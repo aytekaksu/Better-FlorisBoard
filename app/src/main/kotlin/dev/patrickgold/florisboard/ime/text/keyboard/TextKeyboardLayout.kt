@@ -716,7 +716,7 @@ private class TextKeyboardLayoutController(
 
     override fun onSwipe(event: SwipeGesture.Event): Boolean {
         val pointer = pointerMap.findById(event.pointerId) ?: return false
-        val initialKey = pointer.initialKey ?: return false
+        val initialKey = pointer.initialKey ?: return handleKeyboardSwipe(event, pointer)
         val activeKey = pointer.activeKey
         flogDebug(LogTopic.TEXT_KEYBOARD_VIEW)
 
@@ -735,29 +735,29 @@ private class TextKeyboardLayoutController(
                     inputEventDispatcher.sendCancel(TextKeyData.SHIFT)
                     true
                 }
-                initialKey.computedData.code > KeyCode.SPACE && !popupUiController.isShowingExtendedPopup -> when {
-                    !isGlideEnabled && !pointer.hasTriggeredGestureMove -> when (event.type) {
-                        SwipeGesture.Type.TOUCH_UP -> {
-                            val swipeAction = when (event.direction) {
-                                SwipeGesture.Direction.UP -> prefs.gestures.swipeUp.get()
-                                SwipeGesture.Direction.DOWN -> prefs.gestures.swipeDown.get()
-                                SwipeGesture.Direction.LEFT -> prefs.gestures.swipeLeft.get()
-                                SwipeGesture.Direction.RIGHT -> prefs.gestures.swipeRight.get()
-                                else -> SwipeAction.NO_ACTION
-                            }
-                            if (swipeAction != SwipeAction.NO_ACTION) {
-                                keyboardManager.executeSwipeAction(swipeAction)
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                        else -> false
-                    }
-                    else -> false
-                }
+                initialKey.computedData.code > KeyCode.SPACE && !popupUiController.isShowingExtendedPopup ->
+                    handleKeyboardSwipe(event, pointer)
                 else -> false
             }
+        }
+    }
+
+    private fun handleKeyboardSwipe(event: SwipeGesture.Event, pointer: TouchPointer): Boolean {
+        if (isGlideEnabled || pointer.hasTriggeredGestureMove || event.type != SwipeGesture.Type.TOUCH_UP) {
+            return false
+        }
+        val swipeAction = when (event.direction) {
+            SwipeGesture.Direction.UP -> prefs.gestures.swipeUp.get()
+            SwipeGesture.Direction.DOWN -> prefs.gestures.swipeDown.get()
+            SwipeGesture.Direction.LEFT -> prefs.gestures.swipeLeft.get()
+            SwipeGesture.Direction.RIGHT -> prefs.gestures.swipeRight.get()
+            else -> SwipeAction.NO_ACTION
+        }
+        return if (swipeAction != SwipeAction.NO_ACTION) {
+            keyboardManager.executeSwipeAction(swipeAction)
+            true
+        } else {
+            false
         }
     }
 
