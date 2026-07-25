@@ -1,10 +1,15 @@
-# Contribution guidelines
+# Contribution guidelines for this fork
 
-Thanks for considering contributing to FlorisBoard!
+Thanks for considering contributing to this FlorisBoard fork!
 
-There are several ways to contribute to FlorisBoard. This document provides some general guidelines for each type of contribution.
+Issues and pull requests may be written or implemented with AI assistance. All
+work is reviewed on its merits, and the person submitting it remains
+responsible for its correctness, testing, licensing, and description.
 
-The FlorisBoard community is international, as such we require all contributions, including issues, pull requests, and participation in the Matrix chat to be in English, follow the [code of conduct](https://github.com/florisboard/florisboard/blob/main/CODE_OF_CONDUCT.md), and adhere to our current [AI Policy](https://github.com/florisboard/florisboard/blob/main/AI_POLICY.md). Contributions not adhering to these requirements will be dismissed. Thanks for making the FlorisBoard community an inclusive and safe space for everyone!
+All contributions must be in English and follow the
+[code of conduct](CODE_OF_CONDUCT.md) and this fork's
+[AI-assisted contribution policy](AI_POLICY.md). Anyone may propose a change,
+but only [@aytekaksu](https://github.com/aytekaksu) may approve and merge it.
 
 ## Non-code contributions
 
@@ -17,21 +22,28 @@ To make FlorisBoard accessible in as many languages as possible, the platform [C
 
 ### Bug reporting
 
-Allows us to see where FlorisBoard has flaws and should be improved to maximize stability and user experience. To make this process as smooth as possible, please use the pre-made [bug report template](https://github.com/florisboard/florisboard/issues/new?template=bug_report.yml). This makes it easy for us to understand what the bug is and how to solve it.
+Bug reports show where the fork can improve stability and usability. Please use
+the pre-made [bug report template](https://github.com/aytekaksu/florisboard/issues/new?template=bug_report.yml)
+and include concise reproduction steps.
 
 #### Capturing error logs
 
-Logs are captured by FlorisBoard's crash handler, which gives you the ability to copy it to the clipboard and paste it in the crash report [issue template](https://github.com/florisboard/florisboard/issues/new?template=crash_report.yml). This is the preferred way to capture logs.
+Logs are captured by FlorisBoard's crash handler, which lets you copy them into
+the [crash report template](https://github.com/aytekaksu/florisboard/issues/new?template=crash_report.yml).
+This is the preferred way to capture logs.
 
 Alternatively, you can also use ADB (Android Debug Bridge) to capture the error log. This is recommended for experienced users only.
 
 ### Feature proposals
 
-Use the feature proposal [issue template](https://github.com/florisboard/florisboard/issues/new?template=feature_request.yml) to suggest a new idea or improvement for this project.
+Use the [feature proposal template](https://github.com/aytekaksu/florisboard/issues/new?template=feature_request.yml)
+to suggest an idea or improvement.
 
 ### Feedback
 
-You can [give general feedback](https://github.com/florisboard/florisboard/discussions/new?category=feedback) directly here on GitHub. This is the preferred way to give feedback, as it allows not only for me to read and respond to feedback, but for everyone in this community.
+For general feedback, open an
+[issue](https://github.com/aytekaksu/florisboard/issues/new) with enough
+context to make it actionable.
 
 ## Code contributions
 
@@ -40,7 +52,8 @@ You are always welcome to contribute new features or work on existing issues, th
 > [!NOTE]
 > If you intend to implement a bigger feature please coordinate with us so we can prevent that there's a major difference in expected implementation.
 
-If you are overwhelmed by the code don't hesitate to ask for help in the [dev chat](https://matrix.to/#/#florisboard-dev:matrix.org) or the discussions tab! Some issues are also marked as good first issue, which are easy to do tasks.
+If you need help understanding the code, ask in the relevant issue or pull
+request. Issues marked `good first issue` are intended to be approachable.
 
 ### System requirements for development
 

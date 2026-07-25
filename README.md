@@ -1,3 +1,55 @@
+# FlorisBoard — Practical Community Fork
+
+This is an unofficial fork of
+[FlorisBoard](https://github.com/florisboard/florisboard). It preserves the
+original project history and authorship, but it is independently maintained and
+is not endorsed by the upstream FlorisBoard maintainers.
+
+## Why this fork exists
+
+The upstream project's blanket
+[AI policy](https://github.com/florisboard/florisboard/blob/main/AI_POLICY.md)
+rejects AI-generated code and contribution text without first judging the
+result. That is caveman logic for a modern code-review problem: inspect the
+work, not the hammer used to make it.
+
+This fork accepts both human-written and AI-assisted contributions. Every
+change is held to the same standard: it must be understandable, focused,
+maintainable, appropriately tested, and honestly described. The contributor
+remains responsible for everything they submit; AI is not an excuse for bad
+code or invented evidence.
+
+## What belongs here
+
+Bug fixes, compatibility improvements, focused features, and polished UI work
+are welcome when they improve FlorisBoard without weakening its privacy-first
+design. The first proposed fork fix extends keyboard-wide swipe gestures so
+they can begin in the gaps between keys, not only directly on a key; see
+[pull request #1](https://github.com/aytekaksu/florisboard/pull/1).
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [AI_POLICY.md](AI_POLICY.md) before
+submitting work. Anyone may open an issue or pull request, but only
+[@aytekaksu](https://github.com/aytekaksu) may approve and merge changes into
+this repository.
+
+## Upstream, attribution, and license
+
+This fork remains derived from the
+[original FlorisBoard repository](https://github.com/florisboard/florisboard).
+The original copyright notices and Git history are retained. FlorisBoard and
+this fork are distributed under the
+[Apache License 2.0](LICENSE); contributors must preserve applicable notices
+and submit compatible work.
+
+The complete upstream README is preserved below for project background,
+installation information, and upstream credits. Its badges, downloads, chat
+links, and release information refer to the original project.
+
+## Original FlorisBoard README
+
+<details>
+<summary>Show the original upstream README</summary>
+
 <img align="left" width="80" height="80"
 src=".github/repo_icon.png" alt="App icon">
 
@@ -6,9 +58,6 @@ src=".github/repo_icon.png" alt="App icon">
 **FlorisBoard** is a free and open-source keyboard for Android 8.0+
 devices. It aims at being modern, user-friendly and customizable while
 fully respecting your privacy. Currently in beta state.
-
-> [!NOTE]
-> This is an unofficial fork of the original FlorisBoard project.
 
 <table>
 <tr>
@@ -88,13 +137,6 @@ Feature roadmap: See [ROADMAP.md](ROADMAP.md)
 Want to contribute to FlorisBoard? That's great to hear! There are lots of
 different ways to help out, please see the [contribution guidelines](CONTRIBUTING.md) for more info.
 
-This fork judges contributions by their correctness, clarity, tests, and
-maintainability. The upstream project's blanket ban on AI-generated code and
-contribution text feels a little caveman-like: inspect the work instead of
-panicking over which tool touched the keyboard. AI is still no excuse for bad
-code; contributors must understand, test, and stand behind every change they
-submit.
-
 ## Addons Store
 The official [Addons Store](https://beta.addons.florisboard.org) offers the possibility for the community to share and download FlorisBoard extensions.
 Instructions on how to publish addons can be found [here](https://docs.florisboard.org/publishing).
@@ -166,3 +208,5 @@ Thanks to [The FlorisBoard Contributors](https://github.com/florisboard/florisbo
 [obtainium_preview]: https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://app/%7B%22id%22%3A%22dev.patrickgold.florisboard.beta%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fflorisboard%2Fflorisboard%22%2C%22author%22%3A%22florisboard%22%2C%22name%22%3A%22FlorisBoard%20Preview%22%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22fallbackToOlderReleases%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22preview%5C%22%7D%22%7D%0A
 [obtainium_stable]: https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://app/%7B%22id%22%3A%22dev.patrickgold.florisboard%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fflorisboard%2Fflorisboard%22%2C%22author%22%3A%22florisboard%22%2C%22name%22%3A%22FlorisBoard%20Stable%22%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22fallbackToOlderReleases%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22stable%5C%22%7D%22%7D%0A
 <!-- END SECTION: obtainium_links -->
+
+</details>
