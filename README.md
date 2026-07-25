@@ -7,6 +7,9 @@ src=".github/repo_icon.png" alt="App icon">
 devices. It aims at being modern, user-friendly and customizable while
 fully respecting your privacy. Currently in beta state.
 
+> [!NOTE]
+> This is an unofficial fork of the original FlorisBoard project.
+
 <table>
 <tr>
 <th style="text-align: center; width: 50%">
@@ -84,6 +87,13 @@ Feature roadmap: See [ROADMAP.md](ROADMAP.md)
 ## Contributing
 Want to contribute to FlorisBoard? That's great to hear! There are lots of
 different ways to help out, please see the [contribution guidelines](CONTRIBUTING.md) for more info.
+
+This fork judges contributions by their correctness, clarity, tests, and
+maintainability. The upstream project's blanket ban on AI-generated code and
+contribution text feels a little caveman-like: inspect the work instead of
+panicking over which tool touched the keyboard. AI is still no excuse for bad
+code; contributors must understand, test, and stand behind every change they
+submit.
 
 ## Addons Store
 The official [Addons Store](https://beta.addons.florisboard.org) offers the possibility for the community to share and download FlorisBoard extensions.
