@@ -23,6 +23,7 @@ import dev.patrickgold.florisboard.app.enumDisplayEntriesOf
 import dev.patrickgold.florisboard.ime.smartbar.CandidatesDisplayMode
 import dev.patrickgold.florisboard.ime.smartbar.ExtendedActionsPlacement
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
+import dev.patrickgold.florisboard.ime.smartbar.SmartbarMotionMode
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.jetpref.datastore.ui.ListPreference
 import dev.patrickgold.jetpref.datastore.ui.PreferenceGroup
@@ -44,6 +45,12 @@ fun SmartbarScreen() = FlorisScreen {
             listPref = prefs.smartbar.layout,
             title = stringRes(R.string.pref__smartbar__layout__label),
             entries = enumDisplayEntriesOf(SmartbarLayout::class),
+            enabledIf = { prefs.smartbar.enabled isEqualTo true },
+        )
+        ListPreference(
+            listPref = prefs.smartbar.motionMode,
+            title = stringRes(R.string.pref__smartbar__motion_mode__label),
+            entries = enumDisplayEntriesOf(SmartbarMotionMode::class),
             enabledIf = { prefs.smartbar.enabled isEqualTo true },
         )
 

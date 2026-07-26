@@ -43,6 +43,7 @@ import dev.patrickgold.florisboard.ime.smartbar.CandidatesDisplayMode
 import dev.patrickgold.florisboard.ime.smartbar.ExtendedActionsPlacement
 import dev.patrickgold.florisboard.ime.smartbar.IncognitoDisplayMode
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
+import dev.patrickgold.florisboard.ime.smartbar.SmartbarMotionMode
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickAction
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionArrangement
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionJsonConfig
@@ -647,6 +648,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         val layout = enum(
             key = "smartbar__layout",
             default = SmartbarLayout.SUGGESTIONS_ACTIONS_SHARED,
+        )
+        val motionMode = enum(
+            key = "smartbar__motion_mode",
+            default = SmartbarMotionMode.STANDARD,
         )
         val actionArrangement = custom(
             key = "smartbar__action_arrangement",
