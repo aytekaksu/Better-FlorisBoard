@@ -39,6 +39,7 @@ import dev.patrickgold.florisboard.ime.smartbar.CandidatesDisplayMode
 import dev.patrickgold.florisboard.ime.smartbar.ExtendedActionsPlacement
 import dev.patrickgold.florisboard.ime.smartbar.IncognitoDisplayMode
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
+import dev.patrickgold.florisboard.ime.smartbar.SmartbarMotionMode
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeActivationArea
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
 import dev.patrickgold.florisboard.ime.text.key.KeyHintMode
@@ -520,6 +521,22 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
                 key = SmartbarLayout.SUGGESTIONS_ACTIONS_EXTENDED,
                 label = stringRes(R.string.enum__smartbar_layout__suggestions_actions_extended),
                 description = stringRes(R.string.enum__smartbar_layout__suggestions_actions_extended__description),
+            )
+        }
+    },
+    SmartbarMotionMode::class to DEFAULT to {
+        listPrefEntries {
+            entry(
+                key = SmartbarMotionMode.STANDARD,
+                label = stringRes(R.string.enum__smartbar_motion_mode__standard),
+            )
+            entry(
+                key = SmartbarMotionMode.REDUCED,
+                label = stringRes(R.string.enum__smartbar_motion_mode__reduced),
+            )
+            entry(
+                key = SmartbarMotionMode.OFF,
+                label = stringRes(R.string.enum__smartbar_motion_mode__off),
             )
         }
     },

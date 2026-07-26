@@ -20,6 +20,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.background
@@ -82,25 +83,18 @@ const val AnimationDuration = 200
 val VerticalEnterTransition = EnterTransition.verticalTween(AnimationDuration)
 val VerticalExitTransition = ExitTransition.verticalTween(AnimationDuration)
 
-private val HorizontalEnterTransition = EnterTransition.horizontalTween(AnimationDuration)
-private val HorizontalExitTransition = ExitTransition.horizontalTween(AnimationDuration)
-
-private val NoEnterTransition = EnterTransition.horizontalTween(0)
-private val NoExitTransition = ExitTransition.horizontalTween(0)
-
-private val AnimationTween = tween<Float>(AnimationDuration)
-private val NoAnimationTween = tween<Float>(0)
-
 @Composable
 fun Smartbar() {
     val prefs by FlorisPreferenceStore
     val smartbarEnabled by prefs.smartbar.enabled.collectAsState()
     val extendedActionsPlacement by prefs.smartbar.extendedActionsPlacement.collectAsState()
+    val motionMode by prefs.smartbar.motionMode.collectAsState()
+    val motionDuration = motionMode.durationMillis(AnimationDuration)
 
     AnimatedVisibility(
         visible = smartbarEnabled,
-        enter = VerticalEnterTransition,
-        exit = VerticalExitTransition,
+        enter = EnterTransition.verticalTween(motionDuration),
+        exit = ExitTransition.verticalTween(motionDuration),
     ) {
         when (extendedActionsPlacement) {
             ExtendedActionsPlacement.ABOVE_CANDIDATES -> {
@@ -160,6 +154,15 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
     val extendedActionsExpanded by prefs.smartbar.extendedActionsExpanded.collectAsState()
 
     val shouldAnimate by prefs.smartbar.sharedActionsExpandWithAnimation.collectAsState()
+    val motionMode by prefs.smartbar.motionMode.collectAsState()
+    val motionDuration = motionMode.durationMillis(AnimationDuration)
+    val sharedActionsMotionDuration = if (shouldAnimate) motionDuration else 0
+    val sharedActionsTween = tween<Float>(sharedActionsMotionDuration)
+    val extendedActionsAnimationSpec = when (motionMode) {
+        SmartbarMotionMode.STANDARD -> spring<Float>()
+        SmartbarMotionMode.REDUCED,
+        SmartbarMotionMode.OFF -> tween(motionDuration)
+    }
 
     @Composable
     fun SharedActionsToggle() {
@@ -177,9 +180,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
         ) {
             val transition = updateTransition(sharedActionsExpanded, label = "sharedActionsExpandedToggleBtn")
             val rotation by transition.animateFloat(
-                transitionSpec = {
-                    if (shouldAnimate) AnimationTween else NoAnimationTween
-                },
+                transitionSpec = { sharedActionsTween },
                 label = "rotation",
             ) {
                 if (it) 180f else 0f
@@ -216,8 +217,8 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
                 .weight(1f)
                 .fillMaxHeight(),
         ) {
-            val enterTransition = if (shouldAnimate) HorizontalEnterTransition else NoEnterTransition
-            val exitTransition = if (shouldAnimate) HorizontalExitTransition else NoExitTransition
+            val enterTransition = EnterTransition.horizontalTween(sharedActionsMotionDuration)
+            val exitTransition = ExitTransition.horizontalTween(sharedActionsMotionDuration)
             this@CenterContent.AnimatedVisibility(
                 visible = !expanded,
                 enter = enterTransition,
@@ -257,8 +258,18 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
             modifier = Modifier.sizeIn(maxHeight = FlorisImeSizing.smartbarHeight).aspectRatio(1f)
         ) {
             val transition = updateTransition(extendedActionsExpanded, label = "smartbarSecondaryRowToggleBtn")
-            val alpha by transition.animateFloat(label = "alpha") { if (it) 1f else 0f }
-            val rotation by transition.animateFloat(label = "rotation") { if (it) 180f else 0f }
+            val alpha by transition.animateFloat(
+                transitionSpec = { extendedActionsAnimationSpec },
+                label = "alpha",
+            ) {
+                if (it) 1f else 0f
+            }
+            val rotation by transition.animateFloat(
+                transitionSpec = { extendedActionsAnimationSpec },
+                label = "rotation",
+            ) {
+                if (it) 180f else 0f
+            }
             // Expanded icon
             SnyggIcon(
                 FlorisImeUi.SmartbarExtendedActionsToggleIcon.elementName,
@@ -375,6 +386,8 @@ private fun SmartbarSecondaryRow(modifier: Modifier = Modifier) {
     val windowStyle = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
     val extendedActionsExpanded by prefs.smartbar.extendedActionsExpanded.collectAsState()
     val extendedActionsPlacement by prefs.smartbar.extendedActionsPlacement.collectAsState()
+    val motionMode by prefs.smartbar.motionMode.collectAsState()
+    val motionDuration = motionMode.durationMillis(AnimationDuration)
     val background = secondaryRowStyle.background().let { color ->
         if (extendedActionsPlacement == ExtendedActionsPlacement.OVERLAY_APP_UI) {
             if (color.isUnspecified || color.alpha == 0f) {
@@ -389,8 +402,8 @@ private fun SmartbarSecondaryRow(modifier: Modifier = Modifier) {
 
     AnimatedVisibility(
         visible = smartbarLayout == SmartbarLayout.SUGGESTIONS_ACTIONS_EXTENDED && extendedActionsExpanded,
-        enter = VerticalEnterTransition,
-        exit = VerticalExitTransition,
+        enter = EnterTransition.verticalTween(motionDuration),
+        exit = ExitTransition.verticalTween(motionDuration),
     ) {
         QuickActionsRow(
             FlorisImeUi.SmartbarExtendedActionsRow.elementName,

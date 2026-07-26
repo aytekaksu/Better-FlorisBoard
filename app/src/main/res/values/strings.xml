@@ -478,6 +478,7 @@
     <string name="pref__smartbar__enabled__label" comment="Preference title">Enable Smartbar</string>
     <string name="pref__smartbar__enabled__summary" comment="Preference summary">Will show on top of the keyboard</string>
     <string name="pref__smartbar__layout__label" comment="Preference title">Layout</string>
+    <string name="pref__smartbar__motion_mode__label" comment="Preference title">Smartbar motion</string>
     <string name="pref__smartbar__group_layout_specific__label" comment="Preference group title">Layout-specific options</string>
     <string name="pref__smartbar__flip_toggles__label" comment="Preference title">Flip toggle buttons</string>
     <string name="pref__smartbar__flip_toggles__summary" comment="Preference summary">Flips action row toggles</string>
@@ -1086,6 +1087,10 @@
     <string name="enum__smartbar_layout__suggestions_action_shared__description" comment="Enum value description">Shared toggleable candidate and actions row, with sticky action</string>
     <string name="enum__smartbar_layout__suggestions_actions_extended" comment="Enum value label">Suggestions &amp; Actions extended</string>
     <string name="enum__smartbar_layout__suggestions_actions_extended__description" comment="Enum value description">Static candidate row and additional toggleable action row, with sticky action</string>
+
+    <string name="enum__smartbar_motion_mode__standard" comment="Enum value label">Standard</string>
+    <string name="enum__smartbar_motion_mode__reduced" comment="Enum value label">Reduced</string>
+    <string name="enum__smartbar_motion_mode__off" comment="Enum value label">Off</string>
 
     <string name="enum__snygg_level__basic" comment="Enum value label">Basic</string>
     <string name="enum__snygg_level__basic__description" comment="Enum value description">Only color properties are shown, properties and rules are translated.</string>
