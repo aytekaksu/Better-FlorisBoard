@@ -34,7 +34,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -76,7 +76,9 @@ import org.florisboard.lib.snygg.ui.SnyggColumn
 import org.florisboard.lib.snygg.ui.SnyggIcon
 import org.florisboard.lib.snygg.ui.SnyggIconButton
 import org.florisboard.lib.snygg.ui.SnyggRow
+import org.florisboard.lib.snygg.ui.isSnyggThemeElementDefined
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
+import org.florisboard.lib.snygg.value.isUndefined
 
 const val AnimationDuration = 200
 
@@ -166,8 +168,32 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
     }
 
     @Composable
+    fun ToggleSurface(
+        elementName: String,
+        onClick: () -> Unit,
+        content: @Composable () -> Unit,
+    ) {
+        val style = rememberSnyggThemeQuery(elementName)
+        Box(
+            modifier = Modifier.fillMaxHeight().aspectRatio(1f),
+            contentAlignment = Alignment.Center,
+        ) {
+            SnyggIconButton(
+                elementName = elementName,
+                onClick = onClick,
+                modifier = if (style.margin.isUndefined()) {
+                    Modifier.size(FlorisImeSizing.smartbarHeight - 8.dp)
+                } else {
+                    Modifier.fillMaxSize()
+                },
+                content = content,
+            )
+        }
+    }
+
+    @Composable
     fun SharedActionsToggle() {
-        SnyggIconButton(
+        ToggleSurface(
             elementName = FlorisImeUi.SmartbarSharedActionsToggle.elementName,
             onClick = {
                 if (/* was */ sharedActionsExpanded) {
@@ -177,7 +203,6 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
                     prefs.smartbar.sharedActionsExpanded.set(!sharedActionsExpanded)
                 }
             },
-            modifier = Modifier.sizeIn(maxHeight = FlorisImeSizing.smartbarHeight).aspectRatio(1f)
         ) {
             val transition = updateTransition(sharedActionsExpanded, label = "sharedActionsExpandedToggleBtn")
             val rotation by transition.animateFloat(
@@ -202,9 +227,24 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
             } else {
                 arrowIcon
             }
+            val iconElementName = FlorisImeUi.SmartbarSharedActionsToggleIcon.elementName
             SnyggIcon(
-                elementName = FlorisImeUi.SmartbarSharedActionsToggleIcon.elementName,
-                modifier = Modifier.rotate(if (incognitoDisplayMode.value == IncognitoDisplayMode.DISPLAY_BEHIND_KEYBOARD) rotation else 0f),
+                elementName = iconElementName,
+                modifier = Modifier
+                    .rotate(
+                        if (incognitoDisplayMode.value == IncognitoDisplayMode.DISPLAY_BEHIND_KEYBOARD) {
+                            rotation
+                        } else {
+                            0f
+                        },
+                    )
+                    .then(
+                        if (isSnyggThemeElementDefined(iconElementName)) {
+                            Modifier
+                        } else {
+                            Modifier.size(24.dp)
+                        },
+                    ),
                 imageVector = icon,
             )
         }
@@ -267,8 +307,8 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
 
     @Composable
     fun ExtendedActionsToggle() {
-        SnyggIconButton(
-            FlorisImeUi.SmartbarExtendedActionsToggle.elementName,
+        ToggleSurface(
+            elementName = FlorisImeUi.SmartbarExtendedActionsToggle.elementName,
             onClick = {
                 if (/* was */ extendedActionsExpanded) {
                     keyboardManager.activeState.isActionsOverflowVisible = false
@@ -277,7 +317,6 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
                     prefs.smartbar.extendedActionsExpanded.set(!extendedActionsExpanded)
                 }
             },
-            modifier = Modifier.sizeIn(maxHeight = FlorisImeSizing.smartbarHeight).aspectRatio(1f)
         ) {
             val transition = updateTransition(extendedActionsExpanded, label = "smartbarSecondaryRowToggleBtn")
             val alpha by transition.animateFloat(
@@ -292,20 +331,28 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
             ) {
                 if (it) 180f else 0f
             }
+            val iconElementName = FlorisImeUi.SmartbarExtendedActionsToggleIcon.elementName
+            val iconSizeModifier = if (isSnyggThemeElementDefined(iconElementName)) {
+                Modifier
+            } else {
+                Modifier.size(24.dp)
+            }
             // Expanded icon
             SnyggIcon(
-                FlorisImeUi.SmartbarExtendedActionsToggleIcon.elementName,
+                iconElementName,
                 modifier = Modifier
                     .alpha(alpha)
-                    .rotate(rotation),
+                    .rotate(rotation)
+                    .then(iconSizeModifier),
                 imageVector = Icons.Default.UnfoldLess,
             )
             // Not expanded icon
             SnyggIcon(
-                FlorisImeUi.SmartbarExtendedActionsToggleIcon.elementName,
+                iconElementName,
                 modifier = Modifier
                     .alpha(1f - alpha)
-                    .rotate(rotation - 180f),
+                    .rotate(rotation - 180f)
+                    .then(iconSizeModifier),
                 imageVector = Icons.Default.UnfoldMore,
             )
         }
