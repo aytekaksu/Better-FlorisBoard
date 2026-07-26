@@ -964,6 +964,10 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             return prefs.localization.displayLanguageNamesIn.get()
         }
 
+        override fun spaceBarLanguageLabelMode(): SpaceBarLanguageLabelMode {
+            return prefs.keyboard.spaceBarLanguageLabelMode.get()
+        }
+
         override fun evaluateEnabled(data: KeyData): Boolean {
             return when (data.code) {
                 KeyCode.CLIPBOARD_COPY,

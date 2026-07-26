@@ -28,6 +28,7 @@ import dev.patrickgold.florisboard.ime.input.InputFeedbackActivationMode
 import dev.patrickgold.florisboard.ime.input.InputShiftState
 import dev.patrickgold.florisboard.ime.keyboard.IncognitoMode
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
+import dev.patrickgold.florisboard.ime.keyboard.SpaceBarLanguageLabelMode
 import dev.patrickgold.florisboard.ime.keyboard.SpaceBarMode
 import dev.patrickgold.florisboard.ime.landscapeinput.LandscapeInputUiMode
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiHistory
@@ -557,6 +558,22 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
             entry(
                 key = SpaceBarMode.SPACE_BAR_KEY,
                 label = stringRes(R.string.enum__space_bar_mode__space_bar_key),
+            )
+        }
+    },
+    SpaceBarLanguageLabelMode::class to DEFAULT to {
+        listPrefEntries {
+            entry(
+                key = SpaceBarLanguageLabelMode.LOCALE_NAME,
+                label = stringRes(R.string.enum__space_bar_language_label_mode__locale_name),
+            )
+            entry(
+                key = SpaceBarLanguageLabelMode.LANGUAGE_NAME,
+                label = stringRes(R.string.enum__space_bar_language_label_mode__language_name),
+            )
+            entry(
+                key = SpaceBarLanguageLabelMode.LANGUAGE_CODE,
+                label = stringRes(R.string.enum__space_bar_language_label_mode__language_code),
             )
         }
     },

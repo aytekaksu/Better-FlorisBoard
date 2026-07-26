@@ -76,6 +76,8 @@ interface ComputingEvaluator {
 
     fun displayLanguageNamesIn(): DisplayLanguageNamesIn
 
+    fun spaceBarLanguageLabelMode(): SpaceBarLanguageLabelMode
+
     fun evaluateEnabled(data: KeyData): Boolean
 
     fun evaluateVisible(data: KeyData): Boolean
@@ -100,6 +102,8 @@ object DefaultComputingEvaluator : ComputingEvaluator {
 
     override fun displayLanguageNamesIn() = DisplayLanguageNamesIn.NATIVE_LOCALE
 
+    override fun spaceBarLanguageLabelMode() = SpaceBarLanguageLabelMode.LOCALE_NAME
+
     override fun evaluateEnabled(data: KeyData): Boolean = true
 
     override fun evaluateVisible(data: KeyData): Boolean = true
@@ -109,7 +113,19 @@ object DefaultComputingEvaluator : ComputingEvaluator {
     override fun slotData(data: KeyData): KeyData? = null
 }
 
-private var cachedDisplayNameState = Triple(FlorisLocale.ROOT, DisplayLanguageNamesIn.SYSTEM_LOCALE, "")
+private data class LanguageDisplayNameCache(
+    val locale: FlorisLocale,
+    val displayLanguageNamesIn: DisplayLanguageNamesIn,
+    val labelMode: SpaceBarLanguageLabelMode,
+    val displayName: String,
+)
+
+private var cachedDisplayNameState = LanguageDisplayNameCache(
+    locale = FlorisLocale.ROOT,
+    displayLanguageNamesIn = DisplayLanguageNamesIn.SYSTEM_LOCALE,
+    labelMode = SpaceBarLanguageLabelMode.LOCALE_NAME,
+    displayName = "",
+)
 
 /**
  * Compute language name with a cache to prevent repetitive calling of `locale.displayName()`, which invokes the
@@ -117,16 +133,28 @@ private var cachedDisplayNameState = Triple(FlorisLocale.ROOT, DisplayLanguageNa
  * language name. This only caches the last display name, but that's more than enough, as a one-time re-computation when
  * the subtype changes does not hurt, the repetitive computation for the same language hurts.
  */
-private fun computeLanguageDisplayName(locale: FlorisLocale, displayLanguageNamesIn: DisplayLanguageNamesIn): String {
-    val (cachedLocale, cachedDisplayLanguageNamesIn, cachedDisplayName) = cachedDisplayNameState
-    if (cachedLocale == locale && cachedDisplayLanguageNamesIn == displayLanguageNamesIn) {
-        return cachedDisplayName
+private fun computeLanguageDisplayName(
+    locale: FlorisLocale,
+    displayLanguageNamesIn: DisplayLanguageNamesIn,
+    labelMode: SpaceBarLanguageLabelMode,
+): String {
+    val cachedState = cachedDisplayNameState
+    if (cachedState.locale == locale &&
+        cachedState.displayLanguageNamesIn == displayLanguageNamesIn &&
+        cachedState.labelMode == labelMode
+    ) {
+        return cachedState.displayName
     }
-    val displayName = when (displayLanguageNamesIn) {
-        DisplayLanguageNamesIn.SYSTEM_LOCALE -> locale.displayName()
-        DisplayLanguageNamesIn.NATIVE_LOCALE -> locale.displayName(locale)
+    val displayLocale = when (displayLanguageNamesIn) {
+        DisplayLanguageNamesIn.SYSTEM_LOCALE -> FlorisLocale.default()
+        DisplayLanguageNamesIn.NATIVE_LOCALE -> locale
     }
-    cachedDisplayNameState = Triple(locale, displayLanguageNamesIn, displayName)
+    val displayName = when (labelMode) {
+        SpaceBarLanguageLabelMode.LOCALE_NAME -> locale.displayName(displayLocale)
+        SpaceBarLanguageLabelMode.LANGUAGE_NAME -> locale.displayLanguage(displayLocale)
+        SpaceBarLanguageLabelMode.LANGUAGE_CODE -> locale.base.language
+    }
+    cachedDisplayNameState = LanguageDisplayNameCache(locale, displayLanguageNamesIn, labelMode, displayName)
     return displayName
 }
 
@@ -143,7 +171,11 @@ fun ComputingEvaluator.computeLabel(data: KeyData): String? {
             KeyCode.SPACE, KeyCode.CJK_SPACE -> {
                 when (evaluator.keyboard.mode) {
                     KeyboardMode.CHARACTERS -> evaluator.subtype.primaryLocale.let { locale ->
-                        computeLanguageDisplayName(locale, evaluator.displayLanguageNamesIn())
+                        computeLanguageDisplayName(
+                            locale,
+                            evaluator.displayLanguageNamesIn(),
+                            evaluator.spaceBarLanguageLabelMode(),
+                        )
                     }
                     else -> null
                 }

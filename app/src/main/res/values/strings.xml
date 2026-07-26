@@ -456,6 +456,7 @@
     <string name="pref__keyboard__utility_key_enabled__summary" comment="Preference summary">Shows a configurable utility key next to space bar</string>
     <string name="pref__keyboard__utility_key_action__label" comment="Preference title">Utility key action</string>
     <string name="pref__keyboard__space_bar_mode__label" comment="Preference title">Spacebar label</string>
+    <string name="pref__keyboard__space_bar_language_label_mode__label" comment="Preference title">Spacebar language label</string>
     <string name="pref__keyboard__capitalization_behavior__label" comment="Preference title">Capitalization behavior</string>
     <string name="pref__keyboard__font_size_multiplier__label" comment="Preference title">Font size multiplier</string>
     <string name="pref__keyboard__content_scale_mode__label" comment="Preference title">Keyboard content scaling</string>
@@ -1096,6 +1097,10 @@
     <string name="enum__space_bar_mode__nothing" comment="Enum value label">No label</string>
     <string name="enum__space_bar_mode__current_language" comment="Enum value label">Current language</string>
     <string name="enum__space_bar_mode__space_bar_key" comment="Enum value label">␣</string>
+
+    <string name="enum__space_bar_language_label_mode__locale_name" comment="Enum value label">Full locale name</string>
+    <string name="enum__space_bar_language_label_mode__language_name" comment="Enum value label">Language name</string>
+    <string name="enum__space_bar_language_label_mode__language_code" comment="Enum value label">Language code</string>
 
     <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Use system languages</string>
     <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">Use keyboard subtypes</string>

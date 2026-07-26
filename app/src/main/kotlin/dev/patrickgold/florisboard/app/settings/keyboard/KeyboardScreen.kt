@@ -22,6 +22,7 @@ import dev.patrickgold.florisboard.app.LocalNavController
 import dev.patrickgold.florisboard.app.Routes
 import dev.patrickgold.florisboard.app.enumDisplayEntriesOf
 import dev.patrickgold.florisboard.ime.input.CapitalizationBehavior
+import dev.patrickgold.florisboard.ime.keyboard.SpaceBarLanguageLabelMode
 import dev.patrickgold.florisboard.ime.keyboard.SpaceBarMode
 import dev.patrickgold.florisboard.ime.landscapeinput.LandscapeInputUiMode
 import dev.patrickgold.florisboard.ime.smartbar.IncognitoDisplayMode
@@ -87,6 +88,12 @@ fun KeyboardScreen() = FlorisScreen {
             prefs.keyboard.spaceBarMode,
             title = stringRes(R.string.pref__keyboard__space_bar_mode__label),
             entries = enumDisplayEntriesOf(SpaceBarMode::class),
+        )
+        ListPreference(
+            prefs.keyboard.spaceBarLanguageLabelMode,
+            title = stringRes(R.string.pref__keyboard__space_bar_language_label_mode__label),
+            entries = enumDisplayEntriesOf(SpaceBarLanguageLabelMode::class),
+            visibleIf = { prefs.keyboard.spaceBarMode isEqualTo SpaceBarMode.CURRENT_LANGUAGE },
         )
         ListPreference(
             prefs.keyboard.capitalizationBehavior,
