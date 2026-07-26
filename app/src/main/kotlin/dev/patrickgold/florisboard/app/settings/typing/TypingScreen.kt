@@ -21,11 +21,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Contacts
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.SpaceBar
 import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,9 +37,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.R
+import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.LocalNavController
 import dev.patrickgold.florisboard.app.Routes
 import dev.patrickgold.florisboard.app.enumDisplayEntriesOf
+import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.ime.keyboard.IncognitoMode
 import dev.patrickgold.florisboard.ime.nlp.SpellingLanguageMode
 import dev.patrickgold.florisboard.lib.compose.FlorisHyperlinkText
@@ -58,16 +63,31 @@ fun TypingScreen() = FlorisScreen {
     previewFieldVisible = true
 
     val navController = LocalNavController.current
+    val prefs by FlorisPreferenceStore
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val autocorrectPluginManager by context.autocorrectPluginManager()
+    val autocorrectProviders by autocorrectPluginManager.providers.collectAsState()
+    val selectedAutocorrectPlugin by prefs.suggestion.autocorrectPluginComponent.collectAsState()
+    val selectedAutocorrectPluginLabel = autocorrectProviders
+        .firstOrNull { it.id == selectedAutocorrectPlugin }
+        ?.label
+        ?: if (selectedAutocorrectPlugin.isBlank()) {
+            stringRes(R.string.settings__autocorrect_plugins__none)
+        } else {
+            stringRes(R.string.settings__autocorrect_plugins__unavailable)
+        }
+
+    LaunchedEffect(Unit) {
+        autocorrectPluginManager.refreshProviders()
+    }
 
     content {
-        // This card is temporary and is therefore not using a string resource (not so temporary as we thought...)
-        FlorisErrorCard(
-            modifier = Modifier.padding(8.dp),
-            text = """
-                Suggestions (except system autofill) and spell checking are not available in this release. All
-                preferences in the "Corrections" group are properly implemented though.
-            """.trimIndent().replace('\n', ' '),
-        )
+        if (selectedAutocorrectPlugin.isBlank()) {
+            FlorisErrorCard(
+                modifier = Modifier.padding(8.dp),
+                text = stringRes(R.string.settings__autocorrect_plugins__builtin_unavailable),
+            )
+        }
 
         PreferenceGroup(title = stringRes(R.string.pref__suggestion__title)) {
             SwitchPreference(
@@ -86,6 +106,12 @@ fun TypingScreen() = FlorisScreen {
                 title = stringRes(R.string.pref__suggestion__api30_inline_suggestions_enabled__label),
                 summary = stringRes(R.string.pref__suggestion__api30_inline_suggestions_enabled__summary),
                 visibleIf = { AndroidVersion.ATLEAST_API30_R },
+            )
+            Preference(
+                icon = Icons.Default.Extension,
+                title = stringRes(R.string.settings__autocorrect_plugins__title),
+                summary = selectedAutocorrectPluginLabel,
+                onClick = { navController.navigate(Routes.Settings.AutocorrectPlugins) },
             )
             ListPreference(
                 prefs.suggestion.incognitoMode,

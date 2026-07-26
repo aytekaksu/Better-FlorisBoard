@@ -20,6 +20,7 @@ import android.content.Context
 import android.os.SystemClock
 import android.util.LruCache
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
+import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
@@ -27,9 +28,11 @@ import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.editor.EditorRange
+import dev.patrickgold.florisboard.ime.editor.FlorisEditorInfo
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSuggestionProvider
 import dev.patrickgold.florisboard.ime.nlp.han.HanShapeBasedLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.latin.LatinLanguageProvider
+import dev.patrickgold.florisboard.ime.nlp.plugin.ExternalAutocorrectProvider
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
 import dev.patrickgold.florisboard.subtypeManager
@@ -57,11 +60,14 @@ class NlpManager(context: Context) {
     private val clipboardManager by context.clipboardManager()
     private val editorInstance by context.editorInstance()
     private val keyboardManager by context.keyboardManager()
+    private val autocorrectPluginManager by context.autocorrectPluginManager()
     private val subtypeManager by context.subtypeManager()
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val isInputViewActive = AtomicBoolean(false)
     private val clipboardSuggestionProvider = ClipboardSuggestionProvider(context)
     private val emojiSuggestionProvider = EmojiSuggestionProvider(context)
+    private val externalAutocorrectProvider = ExternalAutocorrectProvider(autocorrectPluginManager)
     private val providers = guardedByLock {
         mapOf(
             LatinLanguageProvider.ProviderId to ProviderInstanceWrapper(LatinLanguageProvider(context)),
@@ -91,8 +97,25 @@ class NlpManager(context: Context) {
         clipboardManager.primaryClipFlow.collectLatestIn(scope) {
             assembleCandidates()
         }
-        prefs.suggestion.enabled.asFlow().collectLatestIn(scope) {
-            assembleCandidates()
+        prefs.suggestion.enabled.asFlow().collectLatestIn(scope) { enabled ->
+            if (enabled && isInputViewActive.get()) {
+                startAutocorrectPluginSession(editorInstance.activeInfo)
+            } else {
+                autocorrectPluginManager.finishSession()
+            }
+            clearSuggestions()
+        }
+        prefs.suggestion.autocorrectPluginComponent.asFlow().collectLatestIn(scope) { component ->
+            if (
+                component.isNotBlank() &&
+                prefs.suggestion.enabled.get() &&
+                isInputViewActive.get()
+            ) {
+                startAutocorrectPluginSession(editorInstance.activeInfo)
+            } else {
+                autocorrectPluginManager.finishSession()
+            }
+            clearSuggestions()
         }
         prefs.clipboard.suggestionEnabled.asFlow().collectLatestIn(scope) {
             assembleCandidates()
@@ -130,9 +153,48 @@ class NlpManager(context: Context) {
             ?: FallbackNlpProvider
     }
 
-    private suspend fun getSuggestionProvider(subtype: Subtype): SuggestionProvider {
+    private suspend fun getBuiltInSuggestionProvider(subtype: Subtype): SuggestionProvider {
         return providers.withLock { it[subtype.nlpProviders.suggestion] }?.provider as? SuggestionProvider
             ?: FallbackNlpProvider
+    }
+
+    private suspend fun getSuggestionProvider(subtype: Subtype): SuggestionProvider {
+        return if (autocorrectPluginManager.hasSelectedProvider()) {
+            externalAutocorrectProvider
+        } else {
+            getBuiltInSuggestionProvider(subtype)
+        }
+    }
+
+    @Synchronized
+    fun handleStartInputView(editorInfo: FlorisEditorInfo) {
+        isInputViewActive.set(true)
+        startAutocorrectPluginSession(editorInfo)
+    }
+
+    @Synchronized
+    private fun startAutocorrectPluginSession(editorInfo: FlorisEditorInfo) {
+        if (!isInputViewActive.get()) return
+        autocorrectPluginManager.startSession(
+            subtype = subtypeManager.activeSubtype,
+            editorInfo = editorInfo,
+            isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+        )
+    }
+
+    @Synchronized
+    fun handleFinishInputView() {
+        isInputViewActive.set(false)
+        autocorrectPluginManager.finishSession()
+    }
+
+    @Synchronized
+    fun handleIncognitoModeChanged() {
+        if (isInputViewActive.get() && !keyboardManager.activeState.isIncognitoMode) {
+            startAutocorrectPluginSession(editorInstance.activeInfo)
+        } else {
+            autocorrectPluginManager.finishSession()
+        }
     }
 
     fun preload(subtype: Subtype) {
@@ -267,11 +329,11 @@ class NlpManager(context: Context) {
     }
 
     fun getListOfWords(subtype: Subtype): List<String> {
-        return runBlocking { getSuggestionProvider(subtype).getListOfWords(subtype) }
+        return runBlocking { getBuiltInSuggestionProvider(subtype).getListOfWords(subtype) }
     }
 
     fun getFrequencyForWord(subtype: Subtype, word: String): Double {
-        return runBlocking { getSuggestionProvider(subtype).getFrequencyForWord(subtype, word) }
+        return runBlocking { getBuiltInSuggestionProvider(subtype).getFrequencyForWord(subtype, word) }
     }
 
     private fun assembleCandidates() {

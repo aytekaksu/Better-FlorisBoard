@@ -27,8 +27,23 @@ import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.ui.graphics.vector.ImageVector
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
+import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.media.emoji.Emoji
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
+
+enum class SuggestionSeparatorBehavior {
+    DEFAULT,
+    INSERT,
+    OMIT,
+}
+
+enum class SuggestionCandidateKind {
+    TYPED,
+    CORRECTION,
+    COMPLETION,
+    NEXT_WORD,
+    OTHER,
+}
 
 /**
  * Interface for a candidate item, which is returned by a suggestion provider and used by the UI logic to render
@@ -97,6 +112,40 @@ interface SuggestionCandidate {
      * callbacks.
      */
     val sourceProvider: SuggestionProvider?
+
+    /**
+     * Optional absolute editor range which should be replaced when this candidate is committed.
+     * Null retains the default behavior of replacing the active composing region.
+     */
+    val replacementRange: EditorRange?
+        get() = null
+
+    /**
+     * Text observed in [replacementRange] when this candidate was produced. The host validates it
+     * before replacing anything so a stale plugin response cannot edit unrelated text.
+     */
+    val replacementOriginalText: String?
+        get() = null
+
+    /**
+     * Absolute editor selection observed when this candidate was produced. The host validates it
+     * before applying [replacementRange], preventing a delayed response from moving the cursor.
+     */
+    val replacementExpectedSelection: EditorRange?
+        get() = null
+
+    /**
+     * Controls whether a separator-triggered auto-commit should insert the separator.
+     */
+    val separatorBehavior: SuggestionSeparatorBehavior
+        get() = SuggestionSeparatorBehavior.DEFAULT
+
+    /**
+     * Semantic role supplied by the suggestion provider. This is independent of candidate ranking
+     * and lets candidate UIs distinguish typed words, corrections, completions, and predictions.
+     */
+    val kind: SuggestionCandidateKind
+        get() = SuggestionCandidateKind.OTHER
 }
 
 /**

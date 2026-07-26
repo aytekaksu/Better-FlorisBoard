@@ -498,6 +498,16 @@
     <string name="pref__suggestion__api30_inline_suggestions_enabled__label" comment="Preference title">System autofill suggestions</string>
     <string name="pref__suggestion__api30_inline_suggestions_enabled__summary" comment="Preference summary">Show inline suggestions provided by autofill services</string>
     <string name="pref__suggestion__incognito_mode__label" comment="Label of Incognito mode preference in Typing">Incognito mode</string>
+    <string name="settings__autocorrect_plugins__title">Autocorrect provider</string>
+    <string name="settings__autocorrect_plugins__providers">Installed providers</string>
+    <string name="settings__autocorrect_plugins__none">None</string>
+    <string name="settings__autocorrect_plugins__none_summary">Use FlorisBoard without an external autocorrect engine</string>
+    <string name="settings__autocorrect_plugins__none_installed">No compatible autocorrect provider apps are installed.</string>
+    <string name="settings__autocorrect_plugins__unavailable">Selected provider is unavailable</string>
+    <string name="settings__autocorrect_plugins__configure">Configure provider</string>
+    <string name="settings__autocorrect_plugins__privacy_warning">The selected provider receives limited text around the cursor while you type. FlorisBoard never connects it to password fields or while incognito mode is active. Only select a provider you trust.</string>
+    <string name="settings__autocorrect_plugins__battery_info">Providers run as bound services only during an active typing session. FlorisBoard cancels superseded requests and disconnects the provider as soon as input ends.</string>
+    <string name="settings__autocorrect_plugins__builtin_unavailable">Built-in word suggestions and spell checking are not available in this release. You can install and select a compatible external autocorrect provider.</string>
     <string name="pref__correction__title" comment="Preference group title">Corrections</string>
     <string name="pref__correction__auto_capitalization__label" comment="Preference title">Auto-capitalization</string>
     <string name="pref__correction__auto_capitalization__summary" comment="Preference summary">Capitalize words based on the current input context</string>

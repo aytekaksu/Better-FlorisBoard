@@ -212,6 +212,7 @@ dependencies {
     implementation(libs.patrickgold.jetpref.material.ui)
 
     implementation(projects.lib.android)
+    implementation(projects.lib.autocorrectApi)
     implementation(projects.lib.color)
     implementation(projects.lib.compose)
     implementation(projects.lib.kotlin)

@@ -19,6 +19,9 @@
         <intent>
             <action android:name="android.service.textservice.SpellCheckerService"/>
         </intent>
+        <intent>
+            <action android:name="org.florisboard.autocorrect.api.action.BIND_PROVIDER"/>
+        </intent>
     </queries>
 
     <application
