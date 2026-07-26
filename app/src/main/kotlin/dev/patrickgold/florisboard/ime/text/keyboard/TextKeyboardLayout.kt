@@ -899,7 +899,7 @@ private class TextKeyboardLayoutController(
                                     pointer.hasTriggeredMassSelection = true
                                     editorInstance.massSelection.begin()
                                 }
-                                keyboardManager.handleArrow(KeyCode.ARROW_LEFT, count)
+                                keyboardManager.handleArrow(KeyCode.ARROW_LEFT, count, stopAtTextBoundary = true)
                             }
                         }
                         true
@@ -918,7 +918,7 @@ private class TextKeyboardLayoutController(
                                     pointer.hasTriggeredMassSelection = true
                                     editorInstance.massSelection.begin()
                                 }
-                                keyboardManager.handleArrow(KeyCode.ARROW_RIGHT, count)
+                                keyboardManager.handleArrow(KeyCode.ARROW_RIGHT, count, stopAtTextBoundary = true)
                             }
                         }
                         true

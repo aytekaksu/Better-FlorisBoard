@@ -634,32 +634,48 @@ abstract class AbstractEditorInstance(context: Context) {
      *
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
-    fun sendDownUpKeyEvent(keyEventCode: Int, metaState: Int = meta(), count: Int = 1): Boolean {
+    fun sendDownUpKeyEvent(
+        keyEventCode: Int,
+        metaState: Int = meta(),
+        count: Int = 1,
+        stopAtTextBoundary: Boolean = false,
+    ): Boolean {
         if (count < 1) return false
         val ic = currentInputConnection() ?: return false
         ic.beginBatchEdit()
         val eventTime = SystemClock.uptimeMillis()
-        if (metaState and KeyEvent.META_CTRL_ON != 0) {
-            ic.sendDownKeyEvent(eventTime, KeyEvent.KEYCODE_CTRL_LEFT, 0)
-        }
-        if (metaState and KeyEvent.META_ALT_ON != 0) {
-            ic.sendDownKeyEvent(eventTime, KeyEvent.KEYCODE_ALT_LEFT, 0)
-        }
-        if (metaState and KeyEvent.META_SHIFT_ON != 0) {
-            ic.sendDownKeyEvent(eventTime, KeyEvent.KEYCODE_SHIFT_LEFT, 0)
-        }
+        var dispatchedCount = 0
         for (n in 0 until count) {
-            ic.sendDownKeyEvent(eventTime, keyEventCode, metaState, n)
+            val isAtTextBoundary = stopAtTextBoundary && when (keyEventCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT -> ic.getTextBeforeCursor(1, 0)?.isEmpty() == true
+                KeyEvent.KEYCODE_DPAD_RIGHT -> ic.getTextAfterCursor(1, 0)?.isEmpty() == true
+                else -> false
+            }
+            if (isAtTextBoundary && (n > 0 || !activeContent.selection.isSelectionMode)) break
+            if (n == 0) {
+                if (metaState and KeyEvent.META_CTRL_ON != 0) {
+                    ic.sendDownKeyEvent(eventTime, KeyEvent.KEYCODE_CTRL_LEFT, 0)
+                }
+                if (metaState and KeyEvent.META_ALT_ON != 0) {
+                    ic.sendDownKeyEvent(eventTime, KeyEvent.KEYCODE_ALT_LEFT, 0)
+                }
+                if (metaState and KeyEvent.META_SHIFT_ON != 0) {
+                    ic.sendDownKeyEvent(eventTime, KeyEvent.KEYCODE_SHIFT_LEFT, 0)
+                }
+            }
+            ic.sendDownKeyEvent(eventTime, keyEventCode, metaState, dispatchedCount++)
         }
-        ic.sendUpKeyEvent(eventTime, keyEventCode, metaState)
-        if (metaState and KeyEvent.META_SHIFT_ON != 0) {
-            ic.sendUpKeyEvent(eventTime, KeyEvent.KEYCODE_SHIFT_LEFT, 0)
-        }
-        if (metaState and KeyEvent.META_ALT_ON != 0) {
-            ic.sendUpKeyEvent(eventTime, KeyEvent.KEYCODE_ALT_LEFT, 0)
-        }
-        if (metaState and KeyEvent.META_CTRL_ON != 0) {
-            ic.sendUpKeyEvent(eventTime, KeyEvent.KEYCODE_CTRL_LEFT, 0)
+        if (dispatchedCount > 0) {
+            ic.sendUpKeyEvent(eventTime, keyEventCode, metaState)
+            if (metaState and KeyEvent.META_SHIFT_ON != 0) {
+                ic.sendUpKeyEvent(eventTime, KeyEvent.KEYCODE_SHIFT_LEFT, 0)
+            }
+            if (metaState and KeyEvent.META_ALT_ON != 0) {
+                ic.sendUpKeyEvent(eventTime, KeyEvent.KEYCODE_ALT_LEFT, 0)
+            }
+            if (metaState and KeyEvent.META_CTRL_ON != 0) {
+                ic.sendUpKeyEvent(eventTime, KeyEvent.KEYCODE_CTRL_LEFT, 0)
+            }
         }
         ic.endBatchEdit()
         return true
