@@ -64,6 +64,14 @@ value class InputAttributes private constructor(val raw: Int) {
             else -> Variation.NORMAL
         }
 
+    val isPassword: Boolean
+        get() = when (variation) {
+            Variation.PASSWORD,
+            Variation.VISIBLE_PASSWORD,
+            Variation.WEB_PASSWORD -> true
+            else -> false
+        }
+
     val capsMode: CapsMode
         get() = if (type == Type.TEXT) CapsMode.fromFlags(raw) else CapsMode.NONE
 

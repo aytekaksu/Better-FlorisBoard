@@ -107,7 +107,9 @@ abstract class AbstractEditorInstance(context: Context) {
         activeInfo = editorInfo
         activeCursorCapsMode = editorInfo.initialCapsMode
         activeContent = EditorContent.Unspecified
-        currentInputConnection()?.requestCursorUpdates(CursorUpdateAll)
+        if (!editorInfo.inputAttributes.isPassword) {
+            currentInputConnection()?.requestCursorUpdates(CursorUpdateAll)
+        }
     }
 
     open fun handleStartInputView(editorInfo: FlorisEditorInfo, isRestart: Boolean) {
@@ -291,7 +293,9 @@ abstract class AbstractEditorInstance(context: Context) {
     abstract fun determineComposer(composerName: ExtensionComponentName): Composer
 
     protected open fun shouldDetermineComposingRegion(editorInfo: FlorisEditorInfo): Boolean {
-        return editorInfo.isRichInputEditor && !editorInfo.inputAttributes.flagTextNoSuggestions
+        return editorInfo.isRichInputEditor &&
+            !editorInfo.inputAttributes.isPassword &&
+            !editorInfo.inputAttributes.flagTextNoSuggestions
     }
 
     private suspend fun determineLocalComposing(
