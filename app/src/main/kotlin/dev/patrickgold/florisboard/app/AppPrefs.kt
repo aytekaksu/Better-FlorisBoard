@@ -42,6 +42,7 @@ import dev.patrickgold.florisboard.ime.nlp.SpellingLanguageMode
 import dev.patrickgold.florisboard.ime.smartbar.CandidatesDisplayMode
 import dev.patrickgold.florisboard.ime.smartbar.ExtendedActionsPlacement
 import dev.patrickgold.florisboard.ime.smartbar.IncognitoDisplayMode
+import dev.patrickgold.florisboard.ime.smartbar.SharedActionsTransitionMode
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarMotionMode
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickAction
@@ -665,6 +666,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         val sharedActionsExpanded = boolean(
             key = "smartbar__shared_actions_expanded",
             default = false,
+        )
+        val sharedActionsTransitionMode = enum(
+            key = "smartbar__shared_actions_transition_mode",
+            default = SharedActionsTransitionMode.CURRENT,
         )
         @Deprecated("Always enabled due to UX issues")
         val sharedActionsAutoExpandCollapse = boolean(

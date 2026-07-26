@@ -38,6 +38,7 @@ import dev.patrickgold.florisboard.ime.nlp.SpellingLanguageMode
 import dev.patrickgold.florisboard.ime.smartbar.CandidatesDisplayMode
 import dev.patrickgold.florisboard.ime.smartbar.ExtendedActionsPlacement
 import dev.patrickgold.florisboard.ime.smartbar.IncognitoDisplayMode
+import dev.patrickgold.florisboard.ime.smartbar.SharedActionsTransitionMode
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarMotionMode
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeActivationArea
@@ -521,6 +522,18 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
                 key = SmartbarLayout.SUGGESTIONS_ACTIONS_EXTENDED,
                 label = stringRes(R.string.enum__smartbar_layout__suggestions_actions_extended),
                 description = stringRes(R.string.enum__smartbar_layout__suggestions_actions_extended__description),
+            )
+        }
+    },
+    SharedActionsTransitionMode::class to DEFAULT to {
+        listPrefEntries {
+            entry(
+                key = SharedActionsTransitionMode.CURRENT,
+                label = stringRes(R.string.enum__shared_actions_transition_mode__current),
+            )
+            entry(
+                key = SharedActionsTransitionMode.CLASSIC,
+                label = stringRes(R.string.enum__shared_actions_transition_mode__classic),
             )
         }
     },

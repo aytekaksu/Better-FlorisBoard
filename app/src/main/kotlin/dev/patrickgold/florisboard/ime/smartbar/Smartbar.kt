@@ -151,6 +151,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
     val smartbarLayout by prefs.smartbar.layout.collectAsState()
     val flipToggles by prefs.smartbar.flipToggles.collectAsState()
     val sharedActionsExpanded by prefs.smartbar.sharedActionsExpanded.collectAsState()
+    val sharedActionsTransitionMode by prefs.smartbar.sharedActionsTransitionMode.collectAsState()
     val extendedActionsExpanded by prefs.smartbar.extendedActionsExpanded.collectAsState()
 
     val shouldAnimate by prefs.smartbar.sharedActionsExpandWithAnimation.collectAsState()
@@ -219,26 +220,57 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
         ) {
             val enterTransition = EnterTransition.horizontalTween(sharedActionsMotionDuration)
             val exitTransition = ExitTransition.horizontalTween(sharedActionsMotionDuration)
-            this@CenterContent.AnimatedVisibility(
-                visible = !expanded,
-                enter = enterTransition,
-                exit = exitTransition,
-            ) {
+
+            @Composable
+            fun CollapsedContent() {
                 if (shouldShowInlineSuggestionsUi) {
                     InlineSuggestionsUi(inlineSuggestions)
                 } else {
                     CandidatesRow()
                 }
             }
-            this@CenterContent.AnimatedVisibility(
-                visible = expanded,
-                enter = enterTransition,
-                exit = exitTransition,
-            ) {
+
+            @Composable
+            fun ExpandedContent() {
                 QuickActionsRow(
                     FlorisImeUi.SmartbarSharedActionsRow.elementName,
                     modifier = modifier.fillMaxSize(),
                 )
+            }
+
+            when (sharedActionsTransitionMode) {
+                SharedActionsTransitionMode.CURRENT -> {
+                    this@CenterContent.AnimatedVisibility(
+                        visible = !expanded,
+                        enter = enterTransition,
+                        exit = exitTransition,
+                    ) {
+                        CollapsedContent()
+                    }
+                    this@CenterContent.AnimatedVisibility(
+                        visible = expanded,
+                        enter = enterTransition,
+                        exit = exitTransition,
+                    ) {
+                        ExpandedContent()
+                    }
+                }
+                SharedActionsTransitionMode.CLASSIC -> {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = !expanded,
+                        enter = enterTransition,
+                        exit = exitTransition,
+                    ) {
+                        CollapsedContent()
+                    }
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = expanded,
+                        enter = enterTransition,
+                        exit = exitTransition,
+                    ) {
+                        ExpandedContent()
+                    }
+                }
             }
         }
     }

@@ -484,6 +484,7 @@
     <string name="pref__smartbar__flip_toggles__summary" comment="Preference summary">Flips action row toggles</string>
     <string name="pref__smartbar__shared_actions_auto_expand_collapse__label" comment="Preference title">Auto-expand/collapse</string>
     <string name="pref__smartbar__shared_actions_auto_expand_collapse__summary" comment="Preference summary">Auto-expands/collapses the shared action row based on current state</string>
+    <string name="pref__smartbar__shared_actions_transition_mode__label" comment="Preference title">Shared action transition</string>
     <string name="pref__smartbar__extended_actions_placement__label" comment="Preference title">Action row placement</string>
 
     <!-- Typing strings -->
@@ -1091,6 +1092,9 @@
     <string name="enum__smartbar_motion_mode__standard" comment="Enum value label">Standard</string>
     <string name="enum__smartbar_motion_mode__reduced" comment="Enum value label">Reduced</string>
     <string name="enum__smartbar_motion_mode__off" comment="Enum value label">Off</string>
+
+    <string name="enum__shared_actions_transition_mode__current" comment="Enum value label">Current row transition</string>
+    <string name="enum__shared_actions_transition_mode__classic" comment="Enum value label">Classic collapse and expand</string>
 
     <string name="enum__snygg_level__basic" comment="Enum value label">Basic</string>
     <string name="enum__snygg_level__basic__description" comment="Enum value description">Only color properties are shown, properties and rules are translated.</string>

@@ -22,6 +22,7 @@ import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.enumDisplayEntriesOf
 import dev.patrickgold.florisboard.ime.smartbar.CandidatesDisplayMode
 import dev.patrickgold.florisboard.ime.smartbar.ExtendedActionsPlacement
+import dev.patrickgold.florisboard.ime.smartbar.SharedActionsTransitionMode
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarMotionMode
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
@@ -82,6 +83,13 @@ fun SmartbarScreen() = FlorisScreen {
                 title = stringRes(R.string.pref__smartbar__shared_actions_auto_expand_collapse__label),
                 summary = "[Since v0.4.1] Always enabled due to UX issues",
                 enabledIf = { false },
+                visibleIf = { prefs.smartbar.layout isEqualTo SmartbarLayout.SUGGESTIONS_ACTIONS_SHARED },
+            )
+            ListPreference(
+                prefs.smartbar.sharedActionsTransitionMode,
+                title = stringRes(R.string.pref__smartbar__shared_actions_transition_mode__label),
+                entries = enumDisplayEntriesOf(SharedActionsTransitionMode::class),
+                enabledIf = { prefs.smartbar.enabled isEqualTo true },
                 visibleIf = { prefs.smartbar.layout isEqualTo SmartbarLayout.SUGGESTIONS_ACTIONS_SHARED },
             )
             ListPreference(
