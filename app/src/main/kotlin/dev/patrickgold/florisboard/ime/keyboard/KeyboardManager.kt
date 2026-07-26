@@ -46,6 +46,7 @@ import dev.patrickgold.florisboard.ime.input.InputShiftState
 import dev.patrickgold.florisboard.ime.nlp.ClipboardSuggestionCandidate
 import dev.patrickgold.florisboard.ime.nlp.PunctuationRule
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
+import dev.patrickgold.florisboard.ime.nlp.SuggestionSeparatorBehavior
 import dev.patrickgold.florisboard.ime.popup.PopupMappingComponent
 import dev.patrickgold.florisboard.ime.text.composing.Composer
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
@@ -285,14 +286,17 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         }
     }
 
-    fun commitCandidate(candidate: SuggestionCandidate) {
-        scope.launch {
-            candidate.sourceProvider?.notifySuggestionAccepted(subtypeManager.activeSubtype, candidate)
-        }
-        when (candidate) {
+    fun commitCandidate(candidate: SuggestionCandidate): Boolean {
+        val committed = when (candidate) {
             is ClipboardSuggestionCandidate -> editorInstance.commitClipboardItem(candidate.clipboardItem)
             else -> editorInstance.commitCompletion(candidate)
         }
+        if (committed) {
+            scope.launch {
+                candidate.sourceProvider?.notifySuggestionAccepted(subtypeManager.activeSubtype, candidate)
+            }
+        }
+        return committed
     }
 
     fun commitGesture(word: String) {
@@ -538,12 +542,9 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      * but skips handling changing to characters keyboard and double space periods.
      */
     fun handleHardwareKeyboardSpace() {
-        val candidate = nlpManager.getAutoCommitCandidate()
-        candidate?.let { commitCandidate(it) }
+        val candidate = nlpManager.getAutoCommitCandidate()?.takeIf { commitCandidate(it) }
         // Skip handling changing to characters keyboard and double space periods
-        // TODO: this is whether we commit space after selecting candidate. Should be determined by SuggestionProvider
-        if (!subtypeManager.activeSubtype.primaryLocale.supportsAutoSpace &&
-                candidate != null) { /* Do nothing */ } else {
+        if (shouldInsertSeparatorAfter(candidate)) {
             editorInstance.commitText(KeyCode.SPACE.toChar().toString())
         }
     }
@@ -553,8 +554,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      * enabled by the user.
      */
     private fun handleSpace(data: KeyData) {
-        val candidate = nlpManager.getAutoCommitCandidate()
-        candidate?.let { commitCandidate(it) }
+        val candidate = nlpManager.getAutoCommitCandidate()?.takeIf { commitCandidate(it) }
         if (prefs.keyboard.spaceBarSwitchesToCharacters.get()) {
             when (activeState.keyboardMode) {
                 KeyboardMode.NUMERIC_ADVANCED,
@@ -575,10 +575,18 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 }
             }
         }
-        // TODO: this is whether we commit space after selecting candidate. Should be determined by SuggestionProvider
-        if (!subtypeManager.activeSubtype.primaryLocale.supportsAutoSpace &&
-                candidate != null) { /* Do nothing */ } else {
+        if (shouldInsertSeparatorAfter(candidate)) {
             editorInstance.commitText(KeyCode.SPACE.toChar().toString())
+        }
+    }
+
+    private fun shouldInsertSeparatorAfter(candidate: SuggestionCandidate?): Boolean {
+        return when (candidate?.separatorBehavior) {
+            SuggestionSeparatorBehavior.INSERT -> true
+            SuggestionSeparatorBehavior.OMIT -> false
+            SuggestionSeparatorBehavior.DEFAULT, null -> {
+                candidate == null || subtypeManager.activeSubtype.primaryLocale.supportsAutoSpace
+            }
         }
     }
 
@@ -589,6 +597,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         prefs.suggestion.forceIncognitoModeFromDynamic.set(!prefs.suggestion.forceIncognitoModeFromDynamic.get())
         val newState = !activeState.isIncognitoMode
         activeState.isIncognitoMode = newState
+        nlpManager.handleIncognitoModeChanged()
         lastToastReference.get()?.cancel()
         lastToastReference = WeakReference(
             if (newState) {

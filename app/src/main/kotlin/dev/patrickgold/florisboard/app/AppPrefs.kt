@@ -716,6 +716,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "suggestion__enabled",
             default = false,
         )
+        val autocorrectPluginComponent = string(
+            key = "suggestion__autocorrect_plugin_component",
+            default = "",
+        )
         val displayMode = enum(
             key = "suggestion__display_mode",
             default = CandidatesDisplayMode.DYNAMIC_SCROLLABLE,

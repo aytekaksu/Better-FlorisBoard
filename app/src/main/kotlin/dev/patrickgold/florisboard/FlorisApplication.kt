@@ -34,6 +34,7 @@ import dev.patrickgold.florisboard.ime.editor.EditorInstance
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardManager
 import dev.patrickgold.florisboard.ime.media.emoji.FlorisEmojiCompat
 import dev.patrickgold.florisboard.ime.nlp.NlpManager
+import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
 import dev.patrickgold.florisboard.ime.text.gestures.GlideTypingManager
 import dev.patrickgold.florisboard.ime.theme.ThemeManager
 import dev.patrickgold.florisboard.lib.cache.CacheManager
@@ -79,6 +80,7 @@ class FlorisApplication : Application() {
     val extensionManager = lazy { ExtensionManager(this) }
     val glideTypingManager = lazy { GlideTypingManager(this) }
     val keyboardManager = lazy { KeyboardManager(this) }
+    val autocorrectPluginManager = lazy { AutocorrectPluginManager(this) }
     val nlpManager = lazy { NlpManager(this) }
     val subtypeManager = lazy { SubtypeManager(this) }
     val themeManager = lazy { ThemeManager(this) }
@@ -168,6 +170,7 @@ fun Context.glideTypingManager() = this.florisApplication().glideTypingManager
 fun Context.keyboardManager() = this.florisApplication().keyboardManager
 
 fun Context.nlpManager() = this.florisApplication().nlpManager
+fun Context.autocorrectPluginManager() = this.florisApplication().autocorrectPluginManager
 
 fun Context.subtypeManager() = this.florisApplication().subtypeManager
 

@@ -27,6 +27,11 @@ design. The first proposed fork fix extends keyboard-wide swipe gestures so
 they can begin in the gaps between keys, not only directly on a key; see
 [pull request #1](https://github.com/aytekaksu/florisboard/pull/1).
 
+This fork also defines an engine-neutral
+[external autocorrect provider API](AUTOCORRECT_PLUGIN_API.md). Autocorrect
+engines can be installed as separate apps and selected by the user without
+building their dictionaries, models, or ranking logic into FlorisBoard.
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [AI_POLICY.md](AI_POLICY.md) before
 submitting work. Anyone may open an issue or pull request, but only
 [@aytekaksu](https://github.com/aytekaksu) may approve and merge changes into
