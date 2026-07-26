@@ -28,11 +28,9 @@ import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.editor.EditorRange
-import dev.patrickgold.florisboard.ime.editor.FlorisEditorInfo
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSuggestionProvider
 import dev.patrickgold.florisboard.ime.nlp.han.HanShapeBasedLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.latin.LatinLanguageProvider
-import dev.patrickgold.florisboard.ime.nlp.plugin.ExternalAutocorrectProvider
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
 import dev.patrickgold.florisboard.subtypeManager
@@ -64,10 +62,8 @@ class NlpManager(context: Context) {
     private val subtypeManager by context.subtypeManager()
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    private val isInputViewActive = AtomicBoolean(false)
     private val clipboardSuggestionProvider = ClipboardSuggestionProvider(context)
     private val emojiSuggestionProvider = EmojiSuggestionProvider(context)
-    private val externalAutocorrectProvider = ExternalAutocorrectProvider(autocorrectPluginManager)
     private val providers = guardedByLock {
         mapOf(
             LatinLanguageProvider.ProviderId to ProviderInstanceWrapper(LatinLanguageProvider(context)),
@@ -97,24 +93,12 @@ class NlpManager(context: Context) {
         clipboardManager.primaryClipFlow.collectLatestIn(scope) {
             assembleCandidates()
         }
-        prefs.suggestion.enabled.asFlow().collectLatestIn(scope) { enabled ->
-            if (enabled && isInputViewActive.get()) {
-                startAutocorrectPluginSession(editorInstance.activeInfo)
-            } else {
-                autocorrectPluginManager.finishSession()
-            }
+        prefs.suggestion.enabled.asFlow().collectLatestIn(scope) {
+            autocorrectPluginManager.finishSession()
             clearSuggestions()
         }
-        prefs.suggestion.autocorrectPluginComponent.asFlow().collectLatestIn(scope) { component ->
-            if (
-                component.isNotBlank() &&
-                prefs.suggestion.enabled.get() &&
-                isInputViewActive.get()
-            ) {
-                startAutocorrectPluginSession(editorInstance.activeInfo)
-            } else {
-                autocorrectPluginManager.finishSession()
-            }
+        prefs.suggestion.autocorrectPluginComponent.asFlow().collectLatestIn(scope) {
+            autocorrectPluginManager.finishSession()
             clearSuggestions()
         }
         prefs.clipboard.suggestionEnabled.asFlow().collectLatestIn(scope) {
@@ -159,43 +143,14 @@ class NlpManager(context: Context) {
     }
 
     private suspend fun getSuggestionProvider(subtype: Subtype): SuggestionProvider {
-        return if (autocorrectPluginManager.hasSelectedProvider()) {
-            externalAutocorrectProvider
+        return if (prefs.suggestion.autocorrectPluginComponent.get().isNotBlank()) {
+            autocorrectPluginManager
         } else {
             getBuiltInSuggestionProvider(subtype)
         }
     }
 
-    @Synchronized
-    fun handleStartInputView(editorInfo: FlorisEditorInfo) {
-        isInputViewActive.set(true)
-        startAutocorrectPluginSession(editorInfo)
-    }
-
-    @Synchronized
-    private fun startAutocorrectPluginSession(editorInfo: FlorisEditorInfo) {
-        if (!isInputViewActive.get()) return
-        autocorrectPluginManager.startSession(
-            subtype = subtypeManager.activeSubtype,
-            editorInfo = editorInfo,
-            isPrivateSession = keyboardManager.activeState.isIncognitoMode,
-        )
-    }
-
-    @Synchronized
-    fun handleFinishInputView() {
-        isInputViewActive.set(false)
-        autocorrectPluginManager.finishSession()
-    }
-
-    @Synchronized
-    fun handleIncognitoModeChanged() {
-        if (isInputViewActive.get() && !keyboardManager.activeState.isIncognitoMode) {
-            startAutocorrectPluginSession(editorInstance.activeInfo)
-        } else {
-            autocorrectPluginManager.finishSession()
-        }
-    }
+    fun finishAutocorrectSession() = autocorrectPluginManager.finishSession()
 
     fun preload(subtype: Subtype) {
         scope.launch {

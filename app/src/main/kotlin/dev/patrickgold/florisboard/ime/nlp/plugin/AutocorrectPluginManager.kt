@@ -31,9 +31,16 @@ import android.os.Messenger
 import android.os.RemoteException
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
+import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.editor.EditorContent
+import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.editor.FlorisEditorInfo
+import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
+import dev.patrickgold.florisboard.ime.nlp.SuggestionProvider
+import dev.patrickgold.florisboard.ime.nlp.SuggestionReplacement
+import dev.patrickgold.florisboard.ime.nlp.SuggestionSeparatorBehavior
+import dev.patrickgold.florisboard.ime.nlp.WordSuggestionCandidate
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +53,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.florisboard.autocorrect.api.AutocorrectCandidate
 import org.florisboard.autocorrect.api.AutocorrectPluginContract
 import org.florisboard.autocorrect.api.AutocorrectRequest
+import org.florisboard.autocorrect.api.AutocorrectSeparatorBehavior
 import org.florisboard.autocorrect.api.AutocorrectSession
 import org.florisboard.autocorrect.api.candidateEventBundle
 import org.florisboard.autocorrect.api.candidatesFromBundle
@@ -64,28 +72,21 @@ data class AutocorrectPluginDescriptor(
         get() = componentName.flattenToString()
 }
 
-data class AutocorrectPluginSuggestions(
-    val sessionId: Long,
-    val candidates: List<AutocorrectCandidate>,
-) {
-    companion object {
-        val Empty = AutocorrectPluginSuggestions(-1L, emptyList())
-    }
-}
-
 /**
  * Discovers and talks to a user-selected external autocorrect service.
  *
  * This manager never starts a service. It binds for an active typing session and unbinds as soon as
  * input finishes, which leaves Android in full control of the provider process lifetime.
  */
-class AutocorrectPluginManager(context: Context) {
+class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     companion object {
+        const val ProviderId = "org.florisboard.nlp.providers.external-autocorrect"
         private const val CONNECTION_TIMEOUT_MS = 350L
         private const val RESPONSE_TIMEOUT_MS = 500L
     }
 
     private val appContext by context.appContext()
+    private val editorInstance by context.editorInstance()
     private val prefs by FlorisPreferenceStore
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val nextId = AtomicLong(1L)
@@ -101,55 +102,77 @@ class AutocorrectPluginManager(context: Context) {
     @Volatile private var activeSession: AutocorrectSession? = null
     @Volatile private var connectionReady = CompletableDeferred<Messenger?>()
     @Volatile private var latestSuggestionRequestId = -1L
+    @Volatile private var activeProviderId = ""
+    @Volatile private var providerQueryComplete = false
     private var serviceConnection: ServiceConnection? = null
+
+    override val providerId = ProviderId
 
     fun refreshProviders() {
         scope.launch {
             _providers.value = runCatching { discoverProviders() }.getOrDefault(emptyList())
+            providerQueryComplete = true
         }
     }
 
-    fun hasSelectedProvider(): Boolean {
-        return prefs.suggestion.autocorrectPluginComponent.get().isNotBlank()
-    }
+    override suspend fun create() = Unit
+
+    override suspend fun preload(subtype: Subtype) = Unit
 
     @Synchronized
-    fun startSession(
+    private fun ensureSession(
         subtype: Subtype,
         editorInfo: FlorisEditorInfo,
         isPrivateSession: Boolean,
-    ) {
-        finishSession()
+    ): AutocorrectSession? {
+        val selectedProviderId = prefs.suggestion.autocorrectPluginComponent.get()
         if (
             !prefs.suggestion.enabled.get() ||
+            selectedProviderId.isBlank() ||
             isPrivateSession ||
             editorInfo.isRawInputEditor ||
             editorInfo.inputAttributes.isPassword ||
             editorInfo.inputAttributes.flagTextNoSuggestions
         ) {
-            return
+            finishSession()
+            return null
         }
-        val selectedProviderId = prefs.suggestion.autocorrectPluginComponent.get()
-        if (selectedProviderId.isBlank()) return
+        val secondaryLanguageTags = subtype.secondaryLocales.map { it.localeTag() }
+        activeSession?.takeIf { session ->
+            activeProviderId == selectedProviderId &&
+                session.primaryLanguageTag == subtype.primaryLocale.localeTag() &&
+                session.secondaryLanguageTags == secondaryLanguageTags &&
+                session.inputType == editorInfo.inputAttributes.raw &&
+                session.capsMode == editorInfo.initialCapsMode.toInt()
+        }?.let { return it }
+        if (providerQueryComplete && providers.value.none { it.id == selectedProviderId }) {
+            finishSession()
+            return null
+        }
+        finishSession()
         val session = AutocorrectSession(
             sessionId = nextId.getAndIncrement(),
             primaryLanguageTag = subtype.primaryLocale.localeTag(),
-            secondaryLanguageTags = subtype.secondaryLocales.map { it.localeTag() },
+            secondaryLanguageTags = secondaryLanguageTags,
             inputType = editorInfo.inputAttributes.raw,
             capsMode = editorInfo.initialCapsMode.toInt(),
         )
         activeSession = session
+        activeProviderId = selectedProviderId
         connectionReady = CompletableDeferred()
         scope.launch {
-            val discoveredProviders = providers.value.ifEmpty {
+            val discoveredProviders = if (providerQueryComplete) {
+                providers.value
+            } else {
                 runCatching { discoverProviders() }.getOrDefault(emptyList()).also {
                     _providers.value = it
+                    providerQueryComplete = true
                 }
             }
             val descriptor = discoveredProviders.firstOrNull { it.id == selectedProviderId }
             if (descriptor == null) {
                 if (activeSession?.sessionId == session.sessionId) {
-                    unbind()
+                    unbind(clearSession = false)
                 }
                 return@launch
             }
@@ -159,6 +182,7 @@ class AutocorrectPluginManager(context: Context) {
                 }
             }
         }
+        return session
     }
 
     @Synchronized
@@ -171,34 +195,29 @@ class AutocorrectPluginManager(context: Context) {
             )
         }
         activeSession = null
+        activeProviderId = ""
         latestSuggestionRequestId = -1L
         cancelPending()
         unbind()
     }
 
-    suspend fun suggest(
+    override suspend fun suggest(
+        subtype: Subtype,
         content: EditorContent,
         maxCandidateCount: Int,
         allowPossiblyOffensive: Boolean,
         isPrivateSession: Boolean,
-    ): AutocorrectPluginSuggestions {
-        val session = activeSession ?: return AutocorrectPluginSuggestions.Empty
-        if (!prefs.suggestion.enabled.get()) {
-            finishSession()
-            return AutocorrectPluginSuggestions.Empty
-        }
-        if (isPrivateSession) {
-            finishSession()
-            return AutocorrectPluginSuggestions.Empty
-        }
-        if (!content.localSelection.isCursorMode) return AutocorrectPluginSuggestions.Empty
+    ): List<SuggestionCandidate> {
+        if (!content.localSelection.isCursorMode) return emptyList()
+        val session = ensureSession(subtype, editorInstance.activeInfo, isPrivateSession)
+            ?: return emptyList()
         val service = remote ?: withTimeoutOrNull(CONNECTION_TIMEOUT_MS) {
             connectionReady.await()
-        } ?: return AutocorrectPluginSuggestions.Empty
+        } ?: return emptyList()
 
         val (requestId, deferred) = synchronized(this) {
             if (activeSession?.sessionId != session.sessionId) {
-                return AutocorrectPluginSuggestions.Empty
+                return emptyList()
             }
             val requestId = nextId.getAndIncrement()
             val previousRequestId = latestSuggestionRequestId
@@ -224,7 +243,7 @@ class AutocorrectPluginManager(context: Context) {
             pendingSuggestions[requestId] = deferred
             if (!send(AutocorrectPluginContract.MSG_SUGGEST, request.toBundle(), service)) {
                 pendingSuggestions.remove(requestId)
-                return AutocorrectPluginSuggestions.Empty
+                return emptyList()
             }
             requestId to deferred
         }
@@ -241,32 +260,46 @@ class AutocorrectPluginManager(context: Context) {
                 }
             }
         }
-        return AutocorrectPluginSuggestions(
-            sessionId = session.sessionId,
-            candidates = result.orEmpty().take(
+        return result.orEmpty()
+            .take(
                 maxCandidateCount.coerceIn(1, AutocorrectPluginContract.MAX_CANDIDATES),
-            ),
-        )
+            )
+            .map { it.toSuggestionCandidate(session.sessionId, content) }
     }
 
-    fun notifyAccepted(sessionId: Long, candidateId: String) {
-        notifyCandidateEvent(AutocorrectPluginContract.MSG_ACCEPTED, sessionId, candidateId)
+    override suspend fun notifySuggestionAccepted(subtype: Subtype, candidate: SuggestionCandidate) {
+        if (candidate is ExternalAutocorrectCandidate) {
+            notifyCandidateEvent(
+                AutocorrectPluginContract.MSG_ACCEPTED,
+                candidate.pluginSessionId,
+                candidate.pluginCandidateId,
+            )
+        }
     }
 
-    fun notifyReverted(sessionId: Long, candidateId: String) {
-        notifyCandidateEvent(AutocorrectPluginContract.MSG_REVERTED, sessionId, candidateId)
+    override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {
+        if (candidate is ExternalAutocorrectCandidate) {
+            notifyCandidateEvent(
+                AutocorrectPluginContract.MSG_REVERTED,
+                candidate.pluginSessionId,
+                candidate.pluginCandidateId,
+            )
+        }
     }
 
-    suspend fun removeSuggestion(sessionId: Long, candidateId: String): Boolean {
+    override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
+        if (candidate !is ExternalAutocorrectCandidate) return false
         val (requestId, deferred) = synchronized(this) {
-            val session = activeSession?.takeIf { it.sessionId == sessionId } ?: return false
+            val session = activeSession?.takeIf {
+                it.sessionId == candidate.pluginSessionId
+            } ?: return false
             val service = remote ?: return false
             val requestId = nextId.getAndIncrement()
             val deferred = CompletableDeferred<Boolean>()
             pendingRemovals[requestId] = deferred
             if (!send(
                     AutocorrectPluginContract.MSG_REMOVE,
-                    removalRequestBundle(session.sessionId, requestId, candidateId),
+                    removalRequestBundle(session.sessionId, requestId, candidate.pluginCandidateId),
                     service,
                 )
             ) {
@@ -280,6 +313,14 @@ class AutocorrectPluginManager(context: Context) {
         } ?: false
         pendingRemovals.remove(requestId, deferred)
         return removed
+    }
+
+    override suspend fun getListOfWords(subtype: Subtype): List<String> = emptyList()
+
+    override suspend fun getFrequencyForWord(subtype: Subtype, word: String): Double = 0.0
+
+    override suspend fun destroy() {
+        finishSession()
     }
 
     @Synchronized
@@ -319,7 +360,7 @@ class AutocorrectPluginManager(context: Context) {
 
     @Synchronized
     private fun detach(connection: ServiceConnection) {
-        if (serviceConnection === connection) unbind()
+        if (serviceConnection === connection) unbind(clearSession = false)
     }
 
     @Synchronized
@@ -337,7 +378,7 @@ class AutocorrectPluginManager(context: Context) {
             )
         }.getOrDefault(false)
         if (!bound) {
-            unbind()
+            unbind(clearSession = false)
         }
     }
 
@@ -357,23 +398,26 @@ class AutocorrectPluginManager(context: Context) {
 
     @Synchronized
     private fun detach(service: Messenger) {
-        if (remote === service) unbind()
+        if (remote === service) unbind(clearSession = false)
     }
 
     @Synchronized
-    private fun unbind() {
+    private fun unbind(clearSession: Boolean = true) {
         val connection = serviceConnection
         if (bound && connection != null) {
             runCatching { appContext.unbindService(connection) }
         }
         bound = false
         serviceConnection = null
-        clearConnection()
+        clearConnection(clearSession)
     }
 
-    private fun clearConnection() {
+    private fun clearConnection(clearSession: Boolean) {
         remote = null
-        activeSession = null
+        if (clearSession) {
+            activeSession = null
+            activeProviderId = ""
+        }
         connectionReady.complete(null)
         cancelPending()
     }
@@ -442,4 +486,45 @@ class AutocorrectPluginManager(context: Context) {
             }
         }
     }
+
+    private fun AutocorrectCandidate.toSuggestionCandidate(
+        sessionId: Long,
+        content: EditorContent,
+    ): ExternalAutocorrectCandidate {
+        val localReplacement = EditorRange(replacementStart, replacementEnd).takeIf { range ->
+            range.isValid && range.end <= content.text.length
+        }
+        return ExternalAutocorrectCandidate(
+            pluginSessionId = sessionId,
+            pluginCandidateId = id,
+            delegate = WordSuggestionCandidate(
+                text = text,
+                secondaryText = secondaryText,
+                confidence = confidence,
+                isEligibleForAutoCommit = autoCommit,
+                isEligibleForUserRemoval = removable,
+                sourceProvider = this@AutocorrectPluginManager,
+            ),
+            replacement = localReplacement?.let { range ->
+                SuggestionReplacement(
+                    range = range.translatedBy(content.offset.coerceAtLeast(0)),
+                    originalText = content.text.substring(range.start, range.end),
+                    expectedSelection = content.selection,
+                )
+            },
+            separatorBehavior = when (separatorBehavior) {
+                AutocorrectSeparatorBehavior.INSERT -> SuggestionSeparatorBehavior.INSERT
+                AutocorrectSeparatorBehavior.OMIT -> SuggestionSeparatorBehavior.OMIT
+                AutocorrectSeparatorBehavior.DEFAULT -> SuggestionSeparatorBehavior.DEFAULT
+            },
+        )
+    }
 }
+
+private class ExternalAutocorrectCandidate(
+    val pluginSessionId: Long,
+    val pluginCandidateId: String,
+    delegate: WordSuggestionCandidate,
+    override val replacement: SuggestionReplacement?,
+    override val separatorBehavior: SuggestionSeparatorBehavior,
+) : SuggestionCandidate by delegate

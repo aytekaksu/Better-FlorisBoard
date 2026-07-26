@@ -352,7 +352,7 @@ class FlorisImeService : LifecycleInputMethodService() {
     }
 
     override fun onDestroy() {
-        nlpManager.handleFinishInputView()
+        nlpManager.finishAutocorrectSession()
         super.onDestroy()
         unregisterReceiver(wallpaperChangeReceiver)
         FlorisImeServiceReference = WeakReference(null)
@@ -371,6 +371,7 @@ class FlorisImeService : LifecycleInputMethodService() {
         super.onStartInputView(info, restarting)
         if (info == null) return
         val editorInfo = FlorisEditorInfo.wrap(info)
+        nlpManager.finishAutocorrectSession()
         activeState.batchEdit {
             if (activeState.imeUiMode != ImeUiMode.CLIPBOARD || prefs.clipboard.historyHideOnNextTextField.get()) {
                 activeState.imeUiMode = ImeUiMode.TEXT
@@ -378,7 +379,6 @@ class FlorisImeService : LifecycleInputMethodService() {
             activeState.isSelectionMode = editorInfo.initialSelection.isSelectionMode
             editorInstance.handleStartInputView(editorInfo, isRestart = restarting)
         }
-        nlpManager.handleStartInputView(editorInfo)
     }
 
     override fun onEvaluateInputViewShown(): Boolean {
@@ -410,14 +410,14 @@ class FlorisImeService : LifecycleInputMethodService() {
 
     override fun onFinishInputView(finishingInput: Boolean) {
         flogInfo { "finishing=$finishingInput" }
-        nlpManager.handleFinishInputView()
+        nlpManager.finishAutocorrectSession()
         super.onFinishInputView(finishingInput)
         editorInstance.handleFinishInputView()
     }
 
     override fun onFinishInput() {
         flogInfo { "(no args)" }
-        nlpManager.handleFinishInputView()
+        nlpManager.finishAutocorrectSession()
         super.onFinishInput()
         editorInstance.handleFinishInput()
         NlpInlineAutofill.clearInlineSuggestions()

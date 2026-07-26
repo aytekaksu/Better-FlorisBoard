@@ -597,7 +597,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         prefs.suggestion.forceIncognitoModeFromDynamic.set(!prefs.suggestion.forceIncognitoModeFromDynamic.get())
         val newState = !activeState.isIncognitoMode
         activeState.isIncognitoMode = newState
-        nlpManager.handleIncognitoModeChanged()
+        nlpManager.finishAutocorrectSession()
         lastToastReference.get()?.cancel()
         lastToastReference = WeakReference(
             if (newState) {
