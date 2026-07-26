@@ -17,6 +17,7 @@
 package org.florisboard.lib.snygg.ui
 
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -47,6 +48,7 @@ import org.florisboard.lib.snygg.SnyggStylesheet
  * @param textAlign Optional text alignment override.
  * @param maxLines Optional maximum line count override.
  * @param overflow Optional text overflow override.
+ * @param autoSize Optional automatic text sizing strategy.
  *
  * @since 0.5.0-alpha01
  *
@@ -62,6 +64,7 @@ fun SnyggText(
     textAlign: TextAlign? = null,
     maxLines: Int? = null,
     overflow: TextOverflow? = null,
+    autoSize: TextAutoSize? = null,
 ) {
     ProvideSnyggStyle(elementName, attributes, selector) { style ->
         Text(
@@ -83,6 +86,7 @@ fun SnyggText(
             textDecoration = style.textDecorationLine(),
             maxLines = maxLines ?: style.textMaxLines(),
             overflow = overflow ?: style.textOverflow(),
+            autoSize = autoSize,
         )
     }
 }

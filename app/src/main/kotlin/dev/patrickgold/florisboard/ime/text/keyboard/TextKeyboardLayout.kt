@@ -29,7 +29,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -57,8 +59,11 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
 import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
@@ -350,6 +355,7 @@ private fun TextKeyButton(
     ) {
         val isTelPadKey = key.computedData.type == KeyType.NUMERIC && evaluator.keyboard.mode == KeyboardMode.PHONE
         key.label?.let { label ->
+            val autoFitLabel = key.computedData.code == KeyCode.VIEW_NUMERIC_ADVANCED
             var customLabel = label
             if (key.computedData.code == KeyCode.SPACE) {
                 val prefs by FlorisPreferenceStore
@@ -361,10 +367,28 @@ private fun TextKeyButton(
                 }
             }
             SnyggText(
-                modifier = Modifier
-                    .wrapContentSize()
+                modifier = (if (autoFitLabel) {
+                    Modifier.sizeIn(
+                        maxWidth = size.width * 0.72f,
+                        maxHeight = size.height * 0.72f,
+                    )
+                } else {
+                    Modifier.wrapContentSize()
+                })
                     .align(if (isTelPadKey) BiasAlignment(-0.5f, 0f) else Alignment.Center),
                 text = customLabel,
+                textAlign = if (autoFitLabel) TextAlign.Center else null,
+                maxLines = if (autoFitLabel) 2 else null,
+                overflow = if (autoFitLabel) TextOverflow.Clip else null,
+                autoSize = if (autoFitLabel) {
+                    TextAutoSize.StepBased(
+                        minFontSize = 1.sp,
+                        maxFontSize = size.height.value.sp,
+                        stepSize = 0.5.sp,
+                    )
+                } else {
+                    null
+                },
             )
         }
         key.hintedLabel?.let { hintedLabel ->
