@@ -72,6 +72,7 @@ import dev.patrickgold.florisboard.ime.popup.ExceptionsForKeyCodes
 import dev.patrickgold.florisboard.ime.popup.PopupUiController
 import dev.patrickgold.florisboard.ime.popup.rememberPopupUiController
 import dev.patrickgold.florisboard.ime.text.gestures.GlideTypingGesture
+import dev.patrickgold.florisboard.ime.text.gestures.SwipeActivationArea
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeGesture
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
@@ -716,7 +717,10 @@ private class TextKeyboardLayoutController(
 
     override fun onSwipe(event: SwipeGesture.Event): Boolean {
         val pointer = pointerMap.findById(event.pointerId) ?: return false
-        val initialKey = pointer.initialKey ?: return handleKeyboardSwipe(event, pointer)
+        val initialKey = pointer.initialKey ?: return when (prefs.gestures.swipeActivationArea.get()) {
+            SwipeActivationArea.KEYS_ONLY -> false
+            SwipeActivationArea.ENTIRE_KEYBOARD -> handleKeyboardSwipe(event, pointer)
+        }
         val activeKey = pointer.activeKey
         flogDebug(LogTopic.TEXT_KEYBOARD_VIEW)
 

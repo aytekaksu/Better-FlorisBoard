@@ -547,6 +547,7 @@
     <string name="pref__glide__immediate_backspace_deletes_word__label">Always delete word</string>
     <string name="pref__glide__immediate_backspace_deletes_word__summary">Pressing delete right after a glide deletes the whole word</string>
     <string name="pref__gestures__general_title" comment="Preference group title">General gestures</string>
+    <string name="pref__gestures__swipe_activation_area__label" comment="Preference title">Swipe activation area</string>
     <string name="pref__gestures__space_bar_title" comment="Preference group title">Space bar gestures</string>
     <string name="pref__gestures__other_title" comment="Preference group title">Other gestures / Gesture thresholds</string>
     <string name="pref__gestures__swipe_up__label" comment="Preference title">Swipe up</string>
@@ -1083,6 +1084,9 @@
 
     <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Use system languages</string>
     <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">Use keyboard subtypes</string>
+
+    <string name="enum__swipe_activation_area__keys_only" comment="Enum value label">Keys only</string>
+    <string name="enum__swipe_activation_area__entire_keyboard" comment="Enum value label">Entire keyboard, including gaps</string>
 
     <string name="enum__swipe_action__no_action" comment="Enum value label">No action</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">Cycle to previous keyboard mode</string>
