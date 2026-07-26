@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.SentimentSatisfiedAlt
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SpaceBar
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
 import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.R
@@ -335,6 +336,9 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
         }
         KeyCode.TOGGLE_AUTOCORRECT -> {
             Icons.Default.FontDownload
+        }
+        KeyCode.AUTOCORRECT_PLUGIN_UI -> {
+            Icons.Default.Tune
         }
         KeyCode.KANA_SWITCHER -> {
             if (evaluator.state.isKanaKata) {

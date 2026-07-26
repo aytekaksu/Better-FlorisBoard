@@ -37,15 +37,23 @@ object AutocorrectPluginContract {
     const val MSG_REMOVE = 5
     const val MSG_FINISH_SESSION = 6
     const val MSG_CANCEL = 7
+    const val MSG_GET_PLUGIN_UI = 8
+    const val MSG_SET_PLUGIN_UI_VALUE = 9
+    const val MSG_INVOKE_PLUGIN_UI_ACTION = 10
+    const val MSG_TEXT_EVENT = 11
+    const val MSG_PLUGIN_UI_CLOSED = 12
 
     const val MSG_SUGGESTIONS = 101
     const val MSG_REMOVE_RESULT = 102
+    const val MSG_PLUGIN_UI_RESULT = 103
 
     const val MAX_CONTEXT_CHARS = 512
     const val MAX_CANDIDATES = 16
     const val MAX_CANDIDATE_ID_CHARS = 256
     const val MAX_CANDIDATE_TEXT_CHARS = 256
     const val MAX_SECONDARY_TEXT_CHARS = 128
+    const val MAX_TRACE_KEY_COUNT = 64
+    const val MAX_TRACE_POINT_COUNT = 48
 }
 
 enum class AutocorrectCandidateKind {
@@ -67,6 +75,7 @@ data class AutocorrectSession(
     val secondaryLanguageTags: List<String>,
     val inputType: Int,
     val capsMode: Int,
+    val allowPersonalizedLearning: Boolean = false,
 ) {
     fun toBundle() = Bundle().apply {
         putLong(Keys.SESSION_ID, sessionId)
@@ -74,6 +83,7 @@ data class AutocorrectSession(
         putStringArrayList(Keys.SECONDARY_LANGUAGE_TAGS, ArrayList(secondaryLanguageTags))
         putInt(Keys.INPUT_TYPE, inputType)
         putInt(Keys.CAPS_MODE, capsMode)
+        putBoolean(Keys.ALLOW_PERSONALIZED_LEARNING, allowPersonalizedLearning)
     }
 
     companion object {
@@ -83,6 +93,7 @@ data class AutocorrectSession(
             secondaryLanguageTags = bundle.getStringArrayList(Keys.SECONDARY_LANGUAGE_TAGS).orEmpty(),
             inputType = bundle.getInt(Keys.INPUT_TYPE),
             capsMode = bundle.getInt(Keys.CAPS_MODE),
+            allowPersonalizedLearning = bundle.getBoolean(Keys.ALLOW_PERSONALIZED_LEARNING),
         )
     }
 }
@@ -99,6 +110,7 @@ data class AutocorrectRequest(
     val currentWordEnd: Int,
     val maxCandidateCount: Int,
     val allowPossiblyOffensive: Boolean,
+    val inputTrace: AutocorrectInputTrace = AutocorrectInputTrace.Empty,
 ) {
     init {
         require(text.length <= AutocorrectPluginContract.MAX_CONTEXT_CHARS)
@@ -116,6 +128,7 @@ data class AutocorrectRequest(
         putInt(Keys.CURRENT_WORD_END, currentWordEnd)
         putInt(Keys.MAX_CANDIDATE_COUNT, maxCandidateCount.coerceIn(1, AutocorrectPluginContract.MAX_CANDIDATES))
         putBoolean(Keys.ALLOW_POSSIBLY_OFFENSIVE, allowPossiblyOffensive)
+        putBundle(Keys.INPUT_TRACE, inputTrace.toBundle())
     }
 
     companion object {
@@ -132,6 +145,8 @@ data class AutocorrectRequest(
             maxCandidateCount = bundle.getInt(Keys.MAX_CANDIDATE_COUNT, 3)
                 .coerceIn(1, AutocorrectPluginContract.MAX_CANDIDATES),
             allowPossiblyOffensive = bundle.getBoolean(Keys.ALLOW_POSSIBLY_OFFENSIVE),
+            inputTrace = bundle.getBundle(Keys.INPUT_TRACE)?.toAutocorrectInputTrace()
+                ?: AutocorrectInputTrace.Empty,
         )
     }
 }
@@ -155,7 +170,7 @@ data class AutocorrectCandidate(
             Keys.SECONDARY_TEXT,
             secondaryText?.take(AutocorrectPluginContract.MAX_SECONDARY_TEXT_CHARS),
         )
-        putDouble(Keys.CONFIDENCE, confidence.coerceIn(0.0, 1.0))
+        putDouble(Keys.CONFIDENCE, confidence.normalizedConfidence())
         putString(Keys.KIND, kind.name)
         putBoolean(Keys.AUTO_COMMIT, autoCommit)
         putBoolean(Keys.REMOVABLE, removable)
@@ -176,7 +191,7 @@ data class AutocorrectCandidate(
                 text = text,
                 secondaryText = bundle.getString(Keys.SECONDARY_TEXT)
                     ?.take(AutocorrectPluginContract.MAX_SECONDARY_TEXT_CHARS),
-                confidence = bundle.getDouble(Keys.CONFIDENCE).coerceIn(0.0, 1.0),
+                confidence = bundle.getDouble(Keys.CONFIDENCE).normalizedConfidence(),
                 kind = bundle.enumValueOrDefault(Keys.KIND, AutocorrectCandidateKind.COMPLETION),
                 autoCommit = bundle.getBoolean(Keys.AUTO_COMMIT),
                 removable = bundle.getBoolean(Keys.REMOVABLE),
@@ -190,6 +205,8 @@ data class AutocorrectCandidate(
         }
     }
 }
+
+private fun Double.normalizedConfidence() = takeIf(Double::isFinite)?.coerceIn(0.0, 1.0) ?: 0.0
 
 internal fun candidatesToBundle(requestId: Long, candidates: List<AutocorrectCandidate>) = Bundle().apply {
     putLong(Keys.REQUEST_ID, requestId)
@@ -232,6 +249,7 @@ internal object Keys {
     const val SECONDARY_LANGUAGE_TAGS = "secondaryLanguageTags"
     const val INPUT_TYPE = "inputType"
     const val CAPS_MODE = "capsMode"
+    const val ALLOW_PERSONALIZED_LEARNING = "allowPersonalizedLearning"
     const val TEXT = "text"
     const val SELECTION_START = "selectionStart"
     const val SELECTION_END = "selectionEnd"
@@ -241,6 +259,7 @@ internal object Keys {
     const val CURRENT_WORD_END = "currentWordEnd"
     const val MAX_CANDIDATE_COUNT = "maxCandidateCount"
     const val ALLOW_POSSIBLY_OFFENSIVE = "allowPossiblyOffensive"
+    const val INPUT_TRACE = "inputTrace"
     const val ID = "id"
     const val SECONDARY_TEXT = "secondaryText"
     const val CONFIDENCE = "confidence"

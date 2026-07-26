@@ -37,6 +37,14 @@ enum class SuggestionSeparatorBehavior {
     OMIT,
 }
 
+enum class SuggestionCandidateKind {
+    TYPED,
+    CORRECTION,
+    COMPLETION,
+    NEXT_WORD,
+    OTHER,
+}
+
 data class SuggestionReplacement(
     val range: EditorRange,
     val originalText: String,
@@ -120,6 +128,10 @@ interface SuggestionCandidate {
      */
     val separatorBehavior: SuggestionSeparatorBehavior
         get() = SuggestionSeparatorBehavior.DEFAULT
+
+    /** Semantic role used for presentation; it never overrides provider ranking. */
+    val kind: SuggestionCandidateKind
+        get() = SuggestionCandidateKind.OTHER
 }
 
 /**
@@ -134,6 +146,7 @@ data class WordSuggestionCandidate(
     override val isEligibleForAutoCommit: Boolean = false,
     override val isEligibleForUserRemoval: Boolean = true,
     override val sourceProvider: SuggestionProvider? = null,
+    override val kind: SuggestionCandidateKind = SuggestionCandidateKind.OTHER,
 ) : SuggestionCandidate {
     override val icon: ImageVector? = null
 }

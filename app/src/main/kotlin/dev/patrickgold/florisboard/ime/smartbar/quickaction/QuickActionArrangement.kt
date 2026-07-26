@@ -64,6 +64,20 @@ data class QuickActionArrangement(
         )
     }
 
+    fun withAvailableActions(): QuickActionArrangement {
+        val present = buildSet {
+            stickyAction?.let(::add)
+            addAll(dynamicActions)
+            addAll(hiddenActions)
+        }
+        val available = buildList {
+            Default.stickyAction?.let(::add)
+            addAll(Default.dynamicActions)
+            addAll(Default.hiddenActions)
+        }
+        return copy(hiddenActions = hiddenActions + available.filterNot(present::contains))
+    }
+
     companion object {
         val Default = QuickActionArrangement(
             stickyAction = QuickAction.InsertKey(TextKeyData.VOICE_INPUT),
@@ -92,6 +106,7 @@ data class QuickActionArrangement(
                 QuickAction.InsertKey(TextKeyData.IME_HIDE_UI),
             ),
             hiddenActions = listOf(
+                QuickAction.InsertKey(TextKeyData.AUTOCORRECT_PLUGIN_UI),
             ),
         )
     }

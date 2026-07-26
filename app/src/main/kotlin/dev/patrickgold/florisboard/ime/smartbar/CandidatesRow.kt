@@ -152,7 +152,10 @@ private fun CandidateItem(
     } else {
         FlorisImeUi.SmartbarCandidateWord
     }.elementName
-    val attributes = mapOf("auto-commit" to if (candidate.isEligibleForAutoCommit) 1 else 0)
+    val attributes = mapOf(
+        "auto-commit" to if (candidate.isEligibleForAutoCommit) 1 else 0,
+        "kind" to candidate.kind.name.lowercase(),
+    )
     val selector = if (isPressed) SnyggSelector.PRESSED else SnyggSelector.NONE
 
     SnyggRow(
