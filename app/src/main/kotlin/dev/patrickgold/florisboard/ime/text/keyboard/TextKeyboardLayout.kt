@@ -57,6 +57,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
@@ -372,11 +373,11 @@ private fun TextKeyButton(
                 modifier = Modifier
                     .wrapContentSize()
                     .align(if (isTelPadKey) BiasAlignment(0.5f, 0f) else Alignment.TopEnd)
-                    .then(
-                        if (keyHintPlacement == KeyHintPlacement.INSET && !isTelPadKey) {
-                            Modifier.padding(horizontal = (key.visibleBounds.width / 12f).toDp())
+                    .padding(
+                        horizontal = if (keyHintPlacement == KeyHintPlacement.INSET && !isTelPadKey) {
+                            (key.visibleBounds.width / 12f).toDp()
                         } else {
-                            Modifier
+                            0.dp
                         },
                     ),
                 text = hintedLabel,

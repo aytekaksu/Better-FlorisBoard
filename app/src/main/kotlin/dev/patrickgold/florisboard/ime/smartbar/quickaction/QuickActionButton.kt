@@ -64,23 +64,11 @@ fun QuickActionButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val isEnabled = type == QuickActionBarType.EDITOR_TILE || evaluator.evaluateEnabled(action.keyData())
-    val (elementName, iconElementName, textElementName) = when (type) {
-        QuickActionBarType.INTERACTIVE_BUTTON -> Triple(
-            FlorisImeUi.SmartbarActionKey.elementName,
-            FlorisImeUi.SmartbarActionKeyIcon.elementName,
-            FlorisImeUi.SmartbarActionKeyText.elementName,
-        )
-        QuickActionBarType.INTERACTIVE_TILE -> Triple(
-            FlorisImeUi.SmartbarActionTile.elementName,
-            FlorisImeUi.SmartbarActionTileIcon.elementName,
-            FlorisImeUi.SmartbarActionTileText.elementName,
-        )
-        QuickActionBarType.EDITOR_TILE -> Triple(
-            FlorisImeUi.SmartbarActionsEditorTile.elementName,
-            FlorisImeUi.SmartbarActionsEditorTileIcon.elementName,
-            FlorisImeUi.SmartbarActionsEditorTileText.elementName,
-        )
-    }
+    val elementName = when (type) {
+        QuickActionBarType.INTERACTIVE_BUTTON -> FlorisImeUi.SmartbarActionKey
+        QuickActionBarType.INTERACTIVE_TILE -> FlorisImeUi.SmartbarActionTile
+        QuickActionBarType.EDITOR_TILE -> FlorisImeUi.SmartbarActionsEditorTile
+    }.elementName
     val attributes = mapOf(FlorisImeUi.Attr.Code to action.keyData().code)
     val selector = when {
         isPressed -> SnyggSelector.PRESSED
@@ -139,7 +127,7 @@ fun QuickActionButton(
                         }
                         if (imageVector != null) {
                             SnyggBox(
-                                elementName = iconElementName,
+                                elementName = "$elementName-icon",
                                 attributes = attributes,
                                 selector = selector,
                             ) {
@@ -147,7 +135,7 @@ fun QuickActionButton(
                             }
                         } else if (label != null) {
                             SnyggText(
-                                elementName = textElementName,
+                                elementName = "$elementName-text",
                                 attributes = attributes,
                                 selector = selector,
                                 text = label,
@@ -157,7 +145,7 @@ fun QuickActionButton(
 
                     is QuickAction.InsertText -> {
                         SnyggText(
-                            elementName = textElementName,
+                            elementName = "$elementName-text",
                             attributes = attributes,
                             selector = selector,
                             text = action.data.firstOrNull().toString().ifBlank { "?" },
