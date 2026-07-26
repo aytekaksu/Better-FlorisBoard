@@ -45,6 +45,7 @@ import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickAction
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionArrangement
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionJsonConfig
+import dev.patrickgold.florisboard.ime.text.gestures.SwipeActivationArea
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyHintConfiguration
@@ -287,6 +288,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
 
     val gestures = Gestures()
     inner class Gestures {
+        val swipeActivationArea = enum(
+            key = "gestures__swipe_activation_area",
+            default = SwipeActivationArea.KEYS_ONLY,
+        )
         val swipeUp = enum(
             key = "gestures__swipe_up",
             default = SwipeAction.SHIFT,

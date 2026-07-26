@@ -38,6 +38,7 @@ import dev.patrickgold.florisboard.ime.smartbar.CandidatesDisplayMode
 import dev.patrickgold.florisboard.ime.smartbar.ExtendedActionsPlacement
 import dev.patrickgold.florisboard.ime.smartbar.IncognitoDisplayMode
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
+import dev.patrickgold.florisboard.ime.text.gestures.SwipeActivationArea
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
 import dev.patrickgold.florisboard.ime.text.key.KeyHintMode
 import dev.patrickgold.florisboard.ime.text.key.UtilityKeyAction
@@ -542,6 +543,18 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
             entry(
                 key = SpellingLanguageMode.USE_KEYBOARD_SUBTYPES,
                 label = stringRes(R.string.enum__spelling_language_mode__use_keyboard_subtypes),
+            )
+        }
+    },
+    SwipeActivationArea::class to DEFAULT to {
+        listPrefEntries {
+            entry(
+                key = SwipeActivationArea.KEYS_ONLY,
+                label = stringRes(R.string.enum__swipe_activation_area__keys_only),
+            )
+            entry(
+                key = SwipeActivationArea.ENTIRE_KEYBOARD,
+                label = stringRes(R.string.enum__swipe_activation_area__entire_keyboard),
             )
         }
     },

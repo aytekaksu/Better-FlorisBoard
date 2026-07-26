@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.enumDisplayEntriesOf
+import dev.patrickgold.florisboard.ime.text.gestures.SwipeActivationArea
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.jetpref.datastore.ui.DialogSliderPreference
@@ -90,6 +91,12 @@ fun GesturesScreen() = FlorisScreen {
         }*/
 
         PreferenceGroup(title = stringRes(R.string.pref__gestures__general_title)) {
+            ListPreference(
+                prefs.gestures.swipeActivationArea,
+                title = stringRes(R.string.pref__gestures__swipe_activation_area__label),
+                entries = enumDisplayEntriesOf(SwipeActivationArea::class),
+                enabledIf = { prefs.glide.enabled isEqualTo false },
+            )
             ListPreference(
                 prefs.gestures.swipeUp,
                 title = stringRes(R.string.pref__gestures__swipe_up__label),
