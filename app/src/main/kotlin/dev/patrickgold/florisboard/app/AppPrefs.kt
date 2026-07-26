@@ -50,6 +50,7 @@ import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyHintConfiguration
 import dev.patrickgold.florisboard.ime.text.key.KeyHintMode
+import dev.patrickgold.florisboard.ime.text.key.KeyHintPlacement
 import dev.patrickgold.florisboard.ime.text.key.UtilityKeyAction
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import dev.patrickgold.florisboard.ime.theme.ThemeMode
@@ -502,6 +503,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         val hintedSymbolsMode = enum(
             key = "keyboard__hinted_symbols_mode",
             default = KeyHintMode.SMART_PRIORITY,
+        )
+        val keyHintPlacement = enum(
+            key = "keyboard__key_hint_placement",
+            default = KeyHintPlacement.CORNER,
         )
         val utilityKeyEnabled = boolean(
             key = "keyboard__utility_key_enabled",

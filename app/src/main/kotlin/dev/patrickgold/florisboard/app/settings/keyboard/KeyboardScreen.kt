@@ -26,6 +26,7 @@ import dev.patrickgold.florisboard.ime.keyboard.SpaceBarMode
 import dev.patrickgold.florisboard.ime.landscapeinput.LandscapeInputUiMode
 import dev.patrickgold.florisboard.ime.smartbar.IncognitoDisplayMode
 import dev.patrickgold.florisboard.ime.text.key.KeyHintMode
+import dev.patrickgold.florisboard.ime.text.key.KeyHintPlacement
 import dev.patrickgold.florisboard.ime.text.key.UtilityKeyAction
 import dev.patrickgold.florisboard.ime.window.KeyboardContentScaleMode
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
@@ -65,6 +66,11 @@ fun KeyboardScreen() = FlorisScreen {
             title = stringRes(R.string.pref__keyboard__hinted_symbols_mode__label),
             summarySwitchDisabled = stringRes(R.string.state__disabled),
             entries = enumDisplayEntriesOf(KeyHintMode::class),
+        )
+        ListPreference(
+            prefs.keyboard.keyHintPlacement,
+            title = stringRes(R.string.pref__keyboard__key_hint_placement__label),
+            entries = enumDisplayEntriesOf(KeyHintPlacement::class),
         )
         SwitchPreference(
             prefs.keyboard.utilityKeyEnabled,
