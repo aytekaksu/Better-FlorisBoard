@@ -114,7 +114,7 @@ class ImeWindowController(
             activeWindowConfig.value = windowConfig
         }
 
-        val userPreferredOptions = combine(
+        val baseUserPreferredOptions = combine(
             activeRootInsets,
             prefs.keyboard.keySpacingHorizontal.asFlow(),
             prefs.keyboard.keySpacingVertical.asFlow(),
@@ -132,6 +132,12 @@ class ImeWindowController(
                     else -> multiplierL / 100f
                 },
             )
+        }
+        val userPreferredOptions = combine(
+            baseUserPreferredOptions,
+            prefs.keyboard.contentScaleMode.asFlow(),
+        ) { options, contentScaleMode ->
+            options.copy(contentScaleMode = contentScaleMode)
         }
 
         combine(

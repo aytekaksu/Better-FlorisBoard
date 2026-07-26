@@ -46,7 +46,13 @@ sealed class ImeWindowSpec {
 
     val keyMarginV: Dp by lazy { props.calcKeyMarginV(constraints) * userPreferredOptions.keySpacingFactorV }
 
-    val fontScale: Float by lazy { props.calcFontScale(constraints) * userPreferredOptions.fontScale }
+    val fontScale: Float by lazy {
+        val windowScale = when (userPreferredOptions.contentScaleMode) {
+            KeyboardContentScaleMode.FOLLOW_KEYBOARD_HEIGHT -> props.calcFontScale(constraints)
+            KeyboardContentScaleMode.FIXED -> 1f
+        }
+        windowScale * userPreferredOptions.fontScale
+    }
 
     /**
      * Calculate how a move gesture would change the computed props.
@@ -289,6 +295,7 @@ sealed class ImeWindowSpec {
         val keySpacingFactorH: Float,
         val keySpacingFactorV: Float,
         val fontScale: Float,
+        val contentScaleMode: KeyboardContentScaleMode = KeyboardContentScaleMode.FOLLOW_KEYBOARD_HEIGHT,
     )
 
     companion object {
