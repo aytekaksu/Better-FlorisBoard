@@ -244,6 +244,7 @@
     <string name="snygg__rule_element__floating_dock_to_fixed_indicator">Floating dock to fixed indicator</string>
 
     <string name="snygg__rule_element__key">Key</string>
+    <string name="snygg__rule_element__key_icon">Key icon</string>
     <string name="snygg__rule_element__key_hint">Key hint</string>
     <string name="snygg__rule_element__key_popup_box">Key popup box</string>
     <string name="snygg__rule_element__key_popup_element">Key popup element</string>
@@ -305,9 +306,13 @@
     <string name="snygg__rule_element__smartbar">Smartbar</string>
     <string name="snygg__rule_element__smartbar_shared_actions_row">Smartbar shared actions row</string>
     <string name="snygg__rule_element__smartbar_shared_actions_toggle">Smartbar shared actions toggle</string>
+    <string name="snygg__rule_element__smartbar_shared_actions_toggle_icon">Smartbar shared actions toggle icon</string>
     <string name="snygg__rule_element__smartbar_extended_actions_row">Smartbar extended actions row</string>
     <string name="snygg__rule_element__smartbar_extended_actions_toggle">Smartbar extended actions toggle</string>
+    <string name="snygg__rule_element__smartbar_extended_actions_toggle_icon">Smartbar extended actions toggle icon</string>
     <string name="snygg__rule_element__smartbar_action_key">Smartbar action key</string>
+    <string name="snygg__rule_element__smartbar_action_key_icon">Smartbar action key icon</string>
+    <string name="snygg__rule_element__smartbar_action_key_text">Smartbar action key text</string>
 
     <string name="snygg__rule_element__smartbar_action_tile">Smartbar action tile</string>
     <string name="snygg__rule_element__smartbar_action_tile_icon">Smartbar action tile icon</string>
@@ -321,6 +326,8 @@
     <string name="snygg__rule_element__smartbar_actions_editor_subheader">Smartbar actions editor subheader</string>
     <string name="snygg__rule_element__smartbar_actions_editor_tile_grid">Smartbar actions editor tile grid</string>
     <string name="snygg__rule_element__smartbar_actions_editor_tile">Smartbar actions editor tile</string>
+    <string name="snygg__rule_element__smartbar_actions_editor_tile_icon">Smartbar actions editor tile icon</string>
+    <string name="snygg__rule_element__smartbar_actions_editor_tile_text">Smartbar actions editor tile text</string>
 
     <string name="snygg__rule_element__smartbar_candidates_row">Smartbar candidates row</string>
     <string name="snygg__rule_element__smartbar_candidate_word">Smartbar candidate word</string>
