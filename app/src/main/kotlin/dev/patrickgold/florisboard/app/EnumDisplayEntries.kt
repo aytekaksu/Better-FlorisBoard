@@ -41,6 +41,7 @@ import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeActivationArea
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
 import dev.patrickgold.florisboard.ime.text.key.KeyHintMode
+import dev.patrickgold.florisboard.ime.text.key.KeyHintPlacement
 import dev.patrickgold.florisboard.ime.text.key.UtilityKeyAction
 import dev.patrickgold.florisboard.ime.theme.ThemeMode
 import dev.patrickgold.florisboard.ime.window.ImeWindowMode
@@ -332,6 +333,18 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
                 label = stringRes(R.string.enum__key_hint_mode__smart_priority),
                 description = stringRes(R.string.enum__key_hint_mode__smart_priority__description),
                 showDescriptionOnlyIfSelected = true,
+            )
+        }
+    },
+    KeyHintPlacement::class to DEFAULT to {
+        listPrefEntries {
+            entry(
+                key = KeyHintPlacement.CORNER,
+                label = stringRes(R.string.enum__key_hint_placement__corner),
+            )
+            entry(
+                key = KeyHintPlacement.INSET,
+                label = stringRes(R.string.enum__key_hint_placement__inset),
             )
         }
     },
