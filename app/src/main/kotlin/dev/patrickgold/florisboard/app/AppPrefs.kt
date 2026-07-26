@@ -55,6 +55,7 @@ import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import dev.patrickgold.florisboard.ime.theme.ThemeMode
 import dev.patrickgold.florisboard.ime.theme.extCoreTheme
 import dev.patrickgold.florisboard.ime.window.ImeWindowConfig
+import dev.patrickgold.florisboard.ime.window.KeyboardContentScaleMode
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
 import dev.patrickgold.florisboard.lib.util.VersionName
 import dev.patrickgold.jetpref.datastore.annotations.Preferences
@@ -525,6 +526,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         val fontSizeMultiplierLandscape = int(
             key = "keyboard__font_size_multiplier_landscape",
             default = 100,
+        )
+        val contentScaleMode = enum(
+            key = "keyboard__content_scale_mode",
+            default = KeyboardContentScaleMode.FOLLOW_KEYBOARD_HEIGHT,
         )
         val landscapeInputUiMode = enum(
             key = "keyboard__landscape_input_ui_mode",

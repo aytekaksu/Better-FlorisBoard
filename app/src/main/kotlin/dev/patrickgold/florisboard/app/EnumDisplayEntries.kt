@@ -44,6 +44,7 @@ import dev.patrickgold.florisboard.ime.text.key.KeyHintMode
 import dev.patrickgold.florisboard.ime.text.key.UtilityKeyAction
 import dev.patrickgold.florisboard.ime.theme.ThemeMode
 import dev.patrickgold.florisboard.ime.window.ImeWindowMode
+import dev.patrickgold.florisboard.ime.window.KeyboardContentScaleMode
 import dev.patrickgold.jetpref.datastore.ui.ListPreferenceEntry
 import dev.patrickgold.jetpref.datastore.ui.listPrefEntries
 import dev.patrickgold.jetpref.material.ui.ColorRepresentation
@@ -421,6 +422,18 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
             entry(
                 key = ImeWindowMode.FLOATING,
                 label = stringRes(R.string.enum__ime_window_mode__floating),
+            )
+        }
+    },
+    KeyboardContentScaleMode::class to DEFAULT to {
+        listPrefEntries {
+            entry(
+                key = KeyboardContentScaleMode.FOLLOW_KEYBOARD_HEIGHT,
+                label = stringRes(R.string.enum__keyboard_content_scale_mode__follow_keyboard_height),
+            )
+            entry(
+                key = KeyboardContentScaleMode.FIXED,
+                label = stringRes(R.string.enum__keyboard_content_scale_mode__fixed),
             )
         }
     },

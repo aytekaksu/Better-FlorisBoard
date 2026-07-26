@@ -450,6 +450,7 @@
     <string name="pref__keyboard__space_bar_mode__label" comment="Preference title">Spacebar label</string>
     <string name="pref__keyboard__capitalization_behavior__label" comment="Preference title">Capitalization behavior</string>
     <string name="pref__keyboard__font_size_multiplier__label" comment="Preference title">Font size multiplier</string>
+    <string name="pref__keyboard__content_scale_mode__label" comment="Preference title">Keyboard content scaling</string>
     <string name="pref__keyboard__group_layout__label" comment="Preference group title">Layout</string>
     <string name="pref__keyboard__landscape_input_ui_mode__label" comment="Preference value">Landscape fullscreen input</string>
     <string name="pref__keyboard__key_spacing__label" comment="Preference title">Key spacing factor</string>
@@ -1052,6 +1053,9 @@
     <string name="enum__keyboard_mode__numeric_advanced" comment="Enum value label">Numeric advanced</string>
     <string name="enum__keyboard_mode__phone" comment="Enum value label">Phone</string>
     <string name="enum__keyboard_mode__phone2" comment="Enum value label">Phone 2</string>
+
+    <string name="enum__keyboard_content_scale_mode__follow_keyboard_height" comment="Enum value label">Scale labels and icons with keyboard height</string>
+    <string name="enum__keyboard_content_scale_mode__fixed" comment="Enum value label">Keep label and icon sizes fixed</string>
 
     <string name="enum__landscape_input_ui_mode__never_show" comment="Enum value label">Never show</string>
     <string name="enum__landscape_input_ui_mode__always_show" comment="Enum value label">Always show</string>
