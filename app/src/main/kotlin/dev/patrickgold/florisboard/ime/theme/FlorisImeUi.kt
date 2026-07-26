@@ -56,6 +56,10 @@ enum class FlorisImeUi(val elementName: String, val resId: Int?) {
         elementName = "key",
         resId = R.string.snygg__rule_element__key,
     ),
+    KeyIcon(
+        elementName = "key-icon",
+        resId = R.string.snygg__rule_element__key_icon,
+    ),
     KeyHint(
         elementName = "key-hint",
         resId = R.string.snygg__rule_element__key_hint,
@@ -270,6 +274,10 @@ enum class FlorisImeUi(val elementName: String, val resId: Int?) {
         elementName = "smartbar-shared-actions-toggle",
         resId = R.string.snygg__rule_element__smartbar_shared_actions_toggle,
     ),
+    SmartbarSharedActionsToggleIcon(
+        elementName = "smartbar-shared-actions-toggle-icon",
+        resId = R.string.snygg__rule_element__smartbar_shared_actions_toggle_icon,
+    ),
     SmartbarExtendedActionsRow(
         elementName = "smartbar-extended-actions-row",
         resId = R.string.snygg__rule_element__smartbar_extended_actions_row,
@@ -278,9 +286,21 @@ enum class FlorisImeUi(val elementName: String, val resId: Int?) {
         elementName = "smartbar-extended-actions-toggle",
         resId = R.string.snygg__rule_element__smartbar_extended_actions_toggle,
     ),
+    SmartbarExtendedActionsToggleIcon(
+        elementName = "smartbar-extended-actions-toggle-icon",
+        resId = R.string.snygg__rule_element__smartbar_extended_actions_toggle_icon,
+    ),
     SmartbarActionKey(
         elementName = "smartbar-action-key",
         resId = R.string.snygg__rule_element__smartbar_action_key,
+    ),
+    SmartbarActionKeyIcon(
+        elementName = "smartbar-action-key-icon",
+        resId = R.string.snygg__rule_element__smartbar_action_key_icon,
+    ),
+    SmartbarActionKeyText(
+        elementName = "smartbar-action-key-text",
+        resId = R.string.snygg__rule_element__smartbar_action_key_text,
     ),
 
     SmartbarActionTile(
@@ -327,6 +347,14 @@ enum class FlorisImeUi(val elementName: String, val resId: Int?) {
     SmartbarActionsEditorTile(
         elementName = "smartbar-actions-editor-tile",
         resId = R.string.snygg__rule_element__smartbar_actions_editor_tile,
+    ),
+    SmartbarActionsEditorTileIcon(
+        elementName = "smartbar-actions-editor-tile-icon",
+        resId = R.string.snygg__rule_element__smartbar_actions_editor_tile_icon,
+    ),
+    SmartbarActionsEditorTileText(
+        elementName = "smartbar-actions-editor-tile-text",
+        resId = R.string.snygg__rule_element__smartbar_actions_editor_tile_text,
     ),
 
     SmartbarCandidatesRow(

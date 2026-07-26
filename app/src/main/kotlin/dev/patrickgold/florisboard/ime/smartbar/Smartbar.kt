@@ -201,6 +201,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
                 arrowIcon
             }
             SnyggIcon(
+                elementName = FlorisImeUi.SmartbarSharedActionsToggleIcon.elementName,
                 modifier = Modifier.rotate(if (incognitoDisplayMode.value == IncognitoDisplayMode.DISPLAY_BEHIND_KEYBOARD) rotation else 0f),
                 imageVector = icon,
             )
@@ -260,7 +261,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
             val rotation by transition.animateFloat(label = "rotation") { if (it) 180f else 0f }
             // Expanded icon
             SnyggIcon(
-                FlorisImeUi.SmartbarExtendedActionsToggle.elementName,
+                FlorisImeUi.SmartbarExtendedActionsToggleIcon.elementName,
                 modifier = Modifier
                     .alpha(alpha)
                     .rotate(rotation),
@@ -268,7 +269,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
             )
             // Not expanded icon
             SnyggIcon(
-                FlorisImeUi.SmartbarExtendedActionsToggle.elementName,
+                FlorisImeUi.SmartbarExtendedActionsToggleIcon.elementName,
                 modifier = Modifier
                     .alpha(1f - alpha)
                     .rotate(rotation - 180f),

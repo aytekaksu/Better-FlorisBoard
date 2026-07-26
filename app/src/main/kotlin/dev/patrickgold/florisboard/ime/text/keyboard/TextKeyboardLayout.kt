@@ -384,6 +384,9 @@ private fun TextKeyButton(
         }
         key.foregroundImageVector?.let { imageVector ->
             SnyggIcon(
+                elementName = FlorisImeUi.KeyIcon.elementName,
+                attributes = attributes,
+                selector = selector,
                 modifier = Modifier.align(Alignment.Center),
                 imageVector = imageVector,
                 contentDescription = null,
