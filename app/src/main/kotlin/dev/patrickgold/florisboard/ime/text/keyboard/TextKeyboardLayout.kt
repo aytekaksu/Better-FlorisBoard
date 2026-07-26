@@ -899,7 +899,7 @@ private class TextKeyboardLayoutController(
                                     pointer.hasTriggeredMassSelection = true
                                     editorInstance.massSelection.begin()
                                 }
-                                keyboardManager.handleArrow(KeyCode.ARROW_LEFT, count, stopAtTextBoundary = true)
+                                moveCursorFromSpacebar(pointer, -count)
                             }
                         }
                         true
@@ -918,7 +918,7 @@ private class TextKeyboardLayoutController(
                                     pointer.hasTriggeredMassSelection = true
                                     editorInstance.massSelection.begin()
                                 }
-                                keyboardManager.handleArrow(KeyCode.ARROW_RIGHT, count, stopAtTextBoundary = true)
+                                moveCursorFromSpacebar(pointer, count)
                             }
                         }
                         true
@@ -971,6 +971,19 @@ private class TextKeyboardLayoutController(
                 }
             }
         }
+    }
+
+    private fun moveCursorFromSpacebar(pointer: TouchPointer, steps: Int) {
+        val select = keyboardManager.activeState.isManualSelectionMode ||
+            inputEventDispatcher.isPressed(KeyCode.SHIFT)
+        if (select && pointer.isMovingSelectionStart == null) {
+            pointer.isMovingSelectionStart = steps < 0
+        }
+        editorInstance.moveCursorBy(
+            steps = steps,
+            select = select,
+            moveSelectionStart = pointer.isMovingSelectionStart ?: false,
+        )
     }
 
     override fun onGlideAddPoint(point: GlideTypingGesture.Detector.Position) {
@@ -1043,6 +1056,7 @@ private class TextKeyboardLayoutController(
         var hasTriggeredGestureMove: Boolean = false
         var hasTriggeredLongPress: Boolean = false
         var hasTriggeredMassSelection: Boolean = false
+        var isMovingSelectionStart: Boolean? = null
         var pressedKeyInfo: InputEventDispatcher.PressedKeyInfo? = null
 
         override fun reset() {
@@ -1052,6 +1066,7 @@ private class TextKeyboardLayoutController(
             hasTriggeredGestureMove = false
             hasTriggeredLongPress = false
             hasTriggeredMassSelection = false
+            isMovingSelectionStart = null
             pressedKeyInfo = null
         }
 
