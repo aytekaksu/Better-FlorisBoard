@@ -306,13 +306,14 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         val text = candidate.text.toString()
         if (text.isEmpty() || activeInfo.isRawInputEditor) return false
         val content = activeContent
-        val replacementRange = candidate.replacementRange
-        if (replacementRange != null) {
+        val replacement = candidate.replacement
+        if (replacement != null) {
+            val replacementRange = replacement.range
             val localRange = replacementRange.translatedBy(-content.offset.coerceAtLeast(0))
             val isCurrentReplacement = localRange.isValid &&
                 localRange.end <= content.text.length &&
-                content.text.substring(localRange.start, localRange.end) == candidate.replacementOriginalText &&
-                candidate.replacementExpectedSelection?.let { it == content.selection } != false
+                content.text.substring(localRange.start, localRange.end) == replacement.originalText &&
+                content.selection == replacement.expectedSelection
             if (!isCurrentReplacement || !setSelection(replacementRange)) {
                 return false
             }

@@ -37,13 +37,11 @@ enum class SuggestionSeparatorBehavior {
     OMIT,
 }
 
-enum class SuggestionCandidateKind {
-    TYPED,
-    CORRECTION,
-    COMPLETION,
-    NEXT_WORD,
-    OTHER,
-}
+data class SuggestionReplacement(
+    val range: EditorRange,
+    val originalText: String,
+    val expectedSelection: EditorRange,
+)
 
 /**
  * Interface for a candidate item, which is returned by a suggestion provider and used by the UI logic to render
@@ -113,25 +111,8 @@ interface SuggestionCandidate {
      */
     val sourceProvider: SuggestionProvider?
 
-    /**
-     * Optional absolute editor range which should be replaced when this candidate is committed.
-     * Null retains the default behavior of replacing the active composing region.
-     */
-    val replacementRange: EditorRange?
-        get() = null
-
-    /**
-     * Text observed in [replacementRange] when this candidate was produced. The host validates it
-     * before replacing anything so a stale plugin response cannot edit unrelated text.
-     */
-    val replacementOriginalText: String?
-        get() = null
-
-    /**
-     * Absolute editor selection observed when this candidate was produced. The host validates it
-     * before applying [replacementRange], preventing a delayed response from moving the cursor.
-     */
-    val replacementExpectedSelection: EditorRange?
+    /** Optional validated replacement; null retains the active composing-region behavior. */
+    val replacement: SuggestionReplacement?
         get() = null
 
     /**
@@ -139,13 +120,6 @@ interface SuggestionCandidate {
      */
     val separatorBehavior: SuggestionSeparatorBehavior
         get() = SuggestionSeparatorBehavior.DEFAULT
-
-    /**
-     * Semantic role supplied by the suggestion provider. This is independent of candidate ranking
-     * and lets candidate UIs distinguish typed words, corrections, completions, and predictions.
-     */
-    val kind: SuggestionCandidateKind
-        get() = SuggestionCandidateKind.OTHER
 }
 
 /**

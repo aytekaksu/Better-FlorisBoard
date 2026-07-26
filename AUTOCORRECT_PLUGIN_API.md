@@ -76,8 +76,8 @@ the provider package.
   request FlorisBoard's normal composing-region behavior.
 - Candidate IDs are opaque to FlorisBoard and should remain valid until the typing session ends.
   They are returned to the provider for accepted, reverted, and removal events.
-- Candidate kinds are engine-neutral presentation hints. They let the keyboard distinguish typed
-  words, corrections, completions, and next-word predictions without knowing how they were ranked.
+- Candidate kinds let providers classify typed words, corrections, completions, and predictions
+  without prescribing host-side ranking.
 - `AutocorrectSeparatorBehavior` lets the engine insert, omit, or defer separator behavior to the
   active language.
 - Requests and replies are asynchronous. Providers must expect newer requests to cancel older
