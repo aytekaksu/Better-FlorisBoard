@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.RadioButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,9 +29,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import dev.patrickgold.florisboard.R
+import dev.patrickgold.florisboard.app.LocalNavController
+import dev.patrickgold.florisboard.app.Routes
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
+import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginUiHost
 import dev.patrickgold.jetpref.datastore.model.collectAsState
 import dev.patrickgold.jetpref.datastore.ui.Preference
 import dev.patrickgold.jetpref.datastore.ui.PreferenceGroup
@@ -40,12 +44,14 @@ import org.florisboard.lib.compose.FlorisInfoCard
 import org.florisboard.lib.compose.FlorisWarningCard
 import org.florisboard.lib.compose.rippleClickable
 import org.florisboard.lib.compose.stringRes
+import org.florisboard.autocorrect.api.AutocorrectPluginUiSurface
 
 @Composable
 fun AutocorrectPluginScreen() = FlorisScreen {
     title = stringRes(R.string.settings__autocorrect_plugins__title)
 
     val context = LocalContext.current
+    val navController = LocalNavController.current
     val prefs by FlorisPreferenceStore
     val manager by context.autocorrectPluginManager()
     val providers by manager.providers.collectAsState()
@@ -111,19 +117,54 @@ fun AutocorrectPluginScreen() = FlorisScreen {
             )
         }
 
-        selectedProvider?.settingsActivity?.let { settingsActivity ->
-            PreferenceGroup(title = selectedProvider.label) {
+        selectedProvider?.let { provider ->
+            PreferenceGroup(title = provider.label) {
                 Preference(
                     icon = Icons.Default.Settings,
-                    title = stringRes(R.string.settings__autocorrect_plugins__configure),
-                    summary = selectedProvider.label,
+                    title = stringRes(R.string.settings__autocorrect_plugins__configure_embedded),
+                    summary = provider.label,
                     onClick = {
-                        runCatching {
-                            context.startActivity(Intent().setComponent(settingsActivity))
-                        }
+                        navController.navigate(Routes.Settings.AutocorrectPluginUi)
                     },
                 )
+                provider.settingsActivity?.let { settingsActivity ->
+                    Preference(
+                        icon = Icons.Default.Settings,
+                        title = stringRes(R.string.settings__autocorrect_plugins__configure),
+                        summary = provider.label,
+                        onClick = {
+                            runCatching {
+                                context.startActivity(Intent().setComponent(settingsActivity))
+                            }
+                        },
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+fun AutocorrectPluginUiScreen() = FlorisScreen {
+    val context = LocalContext.current
+    val manager by context.autocorrectPluginManager()
+    val ui by manager.pluginUi.collectAsState()
+    val loading by manager.pluginUiLoading.collectAsState()
+    title = manager.selectedProvider()?.label
+        ?: stringRes(R.string.settings__autocorrect_plugins__title)
+    scrollable = false
+    iconSpaceReserved = false
+
+    DisposableEffect(manager) {
+        manager.acquirePluginUi()
+        onDispose { manager.releasePluginUi() }
+    }
+
+    content {
+        AutocorrectPluginUiHost(
+            surface = AutocorrectPluginUiSurface.APP,
+            ui = ui,
+            loading = loading,
+        )
     }
 }

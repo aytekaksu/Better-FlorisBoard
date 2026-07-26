@@ -75,6 +75,7 @@ import dev.patrickgold.florisboard.app.settings.theme.ThemeManagerScreen
 import dev.patrickgold.florisboard.app.settings.theme.ThemeManagerScreenAction
 import dev.patrickgold.florisboard.app.settings.theme.ThemeScreen
 import dev.patrickgold.florisboard.app.settings.typing.AutocorrectPluginScreen
+import dev.patrickgold.florisboard.app.settings.typing.AutocorrectPluginUiScreen
 import dev.patrickgold.florisboard.app.settings.typing.TypingScreen
 import dev.patrickgold.florisboard.app.setup.SetupScreen
 import kotlinx.serialization.SerialName
@@ -156,6 +157,10 @@ object Routes {
         @Serializable
         @Deeplink("settings/typing/autocorrect-plugins")
         object AutocorrectPlugins
+
+        @Serializable
+        @Deeplink("settings/typing/autocorrect-plugin-ui")
+        object AutocorrectPluginUi
 
         @Serializable
         @Deeplink("settings/dictionary")
@@ -307,6 +312,7 @@ object Routes {
 
             composableWithDeepLink(Settings.Typing::class) { TypingScreen() }
             composableWithDeepLink(Settings.AutocorrectPlugins::class) { AutocorrectPluginScreen() }
+            composableWithDeepLink(Settings.AutocorrectPluginUi::class) { AutocorrectPluginUiScreen() }
 
             composableWithDeepLink(Settings.Dictionary::class) { DictionaryScreen() }
             composableWithDeepLink(Settings.UserDictionary::class) { navBackStack ->

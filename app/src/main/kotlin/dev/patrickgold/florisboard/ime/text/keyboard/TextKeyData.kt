@@ -149,6 +149,7 @@ data class TextKeyData(
                 TOGGLE_ACTIONS_EDITOR,
                 TOGGLE_INCOGNITO_MODE,
                 TOGGLE_AUTOCORRECT,
+                AUTOCORRECT_PLUGIN_UI,
             )
         }
 
@@ -530,6 +531,12 @@ data class TextKeyData(
             type = KeyType.FUNCTION,
             code = KeyCode.TOGGLE_AUTOCORRECT,
             label = "toggle_autocorrect",
+        )
+        /** Opens the selected autocorrect provider's keyboard UI. */
+        val AUTOCORRECT_PLUGIN_UI = TextKeyData(
+            type = KeyType.SYSTEM_GUI,
+            code = KeyCode.AUTOCORRECT_PLUGIN_UI,
+            label = "autocorrect_plugin_ui",
         )
     }
 }

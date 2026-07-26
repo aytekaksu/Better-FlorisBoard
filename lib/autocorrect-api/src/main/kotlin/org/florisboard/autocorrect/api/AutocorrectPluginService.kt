@@ -29,7 +29,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Base service for an external autocorrect provider.
@@ -43,6 +46,8 @@ abstract class AutocorrectPluginService : Service() {
     private var sessionJob: Job? = null
     private var suggestionJob: Job? = null
     private var activeSessionId: Long? = null
+    @Volatile private var uiClient: Messenger? = null
+    private val uiMutationGuard = Mutex()
     private val messenger = Messenger(IncomingHandler())
 
     final override fun onBind(intent: Intent?): IBinder? {
@@ -52,6 +57,7 @@ abstract class AutocorrectPluginService : Service() {
     }
 
     final override fun onDestroy() {
+        uiClient = null
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -66,7 +72,32 @@ abstract class AutocorrectPluginService : Service() {
 
     protected open suspend fun onRemoveSuggestion(sessionId: Long, candidateId: String): Boolean = false
 
+    protected open suspend fun onTextEvent(event: AutocorrectTextEvent) = Unit
+
     protected open suspend fun onFinishSession(sessionId: Long) = Unit
+
+    /** Returns declarative pages which FlorisBoard can render in its app and keyboard UIs. */
+    protected open suspend fun onGetPluginUi(): AutocorrectPluginUi? = null
+
+    /** Persists one host-rendered setting. Return false if the item or value is invalid. */
+    protected open suspend fun onSetPluginUiValue(itemId: String, value: String): Boolean = false
+
+    /** Runs one explicit user action from a host-rendered provider page. */
+    protected open suspend fun onInvokePluginUiAction(itemId: String): Boolean = false
+
+    /** Called when the last host-rendered provider page closes. */
+    protected open suspend fun onPluginUiClosed() = Unit
+
+    /**
+     * Pushes updated status or progress while a provider page is visible. This does not start or
+     * keep the service alive; it is delivered only to an already-bound host.
+     */
+    protected fun publishPluginUi(ui: AutocorrectPluginUi) {
+        uiClient.sendSafely(
+            AutocorrectPluginContract.MSG_PLUGIN_UI_RESULT,
+            pluginUiResultBundle(0L, true, ui),
+        )
+    }
 
     private inner class IncomingHandler : Handler(Looper.getMainLooper()) {
         override fun handleMessage(message: Message) {
@@ -74,9 +105,10 @@ abstract class AutocorrectPluginService : Service() {
                 AutocorrectPluginContract.MSG_START_SESSION -> {
                     val session = AutocorrectSession.fromBundle(message.data)
                     suggestionJob?.cancel()
-                    sessionJob?.cancel()
+                    val previousSessionJob = sessionJob
                     activeSessionId = session.sessionId
                     sessionJob = serviceScope.launch {
+                        previousSessionJob?.join()
                         onStartSession(session)
                     }
                 }
@@ -99,8 +131,12 @@ abstract class AutocorrectPluginService : Service() {
                     if (sessionId != activeSessionId) return
                     val candidateId = message.data.getString(Keys.ID).orEmpty()
                         .take(AutocorrectPluginContract.MAX_CANDIDATE_ID_CHARS)
+                    val sessionReady = sessionJob
                     serviceScope.launch {
-                        onSuggestionAccepted(sessionId, candidateId)
+                        sessionReady?.join()
+                        if (sessionId == activeSessionId) {
+                            onSuggestionAccepted(sessionId, candidateId)
+                        }
                     }
                 }
                 AutocorrectPluginContract.MSG_REVERTED -> {
@@ -108,8 +144,12 @@ abstract class AutocorrectPluginService : Service() {
                     if (sessionId != activeSessionId) return
                     val candidateId = message.data.getString(Keys.ID).orEmpty()
                         .take(AutocorrectPluginContract.MAX_CANDIDATE_ID_CHARS)
+                    val sessionReady = sessionJob
                     serviceScope.launch {
-                        onSuggestionReverted(sessionId, candidateId)
+                        sessionReady?.join()
+                        if (sessionId == activeSessionId) {
+                            onSuggestionReverted(sessionId, candidateId)
+                        }
                     }
                 }
                 AutocorrectPluginContract.MSG_REMOVE -> {
@@ -119,8 +159,11 @@ abstract class AutocorrectPluginService : Service() {
                     val candidateId = message.data.getString(Keys.ID).orEmpty()
                         .take(AutocorrectPluginContract.MAX_CANDIDATE_ID_CHARS)
                     val replyTo = message.replyTo
+                    val sessionReady = sessionJob
                     serviceScope.launch {
-                        val removed = onRemoveSuggestion(sessionId, candidateId)
+                        sessionReady?.join()
+                        val removed = sessionId == activeSessionId &&
+                            onRemoveSuggestion(sessionId, candidateId)
                         replyTo.sendSafely(
                             AutocorrectPluginContract.MSG_REMOVE_RESULT,
                             android.os.Bundle().apply {
@@ -134,16 +177,69 @@ abstract class AutocorrectPluginService : Service() {
                     val sessionId = message.data.getLong(Keys.SESSION_ID)
                     if (sessionId != activeSessionId) return
                     suggestionJob?.cancel()
-                    sessionJob?.cancel()
+                    val previousSessionJob = sessionJob
                     activeSessionId = null
-                    serviceScope.launch {
+                    sessionJob = serviceScope.launch {
+                        previousSessionJob?.cancelAndJoin()
                         onFinishSession(sessionId)
                     }
                 }
                 AutocorrectPluginContract.MSG_CANCEL -> {
                     suggestionJob?.cancel()
                 }
+                AutocorrectPluginContract.MSG_TEXT_EVENT -> {
+                    val event = AutocorrectTextEvent.fromBundle(message.data) ?: return
+                    if (event.sessionId != activeSessionId) return
+                    val sessionReady = sessionJob
+                    serviceScope.launch {
+                        sessionReady?.join()
+                        if (event.sessionId == activeSessionId) {
+                            onTextEvent(event)
+                        }
+                    }
+                }
+                AutocorrectPluginContract.MSG_GET_PLUGIN_UI -> {
+                    replyWithPluginUi(message, successful = true)
+                }
+                AutocorrectPluginContract.MSG_SET_PLUGIN_UI_VALUE -> {
+                    val itemId = message.data.pluginUiItemId()
+                    val value = message.data.pluginUiValue() ?: return
+                    replyWithPluginUi(message) {
+                        onSetPluginUiValue(itemId, value)
+                    }
+                }
+                AutocorrectPluginContract.MSG_INVOKE_PLUGIN_UI_ACTION -> {
+                    val itemId = message.data.pluginUiItemId()
+                    replyWithPluginUi(message) {
+                        onInvokePluginUiAction(itemId)
+                    }
+                }
+                AutocorrectPluginContract.MSG_PLUGIN_UI_CLOSED -> {
+                    uiClient = null
+                    serviceScope.launch {
+                        onPluginUiClosed()
+                    }
+                }
                 else -> super.handleMessage(message)
+            }
+        }
+
+        private fun replyWithPluginUi(
+            message: Message,
+            successful: Boolean? = null,
+            operation: suspend () -> Boolean = { true },
+        ) {
+            val requestId = message.data.pluginUiRequestId()
+            val replyTo = message.replyTo ?: return
+            uiClient = replyTo
+            serviceScope.launch {
+                uiMutationGuard.withLock {
+                    val result = successful ?: operation()
+                    replyTo.sendSafely(
+                        AutocorrectPluginContract.MSG_PLUGIN_UI_RESULT,
+                        pluginUiResultBundle(requestId, result, onGetPluginUi()),
+                    )
+                }
             }
         }
     }

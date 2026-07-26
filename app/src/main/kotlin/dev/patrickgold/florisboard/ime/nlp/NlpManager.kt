@@ -230,13 +230,25 @@ class NlpManager(context: Context) {
                     emptyList()
                 }
                 else -> {
-                    getSuggestionProvider(subtype).suggest(
+                    val provider = getSuggestionProvider(subtype)
+                    val externalSuggestions = provider.suggest(
                         subtype = subtype,
                         content = content,
                         maxCandidateCount = 8,
                         allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
                         isPrivateSession = keyboardManager.activeState.isIncognitoMode,
                     )
+                    if (provider === autocorrectPluginManager && externalSuggestions.isEmpty()) {
+                        getBuiltInSuggestionProvider(subtype).suggest(
+                            subtype = subtype,
+                            content = content,
+                            maxCandidateCount = 8,
+                            allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
+                            isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                        )
+                    } else {
+                        externalSuggestions
+                    }
                 }
             }
             internalSuggestionsGuard.withLock {

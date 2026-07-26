@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
 import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
+import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.glideTypingManager
 import dev.patrickgold.florisboard.ime.editor.OperationScope
@@ -74,6 +75,7 @@ import dev.patrickgold.florisboard.ime.editor.OperationUnit
 import dev.patrickgold.florisboard.ime.input.InputEventDispatcher
 import dev.patrickgold.florisboard.ime.keyboard.ComputingEvaluator
 import dev.patrickgold.florisboard.ime.keyboard.FlorisImeSizing
+import dev.patrickgold.florisboard.ime.keyboard.KeyData
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.SpaceBarMode
 import dev.patrickgold.florisboard.ime.popup.ExceptionsForKeyCodes
@@ -444,6 +446,7 @@ private class TextKeyboardLayoutController(
     context: Context,
 ) : SwipeGesture.Listener, GlideTypingGesture.Listener {
     private val prefs by FlorisPreferenceStore
+    private val autocorrectPluginManager by context.autocorrectPluginManager()
     private val editorInstance by context.editorInstance()
     private val keyboardManager by context.keyboardManager()
 
@@ -714,12 +717,15 @@ private class TextKeyboardLayoutController(
                     if (retData == activeKey.computedData) {
                         if (activeKey.computedData != activeKey.computedDataOnDown) {
                             inputEventDispatcher.sendCancel(activeKey.computedDataOnDown)
+                            recordInputTouch(activeKey.computedData, event, pointer)
                             inputEventDispatcher.sendDownUp(activeKey.computedData)
                         } else {
+                            recordInputTouch(activeKey.computedDataOnDown, event, pointer)
                             inputEventDispatcher.sendUp(activeKey.computedDataOnDown)
                         }
                     } else {
                         inputEventDispatcher.sendCancel(activeKey.computedDataOnDown)
+                        recordInputTouch(retData, event, pointer)
                         inputEventDispatcher.sendDownUp(retData)
                     }
                 } else {
@@ -732,8 +738,10 @@ private class TextKeyboardLayoutController(
                 } else {
                     if (activeKey.computedData != activeKey.computedDataOnDown) {
                         inputEventDispatcher.sendCancel(activeKey.computedDataOnDown)
+                        recordInputTouch(activeKey.computedData, event, pointer)
                         inputEventDispatcher.sendDownUp(activeKey.computedData)
                     } else {
+                        recordInputTouch(activeKey.computedDataOnDown, event, pointer)
                         inputEventDispatcher.sendUp(activeKey.computedDataOnDown)
                     }
                 }
@@ -741,6 +749,18 @@ private class TextKeyboardLayoutController(
             pointer.activeKey = null
         }
         pointer.hasTriggeredGestureMove = false
+    }
+
+    private fun recordInputTouch(data: KeyData, event: MotionEvent, pointer: TouchPointer) {
+        autocorrectPluginManager.recordInputTouch(
+            data = data,
+            keyboard = keyboard,
+            x = event.getX(pointer.index),
+            y = event.getY(pointer.index),
+            width = size.width,
+            height = size.height,
+            isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+        )
     }
 
     private fun onTouchCancelInternal(event: MotionEvent, pointer: TouchPointer) {

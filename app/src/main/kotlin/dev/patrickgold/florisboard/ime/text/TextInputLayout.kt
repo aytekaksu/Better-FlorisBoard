@@ -19,8 +19,11 @@ package dev.patrickgold.florisboard.ime.text
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -29,27 +32,41 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
+import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.ime.smartbar.IncognitoDisplayMode
 import dev.patrickgold.florisboard.ime.smartbar.InlineSuggestionsStyleCache
 import dev.patrickgold.florisboard.ime.smartbar.Smartbar
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionsOverflowPanel
+import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginUiHost
+import dev.patrickgold.florisboard.ime.keyboard.FlorisImeSizing
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboardLayout
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.jetpref.datastore.model.collectAsState
 import org.florisboard.lib.snygg.ui.SnyggIcon
+import org.florisboard.lib.snygg.ui.SnyggBox
+import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
+import org.florisboard.autocorrect.api.AutocorrectPluginUiSurface
 
 @Composable
 fun TextInputLayout(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val autocorrectPluginManager by context.autocorrectPluginManager()
     val keyboardManager by context.keyboardManager()
 
     val prefs by FlorisPreferenceStore
 
     val state by keyboardManager.activeState.collectAsState()
     val evaluator by keyboardManager.activeEvaluator.collectAsState()
+    val pluginUiVisible by autocorrectPluginManager.keyboardUiVisible.collectAsState()
+    val pluginUi by autocorrectPluginManager.pluginUi.collectAsState()
+    val pluginUiLoading by autocorrectPluginManager.pluginUiLoading.collectAsState()
+
+    DisposableEffect(autocorrectPluginManager) {
+        onDispose { autocorrectPluginManager.hideKeyboardPluginUi() }
+    }
 
     InlineSuggestionsStyleCache()
 
@@ -59,7 +76,38 @@ fun TextInputLayout(
             .wrapContentHeight(),
     ) {
         Smartbar()
-        if (state.isActionsOverflowVisible) {
+        if (pluginUiVisible) {
+            val panelStyle = rememberSnyggThemeQuery(
+                FlorisImeUi.SmartbarActionsOverflow.elementName,
+            )
+            val actionStyle = rememberSnyggThemeQuery(
+                FlorisImeUi.SmartbarActionsOverflowCustomizeButton.elementName,
+            )
+            val baseColors = MaterialTheme.colorScheme
+            val panelColors = baseColors.copy(
+                background = panelStyle.background(baseColors.background),
+                onBackground = panelStyle.foreground(baseColors.onBackground),
+                surface = panelStyle.background(baseColors.surface),
+                onSurface = panelStyle.foreground(baseColors.onSurface),
+                primary = actionStyle.background(baseColors.primary),
+                onPrimary = actionStyle.foreground(baseColors.onPrimary),
+            )
+            SnyggBox(
+                elementName = FlorisImeUi.SmartbarActionsOverflow.elementName,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(FlorisImeSizing.keyboardUiHeight()),
+            ) {
+                MaterialTheme(colorScheme = panelColors) {
+                    AutocorrectPluginUiHost(
+                        surface = AutocorrectPluginUiSurface.KEYBOARD,
+                        ui = pluginUi,
+                        loading = pluginUiLoading,
+                        onClose = autocorrectPluginManager::hideKeyboardPluginUi,
+                    )
+                }
+            }
+        } else if (state.isActionsOverflowVisible) {
             QuickActionsOverflowPanel()
         } else {
             Box {

@@ -37,27 +37,42 @@ import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.editor.FlorisEditorInfo
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
+import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidateKind
 import dev.patrickgold.florisboard.ime.nlp.SuggestionProvider
 import dev.patrickgold.florisboard.ime.nlp.SuggestionReplacement
 import dev.patrickgold.florisboard.ime.nlp.SuggestionSeparatorBehavior
 import dev.patrickgold.florisboard.ime.nlp.WordSuggestionCandidate
+import dev.patrickgold.florisboard.ime.keyboard.KeyData
+import dev.patrickgold.florisboard.ime.text.key.KeyType
+import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboard
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.florisboard.autocorrect.api.AutocorrectCandidate
+import org.florisboard.autocorrect.api.AutocorrectCandidateKind
+import org.florisboard.autocorrect.api.AutocorrectInputTrace
+import org.florisboard.autocorrect.api.AutocorrectKeyGeometry
 import org.florisboard.autocorrect.api.AutocorrectPluginContract
+import org.florisboard.autocorrect.api.AutocorrectPluginUi
 import org.florisboard.autocorrect.api.AutocorrectRequest
 import org.florisboard.autocorrect.api.AutocorrectSeparatorBehavior
 import org.florisboard.autocorrect.api.AutocorrectSession
+import org.florisboard.autocorrect.api.AutocorrectTouchPoint
+import org.florisboard.autocorrect.api.AutocorrectTextEvent
+import org.florisboard.autocorrect.api.AutocorrectTextEventKind
 import org.florisboard.autocorrect.api.candidateEventBundle
 import org.florisboard.autocorrect.api.candidatesFromBundle
 import org.florisboard.autocorrect.api.finishSessionBundle
+import org.florisboard.autocorrect.api.pluginUiMutationBundle
+import org.florisboard.autocorrect.api.pluginUiRequestBundle
+import org.florisboard.autocorrect.api.pluginUiResultFromBundle
 import org.florisboard.autocorrect.api.removalRequestBundle
 import org.florisboard.autocorrect.api.removalResultFromBundle
 import java.util.concurrent.ConcurrentHashMap
@@ -83,6 +98,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         const val ProviderId = "org.florisboard.nlp.providers.external-autocorrect"
         private const val CONNECTION_TIMEOUT_MS = 350L
         private const val RESPONSE_TIMEOUT_MS = 500L
+        private const val UI_RESPONSE_TIMEOUT_MS = 1_500L
     }
 
     private val appContext by context.appContext()
@@ -93,18 +109,32 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     private val pendingSuggestions = ConcurrentHashMap<Long, CompletableDeferred<List<AutocorrectCandidate>>>()
     private val pendingRemovals = ConcurrentHashMap<Long, CompletableDeferred<Boolean>>()
     private val _providers = MutableStateFlow<List<AutocorrectPluginDescriptor>>(emptyList())
-    private val replyMessenger = Messenger(ReplyHandler())
+    private val _pluginUi = MutableStateFlow<AutocorrectPluginUi?>(null)
+    private val _pluginUiLoading = MutableStateFlow(false)
+    private val _keyboardUiVisible = MutableStateFlow(false)
+    @Volatile private var replyMessenger = Messenger(ReplyHandler(""))
 
     val providers = _providers.asStateFlow()
+    val pluginUi = _pluginUi.asStateFlow()
+    val pluginUiLoading = _pluginUiLoading.asStateFlow()
+    val keyboardUiVisible = _keyboardUiVisible.asStateFlow()
 
     @Volatile private var remote: Messenger? = null
     @Volatile private var bound = false
     @Volatile private var activeSession: AutocorrectSession? = null
     @Volatile private var connectionReady = CompletableDeferred<Messenger?>()
     @Volatile private var latestSuggestionRequestId = -1L
+    @Volatile private var latestPluginUiRequestId = -1L
     @Volatile private var activeProviderId = ""
+    @Volatile private var boundProviderId = ""
     @Volatile private var providerQueryComplete = false
+    @Volatile private var uiClientCount = 0
     private var serviceConnection: ServiceConnection? = null
+    private var traceKeyboard: TextKeyboard? = null
+    private var traceWidth = 0f
+    private var traceHeight = 0f
+    private var traceKeys = emptyList<AutocorrectKeyGeometry>()
+    private val tracePoints = mutableListOf<AutocorrectTouchPoint>()
 
     override val providerId = ProviderId
 
@@ -112,6 +142,201 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         scope.launch {
             _providers.value = runCatching { discoverProviders() }.getOrDefault(emptyList())
             providerQueryComplete = true
+        }
+    }
+
+    @Synchronized
+    fun acquirePluginUi() {
+        uiClientCount++
+        if (uiClientCount == 1) {
+            _pluginUiLoading.value = true
+            connectPluginUi()
+        }
+    }
+
+    @Synchronized
+    fun releasePluginUi() {
+        uiClientCount = (uiClientCount - 1).coerceAtLeast(0)
+        if (uiClientCount == 0) {
+            send(AutocorrectPluginContract.MSG_PLUGIN_UI_CLOSED, Bundle())
+            _pluginUi.value = null
+            _pluginUiLoading.value = false
+            if (activeSession == null) unbind(clearSession = false)
+        }
+    }
+
+    fun showKeyboardPluginUi() {
+        if (_keyboardUiVisible.compareAndSet(expect = false, update = true)) {
+            acquirePluginUi()
+        }
+    }
+
+    fun hideKeyboardPluginUi() {
+        if (_keyboardUiVisible.compareAndSet(expect = true, update = false)) {
+            releasePluginUi()
+        }
+    }
+
+    fun setPluginUiValue(itemId: String, value: String) {
+        sendPluginUiMessage(
+            AutocorrectPluginContract.MSG_SET_PLUGIN_UI_VALUE,
+            itemId,
+            value,
+        )
+    }
+
+    fun invokePluginUiAction(itemId: String) {
+        sendPluginUiMessage(
+            AutocorrectPluginContract.MSG_INVOKE_PLUGIN_UI_ACTION,
+            itemId,
+        )
+    }
+
+    @Synchronized
+    fun notifyTextEvent(text: String, kind: AutocorrectTextEventKind) {
+        val session = activeSession ?: return
+        if (!session.allowPersonalizedLearning) return
+        val event = AutocorrectTextEvent(session.sessionId, text, kind)
+        if (
+            event.text.isNotBlank() ||
+            kind == AutocorrectTextEventKind.DELETE_BACKWARD ||
+            kind == AutocorrectTextEventKind.DELETE_FORWARD
+        ) {
+            send(AutocorrectPluginContract.MSG_TEXT_EVENT, event.toBundle())
+        }
+    }
+
+    fun selectedProvider() = providers.value.firstOrNull {
+        it.id == prefs.suggestion.autocorrectPluginComponent.get()
+    }
+
+    private fun sendPluginUiMessage(what: Int, itemId: String, value: String? = null) {
+        val requestId = nextId.getAndIncrement()
+        latestPluginUiRequestId = requestId
+        _pluginUiLoading.value = true
+        if (!send(what, pluginUiMutationBundle(requestId, itemId, value))) {
+            _pluginUiLoading.value = false
+        } else {
+            expirePluginUiRequest(requestId)
+        }
+    }
+
+    private fun requestPluginUi(service: Messenger? = remote) {
+        val requestId = nextId.getAndIncrement()
+        latestPluginUiRequestId = requestId
+        _pluginUiLoading.value = true
+        if (!send(
+                AutocorrectPluginContract.MSG_GET_PLUGIN_UI,
+                pluginUiRequestBundle(requestId),
+                service,
+            )
+        ) {
+            _pluginUiLoading.value = false
+        } else {
+            expirePluginUiRequest(requestId)
+        }
+    }
+
+    private fun expirePluginUiRequest(requestId: Long) {
+        scope.launch {
+            delay(UI_RESPONSE_TIMEOUT_MS)
+            if (latestPluginUiRequestId == requestId) {
+                _pluginUiLoading.value = false
+            }
+        }
+    }
+
+    private fun connectPluginUi() {
+        val selectedProviderId = prefs.suggestion.autocorrectPluginComponent.get()
+        if (selectedProviderId.isBlank()) {
+            _pluginUiLoading.value = false
+            return
+        }
+        scope.launch {
+            val discoveredProviders = if (providerQueryComplete) {
+                providers.value
+            } else {
+                runCatching { discoverProviders() }.getOrDefault(emptyList()).also {
+                    _providers.value = it
+                    providerQueryComplete = true
+                }
+            }
+            val descriptor = discoveredProviders.firstOrNull { it.id == selectedProviderId }
+            withContext(Dispatchers.Main.immediate) {
+                synchronized(this@AutocorrectPluginManager) {
+                    if (uiClientCount == 0) return@synchronized
+                    if (descriptor == null) {
+                        _pluginUiLoading.value = false
+                    } else if (remote != null && boundProviderId == descriptor.id) {
+                        requestPluginUi()
+                    } else {
+                        if (activeProviderId.isNotBlank() && activeProviderId != descriptor.id) {
+                            endSession()
+                        }
+                        if (boundProviderId.isNotBlank()) unbind(clearSession = false)
+                        connectionReady = CompletableDeferred()
+                        bind(descriptor)
+                    }
+                }
+            }
+        }
+    }
+
+    @Synchronized
+    fun recordInputTouch(
+        data: KeyData,
+        keyboard: TextKeyboard,
+        x: Float,
+        y: Float,
+        width: Float,
+        height: Float,
+        isPrivateSession: Boolean,
+    ) {
+        if (
+            prefs.suggestion.autocorrectPluginComponent.get().isBlank() ||
+            isPrivateSession ||
+            data.type != KeyType.CHARACTER ||
+            width <= 0f ||
+            height <= 0f
+        ) {
+            return
+        }
+        val text = data.asString(isForDisplay = false).takeIf { it.isNotBlank() } ?: return
+        if (traceKeyboard !== keyboard || traceWidth != width || traceHeight != height) {
+            traceKeyboard = keyboard
+            traceWidth = width
+            traceHeight = height
+            traceKeys = keyboard.keys().asSequence().mapNotNull { key ->
+                val keyData = key.computedData
+                if (keyData.type != KeyType.CHARACTER) return@mapNotNull null
+                AutocorrectKeyGeometry(
+                    text = keyData.asString(isForDisplay = false),
+                    left = key.touchBounds.left / width,
+                    top = key.touchBounds.top / height,
+                    right = key.touchBounds.right / width,
+                    bottom = key.touchBounds.bottom / height,
+                )
+            }.take(AutocorrectPluginContract.MAX_TRACE_KEY_COUNT).toList()
+        }
+        if (tracePoints.size < AutocorrectPluginContract.MAX_TRACE_POINT_COUNT) {
+            tracePoints.add(AutocorrectTouchPoint(text, x / width, y / height))
+        }
+    }
+
+    @Synchronized
+    fun clearInputTrace() {
+        tracePoints.clear()
+    }
+
+    @Synchronized
+    private fun inputTraceFor(content: EditorContent): AutocorrectInputTrace {
+        val points = tracePoints.toList()
+        return if (points.joinToString(separator = "", transform = AutocorrectTouchPoint::text) ==
+            content.currentWordText
+        ) {
+            AutocorrectInputTrace(traceKeys, points)
+        } else {
+            AutocorrectInputTrace.Empty
         }
     }
 
@@ -156,10 +381,13 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             secondaryLanguageTags = secondaryLanguageTags,
             inputType = editorInfo.inputAttributes.raw,
             capsMode = editorInfo.initialCapsMode.toInt(),
+            allowPersonalizedLearning = !editorInfo.imeOptions.flagNoPersonalizedLearning,
         )
         activeSession = session
         activeProviderId = selectedProviderId
-        connectionReady = CompletableDeferred()
+        connectionReady = CompletableDeferred<Messenger?>().also { ready ->
+            remote?.takeIf { boundProviderId == selectedProviderId }?.let(ready::complete)
+        }
         scope.launch {
             val discoveredProviders = if (providerQueryComplete) {
                 providers.value
@@ -178,7 +406,14 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             }
             withContext(Dispatchers.Main.immediate) {
                 if (activeSession?.sessionId == session.sessionId) {
-                    bind(descriptor)
+                    if (remote != null && boundProviderId == descriptor.id) {
+                        send(
+                            AutocorrectPluginContract.MSG_START_SESSION,
+                            session.toBundle(),
+                        )
+                    } else {
+                        bind(descriptor)
+                    }
                 }
             }
         }
@@ -187,6 +422,15 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
 
     @Synchronized
     fun finishSession() {
+        val hadSession = endSession()
+        if (uiClientCount == 0) {
+            unbind(clearSession = false)
+        } else if (hadSession && remote != null) {
+            requestPluginUi()
+        }
+    }
+
+    private fun endSession(): Boolean {
         val session = activeSession
         if (session != null) {
             send(
@@ -197,8 +441,9 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         activeSession = null
         activeProviderId = ""
         latestSuggestionRequestId = -1L
+        clearInputTrace()
         cancelPending()
-        unbind()
+        return session != null
     }
 
     override suspend fun suggest(
@@ -238,6 +483,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                 currentWordEnd = content.localCurrentWord.end,
                 maxCandidateCount = maxCandidateCount,
                 allowPossiblyOffensive = allowPossiblyOffensive,
+                inputTrace = inputTraceFor(content),
             )
             val deferred = CompletableDeferred<List<AutocorrectCandidate>>()
             pendingSuggestions[requestId] = deferred
@@ -320,6 +566,8 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     override suspend fun getFrequencyForWord(subtype: Subtype, word: String): Double = 0.0
 
     override suspend fun destroy() {
+        _keyboardUiVisible.value = false
+        uiClientCount = 0
         finishSession()
     }
 
@@ -353,21 +601,29 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         val service = Messenger(binder)
         remote = service
         connectionReady.complete(service)
-        activeSession?.let { session ->
+        activeSession?.takeIf { activeProviderId == boundProviderId }?.let { session ->
             send(AutocorrectPluginContract.MSG_START_SESSION, session.toBundle(), service)
-        } ?: unbind()
+        }
+        if (uiClientCount > 0) {
+            requestPluginUi(service)
+        } else if (activeSession == null) {
+            unbind(clearSession = false)
+        }
     }
 
     @Synchronized
     private fun detach(connection: ServiceConnection) {
-        if (serviceConnection === connection) unbind(clearSession = false)
+        if (serviceConnection === connection) unbind(clearSession = true)
     }
 
     @Synchronized
     private fun bind(descriptor: AutocorrectPluginDescriptor) {
-        if (activeSession == null) return
+        if (activeSession == null && uiClientCount == 0) return
+        if (boundProviderId == descriptor.id && serviceConnection != null) return
         val connection = createServiceConnection()
         serviceConnection = connection
+        boundProviderId = descriptor.id
+        replyMessenger = Messenger(ReplyHandler(descriptor.id))
         val intent = Intent(AutocorrectPluginContract.ACTION_BIND_PROVIDER)
             .setComponent(descriptor.componentName)
         bound = runCatching {
@@ -378,7 +634,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             )
         }.getOrDefault(false)
         if (!bound) {
-            unbind(clearSession = false)
+            unbind(clearSession = activeSession != null)
         }
     }
 
@@ -398,7 +654,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
 
     @Synchronized
     private fun detach(service: Messenger) {
-        if (remote === service) unbind(clearSession = false)
+        if (remote === service) unbind(clearSession = true)
     }
 
     @Synchronized
@@ -414,10 +670,13 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
 
     private fun clearConnection(clearSession: Boolean) {
         remote = null
+        boundProviderId = ""
         if (clearSession) {
             activeSession = null
             activeProviderId = ""
+            if (uiClientCount > 0) _pluginUi.value = null
         }
+        if (uiClientCount > 0) _pluginUiLoading.value = false
         connectionReady.complete(null)
         cancelPending()
     }
@@ -453,21 +712,28 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             val component = ComponentName(serviceInfo.packageName, serviceInfo.name)
             val settingsName = serviceInfo.metaData
                 ?.getString(AutocorrectPluginContract.META_SETTINGS_ACTIVITY)
+            val settingsActivity = settingsName?.let { name ->
+                ComponentName(
+                    serviceInfo.packageName,
+                    if (name.startsWith(".")) serviceInfo.packageName + name else name,
+                )
+            }?.takeIf { activity ->
+                runCatching { packageManager.getActivityInfo(activity, 0).exported }
+                    .getOrDefault(false)
+            }
             AutocorrectPluginDescriptor(
                 componentName = component,
                 label = resolveInfo.loadLabel(packageManager).toString(),
-                settingsActivity = settingsName?.let { name ->
-                    ComponentName(
-                        serviceInfo.packageName,
-                        if (name.startsWith(".")) serviceInfo.packageName + name else name,
-                    )
-                },
+                settingsActivity = settingsActivity,
             )
         }.sortedBy { it.label.lowercase() }
     }
 
-    private inner class ReplyHandler : Handler(Looper.getMainLooper()) {
+    private inner class ReplyHandler(
+        private val providerId: String,
+    ) : Handler(Looper.getMainLooper()) {
         override fun handleMessage(message: Message) {
+            if (providerId != boundProviderId) return
             when (message.what) {
                 AutocorrectPluginContract.MSG_SUGGESTIONS -> {
                     val (requestId, candidates) = candidatesFromBundle(message.data)
@@ -481,6 +747,16 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                 AutocorrectPluginContract.MSG_REMOVE_RESULT -> {
                     val (requestId, removed) = removalResultFromBundle(message.data)
                     pendingRemovals.remove(requestId)?.complete(removed)
+                }
+                AutocorrectPluginContract.MSG_PLUGIN_UI_RESULT -> {
+                    val result = pluginUiResultFromBundle(message.data)
+                    if (
+                        uiClientCount > 0 &&
+                        (result.requestId == 0L || result.requestId >= latestPluginUiRequestId)
+                    ) {
+                        if (result.successful || result.ui != null) _pluginUi.value = result.ui
+                        if (result.requestId != 0L) _pluginUiLoading.value = false
+                    }
                 }
                 else -> super.handleMessage(message)
             }
@@ -504,6 +780,12 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                 isEligibleForAutoCommit = autoCommit,
                 isEligibleForUserRemoval = removable,
                 sourceProvider = this@AutocorrectPluginManager,
+                kind = when (kind) {
+                    AutocorrectCandidateKind.TYPED -> SuggestionCandidateKind.TYPED
+                    AutocorrectCandidateKind.CORRECTION -> SuggestionCandidateKind.CORRECTION
+                    AutocorrectCandidateKind.COMPLETION -> SuggestionCandidateKind.COMPLETION
+                    AutocorrectCandidateKind.NEXT_WORD -> SuggestionCandidateKind.NEXT_WORD
+                },
             ),
             replacement = localReplacement?.let { range ->
                 SuggestionReplacement(

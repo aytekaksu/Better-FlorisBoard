@@ -78,7 +78,7 @@ fun QuickActionsEditorPanel() {
     val keyboardManager by context.keyboardManager()
 
     // We get the current arrangement once and do not observe on purpose
-    val actionArrangement = remember { prefs.smartbar.actionArrangement.get() }
+    val actionArrangement = remember { prefs.smartbar.actionArrangement.get().withAvailableActions() }
     var stickyAction by remember(actionArrangement) {
         mutableStateOf(actionArrangement.stickyAction ?: NoopAction)
     }

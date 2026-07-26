@@ -27,6 +27,7 @@ import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
+import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.extensionManager
@@ -81,12 +82,14 @@ import org.florisboard.lib.android.showShortToastSync
 import org.florisboard.lib.android.systemService
 import org.florisboard.lib.kotlin.collectIn
 import org.florisboard.lib.kotlin.collectLatestIn
+import org.florisboard.autocorrect.api.AutocorrectTextEventKind
 
 private val DoubleSpacePeriodMatcher = """([^.!?‽\s]\s)""".toRegex()
 
 class KeyboardManager(context: Context) : InputKeyEventReceiver {
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
+    private val autocorrectPluginManager by context.autocorrectPluginManager()
     private val clipboardManager by context.clipboardManager()
     private val editorInstance by context.editorInstance()
     private val extensionManager by context.extensionManager()
@@ -292,6 +295,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             else -> editorInstance.commitCompletion(candidate)
         }
         if (committed) {
+            autocorrectPluginManager.clearInputTrace()
             scope.launch {
                 candidate.sourceProvider?.notifySuggestionAccepted(subtypeManager.activeSubtype, candidate)
             }
@@ -300,7 +304,13 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     }
 
     fun commitGesture(word: String) {
-        editorInstance.commitGesture(fixCase(word))
+        autocorrectPluginManager.clearInputTrace()
+        val committedWord = fixCase(word)
+        editorInstance.commitGesture(committedWord)
+        autocorrectPluginManager.notifyTextEvent(
+            committedWord,
+            AutocorrectTextEventKind.COMMIT_GESTURE,
+        )
     }
 
     /**
@@ -418,13 +428,20 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         }
     }
 
+    private fun notifyTextDeletion(kind: AutocorrectTextEventKind) {
+        if (editorInstance.phantomSpace.candidateForRevert?.sourceProvider === autocorrectPluginManager) return
+        autocorrectPluginManager.notifyTextEvent(editorInstance.activeContent.currentWordText, kind)
+    }
+
     /**
      * Handles a [KeyCode.DELETE] event.
      */
     private fun handleBackwardDelete(unit: OperationUnit) {
+        autocorrectPluginManager.clearInputTrace()
         if (inputEventDispatcher.isPressed(KeyCode.SHIFT)) {
             return handleForwardDelete(unit)
         }
+        notifyTextDeletion(AutocorrectTextEventKind.DELETE_BACKWARD)
         activeState.batchEdit {
             it.isManualSelectionMode = false
             it.isManualSelectionModeStart = false
@@ -438,6 +455,8 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      * Handles a [KeyCode.FORWARD_DELETE] event.
      */
     private fun handleForwardDelete(unit: OperationUnit) {
+        autocorrectPluginManager.clearInputTrace()
+        notifyTextDeletion(AutocorrectTextEventKind.DELETE_FORWARD)
         activeState.batchEdit {
             it.isManualSelectionMode = false
             it.isManualSelectionModeStart = false
@@ -451,6 +470,11 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      * Handles a [KeyCode.ENTER] event.
      */
     private fun handleEnter() {
+        autocorrectPluginManager.notifyTextEvent(
+            editorInstance.activeContent.currentWordText,
+            AutocorrectTextEventKind.COMMIT_TYPED,
+        )
+        autocorrectPluginManager.clearInputTrace()
         val info = editorInstance.activeInfo
         val isShiftPressed = inputEventDispatcher.isPressed(KeyCode.SHIFT)
         if (editorInstance.tryPerformEnterCommitRaw()) {
@@ -542,11 +566,19 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      * but skips handling changing to characters keyboard and double space periods.
      */
     fun handleHardwareKeyboardSpace() {
+        val typedWord = editorInstance.activeContent.currentWordText
         val candidate = nlpManager.getAutoCommitCandidate()?.takeIf { commitCandidate(it) }
         // Skip handling changing to characters keyboard and double space periods
         if (shouldInsertSeparatorAfter(candidate)) {
             editorInstance.commitText(KeyCode.SPACE.toChar().toString())
         }
+        if (candidate == null) {
+            autocorrectPluginManager.notifyTextEvent(
+                typedWord,
+                AutocorrectTextEventKind.COMMIT_TYPED,
+            )
+        }
+        autocorrectPluginManager.clearInputTrace()
     }
 
     /**
@@ -554,6 +586,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      * enabled by the user.
      */
     private fun handleSpace(data: KeyData) {
+        val typedWord = editorInstance.activeContent.currentWordText
         val candidate = nlpManager.getAutoCommitCandidate()?.takeIf { commitCandidate(it) }
         if (prefs.keyboard.spaceBarSwitchesToCharacters.get()) {
             when (activeState.keyboardMode) {
@@ -571,6 +604,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 if (text.length == 2 && DoubleSpacePeriodMatcher.matches(text)) {
                     editorInstance.deleteBackwards(OperationUnit.CHARACTERS)
                     editorInstance.commitText(". ")
+                    autocorrectPluginManager.clearInputTrace()
                     return
                 }
             }
@@ -578,6 +612,13 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         if (shouldInsertSeparatorAfter(candidate)) {
             editorInstance.commitText(KeyCode.SPACE.toChar().toString())
         }
+        if (candidate == null) {
+            autocorrectPluginManager.notifyTextEvent(
+                typedWord,
+                AutocorrectTextEventKind.COMMIT_TYPED,
+            )
+        }
+        autocorrectPluginManager.clearInputTrace()
     }
 
     private fun shouldInsertSeparatorAfter(candidate: SuggestionCandidate?): Boolean {
@@ -779,6 +820,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             }
             KeyCode.TOGGLE_INCOGNITO_MODE -> scope.launch { handleToggleIncognitoMode() }
             KeyCode.TOGGLE_AUTOCORRECT -> handleToggleAutocorrect()
+            KeyCode.AUTOCORRECT_PLUGIN_UI -> autocorrectPluginManager.showKeyboardPluginUi()
             KeyCode.UNDO -> editorInstance.performUndo()
             KeyCode.VIEW_CHARACTERS -> activeState.keyboardMode = KeyboardMode.CHARACTERS
             KeyCode.VIEW_NUMERIC -> activeState.keyboardMode = KeyboardMode.NUMERIC
@@ -815,7 +857,16 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                         KeyType.CHARACTER, KeyType.NUMERIC ->{
                             val text = data.asString(isForDisplay = false)
                             if (!UCharacter.isUAlphabetic(UCharacter.codePointAt(text, 0))) {
-                                nlpManager.getAutoCommitCandidate()?.let { commitCandidate(it) }
+                                val typedWord = editorInstance.activeContent.currentWordText
+                                val candidate = nlpManager.getAutoCommitCandidate()
+                                    ?.takeIf { commitCandidate(it) }
+                                if (candidate == null) {
+                                    autocorrectPluginManager.notifyTextEvent(
+                                        typedWord,
+                                        AutocorrectTextEventKind.COMMIT_TYPED,
+                                    )
+                                }
+                                autocorrectPluginManager.clearInputTrace()
                             }
                             editorInstance.commitChar(text)
                         }
@@ -1002,6 +1053,9 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 }
                 KeyCode.LANGUAGE_SWITCH -> {
                     subtypeManager.subtypes.size > 1
+                }
+                KeyCode.AUTOCORRECT_PLUGIN_UI -> {
+                    prefs.suggestion.autocorrectPluginComponent.get().isNotBlank()
                 }
                 else -> true
             }

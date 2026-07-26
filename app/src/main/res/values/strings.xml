@@ -93,6 +93,8 @@
     <string name="quick_action__toggle_incognito_mode__tooltip">Toggle incognito mode</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Autocorrect</string>
     <string name="quick_action__toggle_autocorrect__tooltip">Toggle autocorrect</string>
+    <string name="quick_action__autocorrect_plugin" comment="Please mind the limited available space for the quick action strings">Provider</string>
+    <string name="quick_action__autocorrect_plugin__tooltip">Open autocorrect provider controls</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Voice input</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Open voice input provider</string>
     <string name="quick_action__floating_window_mode" comment="Please mind the limited available space for the quick action strings">Floating</string>
@@ -505,9 +507,11 @@
     <string name="settings__autocorrect_plugins__none_installed">No compatible autocorrect provider apps are installed.</string>
     <string name="settings__autocorrect_plugins__unavailable">Selected provider is unavailable</string>
     <string name="settings__autocorrect_plugins__configure">Configure provider</string>
+    <string name="settings__autocorrect_plugins__configure_embedded">Provider features and settings</string>
     <string name="settings__autocorrect_plugins__privacy_warning">The selected provider receives limited text around the cursor while you type. FlorisBoard never connects it to password fields or while incognito mode is active. Only select a provider you trust.</string>
-    <string name="settings__autocorrect_plugins__battery_info">Providers run as bound services only during an active typing session. FlorisBoard cancels superseded requests and disconnects the provider as soon as input ends.</string>
+    <string name="settings__autocorrect_plugins__battery_info">Providers use non-foreground bound connections only while typing or while their controls are visible. FlorisBoard cancels superseded requests, never polls for status, and disconnects when neither is active.</string>
     <string name="settings__autocorrect_plugins__builtin_unavailable">Built-in word suggestions and spell checking are not available in this release. You can install and select a compatible external autocorrect provider.</string>
+    <string name="settings__autocorrect_plugins__embedded_unavailable">This provider does not expose controls for this screen. Use its external settings page if one is available.</string>
     <string name="pref__correction__title" comment="Preference group title">Corrections</string>
     <string name="pref__correction__auto_capitalization__label" comment="Preference title">Auto-capitalization</string>
     <string name="pref__correction__auto_capitalization__summary" comment="Preference summary">Capitalize words based on the current input context</string>
