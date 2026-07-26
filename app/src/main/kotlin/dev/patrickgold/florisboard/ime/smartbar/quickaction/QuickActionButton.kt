@@ -24,8 +24,15 @@ import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -34,9 +41,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import dev.patrickgold.compose.tooltip.PlainTooltip
 import dev.patrickgold.florisboard.ime.input.LocalInputFeedbackController
 import dev.patrickgold.florisboard.ime.keyboard.ComputingEvaluator
+import dev.patrickgold.florisboard.ime.keyboard.FlorisImeSizing
 import dev.patrickgold.florisboard.ime.keyboard.computeImageVector
 import dev.patrickgold.florisboard.ime.keyboard.computeLabel
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
@@ -45,6 +56,7 @@ import org.florisboard.lib.snygg.SnyggSelector
 import org.florisboard.lib.snygg.ui.SnyggBox
 import org.florisboard.lib.snygg.ui.SnyggIcon
 import org.florisboard.lib.snygg.ui.SnyggText
+import org.florisboard.lib.snygg.ui.isSnyggThemeElementDefined
 
 enum class QuickActionBarType {
     INTERACTIVE_BUTTON,
@@ -118,7 +130,18 @@ fun QuickActionButton(
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            val isTile = type != QuickActionBarType.INTERACTIVE_BUTTON
+            Column(
+                modifier = if (isTile) {
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                } else {
+                    Modifier
+                },
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 // Render foreground
                 when (action) {
                     is QuickAction.InsertKey -> {
@@ -126,13 +149,18 @@ fun QuickActionButton(
                             evaluator.computeImageVector(action.data) to evaluator.computeLabel(action.data)
                         }
                         if (imageVector != null) {
-                            SnyggBox(
-                                elementName = "$elementName-icon",
+                            val iconElementName = "$elementName-icon"
+                            SnyggIcon(
+                                elementName = iconElementName,
                                 attributes = attributes,
                                 selector = selector,
-                            ) {
-                                SnyggIcon(imageVector = imageVector)
-                            }
+                                modifier = if (isSnyggThemeElementDefined(iconElementName)) {
+                                    Modifier
+                                } else {
+                                    Modifier.size(FlorisImeSizing.smartbarHeight * 0.5f)
+                                },
+                                imageVector = imageVector,
+                            )
                         } else if (label != null) {
                             SnyggText(
                                 elementName = "$elementName-text",
@@ -154,12 +182,17 @@ fun QuickActionButton(
                 }
 
                 // Render additional info if this is a tile
-                if (type != QuickActionBarType.INTERACTIVE_BUTTON) {
+                if (isTile) {
+                    Spacer(modifier = Modifier.height(8.dp))
                     SnyggText(
                         elementName = "$elementName-text",
                         attributes = attributes,
                         selector = selector,
+                        modifier = Modifier.fillMaxWidth(),
                         text = action.computeDisplayName(evaluator = evaluator),
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

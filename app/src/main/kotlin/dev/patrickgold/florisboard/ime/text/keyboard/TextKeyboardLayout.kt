@@ -47,6 +47,7 @@ import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -100,6 +101,7 @@ import org.florisboard.lib.snygg.SnyggSelector
 import org.florisboard.lib.snygg.ui.SnyggBox
 import org.florisboard.lib.snygg.ui.SnyggIcon
 import org.florisboard.lib.snygg.ui.SnyggText
+import org.florisboard.lib.snygg.ui.isSnyggThemeElementDefined
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -384,11 +386,20 @@ private fun TextKeyButton(
             )
         }
         key.foregroundImageVector?.let { imageVector ->
+            val iconElementName = FlorisImeUi.KeyIcon.elementName
             SnyggIcon(
-                elementName = FlorisImeUi.KeyIcon.elementName,
+                elementName = iconElementName,
                 attributes = attributes,
                 selector = selector,
-                modifier = Modifier.align(Alignment.Center),
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .then(
+                        if (isSnyggThemeElementDefined(iconElementName)) {
+                            Modifier
+                        } else {
+                            Modifier.scale(1.1f)
+                        },
+                    ),
                 imageVector = imageVector,
                 contentDescription = null,
             )

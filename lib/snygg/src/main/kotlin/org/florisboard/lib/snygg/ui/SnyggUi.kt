@@ -254,6 +254,14 @@ fun rememberSnyggThemeQuery(
     return theme.rememberQuery(elementName, attributes, selector)
 }
 
+/**
+ * Returns whether the active stylesheet defines at least one rule for [elementName].
+ */
+@Composable
+fun isSnyggThemeElementDefined(elementName: String): Boolean {
+    return LocalSnyggTheme.current.style.containsKey(elementName)
+}
+
 @Composable
 internal fun SnyggTheme.rememberQuery(
     elementName: String?,
