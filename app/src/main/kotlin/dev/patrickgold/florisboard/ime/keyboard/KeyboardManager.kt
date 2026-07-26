@@ -320,7 +320,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     /**
      * Handles [KeyCode] arrow and move events, behaves differently depending on text selection.
      */
-    fun handleArrow(code: Int, count: Int = 1, stopAtTextBoundary: Boolean = false) = editorInstance.apply {
+    fun handleArrow(code: Int, count: Int = 1) = editorInstance.apply {
         val isShiftPressed = activeState.isManualSelectionMode || inputEventDispatcher.isPressed(KeyCode.SHIFT)
         val content = activeContent
         val selection = content.selection
@@ -330,24 +330,14 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                     activeState.isManualSelectionModeStart = true
                     activeState.isManualSelectionModeEnd = false
                 }
-                sendDownUpKeyEvent(
-                    KeyEvent.KEYCODE_DPAD_LEFT,
-                    meta(shift = isShiftPressed),
-                    count,
-                    stopAtTextBoundary && !isShiftPressed,
-                )
+                sendDownUpKeyEvent(KeyEvent.KEYCODE_DPAD_LEFT, meta(shift = isShiftPressed), count)
             }
             KeyCode.ARROW_RIGHT -> {
                 if (!selection.isSelectionMode && activeState.isManualSelectionMode) {
                     activeState.isManualSelectionModeStart = false
                     activeState.isManualSelectionModeEnd = true
                 }
-                sendDownUpKeyEvent(
-                    KeyEvent.KEYCODE_DPAD_RIGHT,
-                    meta(shift = isShiftPressed),
-                    count,
-                    stopAtTextBoundary && !isShiftPressed,
-                )
+                sendDownUpKeyEvent(KeyEvent.KEYCODE_DPAD_RIGHT, meta(shift = isShiftPressed), count)
             }
             KeyCode.ARROW_UP -> {
                 if (!selection.isSelectionMode && activeState.isManualSelectionMode) {

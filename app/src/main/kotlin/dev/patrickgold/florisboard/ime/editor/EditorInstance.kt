@@ -166,6 +166,59 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         return super.setSelection(selection)
     }
 
+    /**
+     * Moves the cursor or selection directly, without sending directional key events to the editor.
+     */
+    fun moveCursorBy(
+        steps: Int,
+        select: Boolean = false,
+        moveSelectionStart: Boolean = steps < 0,
+    ): Boolean {
+        if (steps == 0) return true
+        val content = activeContent
+        val selection = content.selection
+        if (selection.isNotValid) return false
+
+        val isMovingLeft = steps < 0
+        val selectionStart = minOf(selection.start, selection.end)
+        val selectionEnd = maxOf(selection.start, selection.end)
+        val stepCount = kotlin.math.abs(steps)
+        if (select) {
+            val selectedText = content.selectedText
+            val movement = when {
+                moveSelectionStart && isMovingLeft -> content.getTextBeforeCursor(stepCount).length
+                moveSelectionStart -> runBlocking {
+                    breakIterators.measureUChars(selectedText, stepCount)
+                }
+                !isMovingLeft -> content.getTextAfterCursor(stepCount).length
+                else -> runBlocking {
+                    breakIterators.measureLastUChars(selectedText, stepCount)
+                }
+            }
+            return if (moveSelectionStart) {
+                setSelection(
+                    selectionStart + if (isMovingLeft) -movement else movement,
+                    selectionEnd,
+                )
+            } else {
+                setSelection(
+                    selectionStart,
+                    selectionEnd + if (isMovingLeft) -movement else movement,
+                )
+            }
+        }
+        val selectionBoundary = if (isMovingLeft) selectionStart else selectionEnd
+        val remainingSteps = (stepCount - if (selection.isSelectionMode) 1 else 0)
+            .coerceAtLeast(0)
+        val movement = if (isMovingLeft) {
+            content.getTextBeforeCursor(remainingSteps).length
+        } else {
+            content.getTextAfterCursor(remainingSteps).length
+        }
+        val target = selectionBoundary + if (isMovingLeft) -movement else movement
+        return setSelection(target, target)
+    }
+
     private fun shouldInsertAutoSpaceBefore(text: String): Boolean {
         if (!prefs.correction.autoSpacePunctuation.get() || text.isEmpty()) return false
         if (activeInfo.isRawInputEditor) return false
