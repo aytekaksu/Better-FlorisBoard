@@ -31,6 +31,7 @@ import dev.patrickgold.florisboard.ime.input.CapitalizationBehavior
 import dev.patrickgold.florisboard.ime.input.HapticVibrationMode
 import dev.patrickgold.florisboard.ime.input.InputFeedbackActivationMode
 import dev.patrickgold.florisboard.ime.keyboard.IncognitoMode
+import dev.patrickgold.florisboard.ime.keyboard.SpaceBarLanguageLabelMode
 import dev.patrickgold.florisboard.ime.keyboard.SpaceBarMode
 import dev.patrickgold.florisboard.ime.landscapeinput.LandscapeInputUiMode
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiHairStyle
@@ -519,6 +520,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         val spaceBarMode = enum(
             key = "keyboard__space_bar_display_mode",
             default = SpaceBarMode.CURRENT_LANGUAGE,
+        )
+        val spaceBarLanguageLabelMode = enum(
+            key = "keyboard__space_bar_language_label_mode",
+            default = SpaceBarLanguageLabelMode.LOCALE_NAME,
         )
         val capitalizationBehavior = enum(
             key = "keyboard__capitalization_behavior",
