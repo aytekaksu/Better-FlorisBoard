@@ -268,12 +268,13 @@ not included in this Apache-licensed repository.
 
 ## Privacy and battery contract
 
-FlorisBoard never connects an external provider for password fields, fields which disable
-suggestions, raw input editors, or incognito sessions. It does not send the target application's
-package name. Compatibility cases which FlorisBoard can recognize locally, including browser and
-code-editor behavior, are reduced to the generic editor flags before crossing the service boundary.
-Editors can independently disable persistent personalization without disabling
-suggestions.
+FlorisBoard never connects an external provider for password fields, raw input editors, or
+incognito sessions. It does not send the target application's package name. The raw Android input
+type remains part of the session, so a provider can honor an editor's no-suggestions hint without
+the host suppressing every provider feature. Compatibility cases which FlorisBoard can recognize
+locally, including browser and code-editor behavior, are reduced to the generic editor flags before
+crossing the service boundary. Editors can independently disable persistent personalization
+without disabling suggestions.
 
 The provider is bound only while an eligible input view or an explicit provider-settings page is
 active. FlorisBoard uses a non-foreground binding, does not call `startService`, poll the provider,

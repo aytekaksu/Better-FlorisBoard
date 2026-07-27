@@ -49,6 +49,7 @@ import dev.patrickgold.florisboard.ime.dictionary.strictUserDictionaryLocale
 import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.editor.FlorisEditorInfo
+import dev.patrickgold.florisboard.ime.editor.InputAttributes
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidateKind
 import dev.patrickgold.florisboard.ime.nlp.SuggestionProvider
@@ -696,10 +697,10 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         if (
             !prefs.suggestion.enabled.get() ||
             selectedProviderId.isBlank() ||
-            isPrivateSession ||
-            editorInfo.isRawInputEditor ||
-            editorInfo.inputAttributes.isPassword ||
-            editorInfo.inputAttributes.flagTextNoSuggestions
+            !editorInfo.inputAttributes.allowsAutocorrectPluginSession(
+                isPrivateSession = isPrivateSession,
+                isRawInputEditor = editorInfo.isRawInputEditor,
+            )
         ) {
             finishCurrentSession()
             return null
@@ -1840,6 +1841,11 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         )
     }
 }
+
+internal fun InputAttributes.allowsAutocorrectPluginSession(
+    isPrivateSession: Boolean,
+    isRawInputEditor: Boolean,
+) = !isPrivateSession && !isRawInputEditor && !isPassword
 
 internal fun AutocorrectCandidateKind.toSuggestionCandidateKind() = when (this) {
     AutocorrectCandidateKind.TYPED -> SuggestionCandidateKind.TYPED

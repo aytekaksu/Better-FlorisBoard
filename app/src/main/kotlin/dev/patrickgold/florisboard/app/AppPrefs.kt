@@ -730,7 +730,7 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         )
         val matchKeyAppearance = boolean(
             key = "suggestion__match_key_appearance",
-            default = false,
+            default = true,
         )
         val blockPossiblyOffensive = boolean(
             key = "suggestion__block_possibly_offensive",

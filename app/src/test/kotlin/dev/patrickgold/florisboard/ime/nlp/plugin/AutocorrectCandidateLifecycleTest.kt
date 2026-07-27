@@ -16,6 +16,8 @@
 
 package dev.patrickgold.florisboard.ime.nlp.plugin
 
+import android.text.InputType
+import dev.patrickgold.florisboard.ime.editor.InputAttributes
 import dev.patrickgold.florisboard.ime.nlp.AutomaticSmartbarMutations
 import dev.patrickgold.florisboard.ime.nlp.CandidateAssemblyRevision
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidateKind
@@ -34,6 +36,26 @@ class AutocorrectCandidateLifecycleTest : FunSpec({
     test("current editor request creates a session and sends") {
         editorRequestEffects(requestGeneration = 4, activeGeneration = 4) shouldBe
             listOf("session", "bind", "send")
+    }
+
+    test("editor no-suggestions hint still allows provider suggestions") {
+        InputAttributes.wrap(
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS,
+        ).allowsAutocorrectPluginSession(
+            isPrivateSession = false,
+            isRawInputEditor = false,
+        ) shouldBe true
+    }
+
+    test("private, raw, and password editors still block provider sessions") {
+        val text = InputAttributes.wrap(InputType.TYPE_CLASS_TEXT)
+        val password = InputAttributes.wrap(
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD,
+        )
+
+        text.allowsAutocorrectPluginSession(true, false) shouldBe false
+        text.allowsAutocorrectPluginSession(false, true) shouldBe false
+        password.allowsAutocorrectPluginSession(false, false) shouldBe false
     }
 
     test("candidate is current only for its admitted session and editor generation") {
