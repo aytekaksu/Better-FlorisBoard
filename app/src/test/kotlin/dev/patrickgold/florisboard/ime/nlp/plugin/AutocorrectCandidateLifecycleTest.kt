@@ -18,11 +18,13 @@ package dev.patrickgold.florisboard.ime.nlp.plugin
 
 import dev.patrickgold.florisboard.ime.nlp.AutomaticSmartbarMutations
 import dev.patrickgold.florisboard.ime.nlp.CandidateAssemblyRevision
+import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidateKind
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import org.florisboard.autocorrect.api.AutocorrectCandidateKind
 
 class AutocorrectCandidateLifecycleTest : FunSpec({
     test("stale editor request cannot create a session or send") {
@@ -60,6 +62,17 @@ class AutocorrectCandidateLifecycleTest : FunSpec({
         isCurrentAutocorrectCandidate(7, 3, 8, 8, 3, true) shouldBe false
         isCurrentAutocorrectCandidate(7, 3, 7, -1, 3, true) shouldBe false
         isCurrentAutocorrectCandidate(7, 3, 7, 7, 3, false) shouldBe false
+    }
+
+    test("provider candidate kinds retain their presentation semantics") {
+        AutocorrectCandidateKind.entries.map { it.toSuggestionCandidateKind() } shouldBe
+            listOf(
+                SuggestionCandidateKind.TYPED,
+                SuggestionCandidateKind.CORRECTION,
+                SuggestionCandidateKind.COMPLETION,
+                SuggestionCandidateKind.NEXT_WORD,
+                SuggestionCandidateKind.EMOJI,
+            )
     }
 
     test("clear prevents an already-running assembly from republishing candidates") {

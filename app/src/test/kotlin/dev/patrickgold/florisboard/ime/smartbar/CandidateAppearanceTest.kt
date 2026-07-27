@@ -57,4 +57,18 @@ class CandidateAppearanceTest : FunSpec({
             useKeyColoredClassicSeparator = false,
         )
     }
+
+    test("classic display keeps the first three candidates") {
+        candidatesForDisplay(
+            candidates = listOf("one", "two", "three", "four"),
+            displayMode = CandidatesDisplayMode.CLASSIC,
+        ) shouldBe listOf("one", "two", "three")
+    }
+
+    test("dynamic displays keep the complete candidate list") {
+        val candidates = listOf("one", "two", "three", "four")
+
+        candidatesForDisplay(candidates, CandidatesDisplayMode.DYNAMIC) shouldBe candidates
+        candidatesForDisplay(candidates, CandidatesDisplayMode.DYNAMIC_SCROLLABLE) shouldBe candidates
+    }
 })

@@ -26,13 +26,10 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -42,9 +39,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.patrickgold.compose.tooltip.PlainTooltip
 import dev.patrickgold.florisboard.ime.input.LocalInputFeedbackController
 import dev.patrickgold.florisboard.ime.keyboard.ComputingEvaluator
@@ -58,6 +54,7 @@ import org.florisboard.lib.snygg.ui.SnyggBox
 import org.florisboard.lib.snygg.ui.SnyggIcon
 import org.florisboard.lib.snygg.ui.SnyggText
 import org.florisboard.lib.snygg.ui.isSnyggThemeElementDefined
+import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
 enum class QuickActionBarType {
     INTERACTIVE_BUTTON,
@@ -140,13 +137,7 @@ fun QuickActionButton(
         ) {
             val isTile = type != QuickActionBarType.INTERACTIVE_BUTTON
             Column(
-                modifier = if (isTile) {
-                    Modifier
-                        .fillMaxSize()
-                        .padding(vertical = 6.dp)
-                } else {
-                    Modifier
-                },
+                modifier = if (isTile) Modifier.fillMaxSize() else Modifier,
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -158,17 +149,20 @@ fun QuickActionButton(
                         }
                         if (imageVector != null) {
                             val iconElementName = "$elementName-icon"
-                            SnyggIcon(
+                            SnyggBox(
                                 elementName = iconElementName,
                                 attributes = attributes,
                                 selector = selector,
-                                modifier = if (isSnyggThemeElementDefined(iconElementName)) {
-                                    Modifier
-                                } else {
-                                    Modifier.size(FlorisImeSizing.smartbarHeight * 0.5f)
-                                },
-                                imageVector = imageVector,
-                            )
+                            ) {
+                                SnyggIcon(
+                                    modifier = if (isSnyggThemeElementDefined(iconElementName)) {
+                                        Modifier
+                                    } else {
+                                        Modifier.size(FlorisImeSizing.smartbarHeight * 0.5f)
+                                    },
+                                    imageVector = imageVector,
+                                )
+                            }
                         } else if (label != null) {
                             SnyggText(
                                 elementName = "$elementName-text",
@@ -191,16 +185,28 @@ fun QuickActionButton(
 
                 // Render additional info if this is a tile
                 if (isTile) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    SnyggText(
-                        elementName = "$elementName-text",
+                    val textElementName = "$elementName-text"
+                    val textFontSize = rememberSnyggThemeQuery(
+                        elementName = textElementName,
                         attributes = attributes,
                         selector = selector,
-                        modifier = Modifier.fillMaxWidth(),
+                    ).fontSize()
+                    SnyggText(
+                        elementName = textElementName,
+                        attributes = attributes,
+                        selector = selector,
                         text = action.computeDisplayName(evaluator = evaluator),
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        autoSize = remember(textFontSize) {
+                            if (textFontSize.isSp && textFontSize > 1.sp) {
+                                TextAutoSize.StepBased(
+                                    minFontSize = textFontSize * 0.75f,
+                                    maxFontSize = textFontSize,
+                                    stepSize = 0.5.sp,
+                                )
+                            } else {
+                                null
+                            }
+                        },
                     )
                 }
             }

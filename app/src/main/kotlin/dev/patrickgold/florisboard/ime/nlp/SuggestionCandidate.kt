@@ -42,6 +42,7 @@ enum class SuggestionCandidateKind {
     CORRECTION,
     COMPLETION,
     NEXT_WORD,
+    EMOJI,
     OTHER,
 }
 
@@ -211,4 +212,5 @@ data class EmojiSuggestionCandidate(
 ) : SuggestionCandidate {
     override val text = emoji.value
     override val secondaryText = if (showName) emoji.name else null
+    override val kind = SuggestionCandidateKind.EMOJI
 }

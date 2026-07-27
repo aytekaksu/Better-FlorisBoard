@@ -111,6 +111,9 @@ depend on a companion keyboard application being installed.
 - The session's `allowPersonalizedLearning` flag reflects Android's no-personalized-learning
   editor option. FlorisBoard suppresses text events when it is false; providers must also avoid
   persistent learning from candidate callbacks in that session.
+- `AutocorrectSession.preferredEmojiSkinToneModifier` is `0` for the provider default or one of
+  Unicode's `U+1F3FB` through `U+1F3FF` emoji modifiers. FlorisBoard sends its current emoji
+  preference once per session; omitted and invalid values normalize to `0`.
 - `AutocorrectSession.editorFlags` contains only normalized behavior traits (`CODE_LIKE` and
   `WEB_FIELD`). Unknown bits are discarded and an omitted field means no traits. Providers must
   not infer a target application's identity from these flags.

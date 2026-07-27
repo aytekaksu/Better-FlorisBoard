@@ -388,15 +388,7 @@ class NlpManager(context: Context) {
                 }
                 else -> emptyList()
             }
-            val visibleCandidates = candidates
-                .filter(SuggestionCandidate::isVisible)
-                .let { visible ->
-                    if (visible.any(SuggestionCandidate::isExternalAutocorrect)) {
-                        visible.take(AutocorrectPluginManager.MaxVisibleCandidates)
-                    } else {
-                        visible
-                    }
-            }
+            val visibleCandidates = candidates.filter(SuggestionCandidate::isVisible)
             candidateAssemblyRevision.publishIfCurrent(revision) {
                 autoCommitCandidate = candidates.firstOrNull { it.isEligibleForAutoCommit }
                 activeCandidates = visibleCandidates

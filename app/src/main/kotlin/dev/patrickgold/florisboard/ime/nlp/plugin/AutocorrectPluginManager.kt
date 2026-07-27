@@ -155,7 +155,6 @@ internal fun isCurrentAutocorrectCandidate(
 class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     companion object {
         const val ProviderId = "org.florisboard.nlp.providers.external-autocorrect"
-        const val MaxVisibleCandidates = 3
         private const val CONNECTION_TIMEOUT_MS = 350L
         private const val RESPONSE_TIMEOUT_MS = 1_000L
         private const val FINISH_TIMEOUT_MS = 2_000L
@@ -707,13 +706,15 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         }
         val secondaryLanguageTags = subtype.secondaryLocales.map { it.languageTag() }
         val editorFlags = editorInfo.autocorrectEditorFlags()
+        val preferredEmojiSkinToneModifier = prefs.emoji.preferredSkinTone.get().id
         activeSession?.takeIf { session ->
             activeProviderId == selectedProviderId &&
                 session.primaryLanguageTag == subtype.primaryLocale.languageTag() &&
                 session.secondaryLanguageTags == secondaryLanguageTags &&
                 session.inputType == editorInfo.inputAttributes.raw &&
                 session.capsMode == editorInfo.initialCapsMode.toInt() &&
-                session.editorFlags == editorFlags
+                session.editorFlags == editorFlags &&
+                session.preferredEmojiSkinToneModifier == preferredEmojiSkinToneModifier
         }?.let { return it }
         if (providerQueryComplete && providers.value.none { it.id == selectedProviderId }) {
             finishCurrentSession()
@@ -728,6 +729,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             capsMode = editorInfo.initialCapsMode.toInt(),
             allowPersonalizedLearning = !editorInfo.imeOptions.flagNoPersonalizedLearning,
             editorFlags = editorFlags,
+            preferredEmojiSkinToneModifier = preferredEmojiSkinToneModifier,
         )
         activeSession = session
         activeProviderId = selectedProviderId
@@ -855,7 +857,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             composingEnd = composing.end,
             currentWordStart = currentWord.start,
             currentWordEnd = currentWord.end,
-            maxCandidateCount = MaxVisibleCandidates,
+            maxCandidateCount = 1,
             allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
             capsMode = keyboardManager.activeState.inputShiftState.toAutocorrectCapsMode(),
         )
@@ -1821,13 +1823,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                 isEligibleForAutoCommit = autoCommit,
                 isEligibleForUserRemoval = removable,
                 sourceProvider = this@AutocorrectPluginManager,
-                kind = when (kind) {
-                    AutocorrectCandidateKind.TYPED -> SuggestionCandidateKind.TYPED
-                    AutocorrectCandidateKind.CORRECTION -> SuggestionCandidateKind.CORRECTION
-                    AutocorrectCandidateKind.COMPLETION -> SuggestionCandidateKind.COMPLETION
-                    AutocorrectCandidateKind.NEXT_WORD -> SuggestionCandidateKind.NEXT_WORD
-                    AutocorrectCandidateKind.EMOJI -> SuggestionCandidateKind.OTHER
-                },
+                kind = kind.toSuggestionCandidateKind(),
             ),
             replacement = localReplacement?.let { range ->
                 SuggestionReplacement(
@@ -1843,6 +1839,14 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             },
         )
     }
+}
+
+internal fun AutocorrectCandidateKind.toSuggestionCandidateKind() = when (this) {
+    AutocorrectCandidateKind.TYPED -> SuggestionCandidateKind.TYPED
+    AutocorrectCandidateKind.CORRECTION -> SuggestionCandidateKind.CORRECTION
+    AutocorrectCandidateKind.COMPLETION -> SuggestionCandidateKind.COMPLETION
+    AutocorrectCandidateKind.NEXT_WORD -> SuggestionCandidateKind.NEXT_WORD
+    AutocorrectCandidateKind.EMOJI -> SuggestionCandidateKind.EMOJI
 }
 
 private fun InputShiftState.toAutocorrectCapsMode() = when (this) {

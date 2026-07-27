@@ -137,7 +137,7 @@ val FlorisImeThemeBaseStyle = SnyggStylesheet.v2 {
         shadowElevation = size(2.dp)
     }
     FlorisImeUi.SmartbarSharedActionsToggleIcon.elementName {
-        fontSize = fontSize(24.sp)
+        fontSize = fontSize(32.sp)
     }
     FlorisImeUi.SmartbarExtendedActionsToggle.elementName {
         background = rgbaColor(0, 0, 0, 0f)
