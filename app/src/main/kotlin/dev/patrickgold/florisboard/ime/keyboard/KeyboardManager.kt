@@ -516,6 +516,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 ImeOptions.Action.PREVIOUS,
                 ImeOptions.Action.SEARCH,
                 ImeOptions.Action.SEND -> {
+                    nlpManager.finishAutocorrectSession()
                     editorInstance.performEnterAction(action)
                 }
                 else -> editorInstance.performEnter()
