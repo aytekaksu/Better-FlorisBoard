@@ -16,9 +16,11 @@
 
 package dev.patrickgold.florisboard.ime.nlp.plugin
 
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -34,6 +36,7 @@ import android.os.RemoteException
 import android.provider.OpenableColumns
 import android.text.InputType
 import android.view.accessibility.AccessibilityManager
+import androidx.core.content.ContextCompat
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.editorInstance
@@ -142,6 +145,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         ConcurrentHashMap<AutocorrectPluginHostSetting, Boolean>()
     private val pendingPluginUiOperations = mutableSetOf<Long>()
     private val hostSettingMutationGuard = Mutex()
+    private val providerQueryGuard = Mutex()
     private val _providers = MutableStateFlow<List<AutocorrectPluginDescriptor>>(emptyList())
     private val _pluginUi = MutableStateFlow<AutocorrectPluginUi?>(null)
     private val _pluginUiLoading = MutableStateFlow(false)
@@ -165,6 +169,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     @Volatile private var activeProviderId = ""
     @Volatile private var boundProviderId = ""
     @Volatile private var providerQueryComplete = false
+    @Volatile private var providerQueryRevision = 0L
     @Volatile private var boostedCodePoints = emptySet<Int>()
     @Volatile private var uiClientCount = 0
     private var preparingPluginUiDocuments = 0
@@ -174,13 +179,48 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     private var traceHeight = 0f
     private var traceKeys = emptyList<AutocorrectKeyGeometry>()
     private val tracePoints = mutableListOf<AutocorrectTouchPoint>()
+    private val providerPackageReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            intent ?: return
+            if (
+                intent.action == Intent.ACTION_PACKAGE_REMOVED &&
+                intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)
+            ) {
+                return
+            }
+            refreshProviders()
+        }
+    }
+
+    init {
+        ContextCompat.registerReceiver(
+            appContext,
+            providerPackageReceiver,
+            IntentFilter().apply {
+                addAction(Intent.ACTION_PACKAGE_ADDED)
+                addAction(Intent.ACTION_PACKAGE_CHANGED)
+                addAction(Intent.ACTION_PACKAGE_REMOVED)
+                addDataScheme("package")
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+    }
 
     override val providerId = ProviderId
 
     fun refreshProviders() {
+        val revision = synchronized(this) {
+            providerQueryRevision++
+            providerQueryComplete = false
+            providerQueryRevision
+        }
         scope.launch {
-            _providers.value = runCatching { discoverProviders() }.getOrDefault(emptyList())
-            providerQueryComplete = true
+            queryProviders(forceRefresh = true, expectedRevision = revision) { result ->
+                result.fold(
+                    onSuccess = ::reconcileSelectedProvider,
+                    onFailure = { handleProviderQueryFailure() },
+                )
+            }
         }
     }
 
@@ -474,25 +514,20 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             return
         }
         scope.launch {
-            val discoveredProviders = if (providerQueryComplete) {
-                providers.value
-            } else {
-                runCatching { discoverProviders() }.getOrDefault(emptyList()).also {
-                    _providers.value = it
-                    providerQueryComplete = true
-                }
-            }
-            val descriptor = discoveredProviders.firstOrNull { it.id == selectedProviderId }
-            withContext(Dispatchers.Main.immediate) {
+            queryProviders { result ->
                 synchronized(this@AutocorrectPluginManager) {
                     if (uiClientCount == 0) return@synchronized
+                    val descriptor = result.getOrNull()
+                        ?.firstOrNull { it.id == selectedProviderId }
                     if (descriptor == null) {
                         _pluginUiError.value = true
                         _pluginUiLoading.value = false
                     } else if (remote != null && boundProviderId == descriptor.id) {
                         requestPluginUi()
                     } else {
-                        if (activeProviderId.isNotBlank() && activeProviderId != descriptor.id) {
+                        if (activeProviderId.isNotBlank() &&
+                            activeProviderId != descriptor.id
+                        ) {
                             endSession()
                         }
                         if (boundProviderId.isNotBlank()) unbind(clearSession = false)
@@ -615,22 +650,19 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             remote?.takeIf { boundProviderId == selectedProviderId }?.let(ready::complete)
         }
         scope.launch {
-            val discoveredProviders = if (providerQueryComplete) {
-                providers.value
-            } else {
-                runCatching { discoverProviders() }.getOrDefault(emptyList()).also {
-                    _providers.value = it
-                    providerQueryComplete = true
+            queryProviders { result ->
+                if (result.isFailure) {
+                    if (activeSession?.sessionId == session.sessionId) finishSession()
+                    return@queryProviders
                 }
-            }
-            val descriptor = discoveredProviders.firstOrNull { it.id == selectedProviderId }
-            if (descriptor == null) {
-                if (activeSession?.sessionId == session.sessionId) {
-                    unbind(clearSession = false)
+                val descriptor = result.getOrThrow()
+                    .firstOrNull { it.id == selectedProviderId }
+                if (descriptor == null) {
+                    if (activeSession?.sessionId == session.sessionId) {
+                        unbind(clearSession = true)
+                    }
+                    return@queryProviders
                 }
-                return@launch
-            }
-            withContext(Dispatchers.Main.immediate) {
                 if (activeSession?.sessionId == session.sessionId) {
                     if (remote != null && boundProviderId == descriptor.id) {
                         send(
@@ -1057,6 +1089,83 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         pendingSuggestions.clear()
         pendingRemovals.values.forEach { it.complete(false) }
         pendingRemovals.clear()
+    }
+
+    private suspend fun queryProviders(
+        forceRefresh: Boolean = false,
+        expectedRevision: Long? = null,
+        consume: (Result<List<AutocorrectPluginDescriptor>>) -> Unit,
+    ) = providerQueryGuard.withLock {
+        val revision = providerQueryRevision
+        if (expectedRevision != null && expectedRevision != revision) return@withLock
+        val cached = synchronized(this@AutocorrectPluginManager) {
+            providers.value.takeIf { !forceRefresh && providerQueryComplete }
+        }
+        val result = cached?.let { Result.success(it) } ?: runCatching {
+            discoverProviders()
+        }.let { queryResult ->
+            synchronized(this@AutocorrectPluginManager) {
+                if (revision != providerQueryRevision) return@withLock
+                queryResult.onSuccess {
+                    _providers.value = it
+                    providerQueryComplete = true
+                }.onFailure {
+                    providerQueryComplete = false
+                }
+            }
+        }
+        withContext(Dispatchers.Main.immediate) {
+            synchronized(this@AutocorrectPluginManager) {
+                if (revision == providerQueryRevision) consume(result)
+            }
+        }
+    }
+
+    @Synchronized
+    private fun handleProviderQueryFailure() {
+        if (remote != null || serviceConnection != null) return
+        endSession()
+        connectionReady.complete(null)
+        if (uiClientCount > 0) {
+            _pluginUiLoading.value = false
+            _pluginUiError.value = true
+        }
+    }
+
+    private fun reconcileSelectedProvider(
+        discoveredProviders: List<AutocorrectPluginDescriptor>,
+    ) {
+        val selectedProviderId = prefs.suggestion.autocorrectPluginComponent.get()
+        if (selectedProviderId.isBlank()) return
+        val descriptor = discoveredProviders.firstOrNull { it.id == selectedProviderId }
+        synchronized(this) {
+            if (prefs.suggestion.autocorrectPluginComponent.get() != selectedProviderId) return
+            if (descriptor == null) {
+                if (
+                    activeProviderId == selectedProviderId ||
+                    boundProviderId == selectedProviderId
+                ) {
+                    unbind(clearSession = true)
+                }
+                if (uiClientCount > 0) {
+                    providerPluginUi = null
+                    _pluginUi.value = null
+                    _pluginUiLoading.value = false
+                    _pluginUiError.value = true
+                }
+                return
+            }
+            if (remote != null || serviceConnection != null) return
+            val activeForProvider = activeSession != null && activeProviderId == descriptor.id
+            if (!activeForProvider && uiClientCount == 0) return
+            if (activeProviderId.isNotBlank() && activeProviderId != descriptor.id) {
+                endSession()
+            }
+            if (connectionReady.isCompleted) {
+                connectionReady = CompletableDeferred()
+            }
+            bind(descriptor)
+        }
     }
 
     private suspend fun discoverProviders(): List<AutocorrectPluginDescriptor> = withContext(Dispatchers.IO) {
