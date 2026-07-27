@@ -36,10 +36,12 @@ import dev.patrickgold.florisboard.ime.core.DisplayLanguageNamesIn
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.core.SubtypePreset
 import dev.patrickgold.florisboard.ime.editor.EditorContent
+import dev.patrickgold.florisboard.ime.editor.EditorEditResult
 import dev.patrickgold.florisboard.ime.editor.FlorisEditorInfo
 import dev.patrickgold.florisboard.ime.editor.ImeOptions
 import dev.patrickgold.florisboard.ime.editor.InputAttributes
 import dev.patrickgold.florisboard.ime.editor.OperationUnit
+import dev.patrickgold.florisboard.ime.editor.asEditorEditResult
 import dev.patrickgold.florisboard.ime.input.CapitalizationBehavior
 import dev.patrickgold.florisboard.ime.input.InputEventDispatcher
 import dev.patrickgold.florisboard.ime.input.InputKeyEventReceiver
@@ -293,12 +295,25 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         candidate: SuggestionCandidate,
         acceptanceKind: AutocorrectAcceptanceKind = AutocorrectAcceptanceKind.MANUAL,
     ): Boolean {
-        val committed = when (candidate) {
-            is ClipboardSuggestionCandidate -> editorInstance.commitClipboardItem(candidate.clipboardItem)
-            else -> editorInstance.commitCompletion(candidate)
+        return commitCandidateResult(candidate, acceptanceKind) == EditorEditResult.SUCCESS
+    }
+
+    private fun commitCandidateResult(
+        candidate: SuggestionCandidate,
+        acceptanceKind: AutocorrectAcceptanceKind,
+    ): EditorEditResult {
+        val result = when (candidate) {
+            is ClipboardSuggestionCandidate ->
+                editorInstance.commitClipboardItem(candidate.clipboardItem).asEditorEditResult()
+            else -> editorInstance.commitCompletion(
+                candidate,
+                canRevert = acceptanceKind == AutocorrectAcceptanceKind.AUTO_CORRECTION,
+            )
         }
-        if (committed) {
+        if (result != EditorEditResult.NOT_APPLICABLE) {
             autocorrectPluginManager.clearInputTrace()
+        }
+        if (result == EditorEditResult.SUCCESS) {
             if (candidate.sourceProvider === autocorrectPluginManager) {
                 autocorrectPluginManager.notifySuggestionAccepted(candidate, acceptanceKind)
             } else {
@@ -310,7 +325,15 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 }
             }
         }
-        return committed
+        return result
+    }
+
+    private fun commitAutoCorrectionCandidate(): Pair<SuggestionCandidate?, EditorEditResult> {
+        val candidate = nlpManager.getAutoCommitCandidate()
+        val result = candidate?.let {
+            commitCandidateResult(it, AutocorrectAcceptanceKind.AUTO_CORRECTION)
+        } ?: EditorEditResult.NOT_APPLICABLE
+        return candidate to result
     }
 
     fun commitGesture(word: String) {
@@ -437,25 +460,22 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         }
     }
 
-    private fun revertPreviouslyAcceptedCandidate() {
-        editorInstance.phantomSpace.candidateForRevert?.let { candidateForRevert ->
-            candidateForRevert.sourceProvider?.let { sourceProvider ->
-                if (sourceProvider === autocorrectPluginManager) {
-                    autocorrectPluginManager.notifySuggestionReverted(candidateForRevert)
-                } else {
-                    scope.launch {
-                        sourceProvider.notifySuggestionReverted(
-                            subtype = subtypeManager.activeSubtype,
-                            candidate = candidateForRevert,
-                        )
-                    }
+    private fun notifySuggestionReverted(candidate: SuggestionCandidate) {
+        candidate.sourceProvider?.let { sourceProvider ->
+            if (sourceProvider === autocorrectPluginManager) {
+                autocorrectPluginManager.notifySuggestionReverted(candidate)
+            } else {
+                scope.launch {
+                    sourceProvider.notifySuggestionReverted(
+                        subtype = subtypeManager.activeSubtype,
+                        candidate = candidate,
+                    )
                 }
             }
         }
     }
 
     private fun notifyTextDeletion(kind: AutocorrectTextEventKind) {
-        if (editorInstance.phantomSpace.candidateForRevert?.sourceProvider === autocorrectPluginManager) return
         autocorrectPluginManager.notifyTextEvent(editorInstance.activeContent.currentWordText, kind)
     }
 
@@ -467,13 +487,23 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         if (inputEventDispatcher.isPressed(KeyCode.SHIFT)) {
             return handleForwardDelete(unit)
         }
-        notifyTextDeletion(AutocorrectTextEventKind.DELETE_BACKWARD)
         activeState.batchEdit {
             it.isManualSelectionMode = false
             it.isManualSelectionModeStart = false
             it.isManualSelectionModeEnd = false
         }
-        revertPreviouslyAcceptedCandidate()
+        if (unit == OperationUnit.CHARACTERS) {
+            val candidate = editorInstance.phantomSpace.candidateForRevert
+            when (editorInstance.revertAutoCorrection()) {
+                EditorEditResult.NOT_APPLICABLE -> Unit
+                EditorEditResult.DIRTY_FAILURE -> return
+                EditorEditResult.SUCCESS -> {
+                    candidate?.let(::notifySuggestionReverted)
+                    return
+                }
+            }
+        }
+        notifyTextDeletion(AutocorrectTextEventKind.DELETE_BACKWARD)
         editorInstance.deleteBackwards(unit)
     }
 
@@ -488,7 +518,6 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             it.isManualSelectionModeStart = false
             it.isManualSelectionModeEnd = false
         }
-        revertPreviouslyAcceptedCandidate()
         editorInstance.deleteForwards(unit)
     }
 
@@ -594,14 +623,16 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      */
     fun handleHardwareKeyboardSpace() {
         val typedWord = editorInstance.activeContent.currentWordText
-        val candidate = nlpManager.getAutoCommitCandidate()?.takeIf {
-            commitCandidate(it, AutocorrectAcceptanceKind.AUTO_CORRECTION)
+        val (candidate, commitResult) = commitAutoCorrectionCandidate()
+        if (commitResult == EditorEditResult.DIRTY_FAILURE) {
+            return
         }
+        val committedCandidate = candidate.takeIf { commitResult == EditorEditResult.SUCCESS }
         // Skip handling changing to characters keyboard and double space periods
-        if (shouldInsertSeparatorAfter(candidate)) {
+        if (shouldInsertSeparatorAfter(committedCandidate)) {
             editorInstance.commitText(KeyCode.SPACE.toChar().toString())
         }
-        if (candidate == null) {
+        if (committedCandidate == null) {
             autocorrectPluginManager.notifyTextEvent(
                 typedWord,
                 AutocorrectTextEventKind.COMMIT_TYPED,
@@ -616,9 +647,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      */
     private fun handleSpace(data: KeyData) {
         val typedWord = editorInstance.activeContent.currentWordText
-        val candidate = nlpManager.getAutoCommitCandidate()?.takeIf {
-            commitCandidate(it, AutocorrectAcceptanceKind.AUTO_CORRECTION)
-        }
+        val (candidate, commitResult) = commitAutoCorrectionCandidate()
         if (prefs.keyboard.spaceBarSwitchesToCharacters.get()) {
             when (activeState.keyboardMode) {
                 KeyboardMode.NUMERIC_ADVANCED,
@@ -629,6 +658,10 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 else -> { /* Do nothing */ }
             }
         }
+        if (commitResult == EditorEditResult.DIRTY_FAILURE) {
+            return
+        }
+        val committedCandidate = candidate.takeIf { commitResult == EditorEditResult.SUCCESS }
         if (prefs.correction.doubleSpacePeriod.get()) {
             if (inputEventDispatcher.isConsecutiveUp(data)) {
                 val text = editorInstance.run { activeContent.getTextBeforeCursor(2) }
@@ -640,10 +673,10 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 }
             }
         }
-        if (shouldInsertSeparatorAfter(candidate)) {
+        if (shouldInsertSeparatorAfter(committedCandidate)) {
             editorInstance.commitText(KeyCode.SPACE.toChar().toString())
         }
-        if (candidate == null) {
+        if (committedCandidate == null) {
             autocorrectPluginManager.notifyTextEvent(
                 typedWord,
                 AutocorrectTextEventKind.COMMIT_TYPED,
@@ -852,10 +885,10 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             KeyCode.VIEW_SYMBOLS2 -> activeState.keyboardMode = KeyboardMode.SYMBOLS2
             else -> {
                 if (activeState.imeUiMode == ImeUiMode.MEDIA) {
-                    nlpManager.getAutoCommitCandidate()?.let {
-                        commitCandidate(it, AutocorrectAcceptanceKind.AUTO_CORRECTION)
+                    val (_, commitResult) = commitAutoCorrectionCandidate()
+                    if (commitResult != EditorEditResult.DIRTY_FAILURE) {
+                        editorInstance.commitText(data.asString(isForDisplay = false))
                     }
-                    editorInstance.commitText(data.asString(isForDisplay = false))
                     return@batchEdit
                 }
                 when (activeState.keyboardMode) {
@@ -881,20 +914,17 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                             val text = data.asString(isForDisplay = false)
                             if (!UCharacter.isUAlphabetic(UCharacter.codePointAt(text, 0))) {
                                 val typedWord = editorInstance.activeContent.currentWordText
-                                val candidate = nlpManager.getAutoCommitCandidate()
-                                    ?.takeIf {
-                                        commitCandidate(
-                                            it,
-                                            AutocorrectAcceptanceKind.AUTO_CORRECTION,
-                                        )
-                                    }
-                                if (candidate == null) {
+                                val (_, commitResult) = commitAutoCorrectionCandidate()
+                                if (commitResult == EditorEditResult.NOT_APPLICABLE) {
                                     autocorrectPluginManager.notifyTextEvent(
                                         typedWord,
                                         AutocorrectTextEventKind.COMMIT_TYPED,
                                     )
                                 }
                                 autocorrectPluginManager.clearInputTrace()
+                                if (commitResult == EditorEditResult.DIRTY_FAILURE) {
+                                    return@batchEdit
+                                }
                             }
                             editorInstance.commitChar(text)
                         }

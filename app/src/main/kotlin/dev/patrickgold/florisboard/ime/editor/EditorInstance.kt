@@ -34,6 +34,7 @@ import dev.patrickgold.florisboard.ime.input.InputShiftState
 import dev.patrickgold.florisboard.ime.keyboard.IncognitoMode
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
+import dev.patrickgold.florisboard.ime.nlp.SuggestionReplacement
 import dev.patrickgold.florisboard.ime.text.composing.Appender
 import dev.patrickgold.florisboard.ime.text.composing.Composer
 import dev.patrickgold.florisboard.ime.text.key.KeyVariation
@@ -44,6 +45,51 @@ import dev.patrickgold.florisboard.subtypeManager
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.runBlocking
 import org.florisboard.lib.android.showShortToastSync
+
+internal data class AutoCorrectionRevertPlan(
+    val range: EditorRange,
+    val expectedText: String,
+    val replacementText: String,
+)
+
+internal fun autoCorrectionRevertPlan(
+    replacement: SuggestionReplacement,
+    candidateText: String,
+    content: EditorContent,
+): AutoCorrectionRevertPlan? {
+    val selection = content.selection
+    if (
+        content.offset < 0 ||
+        replacement.range.isNotValid ||
+        replacement.range.start > replacement.range.end ||
+        replacement.originalText.isEmpty() ||
+        replacement.originalText.length != replacement.range.length ||
+        replacement.expectedSelection != EditorRange.cursor(replacement.range.end) ||
+        candidateText == replacement.originalText ||
+        candidateText.length > Int.MAX_VALUE - replacement.range.start ||
+        !selection.isCursorMode
+    ) {
+        return null
+    }
+    val correctedEnd = replacement.range.start + candidateText.length
+    val separatorLength = selection.start - correctedEnd
+    val localStart = replacement.range.start - content.offset
+    val localEnd = selection.start - content.offset
+    val expectedText = candidateText + if (separatorLength == 1) " " else ""
+    if (
+        separatorLength !in 0..1 ||
+        localStart < 0 ||
+        localEnd > content.text.length ||
+        content.text.substring(localStart, localEnd) != expectedText
+    ) {
+        return null
+    }
+    return AutoCorrectionRevertPlan(
+        range = EditorRange(replacement.range.start, selection.start),
+        expectedText = expectedText,
+        replacementText = replacement.originalText,
+    )
+}
 
 class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     companion object {
@@ -59,10 +105,14 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
 
     private val activeState get() = keyboardManager.activeState
     val autoSpace = AutoSpaceState()
-    val phantomSpace = PhantomSpaceState()
+    internal val phantomSpace = PhantomSpaceState()
     val massSelection = MassSelectionState()
 
     private fun currentInputConnection() = FlorisImeService.currentInputConnection()
+
+    private fun Boolean.finishCommitAttempt() = also {
+        if (it) updateLastCommitPosition() else phantomSpace.setInactive()
+    }
 
     override fun handleStartInputView(editorInfo: FlorisEditorInfo, isRestart: Boolean) {
         if (!prefs.correction.rememberCapsLockState.get()) {
@@ -127,14 +177,19 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         }
     }
 
-    override fun handleSelectionUpdate(oldSelection: EditorRange, newSelection: EditorRange, composing: EditorRange) {
+    override fun handleSelectionUpdate(
+        oldSelection: EditorRange,
+        newSelection: EditorRange,
+        composing: EditorRange,
+    ) {
         autoSpace.setInactiveFromUpdate()
-        phantomSpace.setInactiveFromUpdate()
-        if (massSelection.isActive) {
+        val isExpectedUpdate = if (massSelection.isActive) {
             super.handleMassSelectionUpdate(newSelection, composing)
+            false
         } else {
-            super.handleSelectionUpdate(oldSelection, newSelection, composing)
+            super.handleSelectionUpdateInternal(newSelection, composing)
         }
+        phantomSpace.setInactiveFromUpdate(isExpectedUpdate)
     }
 
     override fun determineComposingEnabled(): Boolean {
@@ -282,13 +337,15 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      */
     override fun commitText(text: String): Boolean {
         val isPhantomSpaceActive = phantomSpace.determine(text)
+        val candidateForRevert = phantomSpace.candidateForRevert.takeIf { text == SPACE }
         autoSpace.setInactive()
-        phantomSpace.setInactive()
-        return if (isPhantomSpaceActive) {
-            super.commitText("$SPACE$text")
-        } else {
-            super.commitText(text)
+        phantomSpace.setInactive(candidateForRevert)
+        val committedText = if (isPhantomSpaceActive) "$SPACE$text" else text
+        val committed = super.commitText(committedText)
+        if (!committed) {
+            phantomSpace.setInactive()
         }
+        return committed
     }
 
     /**
@@ -300,43 +357,83 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      *
      * @param candidate The candidate to complete in this editor.
      *
-     * @return True on success, false if an error occurred or the input connection is invalid.
+     * @return Whether the candidate was committed, rejected without mutation, or failed after a mutation attempt.
      */
-    fun commitCompletion(candidate: SuggestionCandidate): Boolean {
+    internal fun commitCompletion(
+        candidate: SuggestionCandidate,
+        canRevert: Boolean,
+    ): EditorEditResult {
         val text = candidate.text.toString()
-        if (text.isEmpty() || activeInfo.isRawInputEditor) return false
+        if (text.isEmpty() || activeInfo.isRawInputEditor) {
+            return EditorEditResult.NOT_APPLICABLE
+        }
         val content = activeContent
         val replacement = candidate.replacement
         if (replacement != null) {
+            val candidateForRevert = candidate.takeIf { canRevert }
             val replacementRange = replacement.range
             val localRange = replacementRange.translatedBy(-content.offset.coerceAtLeast(0))
             val isCurrentReplacement = localRange.isValid &&
+                localRange.start <= localRange.end &&
                 localRange.end <= content.text.length &&
                 content.text.substring(localRange.start, localRange.end) == replacement.originalText &&
                 content.selection == replacement.expectedSelection
-            if (!isCurrentReplacement || !setSelection(replacementRange)) {
-                return false
+            if (!isCurrentReplacement) {
+                return EditorEditResult.NOT_APPLICABLE
             }
-            phantomSpace.setActive(showComposingRegion = false, candidate = candidate)
-            return super.commitText(text).also {
-                updateLastCommitPosition()
+            phantomSpace.setActive(
+                showComposingRegion = false,
+                candidate = candidateForRevert,
+            )
+            val result = replaceTextBeforeCursor(
+                range = replacementRange,
+                expectedText = replacement.originalText,
+                replacementText = text,
+            )
+            if (result != EditorEditResult.SUCCESS) {
+                phantomSpace.setInactive()
             }
+            if (result == EditorEditResult.SUCCESS) updateLastCommitPosition()
+            return result
         }
-        return if (content.composing.isValid) {
-            phantomSpace.setActive(showComposingRegion = false, candidate = candidate)
+        val committed = if (content.composing.isValid) {
+            phantomSpace.setActive(showComposingRegion = false)
             super.finalizeComposingText(text)
         } else {
             val isPhantomSpaceActive = phantomSpace.determine(text)
-            phantomSpace.setActive(showComposingRegion = false, candidate = candidate)
-            return if (isPhantomSpaceActive) {
+            phantomSpace.setActive(showComposingRegion = false)
+            (if (isPhantomSpaceActive) {
                 super.commitText("$SPACE$text")
             } else {
                 super.commitText(text)
-            }.also {
-                // handled in finalizeComposingText if content.composing.isValid
-                updateLastCommitPosition()
-            }
+            }).finishCommitAttempt()
         }
+        if (!committed) phantomSpace.setInactive()
+        return committed.asEditorEditResult()
+    }
+
+    internal fun revertAutoCorrection(): EditorEditResult {
+        val candidate = phantomSpace.candidateForRevert
+            ?: return EditorEditResult.NOT_APPLICABLE
+        val plan = candidate.replacement?.let { replacement ->
+            autoCorrectionRevertPlan(
+                replacement = replacement,
+                candidateText = candidate.text.toString(),
+                content = activeContent,
+            )
+        }
+        if (plan == null) {
+            phantomSpace.setInactive()
+            return EditorEditResult.NOT_APPLICABLE
+        }
+        phantomSpace.setInactive()
+        return replaceTextBeforeCursor(
+            range = plan.range,
+            expectedText = plan.expectedText,
+            replacementText = plan.replacementText,
+            validateLiveState = true,
+            resetLastCommitPositionTo = plan.range.start,
+        )
     }
 
     /**
@@ -353,13 +450,11 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         if (text.isEmpty() || activeInfo.isRawInputEditor) return false
         val isPhantomSpaceActive = phantomSpace.determine(text, forceActive = true)
         phantomSpace.setActive(showComposingRegion = true)
-        return if (isPhantomSpaceActive) {
+        return (if (isPhantomSpaceActive) {
             super.commitText("$SPACE$text")
         } else {
             super.commitText(text)
-        }.also {
-            updateLastCommitPosition()
-        }
+        }).finishCommitAttempt()
     }
 
     /**
@@ -375,11 +470,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         if (item == null) return false
         val mimeTypes = item.mimeTypes
         return when (item.type) {
-            ItemType.TEXT -> {
-                commitText(item.text.toString()).also {
-                    updateLastCommitPosition()
-                }
-            }
+            ItemType.TEXT -> commitText(item.text.toString()).finishCommitAttempt()
             ItemType.IMAGE, ItemType.VIDEO -> {
                 item.uri ?: return false
                 val id = ContentUris.parseId(item.uri)
@@ -659,7 +750,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         }
     }
 
-    class PhantomSpaceState {
+    internal class PhantomSpaceState {
         companion object {
             private const val F_IS_ACTIVE = 0x1
             private const val F_SHOW_COMPOSING_REGION = 0x2
@@ -692,16 +783,18 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
             candidateForRevert = candidate
         }
 
-        fun setInactive() {
+        fun setInactive(
+            candidateToRetain: SuggestionCandidate? = null,
+        ) {
             state.set(0)
-            candidateForRevert = null
+            candidateForRevert = candidateToRetain
         }
 
-        fun setInactiveFromUpdate() {
-            val prevStateValue = state.getAndUpdate { state ->
+        fun setInactiveFromUpdate(isExpectedUpdate: Boolean) {
+            state.updateAndGet { state ->
                 if ((state and F_STAY_ACTIVE_NEXT_UPDATE) != 0) (state and F_STAY_ACTIVE_NEXT_UPDATE.inv()) else 0
             }
-            if ((prevStateValue and F_STAY_ACTIVE_NEXT_UPDATE) == 0) {
+            if (candidateForRevert != null && !isExpectedUpdate) {
                 candidateForRevert = null
             }
         }

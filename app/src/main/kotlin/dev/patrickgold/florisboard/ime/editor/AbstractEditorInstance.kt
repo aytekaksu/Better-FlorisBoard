@@ -23,6 +23,7 @@ import android.text.TextUtils
 import android.view.InputDevice
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
+import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.ime.nlp.BreakIteratorGroup
@@ -50,12 +51,45 @@ enum class OperationScope {
     AFTER_CURSOR;
 }
 
+private const val NumCharsSafeMarginBeforeCursor: Int = 128
+
+internal enum class EditorEditResult {
+    NOT_APPLICABLE,
+    DIRTY_FAILURE,
+    SUCCESS,
+}
+
+internal fun classifyEditorEditResult(
+    selectionAccepted: Boolean,
+    commitAccepted: Boolean,
+    cursorRestored: Boolean,
+): EditorEditResult = when {
+    !selectionAccepted -> EditorEditResult.NOT_APPLICABLE
+    commitAccepted -> EditorEditResult.SUCCESS
+    cursorRestored -> EditorEditResult.NOT_APPLICABLE
+    else -> EditorEditResult.DIRTY_FAILURE
+}
+
+internal fun Boolean.asEditorEditResult() =
+    if (this) EditorEditResult.SUCCESS else EditorEditResult.NOT_APPLICABLE
+
+internal fun absoluteCollapsedSelection(
+    startOffset: Int,
+    textLength: Int,
+    selectionStart: Int,
+    selectionEnd: Int,
+): Int? {
+    if (startOffset < 0 || textLength < 0 || selectionStart !in 0..textLength ||
+        selectionEnd != selectionStart
+    ) return null
+    return (startOffset.toLong() + selectionStart).takeIf { it <= Int.MAX_VALUE }?.toInt()
+}
+
 @Suppress("BlockingMethodInNonBlockingContext")
 abstract class AbstractEditorInstance(context: Context) {
     companion object {
         private const val NumCharsBeforeCursor: Int = 256
         private const val NumCharsAfterCursor: Int = 128
-        private const val NumCharsSafeMarginBeforeCursor: Int = 128
         //private const val NumCharsSafeMarginAfterCursor: Int = 0
 
         private const val CursorUpdateAll: Int =
@@ -164,28 +198,36 @@ abstract class AbstractEditorInstance(context: Context) {
         _lastCommitPosition.handleUpdateSelection(newSelection)
     }
 
-    open fun handleSelectionUpdate(oldSelection: EditorRange, newSelection: EditorRange, composing: EditorRange) {
+    open fun handleSelectionUpdate(
+        oldSelection: EditorRange,
+        newSelection: EditorRange,
+        composing: EditorRange,
+    ) {
+        handleSelectionUpdateInternal(newSelection, composing)
+    }
+
+    protected fun handleSelectionUpdateInternal(
+        newSelection: EditorRange,
+        composing: EditorRange,
+    ): Boolean {
         val ic = currentInputConnection()
         val editorInfo = activeInfo
         if (ic == null || newSelection.isNotValid || editorInfo.isRawInputEditor) {
             activeCursorCapsMode = InputAttributes.CapsMode.NONE
             activeContent = EditorContent.Unspecified
             keyboardManager.reevaluateInputShiftState()
-            return
+            return false
         }
 
         _lastCommitPosition.handleUpdateSelection(newSelection)
         val expected = runBlocking {
-            expectedContentQueue.popUntilOrNull {
-                it.selection == newSelection && it.composing == composing &&
-                    it.textBeforeSelection.length >= NumCharsSafeMarginBeforeCursor.coerceAtMost(it.selection.start)
-            }
+            expectedContentQueue.popUntilOrNull(newSelection, composing)
         }
         if (expected != null) {
             activeCursorCapsMode = expected.cursorCapsMode()
             activeContent = expected
             keyboardManager.reevaluateInputShiftState()
-            return
+            return true
         }
 
         // Get Text
@@ -209,6 +251,7 @@ abstract class AbstractEditorInstance(context: Context) {
                 ic.setComposingRegion(content.composing)
             }
         }
+        return false
     }
 
     open fun handleFinishInputView() {
@@ -317,17 +360,21 @@ abstract class AbstractEditorInstance(context: Context) {
         val content = activeContent
         if (content.selection == selection) return true
         val ic = currentInputConnection() ?: return false
-        ic.beginBatchEdit()
-        runBlocking {
-            val newContent = content
+        val newContent = runBlocking {
+            content
                 .copy(localSelection = selection.translatedBy(-content.offset))
                 .generateCopy(selection = selection)
-            expectedContentQueue.push(newContent)
-            ic.setSelection(selection.start, selection.end)
+        }
+        ic.beginBatchEdit()
+        val selected = ic.setSelection(selection.start, selection.end)
+        if (selected) {
+            runBlocking {
+                expectedContentQueue.push(newContent)
+            }
             ic.setComposingRegion(newContent.composing)
         }
         ic.endBatchEdit()
-        return true
+        return selected
     }
 
     open fun commitChar(char: String): Boolean {
@@ -396,24 +443,109 @@ abstract class AbstractEditorInstance(context: Context) {
         val selection = content.selection
         ic.beginBatchEdit()
         ic.finishComposingText()
-        if (activeInfo.isRawInputEditor) {
+        val committed = if (activeInfo.isRawInputEditor) {
             ic.commitText(text, 1)
-        } else runBlocking {
+        } else {
             val newSelection = EditorRange.cursor(selection.start + text.length)
-            val newContent = content.generateCopy(
-                selection = newSelection,
-                textBeforeSelection = buildString {
-                    append(content.textBeforeSelection)
-                    append(text)
-                },
-                selectedText = "",
-            )
-            expectedContentQueue.push(newContent)
-            ic.commitText(text, 1)
-            ic.setComposingRegion(newContent.composing)
+            val newContent = runBlocking {
+                content.generateCopy(
+                    selection = newSelection,
+                    textBeforeSelection = buildString {
+                        append(content.textBeforeSelection)
+                        append(text)
+                    },
+                    selectedText = "",
+                )
+            }
+            ic.commitText(text, 1).also { accepted ->
+                if (accepted) {
+                    runBlocking {
+                        expectedContentQueue.push(newContent)
+                    }
+                    ic.setComposingRegion(newContent.composing)
+                }
+            }
         }
         ic.endBatchEdit()
-        return true
+        return committed
+    }
+
+    internal fun replaceTextBeforeCursor(
+        range: EditorRange,
+        expectedText: String,
+        replacementText: String,
+        validateLiveState: Boolean = false,
+        resetLastCommitPositionTo: Int? = null,
+    ): EditorEditResult {
+        val content = activeContent
+        val selection = content.selection
+        if (
+            activeInfo.isRawInputEditor ||
+            content.offset < 0 ||
+            range.isNotValid ||
+            range.start > range.end ||
+            selection != EditorRange.cursor(range.end) ||
+            range.length != expectedText.length ||
+            !content.textBeforeSelection.endsWith(expectedText)
+        ) {
+            return EditorEditResult.NOT_APPLICABLE
+        }
+        val ic = currentInputConnection() ?: return EditorEditResult.NOT_APPLICABLE
+        if (validateLiveState) {
+            val request = ExtractedTextRequest().apply {
+                hintMaxChars = expectedText.length.coerceAtLeast(1)
+                hintMaxLines = 1
+            }
+            val extracted = ic.getExtractedText(request, 0)
+                ?: return EditorEditResult.NOT_APPLICABLE
+            val liveSelection = absoluteCollapsedSelection(
+                extracted.startOffset,
+                extracted.text?.length ?: return EditorEditResult.NOT_APPLICABLE,
+                extracted.selectionStart,
+                extracted.selectionEnd,
+            )
+            val liveText = ic.getTextBeforeCursor(expectedText.length, 0)
+                ?: return EditorEditResult.NOT_APPLICABLE
+            if (liveSelection != range.end || liveText.toString() != expectedText) {
+                return EditorEditResult.NOT_APPLICABLE
+            }
+        }
+        ic.beginBatchEdit()
+        val selected = ic.setSelection(range.start, range.end)
+        if (selected) {
+            ic.finishComposingText()
+        }
+        val committed = selected && ic.commitText(replacementText, 1)
+        val cursorRestored = !selected || committed ||
+            ic.setSelection(selection.start, selection.end)
+        val result = classifyEditorEditResult(selected, committed, cursorRestored)
+        if (result != EditorEditResult.SUCCESS) {
+            ic.endBatchEdit()
+            return result
+        }
+        val selectedContent = runBlocking {
+            content
+                .copy(localSelection = range.translatedBy(-content.offset))
+                .generateCopy(selection = range)
+        }
+        if (resetLastCommitPositionTo != null) {
+            _lastCommitPosition.resetTo(resetLastCommitPositionTo)
+        }
+        val newSelection = EditorRange.cursor(range.start + replacementText.length)
+        val newContent = runBlocking {
+            content.generateCopy(
+                selection = newSelection,
+                textBeforeSelection = content.textBeforeSelection.dropLast(expectedText.length) + replacementText,
+                selectedText = "",
+            )
+        }
+        runBlocking {
+            expectedContentQueue.push(selectedContent)
+            expectedContentQueue.push(newContent)
+        }
+        ic.setComposingRegion(newContent.composing)
+        ic.endBatchEdit()
+        return EditorEditResult.SUCCESS
     }
 
     open fun finalizeComposingText(text: String): Boolean {
@@ -665,17 +797,21 @@ abstract class AbstractEditorInstance(context: Context) {
         return true
     }
 
-    private class ExpectedContentQueue {
+    internal class ExpectedContentQueue {
         private val list = guardedByLock { mutableListOf<EditorContent>() }
 
-        suspend fun popUntilOrNull(predicate: (EditorContent) -> Boolean): EditorContent? {
-            return list.withLock { list ->
-                while (list.isNotEmpty()) {
-                    val item = list.removeAt(0)
-                    if (predicate(item)) return@withLock item
-                }
-                return@withLock null
+        suspend fun popUntilOrNull(
+            selection: EditorRange,
+            composing: EditorRange,
+        ): EditorContent? = list.withLock { list ->
+            while (list.isNotEmpty()) {
+                val item = list.removeAt(0)
+                if (item.selection == selection && item.composing == composing &&
+                    item.textBeforeSelection.length >=
+                        NumCharsSafeMarginBeforeCursor.coerceAtMost(item.selection.start)
+                ) return@withLock item
             }
+            null
         }
 
         suspend fun push(item: EditorContent) {
@@ -709,6 +845,10 @@ abstract class AbstractEditorInstance(context: Context) {
 
         fun reset() {
             pos = -1
+        }
+
+        fun resetTo(position: Int) {
+            pos = position
         }
 
         fun handleCommit(selection: EditorRange) {
