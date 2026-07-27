@@ -776,10 +776,11 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             admittedSessionId == session.sessionId &&
             activeProviderId == boundProviderId
         ) {
+            val finalRequest = buildFinalRequest(session)
             pendingSessionFinishes.add(session.sessionId)
             if (send(
                 what = AutocorrectPluginContract.MSG_FINISH_SESSION,
-                data = finishSessionBundle(session.sessionId),
+                data = finishSessionBundle(session.sessionId, finalRequest),
             )) {
                 expireSessionFinish(session.sessionId)
             } else {
@@ -794,6 +795,41 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         clearInputTrace()
         cancelPending()
         return session != null
+    }
+
+    private fun buildFinalRequest(session: AutocorrectSession): AutocorrectRequest {
+        val content = editorInstance.activeContent.takeIf {
+            it.localSelection.isCursorMode &&
+                it.localSelection.start in 0..it.text.length
+        }
+        val text = content?.text.orEmpty()
+        val cursor = content?.localSelection?.start ?: 0
+        val windowStart =
+            (cursor - AutocorrectPluginContract.MAX_CONTEXT_CHARS).coerceAtLeast(0)
+        val windowEnd = minOf(
+            text.length,
+            maxOf(cursor, windowStart + AutocorrectPluginContract.MAX_CONTEXT_CHARS),
+        )
+        fun EditorRange?.inWindow() = this?.takeIf {
+            isValid && start >= windowStart && end <= windowEnd
+        }?.translatedBy(-windowStart) ?: EditorRange.Unspecified
+        val composing = content?.localComposing.inWindow()
+        val currentWord = content?.localCurrentWord.inWindow()
+        val localCursor = cursor - windowStart
+        return AutocorrectRequest(
+            sessionId = session.sessionId,
+            requestId = nextId.getAndIncrement(),
+            text = text.substring(windowStart, windowEnd),
+            selectionStart = localCursor,
+            selectionEnd = localCursor,
+            composingStart = composing.start,
+            composingEnd = composing.end,
+            currentWordStart = currentWord.start,
+            currentWordEnd = currentWord.end,
+            maxCandidateCount = MaxVisibleCandidates,
+            allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
+            capsMode = keyboardManager.activeState.inputShiftState.toAutocorrectCapsMode(),
+        )
     }
 
     private fun expireSessionFinish(sessionId: Long) {
