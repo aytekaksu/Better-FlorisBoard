@@ -21,7 +21,7 @@ Build the API AAR with:
 Add that AAR to the provider application, subclass
 `org.florisboard.autocorrect.api.AutocorrectPluginService`, and implement `onSuggest`. All
 provider APIs are engine-neutral; the provider owns its models, dictionaries, ranking, and
-settings.
+persisted settings, while FlorisBoard owns their presentation.
 
 When consuming the raw AAR rather than this Gradle project, also add
 `org.jetbrains.kotlinx:kotlinx-coroutines-android` to the provider application.
@@ -61,16 +61,14 @@ Declare the service in the provider manifest:
     </intent-filter>
     <meta-data
         android:name="org.florisboard.autocorrect.api.PROTOCOL_VERSION"
-        android:value="1" />
-    <meta-data
-        android:name="org.florisboard.autocorrect.api.SETTINGS_ACTIVITY"
-        android:value=".AutocorrectSettingsActivity" />
+        android:value="2" />
 </service>
 ```
 
-The settings activity metadata is optional. If present, that activity must be exported so
-FlorisBoard can open it explicitly. FlorisBoard then offers a button which opens the activity in
-the provider package.
+Protocol version 2 has no settings-activity metadata or provider-activity UI item. Provider
+settings are declarative and are always rendered by FlorisBoard. A provider can therefore ship as
+a service-only package with no launcher activity and must not depend on a companion keyboard
+application being installed.
 
 ## Suggestions and learning
 
@@ -79,16 +77,26 @@ the provider package.
 - `AutocorrectRequest.inputTrace` optionally supplies normalized key bounds and tap positions for
   proximity-aware correction. For a gesture request it instead carries a bounded, timed,
   single-pointer path and sets `mode` to `GESTURE`. It contains no physical screen coordinates.
+- `AutocorrectRequest.capsMode` reports the keyboard's live shift state for that request, including
+  automatic sentence shift, manual shift, and caps lock. It defaults to `UNSPECIFIED` when an older
+  host omits it.
 - `onSuggestResult` may additionally return a bounded set of Unicode code points which remain
   valid continuations of the current word. FlorisBoard uses these optional hints to expand only
   those character keys during the next hit test. Hints are ignored for non-character keys and
   while Android accessibility is active. Candidate-only providers can keep overriding `onSuggest`.
+- `AutocorrectSuggestionResult.Empty` means the provider handled the request and intentionally
+  produced no candidates. Return `AutocorrectSuggestionResult.Unhandled` when FlorisBoard should
+  ask its built-in language provider instead. This distinction lets a provider disable one of its
+  features without accidentally re-enabling equivalent host suggestions.
 - Candidate IDs are opaque to FlorisBoard and should remain valid until the typing session ends.
   They are returned to the provider for accepted, reverted, and removal events. Acceptance reports
   whether the user tapped a candidate, separator-triggered autocorrection selected it, or a gesture
   result was committed.
 - Candidate kinds let providers classify typed words, corrections, completions, predictions, and
   emoji for presentation without changing provider order.
+- A candidate with `visible == false` remains eligible for separator-triggered autocorrection but
+  is omitted from FlorisBoard's candidate row. This lets a provider independently honor its
+  “show suggestions” and autocorrection settings without owning any keyboard UI.
 - `AutocorrectSeparatorBehavior` lets the engine insert, omit, or defer separator behavior to the
   active language.
 - `onTextEvent` reports plain typed and gesture words which did not originate from a provider
@@ -101,6 +109,9 @@ the provider package.
 - The session's `allowPersonalizedLearning` flag reflects Android's no-personalized-learning
   editor option. FlorisBoard suppresses text events when it is false; providers must also avoid
   persistent learning from candidate callbacks in that session.
+- `AutocorrectSession.editorFlags` contains only normalized behavior traits (`CODE_LIKE` and
+  `WEB_FIELD`). Unknown bits are discarded and an omitted field means no traits. Providers must
+  not infer a target application's identity from these flags.
 - Requests and replies are asynchronous. Providers must expect newer requests to cancel older
   work and should cooperate with coroutine cancellation.
 - Providers may expose any implementation: dictionaries, finite-state algorithms, native code,
@@ -109,36 +120,68 @@ the provider package.
   only expected host package names. The default remains open so independently developed keyboards
   and providers can interoperate without a shared signing key.
 
-If an external provider returns no candidates, times out, disconnects, or crashes, FlorisBoard
-falls back to its built-in language provider. Host-owned spelling, emoji, clipboard, glide typing,
-candidate display, safe editor replacement, and callback behavior remain available.
+FlorisBoard falls back to its built-in language provider when the external provider returns
+`Unhandled`, times out, disconnects, or crashes. A successful handled result remains authoritative
+even when its candidate list is empty. Host-owned spelling, emoji, clipboard, candidate display,
+safe editor replacement, and callback behavior remain available.
 
 ## Provider settings UI
 
-Providers can return an `AutocorrectPluginUi` from `onGetPluginUi`. It is a bounded declarative
-schema which FlorisBoard renders using its own theme and accessibility behavior. A provider chooses
-separate root pages for the settings app and keyboard, and pages can be shared by marking them
-`BOTH`.
+Providers return an `AutocorrectPluginUi` from `onGetPluginUi(languageTags)`. It is a bounded
+declarative schema which FlorisBoard renders using its own components, theme, navigation, and
+accessibility behavior. The provider supplies labels, values, options, validation rules, and
+actions; it does not supply Android views, Compose code, or an activity to launch.
+
+`languageTags` is the bounded, distinct set of language tags configured in FlorisBoard when the UI
+was requested. Providers can use it to construct per-language dictionary and model pages without
+reading another keyboard application's configuration. Suggestion requests still use
+`AutocorrectSession.primaryLanguageTag` and `secondaryLanguageTags` as the typing-session language
+source.
+
+A provider chooses separate root pages for the FlorisBoard settings app and keyboard, and pages can
+be shared by marking them `BOTH`. All provider settings and management workflows must remain usable
+through these host-rendered pages, including when the package contains only the provider service.
+Item IDs are operation identifiers and therefore global to one provider UI. If an ID appears on
+more than one page or surface, every occurrence must represent the same setting or action and
+declare the same host setting.
 
 The schema supports:
 
 - navigation pages, switches, sliders, choices, and text values;
 - explicit actions with optional confirmation;
 - informational rows and determinate or indeterminate progress;
-- a restricted activity escape hatch for file pickers or other complex workflows.
+- document imports and exports through the host-owned Android system document picker.
 
-Activity targets must be exported and belong to the provider package. Arbitrary provider Compose
-code is never loaded into FlorisBoard. Text values are editable in the settings app; the keyboard
-surface displays them read-only because an IME cannot reliably type into its own panel.
+A switch can optionally declare an `AutocorrectPluginHostSetting`. This is for behavior which must
+run before a provider receives a request, such as enabling glide recognition or increasing its
+sensitivity. FlorisBoard owns and persists the authoritative value, substitutes that value into
+every returned page, and applies the behavior itself. The provider still receives the ordinary
+`onSetPluginUiValue` callback so it can mirror the value, but it must not treat its mirrored copy as
+an independent gate. Unknown host settings are ignored, and a host setting on a non-switch item is
+discarded. These host-owned preferences are normal FlorisBoard preferences, so they remain
+available without a provider installed and participate in FlorisBoard configuration backup and
+restore.
 
-After `onSetPluginUiValue` or `onInvokePluginUiAction`, the service returns a fresh UI snapshot.
-Long-running user actions can call `publishPluginUi` to push progress while a page is open. The
-provider receives `onPluginUiClosed` when the last host page closes and must stop UI-only
+For `DOCUMENT_IMPORT`, set `documentMimeTypes` to the accepted MIME types. For
+`DOCUMENT_EXPORT`, also set `documentSuggestedName` when a useful default filename is known.
+FlorisBoard opens the Storage Access Framework picker and passes the selected document to
+`onPluginUiDocument` as an `AutocorrectPluginDocument`. Its `ParcelFileDescriptor` is opened for
+the requested direction (`write == false` for import and `true` for export), is valid only during
+that callback, and is closed by the base service afterward. The provider performs the actual
+bounded read or write and does not need broad storage permission.
+
+Text values are editable in the settings app; the keyboard surface displays them read-only because
+an IME cannot reliably type into its own panel.
+
+After `onSetPluginUiValue`, `onInvokePluginUiAction`, or `onPluginUiDocument`, the service returns a
+fresh UI snapshot. The callback should return `false` for an unknown item, invalid value, or failed
+operation. Long-running user actions can call `publishPluginUi` to push progress while a page is
+open. The provider receives `onPluginUiClosed` when the last host page closes and must stop UI-only
 observation. FlorisBoard does not poll.
 
 The keyboard page is opened through the **Autocorrect provider** quick action. It is available in
-the Smartbar action editor for existing and new configurations. Providers which implement only the
-original suggestion protocol remain compatible; FlorisBoard shows a short unavailable message
+the Smartbar action editor for existing and new configurations. Protocol-v2 providers which do not
+publish settings pages can remain suggestion-only; FlorisBoard shows a short unavailable message
 after the optional UI request times out.
 
 ## Reference-engine coverage
@@ -156,12 +199,14 @@ engine-specific dependency:
 | Proximity-aware correction | normalized `inputTrace` key geometry and taps |
 | Dictionary-aware key hit testing | optional bounded valid-next-code-point hints |
 | Swipe decoding and gesture candidates | timed normalized gesture path with host fallback |
+| Swipe recognition enablement and sensitivity | optional host-owned switch settings |
 | Multilingual model selection | primary and secondary session language tags |
 | Personal history and fine-tuning input | accepted/reverted/removal and text-commit callbacks |
 | Prediction and personalization toggles | switch items |
 | Thresholds, temperature and tuning values | slider and choice items |
 | Model selection and per-language defaults | navigation pages and choices |
-| Model import, export, download and deletion | confirmed actions or provider activities |
+| Model or dictionary import and export | host-picked `DOCUMENT_IMPORT` and `DOCUMENT_EXPORT` items |
+| Model download, deletion and default selection | actions, navigation, progress and choices |
 | Training/download status | progress items and push updates while visible |
 | Personal dictionary and blacklist management | text, navigation and action items; candidate removal |
 
@@ -176,7 +221,9 @@ not included in this Apache-licensed repository.
 
 FlorisBoard never connects an external provider for password fields, fields which disable
 suggestions, raw input editors, or incognito sessions. It does not send the target application's
-package name. Editors can independently disable persistent personalization without disabling
+package name. Compatibility cases which FlorisBoard can recognize locally, including browser and
+code-editor behavior, are reduced to the generic editor flags before crossing the service boundary.
+Editors can independently disable persistent personalization without disabling
 suggestions.
 
 The provider is bound only while an eligible input view or an explicit provider-settings page is
@@ -193,13 +240,15 @@ must not be the only place important data is saved.
 
 Users explicitly select one installed provider under **Settings → Typing → Autocorrect provider**.
 That component selection is a regular FlorisBoard preference and is included in its configuration
-backup. Engine-specific settings remain owned by the provider app, and a restored selection is used
-only when the same compatible provider is installed.
+backup. Engine-specific values remain in provider-owned storage but are configured through
+FlorisBoard's host-rendered pages. A restored selection is used only when the same compatible
+provider service is installed.
 
 To avoid repeatedly loading a large immutable model when switching text fields, a provider may keep
 it in an application-scoped lazy cache. That cache must not run work on its own; Android remains
 free to reclaim the provider process after FlorisBoard unbinds.
 
-Explicit model downloads, imports, exports, or training initiated from provider UI remain the
-provider application's responsibility and must follow Android's normal background-work rules. They
-must not be tied to or kept alive by ordinary typing sessions.
+For imports and exports, FlorisBoard owns the document-picker interaction and the provider handles
+I/O only through the descriptor supplied to its callback. Explicit downloads or training initiated
+from a provider page remain provider operations and must follow Android's normal background-work
+rules. None of these operations may be tied to or kept alive by an ordinary typing session.

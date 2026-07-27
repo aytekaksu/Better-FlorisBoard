@@ -103,6 +103,13 @@ interface SuggestionCandidate {
     val isEligibleForUserRemoval: Boolean
 
     /**
+     * Whether this candidate is shown to the user. Hidden candidates can still participate in
+     * separator-triggered autocorrection.
+     */
+    val isVisible: Boolean
+        get() = true
+
+    /**
      * Optional icon ID for showing an icon on the start of the candidate item. Mainly used for special suggestions
      * such as clipboard, word suggestions should not use this property. Do not provide an invalid drawable ID, any
      * non-null drawable ID that does not exist will result in an unhandled crash.

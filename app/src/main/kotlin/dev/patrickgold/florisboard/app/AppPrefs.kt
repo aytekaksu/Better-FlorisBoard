@@ -353,6 +353,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "glide__enabled",
             default = false,
         )
+        val sensitive = boolean(
+            key = "glide__sensitive",
+            default = false,
+        )
         val showTrail = boolean(
             key = "glide__show_trail",
             default = true,

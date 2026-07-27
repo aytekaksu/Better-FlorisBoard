@@ -31,6 +31,8 @@ import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSuggestionProvider
 import dev.patrickgold.florisboard.ime.nlp.han.HanShapeBasedLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.latin.LatinLanguageProvider
+import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
+import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginSuggestionBatch
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
 import dev.patrickgold.florisboard.subtypeManager
@@ -44,6 +46,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.florisboard.autocorrect.api.AutocorrectPluginContract
 import org.florisboard.lib.kotlin.guardedByLock
 import org.florisboard.lib.kotlin.collectLatestIn
 import java.util.concurrent.atomic.AtomicBoolean
@@ -79,6 +82,7 @@ class NlpManager(context: Context) {
     }
 
     private val _activeCandidatesFlow = MutableStateFlow(listOf<SuggestionCandidate>())
+    @Volatile private var autoCommitCandidate: SuggestionCandidate? = null
     val activeCandidatesFlow = _activeCandidatesFlow.asStateFlow()
     inline var activeCandidates
         get() = activeCandidatesFlow.value
@@ -234,14 +238,28 @@ class NlpManager(context: Context) {
                 }
                 else -> {
                     val provider = getSuggestionProvider(subtype)
-                    val externalSuggestions = provider.suggest(
-                        subtype = subtype,
-                        content = content,
-                        maxCandidateCount = 8,
-                        allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                        isPrivateSession = keyboardManager.activeState.isIncognitoMode,
-                    )
-                    if (provider === autocorrectPluginManager && externalSuggestions.isEmpty()) {
+                    val externalResult = if (provider === autocorrectPluginManager) {
+                        autocorrectPluginManager.suggestWithStatus(
+                            subtype = subtype,
+                            content = content,
+                            maxCandidateCount = AutocorrectPluginContract.MAX_CANDIDATES,
+                            allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
+                            isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                        )
+                    } else {
+                        AutocorrectPluginSuggestionBatch(
+                            candidates = provider.suggest(
+                                subtype = subtype,
+                                content = content,
+                                maxCandidateCount = 8,
+                                allowPossiblyOffensive =
+                                    !prefs.suggestion.blockPossiblyOffensive.get(),
+                                isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                            ),
+                            handled = true,
+                        )
+                    }
+                    if (!externalResult.handled) {
                         getBuiltInSuggestionProvider(subtype).suggest(
                             subtype = subtype,
                             content = content,
@@ -250,7 +268,7 @@ class NlpManager(context: Context) {
                             isPrivateSession = keyboardManager.activeState.isIncognitoMode,
                         )
                     } else {
-                        externalSuggestions
+                        externalResult.candidates
                     }
                 }
             }
@@ -280,7 +298,7 @@ class NlpManager(context: Context) {
     }
 
     fun getAutoCommitCandidate(): SuggestionCandidate? {
-        return activeCandidates.firstOrNull { it.isEligibleForAutoCommit }
+        return autoCommitCandidate
     }
 
     fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
@@ -326,8 +344,21 @@ class NlpManager(context: Context) {
                 }
                 else -> emptyList()
             }
-            activeCandidates = candidates
-            autoExpandCollapseSmartbarActions(candidates, NlpInlineAutofill.suggestions.value)
+            autoCommitCandidate = candidates.firstOrNull { it.isEligibleForAutoCommit }
+            val visibleCandidates = candidates
+                .filter(SuggestionCandidate::isVisible)
+                .let { visible ->
+                    if (visible.any(SuggestionCandidate::isExternalAutocorrect)) {
+                        visible.take(AutocorrectPluginManager.MaxVisibleCandidates)
+                    } else {
+                        visible
+                    }
+                }
+            activeCandidates = visibleCandidates
+            autoExpandCollapseSmartbarActions(
+                visibleCandidates,
+                NlpInlineAutofill.suggestions.value,
+            )
         }
     }
 
@@ -488,4 +519,8 @@ class NlpManager(context: Context) {
                     && !blankStrRegex.matches(currentItem.text)
             }
     }
+}
+
+private fun SuggestionCandidate.isExternalAutocorrect(): Boolean {
+    return sourceProvider?.providerId == AutocorrectPluginManager.ProviderId
 }

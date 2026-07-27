@@ -16,7 +16,6 @@
 
 package dev.patrickgold.florisboard.app.settings.typing
 
-import android.content.Intent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.RadioButton
@@ -127,18 +126,6 @@ fun AutocorrectPluginScreen() = FlorisScreen {
                         navController.navigate(Routes.Settings.AutocorrectPluginUi)
                     },
                 )
-                provider.settingsActivity?.let { settingsActivity ->
-                    Preference(
-                        icon = Icons.Default.Settings,
-                        title = stringRes(R.string.settings__autocorrect_plugins__configure),
-                        summary = provider.label,
-                        onClick = {
-                            runCatching {
-                                context.startActivity(Intent().setComponent(settingsActivity))
-                            }
-                        },
-                    )
-                }
             }
         }
     }
@@ -165,6 +152,15 @@ fun AutocorrectPluginUiScreen() = FlorisScreen {
             surface = AutocorrectPluginUiSurface.APP,
             ui = ui,
             loading = loading,
+            appPreferenceGroup = { groupTitle, groupContent ->
+                if (groupTitle.isEmpty()) {
+                    groupContent()
+                } else {
+                    PreferenceGroup(title = groupTitle) {
+                        groupContent()
+                    }
+                }
+            },
         )
     }
 }
