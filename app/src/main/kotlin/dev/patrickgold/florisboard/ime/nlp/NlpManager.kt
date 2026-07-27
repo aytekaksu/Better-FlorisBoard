@@ -328,19 +328,22 @@ class NlpManager(context: Context) {
         runBlocking {
             val candidates = when {
                 isSuggestionOn() -> {
-                    clipboardSuggestionProvider.suggest(
+                    val content = editorInstance.activeContent
+                    val wordCandidates = internalSuggestionsGuard.withLock {
+                        internalSuggestions.second
+                    }
+                    val clipboardCandidates = clipboardSuggestionProvider.suggest(
                         subtype = Subtype.DEFAULT,
-                        content = editorInstance.activeContent,
+                        content = content,
                         maxCandidateCount = 8,
                         allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
                         isPrivateSession = keyboardManager.activeState.isIncognitoMode,
-                    ).ifEmpty {
-                        buildList {
-                            internalSuggestionsGuard.withLock {
-                                addAll(internalSuggestions.second)
-                            }
+                    )
+                    val isWordBeingTyped = content.currentWordText.isNotBlank() ||
+                        wordCandidates.any {
+                            it.isExternalAutocorrect() && it.kind != SuggestionCandidateKind.NEXT_WORD
                         }
-                    }
+                    selectSmartbarCandidates(isWordBeingTyped, wordCandidates, clipboardCandidates)
                 }
                 else -> emptyList()
             }
@@ -524,3 +527,10 @@ class NlpManager(context: Context) {
 private fun SuggestionCandidate.isExternalAutocorrect(): Boolean {
     return sourceProvider?.providerId == AutocorrectPluginManager.ProviderId
 }
+
+internal fun <T> selectSmartbarCandidates(
+    isWordBeingTyped: Boolean,
+    wordCandidates: List<T>,
+    clipboardCandidates: List<T>,
+): List<T> =
+    if (isWordBeingTyped) wordCandidates else clipboardCandidates.ifEmpty { wordCandidates }
