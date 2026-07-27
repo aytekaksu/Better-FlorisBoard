@@ -25,6 +25,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 
 class AutocorrectCandidateLifecycleTest : FunSpec({
+    test("stale editor request cannot create a session or send") {
+        editorRequestEffects(requestGeneration = 3, activeGeneration = 4) shouldBe emptyList()
+    }
+
+    test("current editor request creates a session and sends") {
+        editorRequestEffects(requestGeneration = 4, activeGeneration = 4) shouldBe
+            listOf("session", "bind", "send")
+    }
+
     test("candidate is current only for its admitted session and editor generation") {
         isCurrentAutocorrectCandidate(
             candidateSessionId = 7,
@@ -108,3 +117,12 @@ class AutocorrectCandidateLifecycleTest : FunSpec({
         }
     }
 })
+
+private fun editorRequestEffects(
+    requestGeneration: Long,
+    activeGeneration: Long,
+) = buildList {
+    if (isCurrentEditorRequest(requestGeneration, activeGeneration)) {
+        addAll(listOf("session", "bind", "send"))
+    }
+}
