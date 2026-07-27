@@ -150,7 +150,18 @@ The schema supports:
 - navigation pages, switches, sliders, choices, and text values;
 - explicit actions with optional confirmation;
 - informational rows and determinate or indeterminate progress;
+- external HTTPS links launched by the host;
 - document imports and exports through the host-owned Android system document picker.
+
+For `EXTERNAL_LINK`, set `target` to an absolute, hierarchical HTTPS URL with a non-empty host, no
+user information, and either no explicit port or a port from 1 through 65,535. FlorisBoard validates
+the URL again when clicked and asks Android to open it with a browsable `ACTION_VIEW` intent; it
+never asks the provider to create or launch an intent and does not send an action callback. Invalid
+and unsupported targets remain inert. Other URI schemes are deliberately not accepted from
+provider content. Like navigation targets, external-link targets are bounded to 256 characters.
+Overlong external links are discarded rather than truncated.
+An older protocol-v2 host which does not know `EXTERNAL_LINK` decodes it as an informational row,
+so the provider remains usable but that link is inert.
 
 A switch can optionally declare an `AutocorrectPluginHostSetting`. This is for behavior which must
 run before a provider receives a request, such as enabling glide recognition or increasing its

@@ -78,6 +78,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.autocorrectPluginManager
+import dev.patrickgold.florisboard.lib.util.launchPluginHttpsUrl
+import dev.patrickgold.florisboard.lib.util.safePluginHttpsUrlOrNull
 import dev.patrickgold.jetpref.material.ui.JetPrefAlertDialog
 import dev.patrickgold.jetpref.material.ui.JetPrefListItem
 import org.florisboard.autocorrect.api.AutocorrectPluginUi
@@ -337,6 +339,7 @@ private fun AppPluginUiItem(
     onAction: (AutocorrectPluginUiItem, () -> Unit) -> Unit,
     onDocument: (String, android.net.Uri, Boolean) -> Unit,
 ) {
+    val context = LocalContext.current
     when (item.kind) {
         AutocorrectPluginUiItemKind.NAVIGATION -> AppPluginListItem(
             item = item,
@@ -416,6 +419,23 @@ private fun AppPluginUiItem(
             )
         }
         AutocorrectPluginUiItemKind.INFO -> AppPluginListItem(item = item)
+        AutocorrectPluginUiItemKind.EXTERNAL_LINK -> {
+            val target = item.target?.safePluginHttpsUrlOrNull()
+            AppPluginListItem(
+                item = item,
+                trailing = if (target != null) {
+                    {
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                        )
+                    }
+                } else {
+                    null
+                },
+                onClick = target?.let { { context.launchPluginHttpsUrl(it) } },
+            )
+        }
         AutocorrectPluginUiItemKind.PROGRESS -> {
             val progress = item.value?.toFloatOrNull()
                 ?.takeIf(Float::isFinite)
@@ -566,6 +586,7 @@ private fun KeyboardPluginUiItem(
     onSetValue: (String, String) -> Unit,
     onAction: (AutocorrectPluginUiItem) -> Unit,
 ) {
+    val context = LocalContext.current
     when (item.kind) {
         AutocorrectPluginUiItemKind.NAVIGATION -> PluginListItem(
             item = item,
@@ -649,6 +670,23 @@ private fun KeyboardPluginUiItem(
         AutocorrectPluginUiItemKind.DOCUMENT_IMPORT,
         AutocorrectPluginUiItemKind.DOCUMENT_EXPORT,
         AutocorrectPluginUiItemKind.INFO -> PluginListItem(item = item)
+        AutocorrectPluginUiItemKind.EXTERNAL_LINK -> {
+            val target = item.target?.safePluginHttpsUrlOrNull()
+            PluginListItem(
+                item = item,
+                trailing = if (target != null) {
+                    {
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                        )
+                    }
+                } else {
+                    null
+                },
+                onClick = target?.let { { context.launchPluginHttpsUrl(it) } },
+            )
+        }
         AutocorrectPluginUiItemKind.PROGRESS -> {
             val progress = item.value?.toFloatOrNull()
                 ?.takeIf(Float::isFinite)

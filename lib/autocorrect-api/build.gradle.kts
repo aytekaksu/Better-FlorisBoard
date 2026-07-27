@@ -37,6 +37,7 @@ configure<LibraryExtension> {
     defaultConfig {
         minSdk = projectMinSdk.toInt()
         consumerProguardFiles("consumer-rules.pro")
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -56,4 +57,5 @@ configure<LibraryExtension> {
 
 dependencies {
     implementation(libs.kotlinx.coroutines)
+    androidTestImplementation(libs.androidx.test.ext)
 }

@@ -19,6 +19,7 @@ package dev.patrickgold.florisboard.lib.util
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.annotation.StringRes
 import dev.patrickgold.florisboard.R
@@ -26,6 +27,7 @@ import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.io.FlorisRef
 import org.florisboard.lib.android.stringRes
 import org.florisboard.lib.kotlin.CurlyArg
+import java.net.URI
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.reflect.KClass
@@ -54,6 +56,39 @@ fun Context.launchUrl(@StringRes url: Int) {
 
 fun Context.launchUrl(@StringRes url: Int, vararg args: CurlyArg) {
     launchUrl(this.stringRes(url, *args))
+}
+
+fun String.safePluginHttpsUrlOrNull(): String? {
+    val target = trim()
+    val uri = runCatching { URI(target) }.getOrNull() ?: return null
+    return target.takeIf {
+        uri.isAbsolute &&
+            !uri.isOpaque &&
+            uri.scheme.equals("https", ignoreCase = true) &&
+            !uri.host.isNullOrBlank() &&
+            uri.rawUserInfo == null &&
+            (uri.port == -1 || uri.port in 1..65535)
+    }?.replaceRange(0, uri.scheme.length, "https")
+}
+
+fun Context.launchPluginHttpsUrl(url: String) {
+    val target = url.safePluginHttpsUrlOrNull() ?: return
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(target)).apply {
+        addCategory(Intent.CATEGORY_BROWSABLE)
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+    }
+    try {
+        startActivity(intent)
+    } catch (error: ActivityNotFoundException) {
+        flogError { error.toString() }
+        Toast.makeText(
+            this,
+            stringRes(R.string.general__no_browser_app_found_for_url, "url" to target),
+            Toast.LENGTH_LONG,
+        ).show()
+    } catch (error: SecurityException) {
+        flogError { error.toString() }
+    }
 }
 
 inline fun <T : Any> Context.launchActivity(kClass: KClass<T>, intentModifier: (Intent) -> Unit = { }) {
