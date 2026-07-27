@@ -8,7 +8,7 @@ For each change in the pull request, a workflow is run, which produces a debug a
 
 ## Checklist
 
-- [ ] I have read and understood the [contribution guidelines](https://github.com/aytekaksu/florisboard/blob/main/CONTRIBUTING.md).
-- [ ] I have read and understood the [AI-assisted contribution policy](https://github.com/aytekaksu/florisboard/blob/main/AI_POLICY.md).
+- [ ] I have read and understood the [contribution guidelines](https://github.com/aytekaksu/better-florisboard/blob/main/CONTRIBUTING.md).
+- [ ] I have read and understood the [AI-assisted contribution policy](https://github.com/aytekaksu/better-florisboard/blob/main/AI_POLICY.md).
 - [ ] I understand and take responsibility for every change in this pull request.
 - [ ] I have described the testing I performed and have not fabricated results.

@@ -58,7 +58,7 @@ jobs:
 
             Hey there!
 
-            We detected changes that disobey the [contribution guidelines](https://github.com/aytekaksu/florisboard/blob/main/CONTRIBUTING.md#translations). This is a kind reminder that pull requests must not contain translated `strings.xml` files, as those are exclusively managed from Crowdin.
+            We detected changes that disobey the [contribution guidelines](https://github.com/aytekaksu/better-florisboard/blob/main/CONTRIBUTING.md#translations). This is a kind reminder that pull requests must not contain translated `strings.xml` files, as those are exclusively managed from Crowdin.
 
             Please remove changes to the following files:
             ```
