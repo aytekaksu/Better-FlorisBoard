@@ -92,7 +92,7 @@ fun TextInputLayout(
             val panelColors = baseColors.copy(
                 background = panelStyle.background(baseColors.background),
                 onBackground = tileStyle.foreground(baseColors.onBackground),
-                surface = panelStyle.background(baseColors.surface),
+                surface = tileStyle.background(baseColors.surface),
                 onSurface = tileStyle.foreground(baseColors.onSurface),
                 primary = actionStyle.background(baseColors.primary),
                 onPrimary = actionStyle.foreground(baseColors.onPrimary),
