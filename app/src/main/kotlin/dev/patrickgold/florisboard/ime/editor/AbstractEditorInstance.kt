@@ -337,8 +337,7 @@ abstract class AbstractEditorInstance(context: Context) {
 
     protected open fun shouldDetermineComposingRegion(editorInfo: FlorisEditorInfo): Boolean {
         return editorInfo.isRichInputEditor &&
-            !editorInfo.inputAttributes.isPassword &&
-            !editorInfo.inputAttributes.flagTextNoSuggestions
+            editorInfo.inputAttributes.allowsWordComposingRegion()
     }
 
     private suspend fun determineLocalComposing(
@@ -874,3 +873,5 @@ abstract class AbstractEditorInstance(context: Context) {
         }
     }
 }
+
+internal fun InputAttributes.allowsWordComposingRegion() = !isPassword

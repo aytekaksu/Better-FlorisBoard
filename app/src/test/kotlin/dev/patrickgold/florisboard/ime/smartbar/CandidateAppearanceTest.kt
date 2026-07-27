@@ -22,10 +22,21 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
 class CandidateAppearanceTest : FunSpec({
-    test("key-matched candidate appearance is opt-in") {
+    test("key-matched candidate appearance preserves the fork default") {
         val prefs by jetprefDataStoreOf(FlorisPreferenceModel::class)
 
-        prefs.suggestion.matchKeyAppearance.get() shouldBe false
+        prefs.suggestion.matchKeyAppearance.get() shouldBe true
+        resolveCandidateAppearance(
+            matchKeyAppearance = true,
+            displayMode = CandidatesDisplayMode.CLASSIC,
+        ) shouldBe CandidateAppearance(
+            useKeyStyle = true,
+            fontSizeScale = 1.125f,
+            useKeyColoredClassicSeparator = true,
+        )
+    }
+
+    test("disabled key matching restores candidate theme styling") {
         resolveCandidateAppearance(
             matchKeyAppearance = false,
             displayMode = CandidatesDisplayMode.CLASSIC,

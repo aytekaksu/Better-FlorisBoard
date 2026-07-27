@@ -79,6 +79,15 @@ class InputAttributesTest : FunSpec({
             attributes.isPassword shouldBe case.password
         }
     }
+
+    test("no-suggestions editors retain word composing while passwords do not") {
+        InputAttributes.wrap(
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS,
+        ).allowsWordComposingRegion() shouldBe true
+        InputAttributes.wrap(
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD,
+        ).allowsWordComposingRegion() shouldBe false
+    }
 })
 
 private data class Case(
