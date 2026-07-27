@@ -83,12 +83,15 @@ fun TextInputLayout(
             val actionStyle = rememberSnyggThemeQuery(
                 FlorisImeUi.SmartbarActionsOverflowCustomizeButton.elementName,
             )
+            val tileStyle = rememberSnyggThemeQuery(
+                FlorisImeUi.SmartbarActionTile.elementName,
+            )
             val baseColors = MaterialTheme.colorScheme
             val panelColors = baseColors.copy(
                 background = panelStyle.background(baseColors.background),
-                onBackground = panelStyle.foreground(baseColors.onBackground),
+                onBackground = tileStyle.foreground(baseColors.onBackground),
                 surface = panelStyle.background(baseColors.surface),
-                onSurface = panelStyle.foreground(baseColors.onSurface),
+                onSurface = tileStyle.foreground(baseColors.onSurface),
                 primary = actionStyle.background(baseColors.primary),
                 onPrimary = actionStyle.foreground(baseColors.onPrimary),
             )
