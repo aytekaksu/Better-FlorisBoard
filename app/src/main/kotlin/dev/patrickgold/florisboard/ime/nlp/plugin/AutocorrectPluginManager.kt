@@ -24,6 +24,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.DeadObjectException
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -900,15 +901,15 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
-            detach(this)
+            handleServiceDisconnected(this)
         }
 
         override fun onBindingDied(name: ComponentName) {
-            detach(this)
+            handleBindingDied(this)
         }
 
         override fun onNullBinding(name: ComponentName) {
-            detach(this)
+            handleNullBinding(this)
         }
     }
 
@@ -929,8 +930,43 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     }
 
     @Synchronized
-    private fun detach(connection: ServiceConnection) {
-        if (serviceConnection === connection) unbind(clearSession = true)
+    private fun handleServiceDisconnected(connection: ServiceConnection) {
+        if (serviceConnection !== connection) return
+        suspendConnection()
+    }
+
+    @Synchronized
+    private fun handleDeadRemote(service: Messenger) {
+        if (remote !== service) return
+        suspendConnection()
+    }
+
+    private fun suspendConnection() {
+        remote = null
+        boostedCodePoints = emptySet()
+        pendingPluginUiOperations.clear()
+        connectionReady.complete(null)
+        connectionReady = CompletableDeferred()
+        failPending()
+        if (uiClientCount > 0) _pluginUiLoading.value = true
+    }
+
+    @Synchronized
+    private fun handleBindingDied(connection: ServiceConnection) {
+        if (serviceConnection !== connection) return
+        unbind(clearSession = true)
+        if (uiClientCount > 0) {
+            _pluginUiError.value = false
+            _pluginUiLoading.value = true
+            connectPluginUi()
+        }
+    }
+
+    @Synchronized
+    private fun handleNullBinding(connection: ServiceConnection) {
+        if (serviceConnection !== connection) return
+        unbind(clearSession = true)
+        if (uiClientCount > 0) _pluginUiError.value = true
     }
 
     @Synchronized
@@ -963,14 +999,18 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                 replyTo = replyMessenger
             })
             true
-        } catch (_: RemoteException) {
-            detach(service)
+        } catch (error: RemoteException) {
+            if (error is DeadObjectException) {
+                handleDeadRemote(service)
+            } else {
+                detachRemote(service)
+            }
             false
         }
     }
 
     @Synchronized
-    private fun detach(service: Messenger) {
+    private fun detachRemote(service: Messenger) {
         if (remote === service) unbind(clearSession = true)
     }
 
