@@ -728,6 +728,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "suggestion__display_mode",
             default = CandidatesDisplayMode.DYNAMIC_SCROLLABLE,
         )
+        val matchKeyAppearance = boolean(
+            key = "suggestion__match_key_appearance",
+            default = false,
+        )
         val blockPossiblyOffensive = boolean(
             key = "suggestion__block_possibly_offensive",
             default = true,

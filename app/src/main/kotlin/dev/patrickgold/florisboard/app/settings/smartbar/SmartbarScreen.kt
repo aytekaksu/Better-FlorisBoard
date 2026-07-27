@@ -64,6 +64,12 @@ fun SmartbarScreen() = FlorisScreen {
                 visibleIf = { prefs.smartbar.layout isNotEqualTo SmartbarLayout.ACTIONS_ONLY },
             )
             SwitchPreference(
+                prefs.suggestion.matchKeyAppearance,
+                title = stringRes(R.string.pref__suggestion__match_key_appearance__label),
+                enabledIf = { prefs.smartbar.enabled isEqualTo true },
+                visibleIf = { prefs.smartbar.layout isNotEqualTo SmartbarLayout.ACTIONS_ONLY },
+            )
+            SwitchPreference(
                 prefs.smartbar.flipToggles,
                 title = stringRes(R.string.pref__smartbar__flip_toggles__label),
                 summary = stringRes(R.string.pref__smartbar__flip_toggles__summary),

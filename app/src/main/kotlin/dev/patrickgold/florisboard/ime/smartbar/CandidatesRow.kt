@@ -64,6 +64,29 @@ import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
 val CandidatesRowScrollbarHeight = 2.dp
 
+internal data class CandidateAppearance(
+    val useKeyStyle: Boolean,
+    val fontSizeScale: Float,
+    val useKeyColoredClassicSeparator: Boolean,
+)
+
+internal fun resolveCandidateAppearance(
+    matchKeyAppearance: Boolean,
+    displayMode: CandidatesDisplayMode,
+): CandidateAppearance = if (matchKeyAppearance) {
+    CandidateAppearance(
+        useKeyStyle = true,
+        fontSizeScale = 1.125f,
+        useKeyColoredClassicSeparator = displayMode == CandidatesDisplayMode.CLASSIC,
+    )
+} else {
+    CandidateAppearance(
+        useKeyStyle = false,
+        fontSizeScale = 1.0f,
+        useKeyColoredClassicSeparator = false,
+    )
+}
+
 @Composable
 fun CandidatesRow(modifier: Modifier = Modifier) {
     val prefs by FlorisPreferenceStore
@@ -73,6 +96,7 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
     val subtypeManager by context.subtypeManager()
 
     val displayMode by prefs.suggestion.displayMode.collectAsState()
+    val matchKeyAppearance by prefs.suggestion.matchKeyAppearance.collectAsState()
     val candidates by nlpManager.activeCandidatesFlow.collectAsState()
     val hasPluginCandidates = candidates.any {
         it.sourceProvider?.providerId == AutocorrectPluginManager.ProviderId
@@ -82,6 +106,7 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
     } else {
         displayMode
     }
+    val appearance = resolveCandidateAppearance(matchKeyAppearance, effectiveDisplayMode)
 
     SnyggRow(
         elementName = FlorisImeUi.SmartbarCandidatesRow.elementName,
@@ -119,9 +144,9 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
                 if (n > 0) {
                     val separatorModifier = Modifier
                         .width(1.dp)
-                        .fillMaxHeight(0.7f)
+                        .fillMaxHeight(if (appearance.useKeyColoredClassicSeparator) 0.7f else 0.6f)
                         .align(Alignment.CenterVertically)
-                    if (effectiveDisplayMode == CandidatesDisplayMode.CLASSIC) {
+                    if (appearance.useKeyColoredClassicSeparator) {
                         val keyStyle = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
                         Spacer(
                             modifier = separatorModifier.background(
@@ -139,6 +164,7 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
                     modifier = candidateModifier,
                     candidate = candidate,
                     displayMode = effectiveDisplayMode,
+                    appearance = appearance,
                     onClick = {
                         // Can't use candidate directly
                         keyboardManager.commitCandidate(candidates[n])
@@ -163,6 +189,7 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
 private fun CandidateItem(
     candidate: SuggestionCandidate,
     displayMode: CandidatesDisplayMode,
+    appearance: CandidateAppearance,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = { },
     onLongPress: () -> Boolean = { false },
@@ -231,8 +258,8 @@ private fun CandidateItem(
                 attributes = attributes,
                 selector = selector,
                 text = candidate.text.toString(),
-                contentStyleElementName = FlorisImeUi.Key.elementName,
-                fontSizeScale = 1.125f,
+                contentStyleElementName = FlorisImeUi.Key.elementName.takeIf { appearance.useKeyStyle },
+                fontSizeScale = appearance.fontSizeScale,
             )
             if (candidate.secondaryText != null) {
                 SnyggText(
