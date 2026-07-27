@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard.ime.nlp
 
+import dev.patrickgold.florisboard.ime.media.emoji.Emoji
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -50,5 +51,12 @@ class SmartbarCandidateSelectionTest : FunSpec({
             wordCandidates = listOf("next", "word"),
             clipboardCandidates = emptyList(),
         ) shouldBe listOf("next", "word")
+    }
+
+    test("built-in emoji suggestions retain their presentation semantics") {
+        EmojiSuggestionCandidate(
+            emoji = Emoji("🙂", "slightly smiling face", emptyList()),
+            showName = false,
+        ).kind shouldBe SuggestionCandidateKind.EMOJI
     }
 })

@@ -202,6 +202,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
                     keyboardManager.activeState.isActionsOverflowVisible = false
                 }
                 scope.launch {
+                    prefs.smartbar.sharedActionsExpandWithAnimation.set(true)
                     prefs.smartbar.sharedActionsExpanded.set(!sharedActionsExpanded)
                 }
             },
@@ -244,7 +245,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
                         if (isSnyggThemeElementDefined(iconElementName)) {
                             Modifier
                         } else {
-                            Modifier.size(24.dp)
+                            Modifier.size(32.dp)
                         },
                     ),
                 imageVector = icon,
