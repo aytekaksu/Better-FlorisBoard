@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard.ime.smartbar.quickaction
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -28,7 +29,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
@@ -44,6 +47,7 @@ import org.florisboard.lib.snygg.ui.SnyggText
 @Composable
 fun QuickActionsOverflowPanel() {
     val prefs by FlorisPreferenceStore
+    val configuration = LocalConfiguration.current
     val context = LocalContext.current
     val keyboardManager by context.keyboardManager()
 
@@ -60,6 +64,10 @@ fun QuickActionsOverflowPanel() {
     val visibleActions = remember(actionArrangement, dynamicActionsCountToShow) {
         actionArrangement.dynamicActions.takeLast(dynamicActionsCountToShow)
     }
+    val minimumTileWidth = quickActionOverflowMinimumWidth(
+        smartbarHeight = FlorisImeSizing.smartbarHeight,
+        isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,
+    )
 
     SnyggBox(
         elementName = FlorisImeUi.SmartbarActionsOverflow.elementName,
@@ -70,7 +78,7 @@ fun QuickActionsOverflowPanel() {
         LazyVerticalGrid(
             modifier = Modifier
                 .fillMaxWidth(),
-            columns = GridCells.Adaptive(FlorisImeSizing.smartbarHeight.coerceAtLeast(1.dp) * 2.2f),
+            columns = GridCells.Adaptive(minimumTileWidth),
         ) {
             items(visibleActions) { action ->
                 QuickActionButton(
@@ -93,4 +101,13 @@ fun QuickActionsOverflowPanel() {
             }
         }
     }
+}
+
+internal fun quickActionOverflowMinimumWidth(smartbarHeight: Dp, isLandscape: Boolean): Dp {
+    val responsiveHeight = if (isLandscape) {
+        smartbarHeight.coerceAtLeast(48.dp)
+    } else {
+        smartbarHeight
+    }
+    return responsiveHeight.coerceAtLeast(1.dp) * 2.2f
 }
