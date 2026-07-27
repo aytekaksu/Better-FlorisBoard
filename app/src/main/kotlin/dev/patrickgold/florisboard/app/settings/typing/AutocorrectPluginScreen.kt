@@ -20,13 +20,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.RadioButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.LocalNavController
 import dev.patrickgold.florisboard.app.Routes
@@ -142,9 +142,9 @@ fun AutocorrectPluginUiScreen() = FlorisScreen {
     scrollable = false
     iconSpaceReserved = false
 
-    DisposableEffect(manager) {
+    LifecycleResumeEffect(manager) {
         manager.acquirePluginUi()
-        onDispose { manager.releasePluginUi() }
+        onPauseOrDispose { manager.releasePluginUi() }
     }
 
     content {
