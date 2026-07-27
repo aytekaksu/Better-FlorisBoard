@@ -21,8 +21,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -102,12 +104,14 @@ fun TextInputLayout(
                     .height(FlorisImeSizing.keyboardUiHeight()),
             ) {
                 MaterialTheme(colorScheme = panelColors) {
-                    AutocorrectPluginUiHost(
-                        surface = AutocorrectPluginUiSurface.KEYBOARD,
-                        ui = pluginUi,
-                        loading = pluginUiLoading,
-                        onClose = autocorrectPluginManager::hideKeyboardPluginUi,
-                    )
+                    CompositionLocalProvider(LocalContentColor provides panelColors.onBackground) {
+                        AutocorrectPluginUiHost(
+                            surface = AutocorrectPluginUiSurface.KEYBOARD,
+                            ui = pluginUi,
+                            loading = pluginUiLoading,
+                            onClose = autocorrectPluginManager::hideKeyboardPluginUi,
+                        )
+                    }
                 }
             }
         } else if (state.isActionsOverflowVisible) {
