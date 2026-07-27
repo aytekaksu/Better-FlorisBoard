@@ -129,6 +129,11 @@ internal data class AutocorrectPluginSuggestionBatch(
     val handled: Boolean,
 )
 
+internal fun isCurrentEditorRequest(
+    requestEditorGeneration: Long,
+    activeEditorGeneration: Long,
+) = requestEditorGeneration == activeEditorGeneration
+
 internal fun isCurrentAutocorrectCandidate(
     candidateSessionId: Long,
     candidateEditorGeneration: Long,
@@ -685,7 +690,9 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         subtype: Subtype,
         editorInfo: FlorisEditorInfo,
         isPrivateSession: Boolean,
+        requestEditorGeneration: Long,
     ): AutocorrectSession? {
+        if (!isCurrentEditorRequest(requestEditorGeneration, editorGeneration)) return null
         val selectedProviderId = prefs.suggestion.autocorrectPluginComponent.get()
         if (
             !prefs.suggestion.enabled.get() ||
@@ -695,7 +702,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             editorInfo.inputAttributes.isPassword ||
             editorInfo.inputAttributes.flagTextNoSuggestions
         ) {
-            finishSession()
+            finishCurrentSession()
             return null
         }
         val secondaryLanguageTags = subtype.secondaryLocales.map { it.languageTag() }
@@ -709,10 +716,10 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                 session.editorFlags == editorFlags
         }?.let { return it }
         if (providerQueryComplete && providers.value.none { it.id == selectedProviderId }) {
-            finishSession()
+            finishCurrentSession()
             return null
         }
-        finishSession()
+        finishCurrentSession()
         val session = AutocorrectSession(
             sessionId = nextId.getAndIncrement(),
             primaryLanguageTag = subtype.primaryLocale.languageTag(),
@@ -728,7 +735,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         scope.launch {
             queryProviders { result ->
                 if (result.isFailure) {
-                    if (activeSession?.sessionId == session.sessionId) finishSession()
+                    if (activeSession?.sessionId == session.sessionId) finishCurrentSession()
                     return@queryProviders
                 }
                 val descriptor = result.getOrThrow()
@@ -770,8 +777,16 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     }
 
     @Synchronized
+    internal fun captureEditorGeneration() = editorGeneration
+
+    @Synchronized
     fun finishSession() {
         editorGeneration++
+        finishCurrentSession()
+    }
+
+    @Synchronized
+    private fun finishCurrentSession() {
         val hadSession = endSession()
         if (!releaseBindingIfIdle() &&
             hadSession &&
@@ -878,6 +893,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             maxCandidateCount = maxCandidateCount,
             allowPossiblyOffensive = allowPossiblyOffensive,
             isPrivateSession = isPrivateSession,
+            requestEditorGeneration = captureEditorGeneration(),
         ).candidates
     }
 
@@ -887,11 +903,17 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         maxCandidateCount: Int,
         allowPossiblyOffensive: Boolean,
         isPrivateSession: Boolean,
+        requestEditorGeneration: Long,
     ): AutocorrectPluginSuggestionBatch {
         if (!content.localSelection.isCursorMode) {
             return AutocorrectPluginSuggestionBatch(emptyList(), handled = false)
         }
-        val session = ensureSession(subtype, editorInstance.activeInfo, isPrivateSession)
+        val session = ensureSession(
+            subtype,
+            editorInstance.activeInfo,
+            isPrivateSession,
+            requestEditorGeneration,
+        )
             ?: return AutocorrectPluginSuggestionBatch(emptyList(), handled = false)
         val result = requestCandidates(
             session = session,
@@ -915,6 +937,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         allowPossiblyOffensive: Boolean,
         isPrivateSession: Boolean,
         inputTrace: AutocorrectInputTrace,
+        requestEditorGeneration: Long,
     ): AutocorrectPluginSuggestionBatch {
         if (
             !content.localSelection.isCursorMode ||
@@ -923,7 +946,12 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         ) {
             return AutocorrectPluginSuggestionBatch(emptyList(), handled = false)
         }
-        val session = ensureSession(subtype, editorInstance.activeInfo, isPrivateSession)
+        val session = ensureSession(
+            subtype,
+            editorInstance.activeInfo,
+            isPrivateSession,
+            requestEditorGeneration,
+        )
             ?: return AutocorrectPluginSuggestionBatch(emptyList(), handled = false)
         val result = requestCandidates(
             session = session,

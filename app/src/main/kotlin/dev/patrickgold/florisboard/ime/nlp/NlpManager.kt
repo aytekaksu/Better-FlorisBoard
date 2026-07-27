@@ -245,6 +245,7 @@ class NlpManager(context: Context) {
 
     fun suggest(subtype: Subtype, content: EditorContent) {
         val reqTime = SystemClock.uptimeMillis()
+        val requestEditorGeneration = autocorrectPluginManager.captureEditorGeneration()
         if (content.currentWordText.isNotBlank() && !content.selection.isSelectionMode) {
             setSharedActionsExpanded(false)
         }
@@ -274,6 +275,7 @@ class NlpManager(context: Context) {
                             maxCandidateCount = AutocorrectPluginContract.MAX_CANDIDATES,
                             allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
                             isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                            requestEditorGeneration = requestEditorGeneration,
                         )
                     } else {
                         AutocorrectPluginSuggestionBatch(

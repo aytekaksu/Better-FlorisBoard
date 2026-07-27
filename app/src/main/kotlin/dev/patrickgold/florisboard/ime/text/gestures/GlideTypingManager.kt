@@ -64,6 +64,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
 
     override fun onGlideComplete(data: GlideTypingGesture.Detector.PointerData) {
         val trace = gestureTrace(data.positions)
+        val requestEditorGeneration = autocorrectPluginManager.captureEditorGeneration()
         val content = editorInstance.activeContent
         completionJob?.cancel()
         completionJob = scope.launch {
@@ -74,6 +75,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
                 allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
                 isPrivateSession = keyboardManager.activeState.isIncognitoMode,
                 inputTrace = trace,
+                requestEditorGeneration = requestEditorGeneration,
             )
             if (!result.handled) {
                 withContext(Dispatchers.Main) {
