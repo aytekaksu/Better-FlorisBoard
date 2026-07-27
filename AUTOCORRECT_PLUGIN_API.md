@@ -61,15 +61,16 @@ Declare the service in the provider manifest:
     </intent-filter>
     <meta-data
         android:name="org.florisboard.autocorrect.api.PROTOCOL_VERSION"
-        android:value="3" />
+        android:value="4" />
 </service>
 ```
 
-Protocol version 3 has no settings-activity metadata or provider-activity UI item. Provider
-settings are declarative and are always rendered by FlorisBoard. It also acknowledges completed
-session shutdown so the host can keep the service bound until admitted learning callbacks and
-`onFinishSession` finish. A provider can therefore ship as a service-only package with no launcher
-activity and must not depend on a companion keyboard application being installed.
+Protocol version 4 has no settings-activity metadata or provider-activity UI item. Provider
+settings are declarative and are always rendered by FlorisBoard. It acknowledges completed session
+shutdown so the host can keep the service bound until admitted learning callbacks and
+`onFinishSession` finish, and exposes the Android personal dictionary through the keyboard host.
+A provider can therefore ship as a service-only package with no launcher activity and must not
+depend on a companion keyboard application being installed.
 
 ## Suggestions and learning
 
@@ -164,8 +165,8 @@ never asks the provider to create or launch an intent and does not send an actio
 and unsupported targets remain inert. Other URI schemes are deliberately not accepted from
 provider content. Like navigation targets, external-link targets are bounded to 256 characters.
 Overlong external links are discarded rather than truncated.
-An older protocol-v2 host which does not know `EXTERNAL_LINK` decodes it as an informational row,
-so the provider remains usable but that link is inert.
+Provider discovery requires the exact current protocol version, so hosts never reinterpret this
+item with an older schema.
 
 A switch can optionally declare an `AutocorrectPluginHostSetting`. This is for behavior which must
 run before a provider receives a request, such as enabling glide recognition or increasing its
@@ -194,10 +195,39 @@ operation. Long-running user actions can call `publishPluginUi` to push progress
 open. The provider receives `onPluginUiClosed` when the last host page closes and must stop UI-only
 observation. FlorisBoard does not poll.
 
+### Android personal dictionary
+
+Providers can read the Android system personal dictionary through `hostUserDictionary`. Only the
+selected provider can read while its host-rendered UI is visible; typing reads require that same
+provider to own the currently admitted session. The keyboard performs `ContentResolver` access
+under its own enabled-IME identity, so a service-only provider needs no user-dictionary permission.
+Disabling FlorisBoard's system-dictionary preference returns `DENIED` without touching the store.
+If FlorisBoard is not an enabled input method or the platform store cannot be reached, the result is
+`UNAVAILABLE`.
+
+During typing, queries are restricted to the active primary and secondary language families plus
+language-neutral rows, represented only by `languageTag = null`. A visible provider settings page
+may request all languages. Results use stable host row IDs and bounded pages of at most 128 entries.
+Providers should load a page only from a service callback (or its structured child coroutine) when
+a session or settings view starts, then cache it for that lifetime; the contract provides no
+observer, polling, wake-lock, or background-sync mechanism.
+
+Dictionary writes are available only through the `AutocorrectUserDictionaryEditor` passed to the
+two-argument `onInvokePluginUiAction` callback. The provider may perform multiple bounded reads and
+writes during that explicit action, which supports generic bulk editors. The editor and its
+provider-bound host capability are revoked when the callback returns, the action times out, the
+last provider page closes, or either process disconnects. Locale values are strict canonical
+BCP-47 tags; scripts, regions, variants, extensions, and private-use subtags survive conversion to
+and from Android's storage format.
+Frequency values range from 0 through 255; zero remains valid for structured entries such as
+Japanese reading metadata stored in the shortcut field. Providers must treat `UNAVAILABLE`,
+`DENIED`, and `INVALID` as recoverable results and continue ordinary suggestions without the
+personal dictionary.
+
 The keyboard page is opened through the **Autocorrect provider** quick action. It is available in
-the Smartbar action editor for existing and new configurations. Protocol-v2 providers which do not
-publish settings pages can remain suggestion-only; FlorisBoard shows a short unavailable message
-after the optional UI request times out.
+the Smartbar action editor for existing and new configurations. Providers which do not publish
+settings pages can remain suggestion-only; FlorisBoard shows a short unavailable message after the
+optional UI request times out.
 
 ## Reference-engine coverage
 
@@ -223,7 +253,8 @@ engine-specific dependency:
 | Model or dictionary import and export | host-picked `DOCUMENT_IMPORT` and `DOCUMENT_EXPORT` items |
 | Model download, deletion and default selection | actions, navigation, progress and choices |
 | Training/download status | progress items and push updates while visible |
-| Personal dictionary and blacklist management | text, navigation and action items; candidate removal |
+| Android personal dictionary | host-brokered, language-scoped bounded pages and action-scoped CRUD |
+| Provider blacklist management | text, navigation and action items; candidate removal |
 
 The provider adapter is responsible for translating these generic values into its engine's native
 types. Another provider can implement an entirely different dictionary, neural model, remote
@@ -255,9 +286,10 @@ must not be the only place important data is saved.
 
 Users explicitly select one installed provider under **Settings → Typing → Autocorrect provider**.
 That component selection is a regular FlorisBoard preference and is included in its configuration
-backup. Engine-specific values remain in provider-owned storage but are configured through
-FlorisBoard's host-rendered pages. A restored selection is used only when the same compatible
-provider service is installed.
+backup. Engine-specific values remain in provider-owned storage, while Android personal-dictionary
+rows remain in the system store accessed by FlorisBoard. Both are configured through FlorisBoard's
+host-rendered pages. A restored selection is used only when the same compatible provider service
+is installed.
 
 To avoid repeatedly loading a large immutable model when switching text fields, a provider may keep
 it in an application-scoped lazy cache. That cache must not run work on its own; Android remains

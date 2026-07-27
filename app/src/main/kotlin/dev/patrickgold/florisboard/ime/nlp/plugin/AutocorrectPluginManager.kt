@@ -33,6 +33,7 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.os.RemoteException
+import android.os.SystemClock
 import android.provider.OpenableColumns
 import android.text.InputType
 import android.view.accessibility.AccessibilityManager
@@ -41,6 +42,10 @@ import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.ime.core.Subtype
+import dev.patrickgold.florisboard.ime.dictionary.SystemUserDictionaryDatabase
+import dev.patrickgold.florisboard.ime.dictionary.UserDictionaryEntry
+import dev.patrickgold.florisboard.ime.dictionary.storedUserDictionaryLocale
+import dev.patrickgold.florisboard.ime.dictionary.strictUserDictionaryLocale
 import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.editor.FlorisEditorInfo
@@ -90,6 +95,11 @@ import org.florisboard.autocorrect.api.AutocorrectSuggestionResult
 import org.florisboard.autocorrect.api.AutocorrectTouchPoint
 import org.florisboard.autocorrect.api.AutocorrectTextEvent
 import org.florisboard.autocorrect.api.AutocorrectTextEventKind
+import org.florisboard.autocorrect.api.AutocorrectUserDictionaryEntry
+import org.florisboard.autocorrect.api.AutocorrectUserDictionaryOperation
+import org.florisboard.autocorrect.api.AutocorrectUserDictionaryPage
+import org.florisboard.autocorrect.api.AutocorrectUserDictionaryRequest
+import org.florisboard.autocorrect.api.AutocorrectUserDictionaryStatus
 import org.florisboard.autocorrect.api.candidateEventBundle
 import org.florisboard.autocorrect.api.finishSessionBundle
 import org.florisboard.autocorrect.api.finishSessionResultFromBundle
@@ -100,12 +110,15 @@ import org.florisboard.autocorrect.api.pluginUiResultFromBundle
 import org.florisboard.autocorrect.api.removalRequestBundle
 import org.florisboard.autocorrect.api.removalResultFromBundle
 import org.florisboard.autocorrect.api.suggestionResultFromBundle
+import org.florisboard.autocorrect.api.userDictionaryRequestFromBundle
+import org.florisboard.autocorrect.api.userDictionaryResultBundle
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 data class AutocorrectPluginDescriptor(
     val componentName: ComponentName,
     val label: String,
+    val uid: Int,
 ) {
     val id: String
         get() = componentName.flattenToString()
@@ -131,7 +144,13 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         private const val FINISH_TIMEOUT_MS = 2_000L
         private const val UI_RESPONSE_TIMEOUT_MS = 1_500L
         private const val UI_OPERATION_TIMEOUT_MS = 120_000L
+        private const val DICTIONARY_ACTION_TIMEOUT_MS = 10_000L
     }
+
+    private data class DictionaryMutationGrant(
+        val providerId: String,
+        val expiresAtMillis: Long,
+    )
 
     private val appContext by context.appContext()
     private val editorInstance by context.editorInstance()
@@ -147,15 +166,20 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     private val pendingHostSettingValues =
         ConcurrentHashMap<AutocorrectPluginHostSetting, Boolean>()
     private val pendingPluginUiOperations = mutableSetOf<Long>()
+    private val pendingDictionaryMutationActions =
+        mutableMapOf<Long, DictionaryMutationGrant>()
     private val hostSettingMutationGuard = Mutex()
     private val providerQueryGuard = Mutex()
+    private val userDictionaryMutationGuard = Mutex()
+    private val hostUserDictionary by lazy { SystemUserDictionaryDatabase(appContext) }
     private val _providers = MutableStateFlow<List<AutocorrectPluginDescriptor>>(emptyList())
     private val _pluginUi = MutableStateFlow<AutocorrectPluginUi?>(null)
     private val _pluginUiLoading = MutableStateFlow(false)
     private val _pluginUiError = MutableStateFlow(false)
     private val _keyboardUiVisible = MutableStateFlow(false)
-    @Volatile private var replyMessenger = Messenger(ReplyHandler(""))
+    @Volatile private var replyMessenger = Messenger(ReplyHandler("", -1, 0L))
     @Volatile private var providerPluginUi: AutocorrectPluginUi? = null
+    @Volatile private var providerBindingEpoch = 0L
 
     val providers = _providers.asStateFlow()
     val pluginUi = _pluginUi.asStateFlow()
@@ -243,6 +267,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     fun releasePluginUi() {
         uiClientCount = (uiClientCount - 1).coerceAtLeast(0)
         if (uiClientCount == 0) {
+            pendingDictionaryMutationActions.clear()
             send(AutocorrectPluginContract.MSG_PLUGIN_UI_CLOSED, Bundle())
             providerPluginUi = null
             _pluginUi.value = null
@@ -417,8 +442,15 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         _pluginUiError.value = false
         _pluginUiLoading.value = true
         pendingPluginUiOperations.add(requestId)
+        if (what == AutocorrectPluginContract.MSG_INVOKE_PLUGIN_UI_ACTION) {
+            pendingDictionaryMutationActions[requestId] = DictionaryMutationGrant(
+                providerId = expectedProviderId,
+                expiresAtMillis = SystemClock.elapsedRealtime() + DICTIONARY_ACTION_TIMEOUT_MS,
+            )
+        }
         if (!send(what, data(requestId), service)) {
             pendingPluginUiOperations.remove(requestId)
+            pendingDictionaryMutationActions.remove(requestId)
             _pluginUiError.value = true
             _pluginUiLoading.value = false
             return null
@@ -431,6 +463,11 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                 UI_RESPONSE_TIMEOUT_MS
             },
         )
+        if (what == AutocorrectPluginContract.MSG_INVOKE_PLUGIN_UI_ACTION) {
+            pendingDictionaryMutationActions[requestId]?.let { grant ->
+                expireDictionaryMutationAction(requestId, grant)
+            }
+        }
         return requestId
     }
 
@@ -481,6 +518,18 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             delay(timeoutMillis)
             if (finishPluginUiOperation(requestId)) {
                 _pluginUiError.value = true
+            }
+        }
+    }
+
+    private fun expireDictionaryMutationAction(
+        requestId: Long,
+        grant: DictionaryMutationGrant,
+    ) {
+        scope.launch {
+            delay(DICTIONARY_ACTION_TIMEOUT_MS)
+            synchronized(this@AutocorrectPluginManager) {
+                pendingDictionaryMutationActions.remove(requestId, grant)
             }
         }
     }
@@ -986,6 +1035,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     override suspend fun destroy() {
         _keyboardUiVisible.value = false
         uiClientCount = 0
+        pendingDictionaryMutationActions.clear()
         finishSession()
     }
 
@@ -1061,6 +1111,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         remote = null
         boostedCodePoints = emptySet()
         pendingPluginUiOperations.clear()
+        pendingDictionaryMutationActions.clear()
         connectionReady.complete(null)
         connectionReady = CompletableDeferred()
         failPending()
@@ -1131,7 +1182,8 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         val connection = createServiceConnection()
         serviceConnection = connection
         boundProviderId = descriptor.id
-        replyMessenger = Messenger(ReplyHandler(descriptor.id))
+        val bindingEpoch = ++providerBindingEpoch
+        replyMessenger = Messenger(ReplyHandler(descriptor.id, descriptor.uid, bindingEpoch))
         val intent = Intent(AutocorrectPluginContract.ACTION_BIND_PROVIDER)
             .setComponent(descriptor.componentName)
         bound = runCatching {
@@ -1181,6 +1233,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     }
 
     private fun clearConnection(clearSession: Boolean) {
+        providerBindingEpoch++
         remote = null
         boundProviderId = ""
         admittedSessionId = -1L
@@ -1188,6 +1241,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         pendingSessionFinishes.clear()
         boostedCodePoints = emptySet()
         pendingPluginUiOperations.clear()
+        pendingDictionaryMutationActions.clear()
         if (clearSession) {
             activeSession = null
             activeProviderId = ""
@@ -1247,6 +1301,128 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         }
     }
 
+    private fun handleUserDictionaryRequest(
+        providerId: String,
+        bindingEpoch: Long,
+        message: Message,
+    ) {
+        val request = runCatching {
+            userDictionaryRequestFromBundle(message.data)
+        }.getOrNull() ?: return
+        val replyTo = message.replyTo ?: return
+        val providerBinder = replyTo.binder
+        if (!isCurrentProviderBinding(providerId, bindingEpoch, providerBinder)) return
+        scope.launch(Dispatchers.IO) {
+            val result = userDictionaryMutationGuard.withLock {
+                val access = synchronized(this@AutocorrectPluginManager) {
+                    userDictionaryAccess(
+                        providerId,
+                        bindingEpoch,
+                        providerBinder,
+                        request,
+                    )
+                }
+                if (access == null) {
+                    AutocorrectUserDictionaryPage(AutocorrectUserDictionaryStatus.DENIED)
+                } else {
+                    runCatching {
+                        performUserDictionaryRequest(request, access)
+                    }.getOrElse {
+                        AutocorrectUserDictionaryPage(
+                            AutocorrectUserDictionaryStatus.UNAVAILABLE,
+                        )
+                    }
+                }
+            }
+            if (!isCurrentProviderBinding(providerId, bindingEpoch, providerBinder)) return@launch
+            try {
+                replyTo.send(
+                    Message.obtain(
+                        null,
+                        AutocorrectPluginContract.MSG_HOST_USER_DICTIONARY_RESULT,
+                    ).apply {
+                        data = userDictionaryResultBundle(
+                            requestId = request.requestId,
+                            status = result.status,
+                            entries = result.entries,
+                            nextAfterId = result.nextAfterId,
+                        )
+                    },
+                )
+            } catch (_: RemoteException) {
+                // The selected provider disappeared while its request was in flight.
+            }
+        }
+    }
+
+    private fun userDictionaryAccess(
+        providerId: String,
+        bindingEpoch: Long,
+        providerBinder: IBinder,
+        request: AutocorrectUserDictionaryRequest,
+    ): List<String>? {
+        if (
+            !prefs.dictionary.enableSystemUserDictionary.get() ||
+            !isCurrentProviderBinding(providerId, bindingEpoch, providerBinder)
+        ) {
+            revokeDeniedDictionaryMutation(providerId, request)
+            return null
+        }
+        val selectedProviderId = prefs.suggestion.autocorrectPluginComponent.get()
+        return when (request.operation) {
+            AutocorrectUserDictionaryOperation.QUERY -> {
+                val session = activeSession
+                when {
+                    uiClientCount > 0 && providerId == selectedProviderId -> {
+                        request.languageTags
+                    }
+                    session != null &&
+                        providerId == selectedProviderId &&
+                        providerId == activeProviderId &&
+                        admittedSessionId == session.sessionId -> {
+                        listOf(session.primaryLanguageTag) + session.secondaryLanguageTags
+                    }
+                    else -> null
+                }
+            }
+            AutocorrectUserDictionaryOperation.UPSERT,
+            AutocorrectUserDictionaryOperation.DELETE -> {
+                val grant = pendingDictionaryMutationActions[request.originUiRequestId]
+                if (
+                    uiClientCount > 0 &&
+                    providerId == selectedProviderId &&
+                    grant?.providerId == providerId &&
+                    SystemClock.elapsedRealtime() < grant.expiresAtMillis
+                ) {
+                    emptyList()
+                } else {
+                    revokeDeniedDictionaryMutation(providerId, request)
+                    null
+                }
+            }
+        }
+    }
+
+    @Synchronized
+    private fun isCurrentProviderBinding(
+        providerId: String,
+        bindingEpoch: Long,
+        providerBinder: IBinder,
+    ) = bindingEpoch == providerBindingEpoch &&
+        providerId == boundProviderId &&
+        remote?.binder == providerBinder
+
+    private fun revokeDeniedDictionaryMutation(
+        providerId: String,
+        request: AutocorrectUserDictionaryRequest,
+    ) {
+        if (request.operation != AutocorrectUserDictionaryOperation.QUERY) {
+            pendingDictionaryMutationActions[request.originUiRequestId]
+                ?.takeIf { it.providerId == providerId }
+                ?.let { pendingDictionaryMutationActions.remove(request.originUiRequestId, it) }
+        }
+    }
+
     @Synchronized
     private fun handleProviderQueryFailure() {
         if (remote != null || serviceConnection != null) return
@@ -1302,6 +1478,108 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         }
     }
 
+    private fun performUserDictionaryRequest(
+        request: AutocorrectUserDictionaryRequest,
+        allowedLanguageTags: List<String>,
+    ): AutocorrectUserDictionaryPage = when (request.operation) {
+        AutocorrectUserDictionaryOperation.QUERY -> {
+            val allowedLocales = allowedLanguageTags.mapNotNull(::strictUserDictionaryLocale)
+            if (allowedLocales.size != allowedLanguageTags.size) {
+                return AutocorrectUserDictionaryPage(AutocorrectUserDictionaryStatus.INVALID)
+            }
+            val page = hostUserDictionary.queryPage(
+                afterId = request.afterId,
+                limit = request.limit,
+                allowedLocales = allowedLocales,
+            ) ?: return AutocorrectUserDictionaryPage(
+                AutocorrectUserDictionaryStatus.UNAVAILABLE,
+            )
+            AutocorrectUserDictionaryPage(
+                status = AutocorrectUserDictionaryStatus.OK,
+                entries = page.entries.mapNotNull { it.toPluginEntry() },
+                nextAfterId = page.nextAfterId,
+            )
+        }
+        AutocorrectUserDictionaryOperation.UPSERT -> {
+            val incoming = request.entry
+                ?: return AutocorrectUserDictionaryPage(
+                    AutocorrectUserDictionaryStatus.INVALID,
+                )
+            val locale = incoming.languageTag?.let { tag ->
+                val parsed = strictUserDictionaryLocale(tag)
+                    ?: return AutocorrectUserDictionaryPage(
+                        AutocorrectUserDictionaryStatus.INVALID,
+                    )
+                parsed.toString().takeIf { storage ->
+                    storage.isNotEmpty() &&
+                        storedUserDictionaryLocale(storage)?.toLanguageTag() ==
+                        parsed.toLanguageTag()
+                } ?: return AutocorrectUserDictionaryPage(
+                    AutocorrectUserDictionaryStatus.INVALID,
+                )
+            }
+            val entry = UserDictionaryEntry(
+                id = incoming.id,
+                word = incoming.word,
+                freq = incoming.frequency,
+                locale = locale,
+                shortcut = incoming.shortcut,
+            )
+            val persisted = if (entry.id == 0L) {
+                val insertedId = hostUserDictionary.insertReturningId(entry)
+                    ?: return AutocorrectUserDictionaryPage(
+                        AutocorrectUserDictionaryStatus.UNAVAILABLE,
+                    )
+                entry.copy(id = insertedId)
+            } else {
+                when (hostUserDictionary.updateById(entry)) {
+                    1 -> Unit
+                    0 -> return AutocorrectUserDictionaryPage(
+                        AutocorrectUserDictionaryStatus.INVALID,
+                    )
+                    else -> return AutocorrectUserDictionaryPage(
+                        AutocorrectUserDictionaryStatus.UNAVAILABLE,
+                    )
+                }
+                entry
+            }
+            val persistedPluginEntry = persisted.toPluginEntry()
+                ?: return AutocorrectUserDictionaryPage(
+                    AutocorrectUserDictionaryStatus.UNAVAILABLE,
+                )
+            AutocorrectUserDictionaryPage(
+                AutocorrectUserDictionaryStatus.OK,
+                entries = listOf(persistedPluginEntry),
+            )
+        }
+        AutocorrectUserDictionaryOperation.DELETE -> {
+            val id = request.entryId.takeIf { it > 0L }
+                ?: return AutocorrectUserDictionaryPage(
+                    AutocorrectUserDictionaryStatus.INVALID,
+                )
+            when (hostUserDictionary.deleteById(id)) {
+                1 -> AutocorrectUserDictionaryPage(AutocorrectUserDictionaryStatus.OK)
+                0 -> AutocorrectUserDictionaryPage(AutocorrectUserDictionaryStatus.INVALID)
+                else -> AutocorrectUserDictionaryPage(
+                    AutocorrectUserDictionaryStatus.UNAVAILABLE,
+                )
+            }
+        }
+    }
+
+    private fun UserDictionaryEntry.toPluginEntry(): AutocorrectUserDictionaryEntry? {
+        val languageTag = locale?.let {
+            storedUserDictionaryLocale(it)?.toLanguageTag() ?: return null
+        }
+        return AutocorrectUserDictionaryEntry(
+            id = id,
+            word = word,
+            frequency = freq,
+            languageTag = languageTag,
+            shortcut = shortcut,
+        )
+    }
+
     private suspend fun discoverProviders(): List<AutocorrectPluginDescriptor> = withContext(Dispatchers.IO) {
         val packageManager = appContext.packageManager
         val intent = Intent(AutocorrectPluginContract.ACTION_BIND_PROVIDER)
@@ -1327,15 +1605,25 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             AutocorrectPluginDescriptor(
                 componentName = component,
                 label = resolveInfo.loadLabel(packageManager).toString(),
+                uid = serviceInfo.applicationInfo.uid,
             )
         }.sortedBy { it.label.lowercase() }
     }
 
     private inner class ReplyHandler(
         private val providerId: String,
+        private val providerUid: Int,
+        private val bindingEpoch: Long,
     ) : Handler(Looper.getMainLooper()) {
         override fun handleMessage(message: Message) {
-            if (providerId != boundProviderId) return
+            if (
+                message.sendingUid != providerUid ||
+                bindingEpoch != providerBindingEpoch ||
+                providerId != boundProviderId ||
+                remote == null
+            ) {
+                return
+            }
             when (message.what) {
                 AutocorrectPluginContract.MSG_SUGGESTIONS -> {
                     val (requestId, result) = suggestionResultFromBundle(message.data)
@@ -1358,6 +1646,9 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                 }
                 AutocorrectPluginContract.MSG_PLUGIN_UI_RESULT -> {
                     val result = pluginUiResultFromBundle(message.data)
+                    synchronized(this@AutocorrectPluginManager) {
+                        pendingDictionaryMutationActions.remove(result.requestId)
+                    }
                     finishPluginUiOperation(result.requestId)
                     if (
                         uiClientCount > 0 &&
@@ -1370,6 +1661,9 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                         }
                         if (result.requestId != 0L) _pluginUiLoading.value = false
                     }
+                }
+                AutocorrectPluginContract.MSG_HOST_USER_DICTIONARY_REQUEST -> {
+                    handleUserDictionaryRequest(providerId, bindingEpoch, message)
                 }
                 else -> super.handleMessage(message)
             }
