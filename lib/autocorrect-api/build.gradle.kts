@@ -58,4 +58,5 @@ configure<LibraryExtension> {
 dependencies {
     implementation(libs.kotlinx.coroutines)
     androidTestImplementation(libs.androidx.test.ext)
+    androidTestImplementation(libs.androidx.test.runner)
 }
