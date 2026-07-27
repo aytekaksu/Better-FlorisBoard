@@ -88,6 +88,22 @@ class InputAttributesTest : FunSpec({
             InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD,
         ).allowsWordComposingRegion() shouldBe false
     }
+
+    test("a newer editor update prevents a suspended snapshot from publishing") {
+        val revisions = EditorContentRevision()
+        var content = "initial"
+        val suspendedUpdate = revisions.next()
+
+        revisions.next().also { currentUpdate ->
+            revisions.publishIfCurrent(currentUpdate) {
+                content = "current"
+            } shouldBe true
+        }
+        revisions.publishIfCurrent(suspendedUpdate) {
+            content = "stale"
+        } shouldBe false
+        content shouldBe "current"
+    }
 })
 
 private data class Case(
