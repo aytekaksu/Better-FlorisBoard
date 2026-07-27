@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -73,6 +74,7 @@ fun QuickActionButton(
 ) {
     val context = LocalContext.current
     val inputFeedbackController = LocalInputFeedbackController.current
+    val fontScale = LocalDensity.current.fontScale
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val isEnabled = type == QuickActionBarType.EDITOR_TILE || evaluator.evaluateEnabled(action.keyData())
@@ -105,7 +107,13 @@ fun QuickActionButton(
             selector = selector,
             modifier = modifier,
             clickAndSemanticsModifier = Modifier
-                .aspectRatio(1f)
+                .aspectRatio(
+                    if (type == QuickActionBarType.INTERACTIVE_TILE) {
+                        quickActionOverflowTileAspectRatio(fontScale)
+                    } else {
+                        1f
+                    },
+                )
                 .indication(interactionSource, LocalIndication.current)
                 .pointerInput(action, isEnabled) {
                     awaitEachGesture {
@@ -198,4 +206,8 @@ fun QuickActionButton(
             }
         }
     }
+}
+
+internal fun quickActionOverflowTileAspectRatio(fontScale: Float): Float {
+    return 0.85f / fontScale.coerceAtLeast(1f)
 }

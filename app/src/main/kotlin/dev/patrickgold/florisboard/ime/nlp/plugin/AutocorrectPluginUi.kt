@@ -76,6 +76,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.autocorrectPluginManager
@@ -91,7 +92,8 @@ import org.florisboard.autocorrect.api.AutocorrectPluginUiPage
 import org.florisboard.autocorrect.api.AutocorrectPluginUiSurface
 import org.florisboard.lib.compose.florisVerticalScroll
 import org.florisboard.lib.compose.stringRes
-import kotlin.math.roundToInt
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 private data class PendingPluginAction(
     val itemId: String,
@@ -377,19 +379,20 @@ private fun AppPluginUiItem(
             )
         }
         AutocorrectPluginUiItemKind.SLIDER,
-        AutocorrectPluginUiItemKind.CHOICE,
         AutocorrectPluginUiItemKind.TEXT -> AppPluginListItem(
             item = item,
             secondaryText = when (item.kind) {
-                AutocorrectPluginUiItemKind.CHOICE ->
-                    item.options.firstOrNull { it.value == item.value }?.label ?: item.summary
-                AutocorrectPluginUiItemKind.SLIDER,
+                AutocorrectPluginUiItemKind.SLIDER -> item.formattedCurrentSliderValue() ?: item.summary
                 AutocorrectPluginUiItemKind.TEXT -> item.value ?: item.summary
                 else -> item.summary
             },
             trailing = {
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
             },
+            onClick = { onEdit(item) },
+        )
+        AutocorrectPluginUiItemKind.CHOICE -> AppPluginChoiceListItem(
+            item = item,
             onClick = { onEdit(item) },
         )
         AutocorrectPluginUiItemKind.ACTION -> AppPluginListItem(
@@ -509,7 +512,7 @@ private fun AppPluginValueDialog(
                 mutableFloatStateOf(
                     item.value?.toFloatOrNull()
                         ?.takeIf(Float::isFinite)
-                        ?.coerceIn(minimum, maximum)
+                        ?.let(item::normalizedSliderValue)
                         ?: minimum,
                 )
             }
@@ -517,7 +520,7 @@ private fun AppPluginValueDialog(
                 title = item.title,
                 confirmLabel = stringRes(R.string.action__apply),
                 dismissLabel = stringRes(R.string.action__cancel),
-                onConfirm = { onSetValue(value.toString()) },
+                onConfirm = { onSetValue(item.formattedSliderValue(value)) },
                 onDismiss = onDismiss,
             ) {
                 Column {
@@ -525,10 +528,13 @@ private fun AppPluginValueDialog(
                     Slider(
                         value = value,
                         valueRange = minimum..maximum,
-                        steps = item.sliderSteps(minimum, maximum),
-                        onValueChange = { value = it },
+                        steps = item.sliderSteps(),
+                        onValueChange = { value = item.normalizedSliderValue(it) },
                     )
-                    Text(value.toString(), style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        item.formattedSliderValue(value),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
             }
         }
@@ -650,7 +656,7 @@ private fun KeyboardPluginUiItem(
                 mutableFloatStateOf(
                     item.value?.toFloatOrNull()
                         ?.takeIf(Float::isFinite)
-                        ?.coerceIn(minimum, maximum)
+                        ?.let(item::normalizedSliderValue)
                         ?: minimum,
                 )
             }
@@ -661,9 +667,11 @@ private fun KeyboardPluginUiItem(
                     value = value,
                     enabled = item.enabled,
                     valueRange = minimum..maximum,
-                    steps = item.sliderSteps(minimum, maximum),
-                    onValueChange = { value = it },
-                    onValueChangeFinished = { onSetValue(item.id, value.toString()) },
+                    steps = item.sliderSteps(),
+                    onValueChange = { value = item.normalizedSliderValue(it) },
+                    onValueChangeFinished = {
+                        onSetValue(item.id, item.formattedSliderValue(value))
+                    },
                 )
             }
         }
@@ -770,6 +778,38 @@ private fun AppPluginListItem(
 }
 
 @Composable
+private fun AppPluginChoiceListItem(
+    item: AutocorrectPluginUiItem,
+    onClick: () -> Unit,
+) {
+    val supportingText = item.appChoiceSupportingText()
+    ListItem(
+        headlineContent = { Text(item.title) },
+        supportingContent = if (supportingText.label != null || supportingText.summary != null) {
+            {
+                Column {
+                    supportingText.label?.let {
+                        Text(it, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    supportingText.summary?.let {
+                        Text(it, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        } else {
+            null
+        },
+        leadingContent = item.icon.imageVector()?.let { icon ->
+            { Icon(icon, contentDescription = null) }
+        },
+        trailingContent = {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+        },
+        modifier = Modifier.clickable(enabled = item.enabled, onClick = onClick),
+    )
+}
+
+@Composable
 private fun PluginListItem(
     item: AutocorrectPluginUiItem,
     secondaryText: String? = item.summary,
@@ -797,15 +837,86 @@ private fun PluginListItem(
     )
 }
 
-private fun AutocorrectPluginUiItem.sliderSteps(minimum: Float, maximum: Float): Int {
-    val ratio = (maximum - minimum) / step.toFloat()
-    return if (step > 0.0 && ratio.isFinite()) {
-        (ratio.roundToInt() - 1)
-            .coerceIn(0, 1_000)
+internal fun AutocorrectPluginUiItem.sliderSteps(): Int {
+    if (step <= 0.0 || !step.isFinite()) return 0
+    val division = BigDecimal.valueOf(maximum)
+        .subtract(BigDecimal.valueOf(minimum))
+        .divideAndRemainder(BigDecimal.valueOf(step))
+    val intervals = division[0]
+    return if (
+        division[1].signum() == 0 &&
+        intervals >= BigDecimal.ONE &&
+        intervals <= BigDecimal.valueOf(1_001L)
+    ) {
+        intervals.toInt() - 1
     } else {
         0
     }
 }
+
+internal fun AutocorrectPluginUiItem.formattedSliderValue(value: Float): String {
+    val normalizedValue = normalizedSliderDecimal(value)
+    if (step <= 0.0 || !step.isFinite()) return normalizedValue.toFloat().toString()
+    val precision = maxOf(
+        minimum.decimalPrecision(),
+        maximum.decimalPrecision(),
+        step.decimalPrecision(),
+    )
+    return normalizedValue
+        .setScale(precision, RoundingMode.HALF_UP)
+        .stripTrailingZeros()
+        .toPlainString()
+}
+
+internal fun AutocorrectPluginUiItem.normalizedSliderValue(value: Float): Float {
+    return normalizedSliderDecimal(value).toFloat()
+}
+
+internal fun AutocorrectPluginUiItem.formattedCurrentSliderValue(): String? {
+    return value
+        ?.toFloatOrNull()
+        ?.takeIf(Float::isFinite)
+        ?.let(::formattedSliderValue)
+}
+
+internal data class AppChoiceSupportingText(
+    val label: String?,
+    val summary: String?,
+)
+
+internal fun AutocorrectPluginUiItem.appChoiceSupportingText(): AppChoiceSupportingText {
+    val selectedLabel = options.firstOrNull { it.value == value }?.label
+        ?.takeIf(String::isNotBlank)
+    val providerSummary = summary
+        ?.takeIf(String::isNotBlank)
+        ?.takeUnless { it == selectedLabel }
+    return AppChoiceSupportingText(selectedLabel, providerSummary)
+}
+
+private fun AutocorrectPluginUiItem.normalizedSliderDecimal(value: Float): BigDecimal {
+    val minimum = BigDecimal.valueOf(minimum)
+    val maximum = BigDecimal.valueOf(maximum)
+    val boundedValue = BigDecimal.valueOf(value.toDouble()).max(minimum).min(maximum)
+    if (step <= 0.0 || !step.isFinite()) return boundedValue
+
+    val step = BigDecimal.valueOf(step)
+    val steppedValue = minimum.add(
+        boundedValue.subtract(minimum)
+            .divide(step, 0, RoundingMode.HALF_UP)
+            .multiply(step),
+    ).max(minimum).min(maximum)
+    return if (
+        maximum.subtract(boundedValue).abs() <=
+        steppedValue.subtract(boundedValue).abs()
+    ) {
+        maximum
+    } else {
+        steppedValue
+    }
+}
+
+private fun Double.decimalPrecision() =
+    BigDecimal.valueOf(this).stripTrailingZeros().scale().coerceAtLeast(0)
 
 private fun AutocorrectPluginUiIcon.imageVector(): ImageVector? = when (this) {
     AutocorrectPluginUiIcon.NONE -> null
