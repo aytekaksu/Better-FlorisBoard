@@ -16,10 +16,12 @@
 
 package dev.patrickgold.florisboard.ime.smartbar
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
@@ -33,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationException
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
@@ -56,6 +59,7 @@ import org.florisboard.lib.snygg.ui.SnyggIcon
 import org.florisboard.lib.snygg.ui.SnyggRow
 import org.florisboard.lib.snygg.ui.SnyggSpacer
 import org.florisboard.lib.snygg.ui.SnyggText
+import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
 val CandidatesRowScrollbarHeight = 2.dp
 
@@ -104,13 +108,23 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
             }
             for ((n, candidate) in list.withIndex()) {
                 if (n > 0) {
-                    SnyggSpacer(
-                        elementName = FlorisImeUi.SmartbarCandidateSpacer.elementName,
-                        modifier = Modifier
-                            .width(1.dp)
-                            .fillMaxHeight(0.6f)
-                            .align(Alignment.CenterVertically),
-                    )
+                    val separatorModifier = Modifier
+                        .width(1.dp)
+                        .fillMaxHeight(0.7f)
+                        .align(Alignment.CenterVertically)
+                    if (displayMode == CandidatesDisplayMode.CLASSIC) {
+                        val keyStyle = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
+                        Spacer(
+                            modifier = separatorModifier.background(
+                                keyStyle.foreground(Color.White).copy(alpha = 0.7f)
+                            ),
+                        )
+                    } else {
+                        SnyggSpacer(
+                            elementName = FlorisImeUi.SmartbarCandidateSpacer.elementName,
+                            modifier = separatorModifier,
+                        )
+                    }
                 }
                 CandidateItem(
                     modifier = candidateModifier,
@@ -208,6 +222,8 @@ private fun CandidateItem(
                 attributes = attributes,
                 selector = selector,
                 text = candidate.text.toString(),
+                contentStyleElementName = FlorisImeUi.Key.elementName,
+                fontSizeScale = 1.125f,
             )
             if (candidate.secondaryText != null) {
                 SnyggText(

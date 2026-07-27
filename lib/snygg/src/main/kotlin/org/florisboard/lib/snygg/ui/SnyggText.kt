@@ -49,6 +49,9 @@ import org.florisboard.lib.snygg.SnyggStylesheet
  * @param maxLines Optional maximum line count override.
  * @param overflow Optional text overflow override.
  * @param autoSize Optional automatic text sizing strategy.
+ * @param contentStyleElementName Optional element whose foreground and font style should be used. Font size and
+ * layout properties continue to come from [elementName].
+ * @param fontSizeScale Scale applied to the resolved font size.
  *
  * @since 0.5.0-alpha01
  *
@@ -65,8 +68,15 @@ fun SnyggText(
     maxLines: Int? = null,
     overflow: TextOverflow? = null,
     autoSize: TextAutoSize? = null,
+    contentStyleElementName: String? = null,
+    fontSizeScale: Float = 1f,
 ) {
     ProvideSnyggStyle(elementName, attributes, selector) { style ->
+        val contentStyle = if (contentStyleElementName != null) {
+            rememberSnyggThemeQuery(contentStyleElementName)
+        } else {
+            style
+        }
         Text(
             modifier = modifier
                 .snyggMargin(style)
@@ -75,12 +85,12 @@ fun SnyggText(
                 .snyggBackground(style, allowClip = false)
                 .snyggPadding(style),
             text = text,
-            color = style.foreground(),
-            fontSize = style.fontSize(),
-            fontStyle = style.fontStyle(),
-            fontWeight = style.fontWeight(),
-            fontFamily = style.fontFamily(LocalSnyggPreloadedCustomFontFamilies.current),
-            letterSpacing = style.letterSpacing(),
+            color = contentStyle.foreground(),
+            fontSize = style.fontSize() * fontSizeScale,
+            fontStyle = contentStyle.fontStyle(),
+            fontWeight = contentStyle.fontWeight(),
+            fontFamily = contentStyle.fontFamily(LocalSnyggPreloadedCustomFontFamilies.current),
+            letterSpacing = contentStyle.letterSpacing(),
             lineHeight = style.lineHeight(),
             textAlign = textAlign ?: style.textAlign(),
             textDecoration = style.textDecorationLine(),
