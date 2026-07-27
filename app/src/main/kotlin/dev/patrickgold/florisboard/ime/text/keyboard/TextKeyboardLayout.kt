@@ -72,12 +72,15 @@ import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.glideTypingManager
 import dev.patrickgold.florisboard.ime.editor.OperationScope
 import dev.patrickgold.florisboard.ime.editor.OperationUnit
+import dev.patrickgold.florisboard.ime.editor.SelectionDragState
 import dev.patrickgold.florisboard.ime.input.InputEventDispatcher
 import dev.patrickgold.florisboard.ime.keyboard.ComputingEvaluator
 import dev.patrickgold.florisboard.ime.keyboard.FlorisImeSizing
 import dev.patrickgold.florisboard.ime.keyboard.KeyData
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.SpaceBarMode
+import dev.patrickgold.florisboard.ime.keyboard.manualSelectionEndpointIsStart
+import dev.patrickgold.florisboard.ime.keyboard.setManualSelectionEndpoint
 import dev.patrickgold.florisboard.ime.popup.ExceptionsForKeyCodes
 import dev.patrickgold.florisboard.ime.popup.PopupUiController
 import dev.patrickgold.florisboard.ime.popup.rememberPopupUiController
@@ -456,8 +459,6 @@ private class TextKeyboardLayoutController(
     private val pointerMap: PointerMap<TouchPointer> = PointerMap { TouchPointer() }
     lateinit var popupUiController: PopupUiController
 
-    private var initSelectionStart: Int = 0
-    private var initSelectionEnd: Int = 0
     var isGliding by mutableStateOf(false)
 
     val glideTypingDetector = GlideTypingGesture.Detector(context)
@@ -668,8 +669,6 @@ private class TextKeyboardLayoutController(
                 pointer.initialKey = key
             }
             pointer.activeKey = key
-            initSelectionStart = editorInstance.activeContent.selection.start
-            initSelectionEnd = editorInstance.activeContent.selection.end
         } else {
             pointer.activeKey = null
         }
@@ -1000,14 +999,28 @@ private class TextKeyboardLayoutController(
     private fun moveCursorFromSpacebar(pointer: TouchPointer, steps: Int) {
         val select = keyboardManager.activeState.isManualSelectionMode ||
             inputEventDispatcher.isPressed(KeyCode.SHIFT)
-        if (select && pointer.isMovingSelectionStart == null) {
-            pointer.isMovingSelectionStart = steps < 0
+        if (select) {
+            val establishedMovingStart = keyboardManager.activeState
+                .takeIf { it.isManualSelectionMode }
+                ?.manualSelectionEndpointIsStart
+            val state = pointer.selectionDragState ?: SelectionDragState.create(
+                editorInstance.activeContent.selection,
+                steps,
+                establishedMovingStart,
+            )
+            if (state != null) {
+                val next = editorInstance.moveSelectionBy(state, steps) ?: state
+                pointer.selectionDragState = next
+                if (keyboardManager.activeState.isManualSelectionMode) {
+                    keyboardManager.activeState.batchEdit {
+                        it.setManualSelectionEndpoint(next.isMovingSelectionStart)
+                    }
+                }
+            }
+        } else {
+            pointer.selectionDragState = null
+            editorInstance.moveCursorBy(steps)
         }
-        editorInstance.moveCursorBy(
-            steps = steps,
-            select = select,
-            moveSelectionStart = pointer.isMovingSelectionStart ?: false,
-        )
     }
 
     override fun onGlideAddPoint(point: GlideTypingGesture.Detector.Position) {
@@ -1080,7 +1093,7 @@ private class TextKeyboardLayoutController(
         var hasTriggeredGestureMove: Boolean = false
         var hasTriggeredLongPress: Boolean = false
         var hasTriggeredMassSelection: Boolean = false
-        var isMovingSelectionStart: Boolean? = null
+        var selectionDragState: SelectionDragState? = null
         var pressedKeyInfo: InputEventDispatcher.PressedKeyInfo? = null
 
         override fun reset() {
@@ -1090,7 +1103,7 @@ private class TextKeyboardLayoutController(
             hasTriggeredGestureMove = false
             hasTriggeredLongPress = false
             hasTriggeredMassSelection = false
-            isMovingSelectionStart = null
+            selectionDragState = null
             pressedKeyInfo = null
         }
 

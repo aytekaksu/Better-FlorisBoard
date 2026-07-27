@@ -91,6 +91,43 @@ internal fun autoCorrectionRevertPlan(
     )
 }
 
+internal data class SelectionDragState(
+    val anchor: Int,
+    val endpoint: Int,
+) {
+    val selection: EditorRange
+        get() = EditorRange.normalized(anchor, endpoint)
+
+    val isMovingSelectionStart: Boolean
+        get() = endpoint <= anchor
+
+    fun movedBy(steps: Int, codeUnitDistance: Int): SelectionDragState {
+        val distance = codeUnitDistance.coerceAtLeast(0)
+        return when {
+            steps < 0 -> copy(endpoint = endpoint - distance)
+            steps > 0 -> copy(endpoint = endpoint + distance)
+            else -> this
+        }
+    }
+
+    companion object {
+        fun create(
+            selection: EditorRange,
+            initialSteps: Int,
+            establishedMovingStart: Boolean? = null,
+        ): SelectionDragState? {
+            if (selection.isNotValid || initialSteps == 0) return null
+            val start = minOf(selection.start, selection.end)
+            val end = maxOf(selection.start, selection.end)
+            return if (establishedMovingStart ?: (initialSteps < 0)) {
+                SelectionDragState(anchor = end, endpoint = start)
+            } else {
+                SelectionDragState(anchor = start, endpoint = end)
+            }
+        }
+    }
+}
+
 class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     companion object {
         private const val SPACE = " "
@@ -222,13 +259,9 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     }
 
     /**
-     * Moves the cursor or selection directly, without sending directional key events to the editor.
+     * Moves the cursor directly, without sending directional key events to the editor.
      */
-    fun moveCursorBy(
-        steps: Int,
-        select: Boolean = false,
-        moveSelectionStart: Boolean = steps < 0,
-    ): Boolean {
+    fun moveCursorBy(steps: Int): Boolean {
         if (steps == 0) return true
         val content = activeContent
         val selection = content.selection
@@ -238,30 +271,6 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         val selectionStart = minOf(selection.start, selection.end)
         val selectionEnd = maxOf(selection.start, selection.end)
         val stepCount = kotlin.math.abs(steps)
-        if (select) {
-            val selectedText = content.selectedText
-            val movement = when {
-                moveSelectionStart && isMovingLeft -> content.getTextBeforeCursor(stepCount).length
-                moveSelectionStart -> runBlocking {
-                    breakIterators.measureUChars(selectedText, stepCount)
-                }
-                !isMovingLeft -> content.getTextAfterCursor(stepCount).length
-                else -> runBlocking {
-                    breakIterators.measureLastUChars(selectedText, stepCount)
-                }
-            }
-            return if (moveSelectionStart) {
-                setSelection(
-                    selectionStart + if (isMovingLeft) -movement else movement,
-                    selectionEnd,
-                )
-            } else {
-                setSelection(
-                    selectionStart,
-                    selectionEnd + if (isMovingLeft) -movement else movement,
-                )
-            }
-        }
         val selectionBoundary = if (isMovingLeft) selectionStart else selectionEnd
         val remainingSteps = (stepCount - if (selection.isSelectionMode) 1 else 0)
             .coerceAtLeast(0)
@@ -272,6 +281,36 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         }
         val target = selectionBoundary + if (isMovingLeft) -movement else movement
         return setSelection(target, target)
+    }
+
+    /**
+     * Moves one endpoint of a selection while keeping its original anchor fixed.
+     */
+    internal fun moveSelectionBy(state: SelectionDragState, steps: Int): SelectionDragState? {
+        if (steps == 0) return state
+        val content = activeContent
+        if (content.offset < 0 || content.selection != state.selection) return null
+        val localEndpoint = state.endpoint - content.offset
+        if (localEndpoint !in 0..content.text.length) return null
+
+        val stepCount = kotlin.math.abs(steps)
+        val movement = runBlocking {
+            if (steps < 0) {
+                breakIterators.measureLastUChars(
+                    content.text.substring(0, localEndpoint),
+                    stepCount,
+                    subtypeManager.activeSubtype.primaryLocale,
+                )
+            } else {
+                breakIterators.measureUChars(
+                    content.text.substring(localEndpoint),
+                    stepCount,
+                    subtypeManager.activeSubtype.primaryLocale,
+                )
+            }
+        }
+        val next = state.movedBy(steps, movement)
+        return next.takeIf { setSelection(it.selection.start, it.selection.end) }
     }
 
     private fun shouldInsertAutoSpaceBefore(text: String): Boolean {
