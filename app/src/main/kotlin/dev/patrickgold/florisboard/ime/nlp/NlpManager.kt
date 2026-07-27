@@ -50,9 +50,33 @@ import org.florisboard.autocorrect.api.AutocorrectPluginContract
 import org.florisboard.lib.kotlin.guardedByLock
 import org.florisboard.lib.kotlin.collectLatestIn
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.properties.Delegates
 
 private const val BLANK_STR_PATTERN = "^\\s*$"
+
+internal class CandidateAssemblyRevision {
+    private var current = 0L
+
+    @Synchronized
+    fun next(onAdvance: (Long) -> Unit = {}) = (++current).also(onAdvance)
+
+    @Synchronized
+    fun publishIfCurrent(revision: Long, publish: () -> Unit) =
+        (revision == current).also { if (it) publish() }
+}
+
+internal class AutomaticSmartbarMutations {
+    private val revision = AtomicLong()
+    private val guard = Mutex()
+
+    fun next() = revision.incrementAndGet()
+
+    suspend fun runIfCurrent(expectedRevision: Long, mutate: suspend () -> Unit) =
+        guard.withLock {
+            (expectedRevision == revision.get()).also { if (it) mutate() }
+        }
+}
 
 class NlpManager(context: Context) {
     private val blankStrRegex = Regex(BLANK_STR_PATTERN)
@@ -76,6 +100,8 @@ class NlpManager(context: Context) {
     // lock unnecessary because values constant
     private val providersForceSuggestionOn = mutableMapOf<String, Boolean>()
 
+    private val candidateAssemblyRevision = CandidateAssemblyRevision()
+    private val automaticSmartbarMutations = AutomaticSmartbarMutations()
     private val internalSuggestionsGuard = Mutex()
     private var internalSuggestions by Delegates.observable(SystemClock.uptimeMillis() to listOf<SuggestionCandidate>()) { _, _, _ ->
         scope.launch { assembleCandidates() }
@@ -154,7 +180,10 @@ class NlpManager(context: Context) {
         }
     }
 
-    fun finishAutocorrectSession() = autocorrectPluginManager.finishSession()
+    fun finishAutocorrectSession() {
+        autocorrectPluginManager.finishSession()
+        clearSuggestions()
+    }
 
     fun preload(subtype: Subtype) {
         scope.launch {
@@ -291,9 +320,18 @@ class NlpManager(context: Context) {
     }
 
     fun clearSuggestions() {
-        val reqTime = SystemClock.uptimeMillis()
         runBlocking {
-            internalSuggestions = reqTime to emptyList()
+            internalSuggestionsGuard.withLock {
+                internalSuggestions = SystemClock.uptimeMillis() to emptyList()
+                candidateAssemblyRevision.next {
+                    autoCommitCandidate = null
+                    activeCandidates = emptyList()
+                    autoExpandCollapseSmartbarActions(
+                        emptyList<SuggestionCandidate>(),
+                        NlpInlineAutofill.suggestions.value,
+                    )
+                }
+            }
         }
     }
 
@@ -325,6 +363,7 @@ class NlpManager(context: Context) {
     }
 
     private fun assembleCandidates() {
+        val revision = candidateAssemblyRevision.next()
         runBlocking {
             val candidates = when {
                 isSuggestionOn() -> {
@@ -347,7 +386,6 @@ class NlpManager(context: Context) {
                 }
                 else -> emptyList()
             }
-            autoCommitCandidate = candidates.firstOrNull { it.isEligibleForAutoCommit }
             val visibleCandidates = candidates
                 .filter(SuggestionCandidate::isVisible)
                 .let { visible ->
@@ -356,12 +394,15 @@ class NlpManager(context: Context) {
                     } else {
                         visible
                     }
-                }
-            activeCandidates = visibleCandidates
-            autoExpandCollapseSmartbarActions(
-                visibleCandidates,
-                NlpInlineAutofill.suggestions.value,
-            )
+            }
+            candidateAssemblyRevision.publishIfCurrent(revision) {
+                autoCommitCandidate = candidates.firstOrNull { it.isEligibleForAutoCommit }
+                activeCandidates = visibleCandidates
+                autoExpandCollapseSmartbarActions(
+                    visibleCandidates,
+                    NlpInlineAutofill.suggestions.value,
+                )
+            }
         }
     }
 
@@ -384,9 +425,12 @@ class NlpManager(context: Context) {
         if (!prefs.smartbar.enabled.get()) {
             return
         }
+        val revision = automaticSmartbarMutations.next()
         scope.launch {
-            prefs.smartbar.sharedActionsExpandWithAnimation.set(false)
-            prefs.smartbar.sharedActionsExpanded.set(isExpanded)
+            automaticSmartbarMutations.runIfCurrent(revision) {
+                prefs.smartbar.sharedActionsExpandWithAnimation.set(false)
+                prefs.smartbar.sharedActionsExpanded.set(isExpanded)
+            }
         }
     }
 
