@@ -302,6 +302,9 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         candidate: SuggestionCandidate,
         acceptanceKind: AutocorrectAcceptanceKind,
     ): EditorEditResult {
+        if (!autocorrectPluginManager.canCommitCandidate(candidate)) {
+            return EditorEditResult.NOT_APPLICABLE
+        }
         val result = when (candidate) {
             is ClipboardSuggestionCandidate ->
                 editorInstance.commitClipboardItem(candidate.clipboardItem).asEditorEditResult()
@@ -347,6 +350,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     }
 
     fun commitGesture(candidate: SuggestionCandidate): Boolean {
+        if (!autocorrectPluginManager.canCommitCandidate(candidate)) return false
         autocorrectPluginManager.clearInputTrace()
         return editorInstance.commitGesture(fixCase(candidate.text.toString())).also { committed ->
             if (committed) {

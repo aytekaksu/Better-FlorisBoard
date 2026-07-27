@@ -129,6 +129,18 @@ internal data class AutocorrectPluginSuggestionBatch(
     val handled: Boolean,
 )
 
+internal fun isCurrentAutocorrectCandidate(
+    candidateSessionId: Long,
+    candidateEditorGeneration: Long,
+    activeSessionId: Long?,
+    admittedSessionId: Long,
+    activeEditorGeneration: Long,
+    providerMatches: Boolean,
+) = providerMatches &&
+    candidateSessionId == activeSessionId &&
+    candidateSessionId == admittedSessionId &&
+    candidateEditorGeneration == activeEditorGeneration
+
 /**
  * Discovers and talks to a user-selected external autocorrect service.
  *
@@ -196,6 +208,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     @Volatile private var activeProviderId = ""
     @Volatile private var boundProviderId = ""
     @Volatile private var admittedSessionId = -1L
+    @Volatile private var editorGeneration = 0L
     @Volatile private var providerQueryComplete = false
     @Volatile private var providerQueryRevision = 0L
     @Volatile private var boostedCodePoints = emptySet<Int>()
@@ -758,6 +771,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
 
     @Synchronized
     fun finishSession() {
+        editorGeneration++
         val hadSession = endSession()
         if (!releaseBindingIfIdle() &&
             hadSession &&
@@ -999,6 +1013,21 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
 
     override suspend fun notifySuggestionAccepted(subtype: Subtype, candidate: SuggestionCandidate) {
         notifySuggestionAccepted(candidate, AutocorrectAcceptanceKind.MANUAL)
+    }
+
+    @Synchronized
+    fun canCommitCandidate(candidate: SuggestionCandidate): Boolean {
+        if (candidate !is ExternalAutocorrectCandidate) return true
+        return isCurrentAutocorrectCandidate(
+            candidateSessionId = candidate.pluginSessionId,
+            candidateEditorGeneration = candidate.editorGeneration,
+            activeSessionId = activeSession?.sessionId,
+            admittedSessionId = admittedSessionId,
+            activeEditorGeneration = editorGeneration,
+            providerMatches = remote != null &&
+                activeProviderId.isNotBlank() &&
+                activeProviderId == boundProviderId,
+        )
     }
 
     fun notifySuggestionAccepted(
@@ -1755,6 +1784,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         return ExternalAutocorrectCandidate(
             pluginSessionId = sessionId,
             pluginCandidateId = id,
+            editorGeneration = editorGeneration,
             isVisible = visible,
             delegate = WordSuggestionCandidate(
                 text = text,
@@ -1820,6 +1850,7 @@ private fun FlorisEditorInfo.autocorrectEditorFlags(): Int {
 private class ExternalAutocorrectCandidate(
     val pluginSessionId: Long,
     val pluginCandidateId: String,
+    val editorGeneration: Long,
     override val isVisible: Boolean,
     delegate: WordSuggestionCandidate,
     override val replacement: SuggestionReplacement?,

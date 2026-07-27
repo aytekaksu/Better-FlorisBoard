@@ -256,6 +256,7 @@ class FlorisImeService : LifecycleInputMethodService() {
     }
 
     private val prefs by FlorisPreferenceStore
+    private val autocorrectPluginManager by autocorrectPluginManager()
     val editorInstance by editorInstance()
     private val keyboardManager by keyboardManager()
     private val nlpManager by nlpManager()
@@ -352,6 +353,7 @@ class FlorisImeService : LifecycleInputMethodService() {
     }
 
     override fun onDestroy() {
+        autocorrectPluginManager.hideKeyboardPluginUi()
         nlpManager.finishAutocorrectSession()
         super.onDestroy()
         unregisterReceiver(wallpaperChangeReceiver)
@@ -360,6 +362,7 @@ class FlorisImeService : LifecycleInputMethodService() {
 
     override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
         flogInfo { "restarting=$restarting info=${info?.debugSummarize()}" }
+        nlpManager.finishAutocorrectSession()
         super.onStartInput(info, restarting)
         if (info == null) return
         val editorInfo = FlorisEditorInfo.wrap(info)
@@ -410,6 +413,7 @@ class FlorisImeService : LifecycleInputMethodService() {
 
     override fun onFinishInputView(finishingInput: Boolean) {
         flogInfo { "finishing=$finishingInput" }
+        autocorrectPluginManager.hideKeyboardPluginUi()
         nlpManager.finishAutocorrectSession()
         super.onFinishInputView(finishingInput)
         editorInstance.handleFinishInputView()
@@ -417,6 +421,7 @@ class FlorisImeService : LifecycleInputMethodService() {
 
     override fun onFinishInput() {
         flogInfo { "(no args)" }
+        autocorrectPluginManager.hideKeyboardPluginUi()
         nlpManager.finishAutocorrectSession()
         super.onFinishInput()
         editorInstance.handleFinishInput()
@@ -435,6 +440,7 @@ class FlorisImeService : LifecycleInputMethodService() {
 
     override fun onWindowHidden() {
         super.onWindowHidden()
+        autocorrectPluginManager.hideKeyboardPluginUi()
         if (windowController.onWindowHidden()) {
             flogInfo(LogTopic.IMS_EVENTS)
             activeState.batchEdit {
