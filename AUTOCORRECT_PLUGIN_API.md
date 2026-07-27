@@ -61,14 +61,15 @@ Declare the service in the provider manifest:
     </intent-filter>
     <meta-data
         android:name="org.florisboard.autocorrect.api.PROTOCOL_VERSION"
-        android:value="2" />
+        android:value="3" />
 </service>
 ```
 
-Protocol version 2 has no settings-activity metadata or provider-activity UI item. Provider
-settings are declarative and are always rendered by FlorisBoard. A provider can therefore ship as
-a service-only package with no launcher activity and must not depend on a companion keyboard
-application being installed.
+Protocol version 3 has no settings-activity metadata or provider-activity UI item. Provider
+settings are declarative and are always rendered by FlorisBoard. It also acknowledges completed
+session shutdown so the host can keep the service bound until admitted learning callbacks and
+`onFinishSession` finish. A provider can therefore ship as a service-only package with no launcher
+activity and must not depend on a companion keyboard application being installed.
 
 ## Suggestions and learning
 
@@ -114,6 +115,9 @@ application being installed.
   not infer a target application's identity from these flags.
 - Requests and replies are asynchronous. Providers must expect newer requests to cancel older
   work and should cooperate with coroutine cancellation.
+- Session starts, admitted learning callbacks, and session finishes run in wire order. A finish
+  acknowledgement is sent only after `onFinishSession` returns; FlorisBoard keeps the provider
+  bound until that acknowledgement or a bounded timeout.
 - Providers may expose any implementation: dictionaries, finite-state algorithms, native code,
   or on-device language models. No engine-specific behavior is part of the host API.
 - Providers which retain sensitive personalization can override `isHostAuthorized` and accept
