@@ -494,6 +494,7 @@
     <string name="pref__suggestion__enabled__label" comment="Preference title">Display suggestions</string>
     <string name="pref__suggestion__enabled__summary" comment="Preference summary">Provides suggestions while you type</string>
     <string name="pref__suggestion__display_mode__label" comment="Preference title">Suggestions display mode</string>
+    <string name="pref__suggestion__match_key_appearance__label" comment="Preference title">Match suggestion appearance to keys</string>
     <string name="pref__suggestion__block_possibly_offensive__label" comment="Preference title">Block possibly offensive words</string>
     <string name="pref__suggestion__block_possibly_offensive__summary" comment="Preference summary">Prevents possibly offensive words from being suggested while you type</string>
     <string name="pref__suggestion__api30_inline_suggestions_enabled__label" comment="Preference title">System autofill suggestions</string>
