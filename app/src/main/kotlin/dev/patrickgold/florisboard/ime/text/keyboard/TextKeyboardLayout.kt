@@ -116,6 +116,29 @@ import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 import kotlin.math.abs
 import kotlin.math.sqrt
 
+internal fun shouldFallbackSpacebarMovementToArrow(
+    isRawInputEditor: Boolean,
+    directMovementSucceeded: Boolean,
+): Boolean = isRawInputEditor && !directMovementSucceeded
+
+internal fun shouldCollectGlideDrawingPoint(
+    isGlideEnabled: Boolean,
+    showTrail: Boolean,
+): Boolean = isGlideEnabled && showTrail
+
+internal fun <T> finishGlideDrawingState(
+    showTrail: Boolean,
+    activePoints: MutableList<T>,
+    fadingPoints: MutableList<T>,
+): Boolean {
+    fadingPoints.clear()
+    if (showTrail) {
+        fadingPoints.addAll(activePoints)
+    }
+    activePoints.clear()
+    return fadingPoints.isNotEmpty()
+}
+
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -465,6 +488,7 @@ private class TextKeyboardLayoutController(
     val glideDataForDrawing = mutableStateListOf<Pair<GlideTypingGesture.Detector.Position, Long>>()
     val fadingGlide = mutableStateListOf<Pair<GlideTypingGesture.Detector.Position, Long>>()
     var fadingGlideRadius by mutableFloatStateOf(0.0f)
+    private var fadingGlideAnimator: ValueAnimator? = null
     private val swipeGestureDetector = SwipeGesture.Detector(this)
 
     lateinit var keyboard: TextKeyboard
@@ -999,7 +1023,7 @@ private class TextKeyboardLayoutController(
     private fun moveCursorFromSpacebar(pointer: TouchPointer, steps: Int) {
         val select = keyboardManager.activeState.isManualSelectionMode ||
             inputEventDispatcher.isPressed(KeyCode.SHIFT)
-        if (select) {
+        val directMovementSucceeded = if (select) {
             val establishedMovingStart = keyboardManager.activeState
                 .takeIf { it.isManualSelectionMode }
                 ?.manualSelectionEndpointIsStart
@@ -1009,22 +1033,35 @@ private class TextKeyboardLayoutController(
                 establishedMovingStart,
             )
             if (state != null) {
-                val next = editorInstance.moveSelectionBy(state, steps) ?: state
-                pointer.selectionDragState = next
-                if (keyboardManager.activeState.isManualSelectionMode) {
-                    keyboardManager.activeState.batchEdit {
-                        it.setManualSelectionEndpoint(next.isMovingSelectionStart)
+                val next = editorInstance.moveSelectionBy(state, steps)
+                if (next != null) {
+                    pointer.selectionDragState = next
+                    if (keyboardManager.activeState.isManualSelectionMode) {
+                        keyboardManager.activeState.batchEdit {
+                            it.setManualSelectionEndpoint(next.isMovingSelectionStart)
+                        }
                     }
                 }
+                next != null
+            } else {
+                false
             }
         } else {
             pointer.selectionDragState = null
             editorInstance.moveCursorBy(steps)
         }
+        if (shouldFallbackSpacebarMovementToArrow(
+                isRawInputEditor = editorInstance.activeInfo.isRawInputEditor,
+                directMovementSucceeded = directMovementSucceeded,
+            )
+        ) {
+            val arrowCode = if (steps < 0) KeyCode.ARROW_LEFT else KeyCode.ARROW_RIGHT
+            keyboardManager.handleArrow(arrowCode, abs(steps))
+        }
     }
 
     override fun onGlideAddPoint(point: GlideTypingGesture.Detector.Position) {
-        if (isGlideEnabled) {
+        if (shouldCollectGlideDrawingPoint(isGlideEnabled, prefs.glide.showTrail.get())) {
             glideDataForDrawing.add(point to System.currentTimeMillis())
         }
     }
@@ -1034,21 +1071,26 @@ private class TextKeyboardLayoutController(
     }
 
     override fun onGlideCancelled() {
-        if (prefs.glide.showTrail.get()) {
-            fadingGlide.clear()
-            fadingGlide.addAll(glideDataForDrawing)
-
+        fadingGlideAnimator?.cancel()
+        val shouldAnimate = finishGlideDrawingState(
+            showTrail = prefs.glide.showTrail.get(),
+            activePoints = glideDataForDrawing,
+            fadingPoints = fadingGlide,
+        )
+        if (shouldAnimate) {
             val animator = ValueAnimator.ofFloat(20.0f, 0.0f)
             animator.interpolator = AccelerateInterpolator()
             animator.duration = prefs.glide.trailDuration.get().toLong()
             animator.addUpdateListener {
                 fadingGlideRadius = it.animatedValue as Float
             }
+            fadingGlideAnimator = animator
             animator.start()
-
-            glideDataForDrawing.clear()
-            isGliding = false
+        } else {
+            fadingGlideAnimator = null
+            fadingGlideRadius = 0.0f
         }
+        isGliding = false
     }
 
     fun drawGlideTrail(
