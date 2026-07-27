@@ -102,7 +102,7 @@ class NlpManager(context: Context) {
 
     private val candidateAssemblyRevision = CandidateAssemblyRevision()
     private val automaticSmartbarMutations = AutomaticSmartbarMutations()
-    private val internalSuggestionsGuard = Mutex()
+    private val internalSuggestionsGuard = Any()
     private var internalSuggestions by Delegates.observable(SystemClock.uptimeMillis() to listOf<SuggestionCandidate>()) { _, _, _ ->
         scope.launch { assembleCandidates() }
     }
@@ -303,7 +303,7 @@ class NlpManager(context: Context) {
                     }
                 }
             }
-            internalSuggestionsGuard.withLock {
+            synchronized(internalSuggestionsGuard) {
                 if (internalSuggestions.first < reqTime) {
                     internalSuggestions = reqTime to buildList {
                         addAll(emojiSuggestions)
@@ -316,23 +316,21 @@ class NlpManager(context: Context) {
 
     fun suggestDirectly(suggestions: List<SuggestionCandidate>) {
         val reqTime = SystemClock.uptimeMillis()
-        runBlocking {
+        synchronized(internalSuggestionsGuard) {
             internalSuggestions = reqTime to suggestions
         }
     }
 
     fun clearSuggestions() {
-        runBlocking {
-            internalSuggestionsGuard.withLock {
-                internalSuggestions = SystemClock.uptimeMillis() to emptyList()
-                candidateAssemblyRevision.next {
-                    autoCommitCandidate = null
-                    activeCandidates = emptyList()
-                    autoExpandCollapseSmartbarActions(
-                        emptyList<SuggestionCandidate>(),
-                        NlpInlineAutofill.suggestions.value,
-                    )
-                }
+        synchronized(internalSuggestionsGuard) {
+            internalSuggestions = SystemClock.uptimeMillis() to emptyList()
+            candidateAssemblyRevision.next {
+                autoCommitCandidate = null
+                activeCandidates = emptyList()
+                autoExpandCollapseSmartbarActions(
+                    emptyList<SuggestionCandidate>(),
+                    NlpInlineAutofill.suggestions.value,
+                )
             }
         }
     }
@@ -364,39 +362,37 @@ class NlpManager(context: Context) {
         return runBlocking { getBuiltInSuggestionProvider(subtype).getFrequencyForWord(subtype, word) }
     }
 
-    private fun assembleCandidates() {
+    private suspend fun assembleCandidates() {
         val revision = candidateAssemblyRevision.next()
-        runBlocking {
-            val candidates = when {
-                isSuggestionOn() -> {
-                    val content = editorInstance.activeContent
-                    val wordCandidates = internalSuggestionsGuard.withLock {
-                        internalSuggestions.second
-                    }
-                    val clipboardCandidates = clipboardSuggestionProvider.suggest(
-                        subtype = Subtype.DEFAULT,
-                        content = content,
-                        maxCandidateCount = 8,
-                        allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                        isPrivateSession = keyboardManager.activeState.isIncognitoMode,
-                    )
-                    val isWordBeingTyped = content.currentWordText.isNotBlank() ||
-                        wordCandidates.any {
-                            it.isExternalAutocorrect() && it.kind != SuggestionCandidateKind.NEXT_WORD
-                        }
-                    selectSmartbarCandidates(isWordBeingTyped, wordCandidates, clipboardCandidates)
+        val candidates = when {
+            isSuggestionOn() -> {
+                val content = editorInstance.activeContent
+                val wordCandidates = synchronized(internalSuggestionsGuard) {
+                    internalSuggestions.second
                 }
-                else -> emptyList()
-            }
-            val visibleCandidates = candidates.filter(SuggestionCandidate::isVisible)
-            candidateAssemblyRevision.publishIfCurrent(revision) {
-                autoCommitCandidate = candidates.firstOrNull { it.isEligibleForAutoCommit }
-                activeCandidates = visibleCandidates
-                autoExpandCollapseSmartbarActions(
-                    visibleCandidates,
-                    NlpInlineAutofill.suggestions.value,
+                val clipboardCandidates = clipboardSuggestionProvider.suggest(
+                    subtype = Subtype.DEFAULT,
+                    content = content,
+                    maxCandidateCount = 8,
+                    allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
+                    isPrivateSession = keyboardManager.activeState.isIncognitoMode,
                 )
+                val isWordBeingTyped = content.currentWordText.isNotBlank() ||
+                    wordCandidates.any {
+                        it.isExternalAutocorrect() && it.kind != SuggestionCandidateKind.NEXT_WORD
+                    }
+                selectSmartbarCandidates(isWordBeingTyped, wordCandidates, clipboardCandidates)
             }
+            else -> emptyList()
+        }
+        val visibleCandidates = candidates.filter(SuggestionCandidate::isVisible)
+        candidateAssemblyRevision.publishIfCurrent(revision) {
+            autoCommitCandidate = candidates.firstOrNull { it.isEligibleForAutoCommit }
+            activeCandidates = visibleCandidates
+            autoExpandCollapseSmartbarActions(
+                visibleCandidates,
+                NlpInlineAutofill.suggestions.value,
+            )
         }
     }
 
