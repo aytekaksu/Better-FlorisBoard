@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="editor_normal_autocorrect" type="id"/>
+    <item name="editor_multiline_autocorrect" type="id"/>
+    <item name="editor_raw" type="id"/>
+    <item name="editor_phone" type="id"/>
+    <item name="editor_date" type="id"/>
+    <item name="editor_signed_decimal" type="id"/>
+    <item name="editor_auto_complete" type="id"/>
+    <item name="editor_text_password" type="id"/>
+    <item name="editor_visible_password" type="id"/>
+    <item name="editor_web_password" type="id"/>
+    <item name="editor_numeric_password" type="id"/>
+    <item name="editor_no_suggestions" type="id"/>
+    <item name="editor_no_personalized_learning" type="id"/>
+    <item name="editor_uri" type="id"/>
+    <item name="editor_email" type="id"/>
+    <item name="editor_web" type="id"/>
+    <item name="editor_web_email" type="id"/>
+</resources>

@@ -1,6 +1,6 @@
-# FlorisBoard — Practical Community Fork
+# Better FlorisBoard — Practical Community Fork
 
-This is an unofficial fork of
+Better FlorisBoard is an unofficial fork of
 [FlorisBoard](https://github.com/florisboard/florisboard). It preserves the
 original project history and authorship, but it is independently maintained and
 is not endorsed by the upstream FlorisBoard maintainers.
@@ -25,7 +25,7 @@ Bug fixes, compatibility improvements, focused features, and polished UI work
 are welcome when they improve FlorisBoard without weakening its privacy-first
 design. The first proposed fork fix extends keyboard-wide swipe gestures so
 they can begin in the gaps between keys, not only directly on a key; see
-[pull request #1](https://github.com/aytekaksu/florisboard/pull/1).
+[pull request #1](https://github.com/aytekaksu/better-florisboard/pull/1).
 
 This fork also defines an engine-neutral
 [external autocorrect provider API](AUTOCORRECT_PLUGIN_API.md). Autocorrect

@@ -68,11 +68,11 @@ body:
     attributes:
       label: "Checklist"
       options:
-        - label: "I made sure that there are *no existing issues* - [open](https://github.com/aytekaksu/florisboard/issues) or [closed](https://github.com/aytekaksu/florisboard/issues?q=is%3Aissue+is%3Aclosed) - which I could contribute my information to."
+        - label: "I made sure that there are *no existing issues* - [open](https://github.com/aytekaksu/better-florisboard/issues) or [closed](https://github.com/aytekaksu/better-florisboard/issues?q=is%3Aissue+is%3Aclosed) - which I could contribute my information to."
           required: true
-        - label: "I have read and understood the [contribution guidelines](https://github.com/aytekaksu/florisboard/blob/main/CONTRIBUTING.md)."
+        - label: "I have read and understood the [contribution guidelines](https://github.com/aytekaksu/better-florisboard/blob/main/CONTRIBUTING.md)."
           required: true
-        - label: "I have read and understood the [AI-assisted contribution policy](https://github.com/aytekaksu/florisboard/blob/main/AI_POLICY.md)."
+        - label: "I have read and understood the [AI-assisted contribution policy](https://github.com/aytekaksu/better-florisboard/blob/main/AI_POLICY.md)."
           required: true
         - label: "I have taken the time to fill in all the required details. I understand that the bug report will be dismissed otherwise."
           required: true

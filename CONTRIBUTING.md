@@ -23,26 +23,26 @@ To make FlorisBoard accessible in as many languages as possible, the platform [C
 ### Bug reporting
 
 Bug reports show where the fork can improve stability and usability. Please use
-the pre-made [bug report template](https://github.com/aytekaksu/florisboard/issues/new?template=bug_report.yml)
+the pre-made [bug report template](https://github.com/aytekaksu/better-florisboard/issues/new?template=bug_report.yml)
 and include concise reproduction steps.
 
 #### Capturing error logs
 
 Logs are captured by FlorisBoard's crash handler, which lets you copy them into
-the [crash report template](https://github.com/aytekaksu/florisboard/issues/new?template=crash_report.yml).
+the [crash report template](https://github.com/aytekaksu/better-florisboard/issues/new?template=crash_report.yml).
 This is the preferred way to capture logs.
 
 Alternatively, you can also use ADB (Android Debug Bridge) to capture the error log. This is recommended for experienced users only.
 
 ### Feature proposals
 
-Use the [feature proposal template](https://github.com/aytekaksu/florisboard/issues/new?template=feature_request.yml)
+Use the [feature proposal template](https://github.com/aytekaksu/better-florisboard/issues/new?template=feature_request.yml)
 to suggest an idea or improvement.
 
 ### Feedback
 
 For general feedback, open an
-[issue](https://github.com/aytekaksu/florisboard/issues/new) with enough
+[issue](https://github.com/aytekaksu/better-florisboard/issues/new) with enough
 context to make it actionable.
 
 ## Code contributions
