@@ -217,6 +217,16 @@ open class KeyboardState protected constructor(open var rawValue: ULong) {
         set(v) { setFlag(F_DEBUG_SHOW_DRAG_AND_DROP_HELPERS, v) }
 }
 
+internal fun KeyboardState.setManualSelectionEndpoint(isStart: Boolean) {
+    isManualSelectionModeStart = isStart
+    isManualSelectionModeEnd = !isStart
+}
+
+internal val KeyboardState.manualSelectionEndpointIsStart: Boolean?
+    get() = isManualSelectionModeStart.takeIf {
+        isManualSelectionModeStart != isManualSelectionModeEnd
+    }
+
 class ObservableKeyboardState private constructor(
     initValue: ULong,
     private val dispatchFlow: MutableStateFlow<KeyboardState> = MutableStateFlow(KeyboardState.new(initValue)),
