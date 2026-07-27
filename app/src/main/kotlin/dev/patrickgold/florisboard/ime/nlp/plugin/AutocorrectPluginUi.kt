@@ -68,7 +68,10 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -114,11 +117,16 @@ fun AutocorrectPluginUiHost(
         AutocorrectPluginUiSurface.KEYBOARD -> ui?.keyboardRootPageId
         AutocorrectPluginUiSurface.BOTH -> null
     }
-    val pageStack = remember(surface) {
-        mutableStateListOf<String>()
-    }
+    val pageStack = rememberSaveable(
+        surface,
+        saver = listSaver(
+            save = { it.toList() },
+            restore = { it.toMutableStateList() },
+        ),
+    ) { mutableStateListOf<String>() }
     LaunchedEffect(ui, rootPageId, surface) {
-        while (pageStack.isNotEmpty() && ui?.page(pageStack.last(), surface) == null) {
+        if (ui == null) return@LaunchedEffect
+        while (pageStack.isNotEmpty() && ui.page(pageStack.last(), surface) == null) {
             pageStack.removeAt(pageStack.lastIndex)
         }
         if (pageStack.isEmpty()) {
@@ -225,6 +233,8 @@ fun AutocorrectPluginUiHost(
                         onInvoke = manager::invokePluginUiAction,
                         onAction = requestAction,
                         onDocument = manager::sendPluginUiDocument,
+                        onDocumentPickerOpen = manager::acquirePluginUi,
+                        onDocumentPickerClosed = manager::releasePluginUi,
                     )
                 } else {
                     KeyboardPluginUiPage(
@@ -273,6 +283,8 @@ private fun AppPluginUiPage(
     onInvoke: (String) -> Unit,
     onAction: (AutocorrectPluginUiItem, () -> Unit) -> Unit,
     onDocument: (String, android.net.Uri, Boolean) -> Unit,
+    onDocumentPickerOpen: () -> Unit,
+    onDocumentPickerClosed: () -> Unit,
 ) {
     var editorId by remember(page.id) { mutableStateOf<String?>(null) }
     val editor = editorId?.let { id ->
@@ -309,6 +321,8 @@ private fun AppPluginUiPage(
                         onEdit = { editorId = it.id },
                         onAction = onAction,
                         onDocument = onDocument,
+                        onDocumentPickerOpen = onDocumentPickerOpen,
+                        onDocumentPickerClosed = onDocumentPickerClosed,
                     )
                 }
             }
@@ -336,6 +350,8 @@ private fun AppPluginUiItem(
     onEdit: (AutocorrectPluginUiItem) -> Unit,
     onAction: (AutocorrectPluginUiItem, () -> Unit) -> Unit,
     onDocument: (String, android.net.Uri, Boolean) -> Unit,
+    onDocumentPickerOpen: () -> Unit,
+    onDocumentPickerClosed: () -> Unit,
 ) {
     val context = LocalContext.current
     when (item.kind) {
@@ -386,15 +402,25 @@ private fun AppPluginUiItem(
             val launcher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.OpenDocument(),
             ) { uri ->
-                uri?.let { onDocument(item.id, it, false) }
+                try {
+                    uri?.let { onDocument(item.id, it, false) }
+                } finally {
+                    onDocumentPickerClosed()
+                }
             }
             AppPluginListItem(
                 item = item,
                 onClick = {
                     onAction(item) {
-                        launcher.launch(
-                            item.documentMimeTypes.ifEmpty { listOf("*/*") }.toTypedArray(),
-                        )
+                        onDocumentPickerOpen()
+                        try {
+                            launcher.launch(
+                                item.documentMimeTypes.ifEmpty { listOf("*/*") }.toTypedArray(),
+                            )
+                        } catch (error: RuntimeException) {
+                            onDocumentPickerClosed()
+                            throw error
+                        }
                     }
                 },
             )
@@ -405,13 +431,23 @@ private fun AppPluginUiItem(
                     item.documentMimeTypes.firstOrNull() ?: "*/*",
                 ),
             ) { uri ->
-                uri?.let { onDocument(item.id, it, true) }
+                try {
+                    uri?.let { onDocument(item.id, it, true) }
+                } finally {
+                    onDocumentPickerClosed()
+                }
             }
             AppPluginListItem(
                 item = item,
                 onClick = {
                     onAction(item) {
-                        launcher.launch(item.documentSuggestedName ?: item.title)
+                        onDocumentPickerOpen()
+                        try {
+                            launcher.launch(item.documentSuggestedName ?: item.title)
+                        } catch (error: RuntimeException) {
+                            onDocumentPickerClosed()
+                            throw error
+                        }
                     }
                 },
             )
