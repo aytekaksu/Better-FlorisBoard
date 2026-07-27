@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.florisboard.lib.kotlin.guardedByLock
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.max
 import kotlin.math.min
 
@@ -72,6 +73,15 @@ internal fun classifyEditorEditResult(
 
 internal fun Boolean.asEditorEditResult() =
     if (this) EditorEditResult.SUCCESS else EditorEditResult.NOT_APPLICABLE
+
+internal class EditorContentRevision {
+    private val current = AtomicLong()
+
+    fun next() = current.incrementAndGet()
+
+    fun publishIfCurrent(revision: Long, publish: () -> Unit) =
+        (revision == current.get()).also { if (it) publish() }
+}
 
 internal fun absoluteCollapsedSelection(
     startOffset: Int,
@@ -127,6 +137,7 @@ abstract class AbstractEditorInstance(context: Context) {
             _activeContentFlow.value = v
         }
     private val expectedContentQueue = ExpectedContentQueue()
+    private val contentRevision = EditorContentRevision()
     private val _lastCommitPosition = LastCommitPosition()
     val lastCommitPosition
         get() = LastCommitPosition(_lastCommitPosition)
@@ -138,6 +149,7 @@ abstract class AbstractEditorInstance(context: Context) {
     private fun currentInputConnection() = FlorisImeService.currentInputConnection()
 
     open fun handleStartInput(editorInfo: FlorisEditorInfo) {
+        contentRevision.next()
         activeInfo = editorInfo
         activeCursorCapsMode = editorInfo.initialCapsMode
         activeContent = EditorContent.Unspecified
@@ -150,6 +162,7 @@ abstract class AbstractEditorInstance(context: Context) {
         if (isRestart) {
             reset() // Just to make sure our state is correct after a restart
         }
+        val revision = contentRevision.next()
         val ic = currentInputConnection()
         activeInfo = editorInfo
         var selection = editorInfo.initialSelection
@@ -182,10 +195,12 @@ abstract class AbstractEditorInstance(context: Context) {
                 textAfterSelection,
                 selectedText,
             )
-            activeCursorCapsMode = content.cursorCapsMode()
-            activeContent = content
-            keyboardManager.reevaluateInputShiftState()
-            ic.setComposingRegion(content.composing)
+            contentRevision.publishIfCurrent(revision) {
+                activeCursorCapsMode = content.cursorCapsMode()
+                activeContent = content
+                keyboardManager.reevaluateInputShiftState()
+                ic.setComposingRegion(content.composing)
+            }
         }
     }
 
@@ -210,6 +225,7 @@ abstract class AbstractEditorInstance(context: Context) {
         newSelection: EditorRange,
         composing: EditorRange,
     ): Boolean {
+        val revision = contentRevision.next()
         val ic = currentInputConnection()
         val editorInfo = activeInfo
         if (ic == null || newSelection.isNotValid || editorInfo.isRawInputEditor) {
@@ -244,11 +260,13 @@ abstract class AbstractEditorInstance(context: Context) {
                 textAfterSelection,
                 selectedText,
             )
-            activeCursorCapsMode = content.cursorCapsMode()
-            activeContent = content
-            keyboardManager.reevaluateInputShiftState()
-            if (content.composing != composing) {
-                ic.setComposingRegion(content.composing)
+            contentRevision.publishIfCurrent(revision) {
+                activeCursorCapsMode = content.cursorCapsMode()
+                activeContent = content
+                keyboardManager.reevaluateInputShiftState()
+                if (content.composing != composing) {
+                    ic.setComposingRegion(content.composing)
+                }
             }
         }
         return false
@@ -264,6 +282,7 @@ abstract class AbstractEditorInstance(context: Context) {
     }
 
     protected open fun reset() {
+        contentRevision.next()
         activeInfo = FlorisEditorInfo.Unspecified
         activeCursorCapsMode = InputAttributes.CapsMode.NONE
         activeContent = EditorContent.Unspecified
