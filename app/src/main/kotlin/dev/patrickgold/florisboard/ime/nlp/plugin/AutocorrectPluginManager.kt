@@ -101,7 +101,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     companion object {
         const val ProviderId = "org.florisboard.nlp.providers.external-autocorrect"
         private const val CONNECTION_TIMEOUT_MS = 350L
-        private const val RESPONSE_TIMEOUT_MS = 500L
+        private const val RESPONSE_TIMEOUT_MS = 1_000L
         private const val UI_RESPONSE_TIMEOUT_MS = 1_500L
     }
 
