@@ -144,11 +144,13 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
     val nlpManager by context.nlpManager()
     val scope = rememberCoroutineScope()
 
+    val candidates by nlpManager.activeCandidatesFlow.collectAsState()
     val inlineSuggestions by NlpInlineAutofill.suggestions.collectAsState()
     LaunchedEffect(inlineSuggestions) {
-        nlpManager.autoExpandCollapseSmartbarActions(null, inlineSuggestions)
+        nlpManager.autoExpandCollapseSmartbarActions(candidates, inlineSuggestions)
     }
-    val shouldShowInlineSuggestionsUi = AndroidVersion.ATLEAST_API30_R && inlineSuggestions.isNotEmpty()
+    val shouldShowInlineSuggestionsUi = AndroidVersion.ATLEAST_API30_R &&
+        candidates.isEmpty() && inlineSuggestions.isNotEmpty()
 
     val smartbarLayout by prefs.smartbar.layout.collectAsState()
     val flipToggles by prefs.smartbar.flipToggles.collectAsState()
@@ -159,8 +161,8 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
     val shouldAnimate by prefs.smartbar.sharedActionsExpandWithAnimation.collectAsState()
     val motionMode by prefs.smartbar.motionMode.collectAsState()
     val motionDuration = motionMode.durationMillis(AnimationDuration)
-    val sharedActionsMotionDuration = if (shouldAnimate) motionDuration else 0
-    val sharedActionsTween = tween<Float>(sharedActionsMotionDuration)
+    val sharedActionsContentMotionDuration = if (shouldAnimate) motionDuration else 0
+    val sharedActionsToggleTween = tween<Float>(motionDuration)
     val extendedActionsAnimationSpec = when (motionMode) {
         SmartbarMotionMode.STANDARD -> spring<Float>()
         SmartbarMotionMode.REDUCED,
@@ -206,7 +208,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
         ) {
             val transition = updateTransition(sharedActionsExpanded, label = "sharedActionsExpandedToggleBtn")
             val rotation by transition.animateFloat(
-                transitionSpec = { sharedActionsTween },
+                transitionSpec = { sharedActionsToggleTween },
                 label = "rotation",
             ) {
                 if (it) 180f else 0f
@@ -258,8 +260,8 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
                 .weight(1f)
                 .fillMaxHeight(),
         ) {
-            val enterTransition = EnterTransition.horizontalTween(sharedActionsMotionDuration)
-            val exitTransition = ExitTransition.horizontalTween(sharedActionsMotionDuration)
+            val enterTransition = EnterTransition.horizontalTween(sharedActionsContentMotionDuration)
+            val exitTransition = ExitTransition.horizontalTween(sharedActionsContentMotionDuration)
 
             @Composable
             fun SharedActionsVisibility(
