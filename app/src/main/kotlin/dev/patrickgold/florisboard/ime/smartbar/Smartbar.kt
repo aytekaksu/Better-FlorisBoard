@@ -42,7 +42,6 @@ import androidx.compose.material.icons.filled.UnfoldLess
 import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -67,6 +66,7 @@ import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.jetpref.datastore.model.collectAsState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.compose.horizontalTween
@@ -392,11 +392,10 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
         }
     }
 
-    SideEffect {
+    LaunchedEffect(shouldAnimate) {
         if (!shouldAnimate) {
-            scope.launch {
-                prefs.smartbar.sharedActionsExpandWithAnimation.set(true)
-            }
+            delay(motionDuration.toLong())
+            prefs.smartbar.sharedActionsExpandWithAnimation.set(true)
         }
     }
 
