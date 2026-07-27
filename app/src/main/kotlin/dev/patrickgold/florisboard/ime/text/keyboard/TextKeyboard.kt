@@ -20,7 +20,9 @@ import dev.patrickgold.florisboard.ime.keyboard.Key
 import dev.patrickgold.florisboard.ime.keyboard.Keyboard
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.popup.PopupMapping
+import dev.patrickgold.florisboard.ime.text.key.KeyType
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 class TextKeyboard(
     val arrangement: Array<Array<TextKey>>,
@@ -41,6 +43,40 @@ class TextKeyboard(
             }
         }
         return null
+    }
+
+    fun getKeyForPos(
+        pointerX: Float,
+        pointerY: Float,
+        boostedCodePoints: Set<Int>,
+    ): TextKey? {
+        val regularKey = getKeyForPos(pointerX, pointerY)
+        if (
+            boostedCodePoints.isEmpty() ||
+            regularKey?.computedData?.type?.let { it != KeyType.CHARACTER } == true
+        ) {
+            return regularKey
+        }
+        return keys().asSequence()
+            .filter {
+                it.isEnabled &&
+                    it.computedData.type == KeyType.CHARACTER &&
+                    it.computedData.code in boostedCodePoints
+            }
+            .mapNotNull { key ->
+                val bounds = key.touchBounds
+                val dx = maxOf(bounds.left - pointerX, 0f, pointerX - bounds.right)
+                val dy = maxOf(bounds.top - pointerY, 0f, pointerY - bounds.bottom)
+                val distance = sqrt(dx * dx + dy * dy)
+                key.takeIf { distance <= minOf(bounds.width, bounds.height) * 0.5f }
+                    ?.let { it to distance }
+            }
+            .minWithOrNull(
+                compareBy<Pair<TextKey, Float>> { it.second }
+                    .thenByDescending { it.first.computedData.code },
+            )
+            ?.first
+            ?: regularKey
     }
 
     override fun layout(

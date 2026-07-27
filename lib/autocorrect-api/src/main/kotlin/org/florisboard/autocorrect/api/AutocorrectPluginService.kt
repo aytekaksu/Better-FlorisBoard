@@ -23,8 +23,12 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import android.os.Process
 import android.os.RemoteException
+import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -34,6 +38,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
+private const val AUTOCORRECT_PLUGIN_TAG = "AutocorrectPlugin"
+
 /**
  * Base service for an external autocorrect provider.
  *
@@ -42,7 +48,11 @@ import kotlinx.coroutines.sync.withLock
  * wake lock, or schedule recurring work for an active typing session.
  */
 abstract class AutocorrectPluginService : Service() {
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val serviceScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, error ->
+            Log.e(AUTOCORRECT_PLUGIN_TAG, "Provider operation failed", error)
+        },
+    )
     private var sessionJob: Job? = null
     private var suggestionJob: Job? = null
     private var activeSessionId: Long? = null
@@ -59,14 +69,40 @@ abstract class AutocorrectPluginService : Service() {
     final override fun onDestroy() {
         uiClient = null
         serviceScope.cancel()
-        super.onDestroy()
+        try {
+            onServiceDestroyed()
+        } finally {
+            super.onDestroy()
+        }
     }
+
+    /** Releases provider-owned resources after outstanding provider operations are cancelled. */
+    protected open fun onServiceDestroyed() = Unit
 
     protected open suspend fun onStartSession(session: AutocorrectSession) = Unit
 
-    protected abstract suspend fun onSuggest(request: AutocorrectRequest): List<AutocorrectCandidate>
+    protected open suspend fun onSuggest(request: AutocorrectRequest): List<AutocorrectCandidate> =
+        emptyList()
 
+    /**
+     * Extended suggestion hook for providers which also supply optional next-key hit-test hints.
+     * Existing candidate-only providers can continue overriding [onSuggest].
+     */
+    protected open suspend fun onSuggestResult(
+        request: AutocorrectRequest,
+    ): AutocorrectSuggestionResult = AutocorrectSuggestionResult(onSuggest(request))
+
+    /**
+     * Compatibility hook for protocol v1 providers. New providers should override the overload
+     * which also receives [AutocorrectAcceptanceKind].
+     */
     protected open suspend fun onSuggestionAccepted(sessionId: Long, candidateId: String) = Unit
+
+    protected open suspend fun onSuggestionAccepted(
+        sessionId: Long,
+        candidateId: String,
+        acceptanceKind: AutocorrectAcceptanceKind,
+    ) = onSuggestionAccepted(sessionId, candidateId)
 
     protected open suspend fun onSuggestionReverted(sessionId: Long, candidateId: String) = Unit
 
@@ -89,6 +125,12 @@ abstract class AutocorrectPluginService : Service() {
     protected open suspend fun onPluginUiClosed() = Unit
 
     /**
+     * Allows providers which retain sensitive personalization data to restrict compatible hosts.
+     * The default accepts every host implementing the public protocol.
+     */
+    protected open fun isHostAuthorized(packageNames: Set<String>): Boolean = true
+
+    /**
      * Pushes updated status or progress while a provider page is visible. This does not start or
      * keep the service alive; it is delivered only to an already-bound host.
      */
@@ -101,6 +143,7 @@ abstract class AutocorrectPluginService : Service() {
 
     private inner class IncomingHandler : Handler(Looper.getMainLooper()) {
         override fun handleMessage(message: Message) {
+            if (!isAuthorized(message)) return
             when (message.what) {
                 AutocorrectPluginContract.MSG_START_SESSION -> {
                     val session = AutocorrectSession.fromBundle(message.data)
@@ -119,10 +162,17 @@ abstract class AutocorrectPluginService : Service() {
                     suggestionJob?.cancel()
                     suggestionJob = serviceScope.launch {
                         sessionJob?.join()
-                        val candidates = onSuggest(request)
+                        val result = try {
+                            onSuggestResult(request)
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (error: Exception) {
+                            Log.e(AUTOCORRECT_PLUGIN_TAG, "Suggestion request failed", error)
+                            AutocorrectSuggestionResult.Empty
+                        }
                         replyTo.sendSafely(
                             AutocorrectPluginContract.MSG_SUGGESTIONS,
-                            candidatesToBundle(request.requestId, candidates),
+                            suggestionResultToBundle(request.requestId, result),
                         )
                     }
                 }
@@ -131,11 +181,14 @@ abstract class AutocorrectPluginService : Service() {
                     if (sessionId != activeSessionId) return
                     val candidateId = message.data.getString(Keys.ID).orEmpty()
                         .take(AutocorrectPluginContract.MAX_CANDIDATE_ID_CHARS)
+                    val acceptanceKind = message.data.getString(Keys.ACCEPTANCE_KIND)?.let { value ->
+                        enumValues<AutocorrectAcceptanceKind>().firstOrNull { it.name == value }
+                    } ?: AutocorrectAcceptanceKind.MANUAL
                     val sessionReady = sessionJob
                     serviceScope.launch {
                         sessionReady?.join()
                         if (sessionId == activeSessionId) {
-                            onSuggestionAccepted(sessionId, candidateId)
+                            onSuggestionAccepted(sessionId, candidateId, acceptanceKind)
                         }
                     }
                 }
@@ -222,6 +275,14 @@ abstract class AutocorrectPluginService : Service() {
                 }
                 else -> super.handleMessage(message)
             }
+        }
+
+        private fun isAuthorized(message: Message): Boolean {
+            if (message.sendingUid == Process.myUid()) return true
+            val packages = packageManager.getPackagesForUid(message.sendingUid)
+                ?.toSet()
+                .orEmpty()
+            return packages.isNotEmpty() && isHostAuthorized(packages)
         }
 
         private fun replyWithPluginUi(

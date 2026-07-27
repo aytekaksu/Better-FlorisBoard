@@ -54,6 +54,8 @@ object AutocorrectPluginContract {
     const val MAX_SECONDARY_TEXT_CHARS = 128
     const val MAX_TRACE_KEY_COUNT = 64
     const val MAX_TRACE_POINT_COUNT = 48
+    const val MAX_GESTURE_POINT_COUNT = 128
+    const val MAX_BOOSTED_CODE_POINT_COUNT = 64
 }
 
 enum class AutocorrectCandidateKind {
@@ -61,12 +63,19 @@ enum class AutocorrectCandidateKind {
     CORRECTION,
     COMPLETION,
     NEXT_WORD,
+    EMOJI,
 }
 
 enum class AutocorrectSeparatorBehavior {
     DEFAULT,
     INSERT,
     OMIT,
+}
+
+enum class AutocorrectAcceptanceKind {
+    MANUAL,
+    AUTO_CORRECTION,
+    GESTURE,
 }
 
 data class AutocorrectSession(
@@ -206,27 +215,71 @@ data class AutocorrectCandidate(
     }
 }
 
+data class AutocorrectSuggestionResult(
+    val candidates: List<AutocorrectCandidate>,
+    val boostedCodePoints: Set<Int> = emptySet(),
+) {
+    companion object {
+        val Empty = AutocorrectSuggestionResult(emptyList())
+    }
+}
+
 private fun Double.normalizedConfidence() = takeIf(Double::isFinite)?.coerceIn(0.0, 1.0) ?: 0.0
 
-internal fun candidatesToBundle(requestId: Long, candidates: List<AutocorrectCandidate>) = Bundle().apply {
+internal fun suggestionResultToBundle(
+    requestId: Long,
+    result: AutocorrectSuggestionResult,
+) = Bundle().apply {
     putLong(Keys.REQUEST_ID, requestId)
     putParcelableArrayList(
         Keys.CANDIDATES,
-        ArrayList(candidates.take(AutocorrectPluginContract.MAX_CANDIDATES).map { it.toBundle() }),
+        ArrayList(
+            result.candidates
+                .take(AutocorrectPluginContract.MAX_CANDIDATES)
+                .map { it.toBundle() },
+        ),
+    )
+    putIntArray(
+        Keys.BOOSTED_CODE_POINTS,
+        result.boostedCodePoints
+            .asSequence()
+            .filter(Character::isValidCodePoint)
+            .take(AutocorrectPluginContract.MAX_BOOSTED_CODE_POINT_COUNT)
+            .toList()
+            .toIntArray(),
     )
 }
 
 @Suppress("DEPRECATION")
-fun candidatesFromBundle(bundle: Bundle): Pair<Long, List<AutocorrectCandidate>> {
+fun suggestionResultFromBundle(bundle: Bundle): Pair<Long, AutocorrectSuggestionResult> {
     val candidates = bundle.getParcelableArrayList<Bundle>(Keys.CANDIDATES)
         .orEmpty()
         .mapNotNull(AutocorrectCandidate::fromBundle)
-    return bundle.getLong(Keys.REQUEST_ID) to candidates
+    val boostedCodePoints = (bundle.getIntArray(Keys.BOOSTED_CODE_POINTS) ?: intArrayOf())
+        .asSequence()
+        .filter(Character::isValidCodePoint)
+        .take(AutocorrectPluginContract.MAX_BOOSTED_CODE_POINT_COUNT)
+        .toSet()
+    return bundle.getLong(Keys.REQUEST_ID) to AutocorrectSuggestionResult(
+        candidates = candidates,
+        boostedCodePoints = boostedCodePoints,
+    )
 }
 
-fun candidateEventBundle(sessionId: Long, candidateId: String) = Bundle().apply {
+@Deprecated("Use suggestionResultFromBundle to retain optional provider hints")
+fun candidatesFromBundle(bundle: Bundle): Pair<Long, List<AutocorrectCandidate>> {
+    val (requestId, result) = suggestionResultFromBundle(bundle)
+    return requestId to result.candidates
+}
+
+fun candidateEventBundle(
+    sessionId: Long,
+    candidateId: String,
+    acceptanceKind: AutocorrectAcceptanceKind? = null,
+) = Bundle().apply {
     putLong(Keys.SESSION_ID, sessionId)
     putString(Keys.ID, candidateId.take(AutocorrectPluginContract.MAX_CANDIDATE_ID_CHARS))
+    acceptanceKind?.let { putString(Keys.ACCEPTANCE_KIND, it.name) }
 }
 
 fun removalRequestBundle(sessionId: Long, requestId: Long, candidateId: String) =
@@ -261,6 +314,7 @@ internal object Keys {
     const val ALLOW_POSSIBLY_OFFENSIVE = "allowPossiblyOffensive"
     const val INPUT_TRACE = "inputTrace"
     const val ID = "id"
+    const val ACCEPTANCE_KIND = "acceptanceKind"
     const val SECONDARY_TEXT = "secondaryText"
     const val CONFIDENCE = "confidence"
     const val KIND = "kind"
@@ -270,6 +324,7 @@ internal object Keys {
     const val REPLACEMENT_END = "replacementEnd"
     const val SEPARATOR_BEHAVIOR = "separatorBehavior"
     const val CANDIDATES = "candidates"
+    const val BOOSTED_CODE_POINTS = "boostedCodePoints"
     const val REMOVED = "removed"
 }
 

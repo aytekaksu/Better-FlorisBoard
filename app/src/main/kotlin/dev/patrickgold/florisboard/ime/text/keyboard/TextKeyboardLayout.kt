@@ -609,7 +609,11 @@ private class TextKeyboardLayoutController(
     private fun onTouchDownInternal(event: MotionEvent, pointer: TouchPointer) {
         flogDebug(LogTopic.TEXT_KEYBOARD_VIEW) { "pointer=$pointer" }
 
-        val key = keyboard.getKeyForPos(event.getX(pointer.index), event.getY(pointer.index))
+        val key = keyboard.getKeyForPos(
+            event.getX(pointer.index),
+            event.getY(pointer.index),
+            autocorrectPluginManager.boostedCodePoints(),
+        )
         if (key != null && key.isEnabled) {
             key.computedDataOnDown = key.computedData
             pointer.pressedKeyInfo = inputEventDispatcher.sendDown(

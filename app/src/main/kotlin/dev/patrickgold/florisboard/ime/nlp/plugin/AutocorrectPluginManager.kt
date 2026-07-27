@@ -29,6 +29,7 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.os.RemoteException
+import android.view.accessibility.AccessibilityManager
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.editorInstance
@@ -55,26 +56,29 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import org.florisboard.autocorrect.api.AutocorrectAcceptanceKind
 import org.florisboard.autocorrect.api.AutocorrectCandidate
 import org.florisboard.autocorrect.api.AutocorrectCandidateKind
 import org.florisboard.autocorrect.api.AutocorrectInputTrace
+import org.florisboard.autocorrect.api.AutocorrectInputMode
 import org.florisboard.autocorrect.api.AutocorrectKeyGeometry
 import org.florisboard.autocorrect.api.AutocorrectPluginContract
 import org.florisboard.autocorrect.api.AutocorrectPluginUi
 import org.florisboard.autocorrect.api.AutocorrectRequest
 import org.florisboard.autocorrect.api.AutocorrectSeparatorBehavior
 import org.florisboard.autocorrect.api.AutocorrectSession
+import org.florisboard.autocorrect.api.AutocorrectSuggestionResult
 import org.florisboard.autocorrect.api.AutocorrectTouchPoint
 import org.florisboard.autocorrect.api.AutocorrectTextEvent
 import org.florisboard.autocorrect.api.AutocorrectTextEventKind
 import org.florisboard.autocorrect.api.candidateEventBundle
-import org.florisboard.autocorrect.api.candidatesFromBundle
 import org.florisboard.autocorrect.api.finishSessionBundle
 import org.florisboard.autocorrect.api.pluginUiMutationBundle
 import org.florisboard.autocorrect.api.pluginUiRequestBundle
 import org.florisboard.autocorrect.api.pluginUiResultFromBundle
 import org.florisboard.autocorrect.api.removalRequestBundle
 import org.florisboard.autocorrect.api.removalResultFromBundle
+import org.florisboard.autocorrect.api.suggestionResultFromBundle
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -106,7 +110,8 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     private val prefs by FlorisPreferenceStore
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val nextId = AtomicLong(1L)
-    private val pendingSuggestions = ConcurrentHashMap<Long, CompletableDeferred<List<AutocorrectCandidate>>>()
+    private val pendingSuggestions =
+        ConcurrentHashMap<Long, CompletableDeferred<AutocorrectSuggestionResult>>()
     private val pendingRemovals = ConcurrentHashMap<Long, CompletableDeferred<Boolean>>()
     private val _providers = MutableStateFlow<List<AutocorrectPluginDescriptor>>(emptyList())
     private val _pluginUi = MutableStateFlow<AutocorrectPluginUi?>(null)
@@ -128,6 +133,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     @Volatile private var activeProviderId = ""
     @Volatile private var boundProviderId = ""
     @Volatile private var providerQueryComplete = false
+    @Volatile private var boostedCodePoints = emptySet<Int>()
     @Volatile private var uiClientCount = 0
     private var serviceConnection: ServiceConnection? = null
     private var traceKeyboard: TextKeyboard? = null
@@ -208,6 +214,12 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
 
     fun selectedProvider() = providers.value.firstOrNull {
         it.id == prefs.suggestion.autocorrectPluginComponent.get()
+    }
+
+    fun boostedCodePoints(): Set<Int> {
+        if (prefs.suggestion.autocorrectPluginComponent.get().isBlank()) return emptySet()
+        val accessibility = appContext.getSystemService(AccessibilityManager::class.java)
+        return boostedCodePoints.takeUnless { accessibility?.isEnabled == true }.orEmpty()
     }
 
     private fun sendPluginUiMessage(what: Int, itemId: String, value: String? = null) {
@@ -326,6 +338,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     @Synchronized
     fun clearInputTrace() {
         tracePoints.clear()
+        boostedCodePoints = emptySet()
     }
 
     @Synchronized
@@ -456,6 +469,48 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         if (!content.localSelection.isCursorMode) return emptyList()
         val session = ensureSession(subtype, editorInstance.activeInfo, isPrivateSession)
             ?: return emptyList()
+        return requestCandidates(
+            session = session,
+            content = content,
+            maxCandidateCount = maxCandidateCount,
+            allowPossiblyOffensive = allowPossiblyOffensive,
+            inputTrace = inputTraceFor(content),
+        ).map { it.toSuggestionCandidate(session.sessionId, content) }
+    }
+
+    suspend fun suggestGesture(
+        subtype: Subtype,
+        content: EditorContent,
+        maxCandidateCount: Int,
+        allowPossiblyOffensive: Boolean,
+        isPrivateSession: Boolean,
+        inputTrace: AutocorrectInputTrace,
+    ): List<SuggestionCandidate> {
+        if (
+            !content.localSelection.isCursorMode ||
+            inputTrace.mode != AutocorrectInputMode.GESTURE ||
+            inputTrace.gesturePoints.size < 2
+        ) {
+            return emptyList()
+        }
+        val session = ensureSession(subtype, editorInstance.activeInfo, isPrivateSession)
+            ?: return emptyList()
+        return requestCandidates(
+            session = session,
+            content = content,
+            maxCandidateCount = maxCandidateCount,
+            allowPossiblyOffensive = allowPossiblyOffensive,
+            inputTrace = inputTrace,
+        ).map { it.toSuggestionCandidate(session.sessionId, content) }
+    }
+
+    private suspend fun requestCandidates(
+        session: AutocorrectSession,
+        content: EditorContent,
+        maxCandidateCount: Int,
+        allowPossiblyOffensive: Boolean,
+        inputTrace: AutocorrectInputTrace,
+    ): List<AutocorrectCandidate> {
         val service = remote ?: withTimeoutOrNull(CONNECTION_TIMEOUT_MS) {
             connectionReady.await()
         } ?: return emptyList()
@@ -483,9 +538,9 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                 currentWordEnd = content.localCurrentWord.end,
                 maxCandidateCount = maxCandidateCount,
                 allowPossiblyOffensive = allowPossiblyOffensive,
-                inputTrace = inputTraceFor(content),
+                inputTrace = inputTrace,
             )
-            val deferred = CompletableDeferred<List<AutocorrectCandidate>>()
+            val deferred = CompletableDeferred<AutocorrectSuggestionResult>()
             pendingSuggestions[requestId] = deferred
             if (!send(AutocorrectPluginContract.MSG_SUGGEST, request.toBundle(), service)) {
                 pendingSuggestions.remove(requestId)
@@ -502,23 +557,30 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                     activeSession?.sessionId == session.sessionId &&
                     requestId == latestSuggestionRequestId
                 ) {
+                    boostedCodePoints = emptySet()
                     send(AutocorrectPluginContract.MSG_CANCEL, Bundle(), service)
                 }
             }
         }
-        return result.orEmpty()
-            .take(
-                maxCandidateCount.coerceIn(1, AutocorrectPluginContract.MAX_CANDIDATES),
-            )
-            .map { it.toSuggestionCandidate(session.sessionId, content) }
+        return result?.candidates.orEmpty().take(
+            maxCandidateCount.coerceIn(1, AutocorrectPluginContract.MAX_CANDIDATES),
+        )
     }
 
     override suspend fun notifySuggestionAccepted(subtype: Subtype, candidate: SuggestionCandidate) {
+        notifySuggestionAccepted(candidate, AutocorrectAcceptanceKind.MANUAL)
+    }
+
+    fun notifySuggestionAccepted(
+        candidate: SuggestionCandidate,
+        acceptanceKind: AutocorrectAcceptanceKind,
+    ) {
         if (candidate is ExternalAutocorrectCandidate) {
             notifyCandidateEvent(
                 AutocorrectPluginContract.MSG_ACCEPTED,
                 candidate.pluginSessionId,
                 candidate.pluginCandidateId,
+                acceptanceKind,
             )
         }
     }
@@ -572,9 +634,14 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     }
 
     @Synchronized
-    private fun notifyCandidateEvent(what: Int, sessionId: Long, candidateId: String) {
+    private fun notifyCandidateEvent(
+        what: Int,
+        sessionId: Long,
+        candidateId: String,
+        acceptanceKind: AutocorrectAcceptanceKind? = null,
+    ) {
         if (activeSession?.sessionId != sessionId) return
-        send(what, candidateEventBundle(sessionId, candidateId))
+        send(what, candidateEventBundle(sessionId, candidateId, acceptanceKind))
     }
 
     private fun createServiceConnection() = object : ServiceConnection {
@@ -736,10 +803,11 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             if (providerId != boundProviderId) return
             when (message.what) {
                 AutocorrectPluginContract.MSG_SUGGESTIONS -> {
-                    val (requestId, candidates) = candidatesFromBundle(message.data)
+                    val (requestId, result) = suggestionResultFromBundle(message.data)
                     val pending = pendingSuggestions.remove(requestId) ?: return
                     if (requestId == latestSuggestionRequestId) {
-                        pending.complete(candidates)
+                        boostedCodePoints = result.boostedCodePoints
+                        pending.complete(result)
                     } else {
                         pending.cancel()
                     }
@@ -785,6 +853,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                     AutocorrectCandidateKind.CORRECTION -> SuggestionCandidateKind.CORRECTION
                     AutocorrectCandidateKind.COMPLETION -> SuggestionCandidateKind.COMPLETION
                     AutocorrectCandidateKind.NEXT_WORD -> SuggestionCandidateKind.NEXT_WORD
+                    AutocorrectCandidateKind.EMOJI -> SuggestionCandidateKind.OTHER
                 },
             ),
             replacement = localReplacement?.let { range ->

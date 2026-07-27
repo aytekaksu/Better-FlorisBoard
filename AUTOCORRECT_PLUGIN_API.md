@@ -77,12 +77,18 @@ the provider package.
 - Candidate replacement offsets refer to `AutocorrectRequest.text`. Use `-1` for both offsets to
   request FlorisBoard's normal composing-region behavior.
 - `AutocorrectRequest.inputTrace` optionally supplies normalized key bounds and tap positions for
-  proximity-aware correction. It contains no screen coordinates and is empty when the trace cannot
-  be matched safely to the current word.
+  proximity-aware correction. For a gesture request it instead carries a bounded, timed,
+  single-pointer path and sets `mode` to `GESTURE`. It contains no physical screen coordinates.
+- `onSuggestResult` may additionally return a bounded set of Unicode code points which remain
+  valid continuations of the current word. FlorisBoard uses these optional hints to expand only
+  those character keys during the next hit test. Hints are ignored for non-character keys and
+  while Android accessibility is active. Candidate-only providers can keep overriding `onSuggest`.
 - Candidate IDs are opaque to FlorisBoard and should remain valid until the typing session ends.
-  They are returned to the provider for accepted, reverted, and removal events.
-- Candidate kinds let providers classify typed words, corrections, completions, and predictions
-  for presentation without changing provider order.
+  They are returned to the provider for accepted, reverted, and removal events. Acceptance reports
+  whether the user tapped a candidate, separator-triggered autocorrection selected it, or a gesture
+  result was committed.
+- Candidate kinds let providers classify typed words, corrections, completions, predictions, and
+  emoji for presentation without changing provider order.
 - `AutocorrectSeparatorBehavior` lets the engine insert, omit, or defer separator behavior to the
   active language.
 - `onTextEvent` reports plain typed and gesture words which did not originate from a provider
@@ -99,6 +105,9 @@ the provider package.
   work and should cooperate with coroutine cancellation.
 - Providers may expose any implementation: dictionaries, finite-state algorithms, native code,
   or on-device language models. No engine-specific behavior is part of the host API.
+- Providers which retain sensitive personalization can override `isHostAuthorized` and accept
+  only expected host package names. The default remains open so independently developed keyboards
+  and providers can interoperate without a shared signing key.
 
 If an external provider returns no candidates, times out, disconnects, or crashes, FlorisBoard
 falls back to its built-in language provider. Host-owned spelling, emoji, clipboard, glide typing,
@@ -143,7 +152,10 @@ engine-specific dependency:
 | --- | --- |
 | Dictionary and transformer candidates | `onSuggest`, ordered candidates, confidence and kind |
 | Autocorrect, completion and next-word UI | candidate kind, secondary text and auto-commit |
+| Emoji suggestions | emoji candidate kind with provider acceptance feedback |
 | Proximity-aware correction | normalized `inputTrace` key geometry and taps |
+| Dictionary-aware key hit testing | optional bounded valid-next-code-point hints |
+| Swipe decoding and gesture candidates | timed normalized gesture path with host fallback |
 | Multilingual model selection | primary and secondary session language tags |
 | Personal history and fine-tuning input | accepted/reverted/removal and text-commit callbacks |
 | Prediction and personalization toggles | switch items |
@@ -155,7 +167,10 @@ engine-specific dependency:
 
 The provider adapter is responsible for translating these generic values into its engine's native
 types. Another provider can implement an entirely different dictionary, neural model, remote
-service, or hybrid pipeline without changing FlorisBoard.
+service, or hybrid pipeline without changing FlorisBoard. A FUTO-derived reference adapter lives
+in the separate, appropriately licensed
+[`aytekaksu/android-keyboard`](https://github.com/aytekaksu/android-keyboard) fork; FUTO source is
+not included in this Apache-licensed repository.
 
 ## Privacy and battery contract
 
@@ -167,8 +182,8 @@ suggestions.
 The provider is bound only while an eligible input view or an explicit provider-settings page is
 active. FlorisBoard uses a non-foreground binding, does not call `startService`, poll the provider,
 acquire a wake lock for it, or schedule background work. It cancels superseded suggestion requests,
-limits text context to 512 UTF-16 code units, accepts at most 16 candidates, bounds trace and UI
-payloads, and unbinds when neither typing nor settings needs the service.
+limits text context to 512 UTF-16 code units, accepts at most 16 candidates, bounds tap and gesture
+traces and UI payloads, and unbinds when neither typing nor settings needs the service.
 
 Provider implementations must not turn a typing session into a started or foreground service.
 They should preload models in `onStartSession`, release session-specific state in
