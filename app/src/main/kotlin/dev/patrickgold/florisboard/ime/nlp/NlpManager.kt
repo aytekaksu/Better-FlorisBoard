@@ -212,6 +212,9 @@ class NlpManager(context: Context) {
 
     fun suggest(subtype: Subtype, content: EditorContent) {
         val reqTime = SystemClock.uptimeMillis()
+        if (content.currentWordText.isNotBlank() && !content.selection.isSelectionMode) {
+            setSharedActionsExpanded(false)
+        }
         scope.launch {
             val emojiSuggestions = when {
                 prefs.emoji.suggestionEnabled.get() -> {
@@ -329,9 +332,6 @@ class NlpManager(context: Context) {
     }
 
     fun autoExpandCollapseSmartbarActions(list1: List<*>?, list2: List<*>?) {
-        if (!prefs.smartbar.enabled.get()) {// || !prefs.smartbar.sharedActionsAutoExpandCollapse.get()) {
-            return
-        }
         // TODO: this is a mess and needs to be cleaned up in v0.5 with the NLP development
         /*if (keyboardManager.inputEventDispatcher.isRepeatableCodeLastDown()
             && !keyboardManager.inputEventDispatcher.isPressed(KeyCode.DELETE)
@@ -343,6 +343,13 @@ class NlpManager(context: Context) {
         }*/
         val isSelection = editorInstance.activeContent.selection.isSelectionMode
         val isExpanded = list1.isNullOrEmpty() && list2.isNullOrEmpty() || isSelection
+        setSharedActionsExpanded(isExpanded)
+    }
+
+    private fun setSharedActionsExpanded(isExpanded: Boolean) {
+        if (!prefs.smartbar.enabled.get()) {
+            return
+        }
         scope.launch {
             prefs.smartbar.sharedActionsExpandWithAnimation.set(false)
             prefs.smartbar.sharedActionsExpanded.set(isExpanded)
