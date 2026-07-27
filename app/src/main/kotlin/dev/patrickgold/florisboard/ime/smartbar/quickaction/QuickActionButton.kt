@@ -135,7 +135,7 @@ fun QuickActionButton(
                 modifier = if (isTile) {
                     Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .padding(vertical = 6.dp)
                 } else {
                     Modifier
                 },
