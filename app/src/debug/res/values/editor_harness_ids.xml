@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Stable IDs used by host-side fleet automation. -->
     <item name="editor_normal_autocorrect" type="id"/>
     <item name="editor_multiline_autocorrect" type="id"/>
     <item name="editor_raw" type="id"/>

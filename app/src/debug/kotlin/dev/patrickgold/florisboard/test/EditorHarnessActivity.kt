@@ -26,7 +26,9 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import dev.patrickgold.florisboard.R
 
+/** Debug-only editor matrix for host-side IME compatibility checks. */
 class EditorHarnessActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
