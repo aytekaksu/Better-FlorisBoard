@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard.ime.smartbar.quickaction
 
+import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import dev.patrickgold.florisboard.lib.io.DefaultJsonConfig
 import dev.patrickgold.jetpref.datastore.model.PreferenceSerializer
@@ -52,13 +53,18 @@ data class QuickActionArrangement(
 
     fun distinct(): QuickActionArrangement {
         val distinctSet = mutableSetOf<QuickAction>()
-        if (stickyAction != null) {
-            distinctSet.add(stickyAction)
+        val normalizedStickyAction = stickyAction?.normalized()
+        if (normalizedStickyAction != null) {
+            distinctSet.add(normalizedStickyAction)
         }
-        val distinctDynamicActions = dynamicActions.filter { distinctSet.add(it) }
-        val distinctHiddenActions = hiddenActions.filter { distinctSet.add(it) }
+        val distinctDynamicActions = dynamicActions
+            .map(QuickAction::normalized)
+            .filter(distinctSet::add)
+        val distinctHiddenActions = hiddenActions
+            .map(QuickAction::normalized)
+            .filter(distinctSet::add)
         return QuickActionArrangement(
-            stickyAction = stickyAction,
+            stickyAction = normalizedStickyAction,
             dynamicActions = distinctDynamicActions,
             hiddenActions = distinctHiddenActions,
         )
@@ -105,9 +111,7 @@ data class QuickActionArrangement(
                 QuickAction.InsertKey(TextKeyData.FORWARD_DELETE),
                 QuickAction.InsertKey(TextKeyData.IME_HIDE_UI),
             ),
-            hiddenActions = listOf(
-                QuickAction.InsertKey(TextKeyData.AUTOCORRECT_PLUGIN_UI),
-            ),
+            hiddenActions = emptyList(),
         )
     }
 
@@ -117,7 +121,18 @@ data class QuickActionArrangement(
         }
 
         override fun deserialize(value: String): QuickActionArrangement {
-            return QuickActionJsonConfig.decodeFromString(value)
+            return QuickActionJsonConfig.decodeFromString<QuickActionArrangement>(value).distinct()
         }
+    }
+}
+
+private fun QuickAction.normalized(): QuickAction {
+    return if (
+        this is QuickAction.InsertKey &&
+        data.code == KeyCode.AUTOCORRECT_PLUGIN_UI
+    ) {
+        QuickAction.InsertKey(TextKeyData.TOGGLE_AUTOCORRECT)
+    } else {
+        this
     }
 }

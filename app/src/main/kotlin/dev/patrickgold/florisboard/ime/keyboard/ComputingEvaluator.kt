@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.ContentPasteGo
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.FontDownload
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardCapslock
@@ -334,9 +333,7 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
                 this.context()?.vectorResource(id = R.drawable.ic_incognito_off)
             }
         }
-        KeyCode.TOGGLE_AUTOCORRECT -> {
-            Icons.Default.FontDownload
-        }
+        KeyCode.TOGGLE_AUTOCORRECT,
         KeyCode.AUTOCORRECT_PLUGIN_UI -> {
             Icons.Default.Tune
         }

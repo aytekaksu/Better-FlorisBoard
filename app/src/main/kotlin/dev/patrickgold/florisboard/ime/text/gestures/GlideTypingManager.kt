@@ -67,7 +67,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
         val content = editorInstance.activeContent
         completionJob?.cancel()
         completionJob = scope.launch {
-            val candidates = autocorrectPluginManager.suggestGesture(
+            val result = autocorrectPluginManager.suggestGesture(
                 subtype = subtypeManager.activeSubtype,
                 content = content,
                 maxCandidateCount = MAX_SUGGESTION_COUNT,
@@ -75,7 +75,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
                 isPrivateSession = keyboardManager.activeState.isIncognitoMode,
                 inputTrace = trace,
             )
-            if (candidates.isEmpty()) {
+            if (!result.handled) {
                 withContext(Dispatchers.Main) {
                     completionJob = updateSuggestionsAsync(
                         MAX_SUGGESTION_COUNT,
@@ -85,14 +85,23 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
                         glideTypingClassifier.clear()
                     }
                 }
+            } else if (result.candidates.isEmpty()) {
+                withContext(Dispatchers.Main) {
+                    if (!content.isStillActive()) {
+                        glideTypingClassifier.clear()
+                        return@withContext
+                    }
+                    nlpManager.suggestDirectly(emptyList())
+                    glideTypingClassifier.clear()
+                }
             } else {
                 withContext(Dispatchers.Main) {
                     if (!content.isStillActive()) {
                         glideTypingClassifier.clear()
                         return@withContext
                     }
-                    nlpManager.suggestDirectly(candidates.drop(1))
-                    keyboardManager.commitGesture(candidates.first())
+                    nlpManager.suggestDirectly(result.candidates.drop(1))
+                    keyboardManager.commitGesture(result.candidates.first())
                     glideTypingClassifier.clear()
                 }
             }

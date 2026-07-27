@@ -43,6 +43,12 @@ fun GesturesScreen() = FlorisScreen {
                 summary = stringRes(R.string.pref__glide__enabled__summary),
             )
             SwitchPreference(
+                prefs.glide.sensitive,
+                title = stringRes(R.string.pref__glide__sensitive__label),
+                summary = stringRes(R.string.pref__glide__sensitive__summary),
+                enabledIf = { prefs.glide.enabled isEqualTo true },
+            )
+            SwitchPreference(
                 prefs.glide.showTrail,
                 title = stringRes(R.string.pref__glide__show_trail__label),
                 summary = stringRes(R.string.pref__glide__show_trail__summary),

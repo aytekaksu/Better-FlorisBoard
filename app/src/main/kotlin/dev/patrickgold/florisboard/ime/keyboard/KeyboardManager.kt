@@ -79,7 +79,6 @@ import org.florisboard.autocorrect.api.AutocorrectAcceptanceKind
 import org.florisboard.autocorrect.api.AutocorrectTextEventKind
 import org.florisboard.lib.android.AndroidKeyguardManager
 import org.florisboard.lib.android.showLongToast
-import org.florisboard.lib.android.showLongToastSync
 import org.florisboard.lib.android.showShortToastSync
 import org.florisboard.lib.android.systemService
 import org.florisboard.lib.kotlin.collectIn
@@ -683,16 +682,6 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     }
 
     /**
-     * Handles a [KeyCode.TOGGLE_AUTOCORRECT] event.
-     */
-    private fun handleToggleAutocorrect() {
-        lastToastReference.get()?.cancel()
-        lastToastReference = WeakReference(
-            appContext.showLongToastSync("Autocorrect toggle is a placeholder and not yet implemented")
-        )
-    }
-
-    /**
      * Handles a [KeyCode.KANA_SWITCHER] event
      */
     private fun handleKanaSwitch() {
@@ -846,7 +835,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 activeState.isActionsEditorVisible = !activeState.isActionsEditorVisible
             }
             KeyCode.TOGGLE_INCOGNITO_MODE -> scope.launch { handleToggleIncognitoMode() }
-            KeyCode.TOGGLE_AUTOCORRECT -> handleToggleAutocorrect()
+            KeyCode.TOGGLE_AUTOCORRECT -> autocorrectPluginManager.showKeyboardPluginUi()
             KeyCode.AUTOCORRECT_PLUGIN_UI -> autocorrectPluginManager.showKeyboardPluginUi()
             KeyCode.UNDO -> editorInstance.performUndo()
             KeyCode.VIEW_CHARACTERS -> activeState.keyboardMode = KeyboardMode.CHARACTERS
@@ -1088,6 +1077,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 KeyCode.LANGUAGE_SWITCH -> {
                     subtypeManager.subtypes.size > 1
                 }
+                KeyCode.TOGGLE_AUTOCORRECT,
                 KeyCode.AUTOCORRECT_PLUGIN_UI -> {
                     prefs.suggestion.autocorrectPluginComponent.get().isNotBlank()
                 }

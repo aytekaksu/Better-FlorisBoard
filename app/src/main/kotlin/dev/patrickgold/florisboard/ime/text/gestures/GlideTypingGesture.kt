@@ -19,6 +19,7 @@ package dev.patrickgold.florisboard.ime.text.gestures
 import android.content.Context
 import android.view.MotionEvent
 import dev.patrickgold.florisboard.R
+import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKey
 import dev.patrickgold.florisboard.lib.devtools.flogDebug
@@ -35,10 +36,12 @@ class GlideTypingGesture {
      * and ignores additional pointers provided, if any.
      */
     class Detector(context: Context) {
+        private val prefs by FlorisPreferenceStore
         private var pointerData: PointerData = PointerData(mutableListOf(), 0)
         private val keySize = ViewUtils.px2dp(context.resources.getDimension(R.dimen.key_width))
         private val listeners: ArrayList<Listener> = arrayListOf()
         private var pointerId: Int = -1
+        private var thresholdScale = 1f
 
         companion object {
             private const val MAX_DETECT_TIME = 500
@@ -57,6 +60,7 @@ class GlideTypingGesture {
                 MotionEvent.ACTION_POINTER_DOWN -> {
                     if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                         resetState()
+                        thresholdScale = if (prefs.glide.sensitive.get()) 0.5f else 1f
                     }
                     if (pointerId != -1) {
                         // if we already have another pointer, we don't care
@@ -96,7 +100,11 @@ class GlideTypingGesture {
                             val dist = ViewUtils.px2dp(pointerData.positions[0].dist(pos))
                             val time = (System.currentTimeMillis() - pointerData.startTime) + 1
                             flogDebug { "Distance glided: $dist dp with velocity: ${dist / time} dp/ms" }
-                            if (dist > keySize && (dist / time) > VELOCITY_THRESHOLD && (initialKey?.computedData?.code !in SWIPE_GESTURE_KEYS)) {
+                            if (
+                                dist > keySize * thresholdScale &&
+                                (dist / time) > VELOCITY_THRESHOLD * thresholdScale &&
+                                initialKey?.computedData?.code !in SWIPE_GESTURE_KEYS
+                            ) {
                                 pointerData.isActuallyGesture = true
                                 // Let listener know all those points need to be added.
                                 pointerData.positions.take(pointerData.positions.size - 1).forEach { point ->

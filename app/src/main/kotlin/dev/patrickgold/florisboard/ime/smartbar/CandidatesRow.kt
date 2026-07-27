@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.ime.nlp.ClipboardSuggestionCandidate
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
+import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.nlpManager
@@ -73,12 +74,20 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
 
     val displayMode by prefs.suggestion.displayMode.collectAsState()
     val candidates by nlpManager.activeCandidatesFlow.collectAsState()
+    val hasPluginCandidates = candidates.any {
+        it.sourceProvider?.providerId == AutocorrectPluginManager.ProviderId
+    }
+    val effectiveDisplayMode = if (hasPluginCandidates) {
+        CandidatesDisplayMode.CLASSIC
+    } else {
+        displayMode
+    }
 
     SnyggRow(
         elementName = FlorisImeUi.SmartbarCandidatesRow.elementName,
         modifier = modifier
             .fillMaxSize()
-            .conditional(displayMode == CandidatesDisplayMode.DYNAMIC_SCROLLABLE && candidates.size > 1) {
+            .conditional(effectiveDisplayMode == CandidatesDisplayMode.DYNAMIC_SCROLLABLE && candidates.size > 1) {
                 florisHorizontalScroll(scrollbarHeight = CandidatesRowScrollbarHeight)
             },
         horizontalArrangement = if (candidates.size > 1) {
@@ -95,14 +104,14 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
             } else {
                 Modifier
                     .fillMaxHeight()
-                    .conditional(displayMode == CandidatesDisplayMode.CLASSIC) {
+                    .conditional(effectiveDisplayMode == CandidatesDisplayMode.CLASSIC) {
                         weight(1f)
                     }
-                    .conditional(displayMode != CandidatesDisplayMode.CLASSIC) {
+                    .conditional(effectiveDisplayMode != CandidatesDisplayMode.CLASSIC) {
                         wrapContentWidth().widthIn(max = 160.dp)
                     }
             }
-            val list = when (displayMode) {
+            val list = when (effectiveDisplayMode) {
                 CandidatesDisplayMode.CLASSIC -> candidates.subList(0, 3.coerceAtMost(candidates.size))
                 else -> candidates
             }
@@ -112,7 +121,7 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
                         .width(1.dp)
                         .fillMaxHeight(0.7f)
                         .align(Alignment.CenterVertically)
-                    if (displayMode == CandidatesDisplayMode.CLASSIC) {
+                    if (effectiveDisplayMode == CandidatesDisplayMode.CLASSIC) {
                         val keyStyle = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
                         Spacer(
                             modifier = separatorModifier.background(
@@ -129,7 +138,7 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
                 CandidateItem(
                     modifier = candidateModifier,
                     candidate = candidate,
-                    displayMode = displayMode,
+                    displayMode = effectiveDisplayMode,
                     onClick = {
                         // Can't use candidate directly
                         keyboardManager.commitCandidate(candidates[n])
