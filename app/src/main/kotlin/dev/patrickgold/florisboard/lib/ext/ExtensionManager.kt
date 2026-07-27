@@ -145,7 +145,9 @@ class ExtensionManager(context: Context) {
     }
 
     fun getExtensionById(id: String): Extension? {
-        return extensions.value.find { it.meta.id == id }
+        return keyboardExtensions.value.find { it.meta.id == id }
+            ?: themes.value.find { it.meta.id == id }
+            ?: languagePacks.value.find { it.meta.id == id }
     }
 
     fun canDelete(ext: Extension): Boolean {
