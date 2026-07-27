@@ -32,13 +32,27 @@ data class AutocorrectTouchPoint(
     val y: Float,
 )
 
+data class AutocorrectGesturePoint(
+    val x: Float,
+    val y: Float,
+    val elapsedTimeMillis: Int,
+)
+
+enum class AutocorrectInputMode {
+    TYPING,
+    GESTURE,
+}
+
 /**
- * Optional normalized keyboard geometry and tap positions for engines which perform key-proximity
- * scoring. Coordinates are in the range 0..1 and contain no physical screen location.
+ * Optional normalized keyboard geometry and pointer data for engines which perform key-proximity
+ * scoring or gesture decoding. Coordinates are in the range 0..1 and contain no physical screen
+ * location.
  */
 data class AutocorrectInputTrace(
     val keys: List<AutocorrectKeyGeometry>,
     val points: List<AutocorrectTouchPoint>,
+    val gesturePoints: List<AutocorrectGesturePoint> = emptyList(),
+    val mode: AutocorrectInputMode = AutocorrectInputMode.TYPING,
 ) {
     companion object {
         val Empty = AutocorrectInputTrace(emptyList(), emptyList())
@@ -68,6 +82,22 @@ internal fun AutocorrectInputTrace.toBundle() = Bundle().apply {
             }
         }),
     )
+    putParcelableArrayList(
+        TraceKeys.GESTURE_POINTS,
+        ArrayList(
+            gesturePoints.take(AutocorrectPluginContract.MAX_GESTURE_POINT_COUNT).map { point ->
+                Bundle().apply {
+                    putFloat(TraceKeys.X, point.x.normalized())
+                    putFloat(TraceKeys.Y, point.y.normalized())
+                    putInt(
+                        TraceKeys.ELAPSED_TIME_MILLIS,
+                        point.elapsedTimeMillis.coerceIn(0, TraceLimits.MAX_ELAPSED_TIME_MILLIS),
+                    )
+                }
+            },
+        ),
+    )
+    putString(TraceKeys.MODE, mode.name)
 }
 
 @Suppress("DEPRECATION")
@@ -102,17 +132,34 @@ internal fun Bundle.toAutocorrectInputTrace() = AutocorrectInputTrace(
                 y = point.getFloat(TraceKeys.Y).normalized(),
             )
         },
+    gesturePoints = getParcelableArrayList<Bundle>(TraceKeys.GESTURE_POINTS)
+        .orEmpty()
+        .take(AutocorrectPluginContract.MAX_GESTURE_POINT_COUNT)
+        .map { point ->
+            AutocorrectGesturePoint(
+                x = point.getFloat(TraceKeys.X).normalized(),
+                y = point.getFloat(TraceKeys.Y).normalized(),
+                elapsedTimeMillis = point.getInt(TraceKeys.ELAPSED_TIME_MILLIS)
+                    .coerceIn(0, TraceLimits.MAX_ELAPSED_TIME_MILLIS),
+            )
+        },
+    mode = getString(TraceKeys.MODE)?.let { value ->
+        enumValues<AutocorrectInputMode>().firstOrNull { it.name == value }
+    } ?: AutocorrectInputMode.TYPING,
 )
 
 private fun Float.normalized() = takeIf(Float::isFinite)?.coerceIn(0f, 1f) ?: 0f
 
 private object TraceLimits {
     const val TEXT_CHARS = 8
+    const val MAX_ELAPSED_TIME_MILLIS = 60_000
 }
 
 private object TraceKeys {
     const val KEYS = "keys"
     const val POINTS = "points"
+    const val GESTURE_POINTS = "gesturePoints"
+    const val MODE = "mode"
     const val TEXT = "text"
     const val LEFT = "left"
     const val TOP = "top"
@@ -120,4 +167,5 @@ private object TraceKeys {
     const val BOTTOM = "bottom"
     const val X = "x"
     const val Y = "y"
+    const val ELAPSED_TIME_MILLIS = "elapsedTimeMillis"
 }

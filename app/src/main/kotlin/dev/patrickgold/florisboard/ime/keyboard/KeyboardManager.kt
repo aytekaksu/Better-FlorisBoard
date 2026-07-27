@@ -75,6 +75,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.florisboard.autocorrect.api.AutocorrectAcceptanceKind
+import org.florisboard.autocorrect.api.AutocorrectTextEventKind
 import org.florisboard.lib.android.AndroidKeyguardManager
 import org.florisboard.lib.android.showLongToast
 import org.florisboard.lib.android.showLongToastSync
@@ -82,7 +84,6 @@ import org.florisboard.lib.android.showShortToastSync
 import org.florisboard.lib.android.systemService
 import org.florisboard.lib.kotlin.collectIn
 import org.florisboard.lib.kotlin.collectLatestIn
-import org.florisboard.autocorrect.api.AutocorrectTextEventKind
 
 private val DoubleSpacePeriodMatcher = """([^.!?‽\s]\s)""".toRegex()
 
@@ -289,7 +290,10 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         }
     }
 
-    fun commitCandidate(candidate: SuggestionCandidate): Boolean {
+    fun commitCandidate(
+        candidate: SuggestionCandidate,
+        acceptanceKind: AutocorrectAcceptanceKind = AutocorrectAcceptanceKind.MANUAL,
+    ): Boolean {
         val committed = when (candidate) {
             is ClipboardSuggestionCandidate -> editorInstance.commitClipboardItem(candidate.clipboardItem)
             else -> editorInstance.commitCompletion(candidate)
@@ -297,7 +301,14 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         if (committed) {
             autocorrectPluginManager.clearInputTrace()
             scope.launch {
-                candidate.sourceProvider?.notifySuggestionAccepted(subtypeManager.activeSubtype, candidate)
+                if (candidate.sourceProvider === autocorrectPluginManager) {
+                    autocorrectPluginManager.notifySuggestionAccepted(candidate, acceptanceKind)
+                } else {
+                    candidate.sourceProvider?.notifySuggestionAccepted(
+                        subtypeManager.activeSubtype,
+                        candidate,
+                    )
+                }
             }
         }
         return committed
@@ -311,6 +322,18 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             committedWord,
             AutocorrectTextEventKind.COMMIT_GESTURE,
         )
+    }
+
+    fun commitGesture(candidate: SuggestionCandidate): Boolean {
+        autocorrectPluginManager.clearInputTrace()
+        return editorInstance.commitGesture(fixCase(candidate.text.toString())).also { committed ->
+            if (committed) {
+                autocorrectPluginManager.notifySuggestionAccepted(
+                    candidate,
+                    AutocorrectAcceptanceKind.GESTURE,
+                )
+            }
+        }
     }
 
     /**
@@ -567,7 +590,9 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      */
     fun handleHardwareKeyboardSpace() {
         val typedWord = editorInstance.activeContent.currentWordText
-        val candidate = nlpManager.getAutoCommitCandidate()?.takeIf { commitCandidate(it) }
+        val candidate = nlpManager.getAutoCommitCandidate()?.takeIf {
+            commitCandidate(it, AutocorrectAcceptanceKind.AUTO_CORRECTION)
+        }
         // Skip handling changing to characters keyboard and double space periods
         if (shouldInsertSeparatorAfter(candidate)) {
             editorInstance.commitText(KeyCode.SPACE.toChar().toString())
@@ -587,7 +612,9 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      */
     private fun handleSpace(data: KeyData) {
         val typedWord = editorInstance.activeContent.currentWordText
-        val candidate = nlpManager.getAutoCommitCandidate()?.takeIf { commitCandidate(it) }
+        val candidate = nlpManager.getAutoCommitCandidate()?.takeIf {
+            commitCandidate(it, AutocorrectAcceptanceKind.AUTO_CORRECTION)
+        }
         if (prefs.keyboard.spaceBarSwitchesToCharacters.get()) {
             when (activeState.keyboardMode) {
                 KeyboardMode.NUMERIC_ADVANCED,
@@ -831,7 +858,9 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             KeyCode.VIEW_SYMBOLS2 -> activeState.keyboardMode = KeyboardMode.SYMBOLS2
             else -> {
                 if (activeState.imeUiMode == ImeUiMode.MEDIA) {
-                    nlpManager.getAutoCommitCandidate()?.let { commitCandidate(it) }
+                    nlpManager.getAutoCommitCandidate()?.let {
+                        commitCandidate(it, AutocorrectAcceptanceKind.AUTO_CORRECTION)
+                    }
                     editorInstance.commitText(data.asString(isForDisplay = false))
                     return@batchEdit
                 }
@@ -859,7 +888,12 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                             if (!UCharacter.isUAlphabetic(UCharacter.codePointAt(text, 0))) {
                                 val typedWord = editorInstance.activeContent.currentWordText
                                 val candidate = nlpManager.getAutoCommitCandidate()
-                                    ?.takeIf { commitCandidate(it) }
+                                    ?.takeIf {
+                                        commitCandidate(
+                                            it,
+                                            AutocorrectAcceptanceKind.AUTO_CORRECTION,
+                                        )
+                                    }
                                 if (candidate == null) {
                                     autocorrectPluginManager.notifyTextEvent(
                                         typedWord,
