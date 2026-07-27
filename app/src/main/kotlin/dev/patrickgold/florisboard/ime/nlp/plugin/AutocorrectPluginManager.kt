@@ -92,6 +92,7 @@ import org.florisboard.autocorrect.api.AutocorrectTextEvent
 import org.florisboard.autocorrect.api.AutocorrectTextEventKind
 import org.florisboard.autocorrect.api.candidateEventBundle
 import org.florisboard.autocorrect.api.finishSessionBundle
+import org.florisboard.autocorrect.api.finishSessionResultFromBundle
 import org.florisboard.autocorrect.api.pluginUiDocumentBundle
 import org.florisboard.autocorrect.api.pluginUiMutationBundle
 import org.florisboard.autocorrect.api.pluginUiRequestBundle
@@ -127,6 +128,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         const val MaxVisibleCandidates = 3
         private const val CONNECTION_TIMEOUT_MS = 350L
         private const val RESPONSE_TIMEOUT_MS = 1_000L
+        private const val FINISH_TIMEOUT_MS = 2_000L
         private const val UI_RESPONSE_TIMEOUT_MS = 1_500L
         private const val UI_OPERATION_TIMEOUT_MS = 120_000L
     }
@@ -141,6 +143,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     private val pendingSuggestions =
         ConcurrentHashMap<Long, CompletableDeferred<AutocorrectSuggestionResult>>()
     private val pendingRemovals = ConcurrentHashMap<Long, CompletableDeferred<Boolean>>()
+    private val pendingSessionFinishes = mutableSetOf<Long>()
     private val pendingHostSettingValues =
         ConcurrentHashMap<AutocorrectPluginHostSetting, Boolean>()
     private val pendingPluginUiOperations = mutableSetOf<Long>()
@@ -168,11 +171,13 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     @Volatile private var latestPluginUiRequestId = -1L
     @Volatile private var activeProviderId = ""
     @Volatile private var boundProviderId = ""
+    @Volatile private var admittedSessionId = -1L
     @Volatile private var providerQueryComplete = false
     @Volatile private var providerQueryRevision = 0L
     @Volatile private var boostedCodePoints = emptySet<Int>()
     @Volatile private var uiClientCount = 0
     private var preparingPluginUiDocuments = 0
+    private var pendingProviderBind: AutocorrectPluginDescriptor? = null
     private var serviceConnection: ServiceConnection? = null
     private var traceKeyboard: TextKeyboard? = null
     private var traceWidth = 0f
@@ -242,9 +247,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             providerPluginUi = null
             _pluginUi.value = null
             _pluginUiLoading.value = false
-            if (activeSession == null && !hasInFlightPluginUiOperation()) {
-                unbind(clearSession = false)
-            }
+            releaseBindingIfIdle()
         }
     }
 
@@ -359,7 +362,11 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
 
     @Synchronized
     fun notifyTextEvent(text: String, kind: AutocorrectTextEventKind) {
-        val session = activeSession ?: return
+        val session = activeSession?.takeIf {
+            admittedSessionId == it.sessionId &&
+                activeProviderId == boundProviderId
+        } ?: return
+        val service = remote ?: return
         if (!session.allowPersonalizedLearning) return
         val event = AutocorrectTextEvent(session.sessionId, text, kind)
         if (
@@ -367,7 +374,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             kind == AutocorrectTextEventKind.DELETE_BACKWARD ||
             kind == AutocorrectTextEventKind.DELETE_FORWARD
         ) {
-            send(AutocorrectPluginContract.MSG_TEXT_EVENT, event.toBundle())
+            send(AutocorrectPluginContract.MSG_TEXT_EVENT, event.toBundle(), service)
         }
     }
 
@@ -485,27 +492,38 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         if (wasLatest) {
             _pluginUiLoading.value = false
         }
-        if (
-            pendingPluginUiOperations.isEmpty() &&
-            preparingPluginUiDocuments == 0 &&
-            uiClientCount == 0 &&
-            activeSession == null
-        ) {
-            unbind(clearSession = false)
-        }
+        releaseBindingIfIdle()
         return wasLatest
     }
 
     @Synchronized
     private fun finishPluginUiDocumentPreparation() {
         preparingPluginUiDocuments = (preparingPluginUiDocuments - 1).coerceAtLeast(0)
-        if (!hasInFlightPluginUiOperation() && uiClientCount == 0 && activeSession == null) {
-            unbind(clearSession = false)
-        }
+        releaseBindingIfIdle()
     }
 
     private fun hasInFlightPluginUiOperation() =
         preparingPluginUiDocuments > 0 || pendingPluginUiOperations.isNotEmpty()
+
+    private fun releaseBindingIfIdle(): Boolean {
+        if (hasInFlightPluginUiOperation() || pendingSessionFinishes.isNotEmpty()) return false
+        val descriptor = pendingProviderBind.also { pendingProviderBind = null }
+        if (descriptor != null && wantsProvider(descriptor.id)) {
+            bind(descriptor)
+            return true
+        }
+        val hasDemand = activeSession != null || uiClientCount > 0
+        if (boundProviderId.isNotBlank() && !wantsProvider(boundProviderId)) {
+            unbind(clearSession = false)
+            if (hasDemand) refreshProviders()
+            return true
+        }
+        if (!hasDemand) {
+            unbind(clearSession = false)
+            return true
+        }
+        return false
+    }
 
     private fun connectPluginUi() {
         val selectedProviderId = prefs.suggestion.autocorrectPluginComponent.get()
@@ -530,8 +548,6 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                         ) {
                             endSession()
                         }
-                        if (boundProviderId.isNotBlank()) unbind(clearSession = false)
-                        connectionReady = CompletableDeferred()
                         bind(descriptor)
                     }
                 }
@@ -646,9 +662,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         )
         activeSession = session
         activeProviderId = selectedProviderId
-        connectionReady = CompletableDeferred<Messenger?>().also { ready ->
-            remote?.takeIf { boundProviderId == selectedProviderId }?.let(ready::complete)
-        }
+        connectionReady = CompletableDeferred()
         scope.launch {
             queryProviders { result ->
                 if (result.isFailure) {
@@ -659,16 +673,15 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                     .firstOrNull { it.id == selectedProviderId }
                 if (descriptor == null) {
                     if (activeSession?.sessionId == session.sessionId) {
-                        unbind(clearSession = true)
+                        endSession()
+                        releaseBindingIfIdle()
                     }
                     return@queryProviders
                 }
                 if (activeSession?.sessionId == session.sessionId) {
-                    if (remote != null && boundProviderId == descriptor.id) {
-                        send(
-                            AutocorrectPluginContract.MSG_START_SESSION,
-                            session.toBundle(),
-                        )
+                    val service = remote
+                    if (service != null && boundProviderId == descriptor.id) {
+                        admitSession(session, service)
                     } else {
                         bind(descriptor)
                     }
@@ -678,31 +691,80 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         return session
     }
 
+    private fun admitSession(session: AutocorrectSession, service: Messenger) {
+        if (
+            activeSession?.sessionId != session.sessionId ||
+            activeProviderId != boundProviderId ||
+            remote !== service
+        ) {
+            return
+        }
+        if (admittedSessionId == session.sessionId ||
+            send(AutocorrectPluginContract.MSG_START_SESSION, session.toBundle(), service)
+        ) {
+            admittedSessionId = session.sessionId
+            connectionReady.complete(service)
+        }
+    }
+
     @Synchronized
     fun finishSession() {
         val hadSession = endSession()
-        if (uiClientCount == 0 && !hasInFlightPluginUiOperation()) {
-            unbind(clearSession = false)
-        } else if (hadSession && remote != null) {
+        if (!releaseBindingIfIdle() &&
+            hadSession &&
+            uiClientCount > 0 &&
+            remote != null &&
+            prefs.suggestion.autocorrectPluginComponent.get() == boundProviderId
+        ) {
             requestPluginUi()
         }
     }
 
     private fun endSession(): Boolean {
         val session = activeSession
-        if (session != null) {
-            send(
+        if (
+            session != null &&
+            admittedSessionId == session.sessionId &&
+            activeProviderId == boundProviderId
+        ) {
+            pendingSessionFinishes.add(session.sessionId)
+            if (send(
                 what = AutocorrectPluginContract.MSG_FINISH_SESSION,
                 data = finishSessionBundle(session.sessionId),
-            )
+            )) {
+                expireSessionFinish(session.sessionId)
+            } else {
+                pendingSessionFinishes.remove(session.sessionId)
+            }
         }
+        if (session?.sessionId == admittedSessionId) admittedSessionId = -1L
         activeSession = null
         activeProviderId = ""
+        if (session != null) connectionReady.complete(null)
         latestSuggestionRequestId = -1L
         clearInputTrace()
         cancelPending()
         return session != null
     }
+
+    private fun expireSessionFinish(sessionId: Long) {
+        scope.launch {
+            delay(FINISH_TIMEOUT_MS)
+            completeSessionFinish(sessionId)
+        }
+    }
+
+    @Synchronized
+    private fun completeSessionFinish(sessionId: Long) {
+        if (!pendingSessionFinishes.remove(sessionId) || pendingSessionFinishes.isNotEmpty()) return
+        releaseBindingIfIdle()
+    }
+
+    private fun wantsProvider(providerId: String) =
+        providerId.isNotBlank() &&
+            ((activeSession != null && activeProviderId == providerId) ||
+                (uiClientCount > 0 &&
+                    prefs.suggestion.autocorrectPluginComponent.get() == providerId))
 
     override suspend fun suggest(
         subtype: Subtype,
@@ -786,12 +848,17 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         allowPossiblyOffensive: Boolean,
         inputTrace: AutocorrectInputTrace,
     ): AutocorrectSuggestionResult? {
-        val service = remote ?: withTimeoutOrNull(CONNECTION_TIMEOUT_MS) {
+        val service = withTimeoutOrNull(CONNECTION_TIMEOUT_MS) {
             connectionReady.await()
         } ?: return null
 
         val (requestId, deferred) = synchronized(this) {
-            if (activeSession?.sessionId != session.sessionId) {
+            if (
+                activeSession?.sessionId != session.sessionId ||
+                admittedSessionId != session.sessionId ||
+                remote !== service ||
+                boundProviderId != activeProviderId
+            ) {
                 return null
             }
             val requestId = nextId.getAndIncrement()
@@ -864,6 +931,10 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     }
 
     override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {
+        notifySuggestionReverted(candidate)
+    }
+
+    fun notifySuggestionReverted(candidate: SuggestionCandidate) {
         if (candidate is ExternalAutocorrectCandidate) {
             notifyCandidateEvent(
                 AutocorrectPluginContract.MSG_REVERTED,
@@ -877,7 +948,9 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         if (candidate !is ExternalAutocorrectCandidate) return false
         val (requestId, deferred) = synchronized(this) {
             val session = activeSession?.takeIf {
-                it.sessionId == candidate.pluginSessionId
+                it.sessionId == candidate.pluginSessionId &&
+                    admittedSessionId == it.sessionId &&
+                    activeProviderId == boundProviderId
             } ?: return false
             val service = remote ?: return false
             val requestId = nextId.getAndIncrement()
@@ -923,8 +996,14 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         candidateId: String,
         acceptanceKind: AutocorrectAcceptanceKind? = null,
     ) {
-        if (activeSession?.sessionId != sessionId) return
-        send(what, candidateEventBundle(sessionId, candidateId, acceptanceKind))
+        if (
+            activeSession?.sessionId != sessionId ||
+            admittedSessionId != sessionId ||
+            activeProviderId != boundProviderId
+        ) {
+            return
+        }
+        send(what, candidateEventBundle(sessionId, candidateId, acceptanceKind), remote)
     }
 
     private fun createServiceConnection() = object : ServiceConnection {
@@ -950,14 +1029,16 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         if (serviceConnection !== connection) return
         val service = Messenger(binder)
         remote = service
-        connectionReady.complete(service)
         activeSession?.takeIf { activeProviderId == boundProviderId }?.let { session ->
-            send(AutocorrectPluginContract.MSG_START_SESSION, session.toBundle(), service)
+            admitSession(session, service)
         }
-        if (uiClientCount > 0) {
-            requestPluginUi(service)
-        } else if (activeSession == null && !hasInFlightPluginUiOperation()) {
-            unbind(clearSession = false)
+        when {
+            uiClientCount > 0 &&
+                prefs.suggestion.autocorrectPluginComponent.get() == boundProviderId -> {
+                requestPluginUi(service)
+            }
+            pendingSessionFinishes.isNotEmpty() || hasInFlightPluginUiOperation() -> Unit
+            else -> releaseBindingIfIdle()
         }
     }
 
@@ -974,37 +1055,79 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     }
 
     private fun suspendConnection() {
+        val queuedProvider = pendingProviderBind.also { pendingProviderBind = null }
+        pendingSessionFinishes.clear()
+        admittedSessionId = -1L
         remote = null
         boostedCodePoints = emptySet()
         pendingPluginUiOperations.clear()
         connectionReady.complete(null)
         connectionReady = CompletableDeferred()
         failPending()
-        if (uiClientCount > 0) _pluginUiLoading.value = true
+        when {
+            hasInFlightPluginUiOperation() -> {
+                pendingProviderBind = queuedProvider?.takeIf { wantsProvider(it.id) }
+                if (uiClientCount > 0) _pluginUiLoading.value = true
+            }
+            queuedProvider != null && wantsProvider(queuedProvider.id) -> {
+                unbind(clearSession = false)
+                bind(queuedProvider)
+            }
+            wantsProvider(boundProviderId) -> {
+                if (uiClientCount > 0) _pluginUiLoading.value = true
+            }
+            else -> {
+                unbind(clearSession = false)
+                if (activeSession != null || uiClientCount > 0) refreshProviders()
+            }
+        }
     }
 
     @Synchronized
     private fun handleBindingDied(connection: ServiceConnection) {
         if (serviceConnection !== connection) return
-        unbind(clearSession = true)
-        if (uiClientCount > 0) {
-            _pluginUiError.value = false
-            _pluginUiLoading.value = true
-            connectPluginUi()
+        val failedProviderId = boundProviderId
+        val queuedProvider = pendingProviderBind?.takeIf { wantsProvider(it.id) }
+        val preserveActiveSession =
+            activeSession != null && activeProviderId != failedProviderId
+        unbind(clearSession = !preserveActiveSession)
+        when {
+            queuedProvider != null -> bind(queuedProvider)
+            preserveActiveSession -> refreshProviders()
+            uiClientCount > 0 -> {
+                _pluginUiError.value = false
+                _pluginUiLoading.value = true
+                connectPluginUi()
+            }
         }
     }
 
     @Synchronized
     private fun handleNullBinding(connection: ServiceConnection) {
         if (serviceConnection !== connection) return
-        unbind(clearSession = true)
-        if (uiClientCount > 0) _pluginUiError.value = true
+        val failedProviderId = boundProviderId
+        val queuedProvider = pendingProviderBind?.takeIf { wantsProvider(it.id) }
+        val preserveActiveSession =
+            activeSession != null && activeProviderId != failedProviderId
+        unbind(clearSession = !preserveActiveSession)
+        when {
+            queuedProvider != null -> bind(queuedProvider)
+            preserveActiveSession -> refreshProviders()
+            uiClientCount > 0 -> _pluginUiError.value = true
+        }
     }
 
     @Synchronized
     private fun bind(descriptor: AutocorrectPluginDescriptor) {
-        if (activeSession == null && uiClientCount == 0) return
+        if (!wantsProvider(descriptor.id)) return
         if (boundProviderId == descriptor.id && serviceConnection != null) return
+        if (boundProviderId.isNotBlank() && boundProviderId != descriptor.id) {
+            if (pendingSessionFinishes.isNotEmpty() || hasInFlightPluginUiOperation()) {
+                pendingProviderBind = descriptor
+                return
+            }
+            unbind(clearSession = false)
+        }
         val connection = createServiceConnection()
         serviceConnection = connection
         boundProviderId = descriptor.id
@@ -1060,6 +1183,9 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     private fun clearConnection(clearSession: Boolean) {
         remote = null
         boundProviderId = ""
+        admittedSessionId = -1L
+        pendingProviderBind = null
+        pendingSessionFinishes.clear()
         boostedCodePoints = emptySet()
         pendingPluginUiOperations.clear()
         if (clearSession) {
@@ -1071,7 +1197,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             }
         }
         if (uiClientCount > 0) _pluginUiLoading.value = false
-        connectionReady.complete(null)
+        if (clearSession || activeSession == null) connectionReady.complete(null)
         failPending()
     }
 
@@ -1125,7 +1251,6 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     private fun handleProviderQueryFailure() {
         if (remote != null || serviceConnection != null) return
         endSession()
-        connectionReady.complete(null)
         if (uiClientCount > 0) {
             _pluginUiLoading.value = false
             _pluginUiError.value = true
@@ -1141,11 +1266,20 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         synchronized(this) {
             if (prefs.suggestion.autocorrectPluginComponent.get() != selectedProviderId) return
             if (descriptor == null) {
-                if (
-                    activeProviderId == selectedProviderId ||
-                    boundProviderId == selectedProviderId
-                ) {
+                if (activeProviderId == selectedProviderId) {
+                    endSession()
+                }
+                if (pendingProviderBind?.id == selectedProviderId) {
+                    pendingProviderBind = null
+                }
+                if (boundProviderId == selectedProviderId) {
                     unbind(clearSession = true)
+                } else if (
+                    pendingSessionFinishes.isEmpty() &&
+                    !hasInFlightPluginUiOperation() &&
+                    boundProviderId.isNotBlank()
+                ) {
+                    unbind(clearSession = false)
                 }
                 if (uiClientCount > 0) {
                     providerPluginUi = null
@@ -1218,6 +1352,9 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                 AutocorrectPluginContract.MSG_REMOVE_RESULT -> {
                     val (requestId, removed) = removalResultFromBundle(message.data)
                     pendingRemovals.remove(requestId)?.complete(removed)
+                }
+                AutocorrectPluginContract.MSG_FINISH_SESSION_RESULT -> {
+                    completeSessionFinish(finishSessionResultFromBundle(message.data))
                 }
                 AutocorrectPluginContract.MSG_PLUGIN_UI_RESULT -> {
                     val result = pluginUiResultFromBundle(message.data)

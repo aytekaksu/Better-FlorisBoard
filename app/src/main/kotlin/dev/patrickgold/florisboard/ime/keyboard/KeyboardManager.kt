@@ -299,10 +299,10 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         }
         if (committed) {
             autocorrectPluginManager.clearInputTrace()
-            scope.launch {
-                if (candidate.sourceProvider === autocorrectPluginManager) {
-                    autocorrectPluginManager.notifySuggestionAccepted(candidate, acceptanceKind)
-                } else {
+            if (candidate.sourceProvider === autocorrectPluginManager) {
+                autocorrectPluginManager.notifySuggestionAccepted(candidate, acceptanceKind)
+            } else {
+                scope.launch {
                     candidate.sourceProvider?.notifySuggestionAccepted(
                         subtypeManager.activeSubtype,
                         candidate,
@@ -440,11 +440,15 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     private fun revertPreviouslyAcceptedCandidate() {
         editorInstance.phantomSpace.candidateForRevert?.let { candidateForRevert ->
             candidateForRevert.sourceProvider?.let { sourceProvider ->
-                scope.launch {
-                    sourceProvider.notifySuggestionReverted(
-                        subtype = subtypeManager.activeSubtype,
-                        candidate = candidateForRevert,
-                    )
+                if (sourceProvider === autocorrectPluginManager) {
+                    autocorrectPluginManager.notifySuggestionReverted(candidateForRevert)
+                } else {
+                    scope.launch {
+                        sourceProvider.notifySuggestionReverted(
+                            subtype = subtypeManager.activeSubtype,
+                            candidate = candidateForRevert,
+                        )
+                    }
                 }
             }
         }
