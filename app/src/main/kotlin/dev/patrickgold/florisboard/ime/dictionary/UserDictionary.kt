@@ -17,10 +17,13 @@
 package dev.patrickgold.florisboard.ime.dictionary
 
 import android.content.ContentValues
+import android.content.ContentUris
 import android.content.Context
 import android.database.Cursor
 import android.net.Uri
+import android.os.Process
 import android.provider.UserDictionary
+import android.view.inputmethod.InputMethodManager
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
@@ -39,11 +42,11 @@ import dev.patrickgold.florisboard.lib.ValidationRule
 import org.florisboard.lib.android.readText
 import org.florisboard.lib.android.writeText
 import org.florisboard.lib.kotlin.tryOrNull
-import java.lang.ref.WeakReference
+import java.util.Locale
 
 private const val WORDS_TABLE = "words"
 
-const val FREQUENCY_MIN = 1
+const val FREQUENCY_MIN = 0
 const val FREQUENCY_MAX = 255
 const val FREQUENCY_DEFAULT = 128
 
@@ -62,6 +65,71 @@ private val PROJECTIONS: Array<String> = arrayOf(
 
 private val PROJECTIONS_LANGUAGE: Array<String> = arrayOf(
     UserDictionary.Words.LOCALE,
+)
+
+internal fun strictUserDictionaryLocale(languageTag: String): Locale? {
+    if (languageTag.isBlank() || '\u0000' in languageTag) return null
+    return runCatching {
+        Locale.Builder().setLanguageTag(languageTag).build()
+    }.getOrNull()?.takeIf { it.language.isNotEmpty() }
+}
+
+internal fun storedUserDictionaryLocale(value: String): Locale? {
+    if ('_' !in value && '#' !in value) return strictUserDictionaryLocale(value)
+    return runCatching {
+        if (value.count { it == '#' } > 1 || value.endsWith('#')) return null
+        val baseAndExtensions = value.split('#', limit = 2)
+        val rawBase = baseAndExtensions[0]
+        val base = rawBase.trimEnd('_').split('_', limit = 3)
+        val language = base.getOrElse(0) { "" }
+        val region = base.getOrElse(1) { "" }
+        val variant = base.getOrElse(2) { "" }
+        val baseTag = Locale(language, region, variant).toLanguageTag()
+        val basePrivateUse = baseTag.substringAfter("-x-", "")
+        val builder = Locale.Builder().setLanguageTag(baseTag)
+        baseAndExtensions.getOrNull(1)?.let { suffix ->
+            val parts = suffix.split('_', limit = 2)
+            val hasScript = parts[0].length == 4 && parts[0].all {
+                it in 'A'..'Z' || it in 'a'..'z'
+            }
+            if (!hasScript && parts.size > 1) return null
+            if (hasScript) builder.setScript(parts[0])
+            val extensions = if (hasScript) parts.getOrNull(1).orEmpty() else parts[0]
+            if (parts.size > 1 && extensions.isEmpty()) return null
+            if (extensions.isNotEmpty()) {
+                if (
+                    extensions.length < 3 ||
+                    !extensions[0].isLetterOrDigit() ||
+                    extensions[1] != '-'
+                ) {
+                    return null
+                }
+                val extensionLocale = Locale.Builder()
+                    .setLanguageTag("und-$extensions")
+                    .build()
+                if (extensionLocale.extensionKeys.isEmpty()) return null
+                extensionLocale.extensionKeys.forEach { key ->
+                    val incoming = extensionLocale.getExtension(key).orEmpty()
+                    builder.setExtension(
+                        key,
+                        if (key == 'x' && basePrivateUse.isNotEmpty()) {
+                            "$incoming-$basePrivateUse"
+                        } else {
+                            incoming
+                        },
+                    )
+                }
+            }
+        }
+        builder.build().takeIf {
+            it.language.isNotEmpty() && it.toString() == value
+        }
+    }.getOrNull()
+}
+
+internal data class SystemUserDictionaryPage(
+    val entries: List<UserDictionaryEntry>,
+    val nextAfterId: Long?,
 )
 
 @Entity(tableName = WORDS_TABLE)
@@ -119,13 +187,13 @@ interface UserDictionaryDao {
     fun queryLanguageList(): List<FlorisLocale?>
 
     @Insert
-    fun insert(entry: UserDictionaryEntry)
+    fun insert(entry: UserDictionaryEntry): Long
 
     @Update
-    fun update(entry: UserDictionaryEntry)
+    fun update(entry: UserDictionaryEntry): Int
 
     @Delete
-    fun delete(entry: UserDictionaryEntry)
+    fun delete(entry: UserDictionaryEntry): Int
 
     @Query("DELETE FROM $WORDS_TABLE")
     fun deleteAll()
@@ -251,7 +319,132 @@ abstract class FlorisUserDictionaryDatabase : RoomDatabase(), UserDictionaryData
 }
 
 class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
-    private val applicationContext: WeakReference<Context> = WeakReference(context.applicationContext ?: context)
+    private val applicationContext = context.applicationContext ?: context
+
+    internal fun isAccessible(): Boolean = runCatching {
+        val enabled = applicationContext.getSystemService(InputMethodManager::class.java)
+            ?.enabledInputMethodList
+            ?.any {
+                it.packageName == applicationContext.packageName &&
+                    it.serviceInfo.applicationInfo.uid == Process.myUid()
+            } == true
+        if (!enabled) return false
+        applicationContext.contentResolver
+            .acquireUnstableContentProviderClient(UserDictionary.Words.CONTENT_URI)
+            ?.use { true }
+            ?: false
+    }.getOrDefault(false)
+
+    internal fun queryPage(
+        afterId: Long,
+        limit: Int,
+        allowedLocales: List<Locale>,
+    ): SystemUserDictionaryPage? {
+        if (!isAccessible()) return null
+        val cursor = runCatching {
+            applicationContext.contentResolver.query(
+                UserDictionary.Words.CONTENT_URI,
+                PROJECTIONS,
+                "${UserDictionary.Words._ID} > ?",
+                arrayOf(afterId.toString()),
+                "${UserDictionary.Words._ID} ASC",
+            )
+        }.getOrNull() ?: return null
+        return runCatching {
+            cursor.use {
+                val idIndex = it.getColumnIndexOrThrow(UserDictionary.Words._ID)
+                val wordIndex = it.getColumnIndexOrThrow(UserDictionary.Words.WORD)
+                val freqIndex = it.getColumnIndexOrThrow(UserDictionary.Words.FREQUENCY)
+                val localeIndex = it.getColumnIndexOrThrow(UserDictionary.Words.LOCALE)
+                val shortcutIndex = it.getColumnIndexOrThrow(UserDictionary.Words.SHORTCUT)
+                val matching = mutableListOf<UserDictionaryEntry>()
+                while (matching.size <= limit && it.moveToNext()) {
+                    val locale = it.getString(localeIndex)
+                    if (
+                        locale != null &&
+                        !storedUserDictionaryLocale(locale).matchesAny(allowedLocales)
+                    ) {
+                        continue
+                    }
+                    matching.add(
+                        UserDictionaryEntry(
+                            id = it.getLong(idIndex),
+                            word = it.getString(wordIndex),
+                            freq = it.getInt(freqIndex),
+                            locale = locale,
+                            shortcut = it.getString(shortcutIndex),
+                        ),
+                    )
+                }
+                val entries = matching.take(limit)
+                SystemUserDictionaryPage(
+                    entries = entries,
+                    nextAfterId = entries.lastOrNull()?.id?.takeIf {
+                        matching.size > limit
+                    },
+                )
+            }
+        }.getOrNull()
+    }
+
+    internal fun insertReturningId(entry: UserDictionaryEntry): Long? {
+        if (!isAccessible()) return null
+        return runCatching { insertEntry(entry) }.getOrNull()
+    }
+
+    internal fun updateById(entry: UserDictionaryEntry): Int? {
+        if (!isAccessible()) return null
+        return runCatching { updateEntry(entry) }.getOrNull()
+    }
+
+    internal fun deleteById(id: Long): Int? {
+        if (!isAccessible()) return null
+        return runCatching { deleteEntry(id) }.getOrNull()
+    }
+
+    private fun Locale?.matchesAny(allowedLocales: List<Locale>): Boolean {
+        if (this == null) return false
+        if (allowedLocales.isEmpty()) return true
+        return allowedLocales.any { allowed ->
+            language.equals(allowed.language, ignoreCase = true) &&
+                script.compatibleWith(allowed.script) &&
+                country.compatibleWith(allowed.country) &&
+                variant.compatibleWith(allowed.variant)
+        }
+    }
+
+    private fun String.compatibleWith(other: String) =
+        isEmpty() || other.isEmpty() || equals(other, ignoreCase = true)
+
+    private fun UserDictionaryEntry.toContentValues(includeAppId: Boolean) =
+        ContentValues(if (includeAppId) 5 else 4).apply {
+            put(UserDictionary.Words.WORD, word)
+            put(UserDictionary.Words.FREQUENCY, freq)
+            put(UserDictionary.Words.LOCALE, locale)
+            if (includeAppId) put(UserDictionary.Words.APP_ID, 0)
+            put(UserDictionary.Words.SHORTCUT, shortcut)
+        }
+
+    private fun insertEntry(entry: UserDictionaryEntry): Long? =
+        applicationContext.contentResolver.insert(
+            UserDictionary.Words.CONTENT_URI,
+            entry.toContentValues(includeAppId = true),
+        )?.lastPathSegment?.toLongOrNull()?.takeIf { it > 0L }
+
+    private fun updateEntry(entry: UserDictionaryEntry): Int =
+        applicationContext.contentResolver.update(
+            ContentUris.withAppendedId(UserDictionary.Words.CONTENT_URI, entry.id),
+            entry.toContentValues(includeAppId = false),
+            null,
+            null,
+        )
+
+    private fun deleteEntry(id: Long): Int =
+        applicationContext.contentResolver.delete(
+            ContentUris.withAppendedId(UserDictionary.Words.CONTENT_URI, id),
+            null,
+            null,
+        )
 
     private val dao = object : UserDictionaryDao {
         override fun query(word: String): List<UserDictionaryEntry> {
@@ -367,7 +560,7 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
         }
 
         override fun queryLanguageList(): List<FlorisLocale?> {
-            val resolver = applicationContext.get()?.contentResolver ?: return listOf()
+            val resolver = applicationContext.contentResolver
             val cursor = resolver.query(
                 UserDictionary.Words.CONTENT_URI,
                 PROJECTIONS_LANGUAGE,
@@ -393,7 +586,7 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
         }
 
         private fun queryResolver(selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): List<UserDictionaryEntry> {
-            val resolver = applicationContext.get()?.contentResolver ?: return listOf()
+            val resolver = applicationContext.contentResolver
             val cursor = resolver.query(
                 UserDictionary.Words.CONTENT_URI,
                 PROJECTIONS,
@@ -428,32 +621,16 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
             return retList
         }
 
-        override fun insert(entry: UserDictionaryEntry) {
-            val resolver = applicationContext.get()?.contentResolver ?: return
-            val contentValues = ContentValues(5).apply {
-                put(UserDictionary.Words.WORD, entry.word)
-                put(UserDictionary.Words.FREQUENCY, entry.freq)
-                put(UserDictionary.Words.LOCALE, entry.locale)
-                put(UserDictionary.Words.APP_ID, 0)
-                put(UserDictionary.Words.SHORTCUT, entry.shortcut)
-            }
-            resolver.insert(UserDictionary.Words.CONTENT_URI, contentValues)
+        override fun insert(entry: UserDictionaryEntry): Long {
+            return insertEntry(entry) ?: 0L
         }
 
-        override fun update(entry: UserDictionaryEntry) {
-            val resolver = applicationContext.get()?.contentResolver ?: return
-            val contentValues = ContentValues(4).apply {
-                put(UserDictionary.Words.WORD, entry.word)
-                put(UserDictionary.Words.FREQUENCY, entry.freq)
-                put(UserDictionary.Words.LOCALE, entry.locale)
-                put(UserDictionary.Words.SHORTCUT, entry.shortcut)
-            }
-            resolver.update(UserDictionary.Words.CONTENT_URI, contentValues, "${UserDictionary.Words._ID} = ${entry.id}", null)
+        override fun update(entry: UserDictionaryEntry): Int {
+            return updateEntry(entry)
         }
 
-        override fun delete(entry: UserDictionaryEntry) {
-            val resolver = applicationContext.get()?.contentResolver ?: return
-            resolver.delete(UserDictionary.Words.CONTENT_URI, "${UserDictionary.Words._ID} = ${entry.id}", null)
+        override fun delete(entry: UserDictionaryEntry): Int {
+            return deleteEntry(entry.id)
         }
 
         override fun deleteAll() {
