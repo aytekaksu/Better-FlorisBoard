@@ -1,89 +1,111 @@
-# Contribution guidelines for this fork
+# Contributing to Better FlorisBoard
 
-Thanks for considering contributing to this FlorisBoard fork!
-
-Issues and pull requests may be written or implemented with AI assistance. All
-work is reviewed on its merits, and the person submitting it remains
-responsible for its correctness, testing, licensing, and description.
+Thank you for helping improve the project. Issues and pull requests may use AI
+assistance, but the person submitting the work is responsible for its
+correctness, testing, licensing, and description.
 
 All contributions must be in English and follow the
-[code of conduct](CODE_OF_CONDUCT.md) and this fork's
-[AI-assisted contribution policy](AI_POLICY.md). Anyone may propose a change,
-but only [@aytekaksu](https://github.com/aytekaksu) may approve and merge it.
+[code of conduct](CODE_OF_CONDUCT.md) and
+[AI-assisted contribution policy](AI_POLICY.md). Anyone may propose a change;
+only [@aytekaksu](https://github.com/aytekaksu) may approve and merge it.
 
-## Non-code contributions
+## Before writing code
 
-### Translations
+- Search [open and closed issues](https://github.com/aytekaksu/Better-FlorisBoard/issues).
+- For a large behavior or architecture change, open an issue before investing
+  heavily so the expected result can be agreed.
+- Read the relevant [feature document](docs/features/README.md). Update it when
+  behavior, ownership, privacy, failure handling, or test commands change.
+- Keep fork-specific behavior behind narrow interfaces where upstream code is
+  involved. This reduces merge conflicts and accidental coupling.
 
-To make FlorisBoard accessible in as many languages as possible, the platform [Crowdin](https://crowdin.florisboard.org) is used to crowdsource and manage translations.  The list of languages in Crowdin covers a good range of languages, but feel free to email [florisboard@patrickgold.dev](mailto:florisboard@patrickgold.dev) to request a new language.
+## Development setup
 
-> [!IMPORTANT]
-> This is the only source of translations - **PRs that add/update translations are not accepted.**
+Install:
 
-### Bug reporting
+- Android Studio, or IntelliJ IDEA with the Android and Compose plugins;
+- Java 17;
+- Android SDK and NDK versions declared by the project;
+- CMake 3.22 or newer and Clang 15 or newer;
+- Git and Rust;
+- optionally Python 3.10 or newer and standard Unix command-line tools.
 
-Bug reports show where the fork can improve stability and usability. Please use
-the pre-made [bug report template](https://github.com/aytekaksu/better-florisboard/issues/new?template=bug_report.yml)
-and include concise reproduction steps.
+Linux, macOS, and WSL2 are the main development environments. If IntelliJ
+cannot sync the current Android Gradle Plugin, enable its support for future
+AGP versions or use a compatible Android Studio release.
 
-#### Capturing error logs
+Run the same complete merge-safety gate as CI:
 
-Logs are captured by FlorisBoard's crash handler, which lets you copy them into
-the [crash report template](https://github.com/aytekaksu/better-florisboard/issues/new?template=crash_report.yml).
-This is the preferred way to capture logs.
+```shell
+./gradlew qualityGate
+```
 
-Alternatively, you can also use ADB (Android Debug Bridge) to capture the error log. This is recommended for experienced users only.
+During development, use the narrower commands listed in each
+[feature document](docs/features/README.md).
 
-### Feature proposals
+Run device tests when changing Android service binding, real touch dispatch,
+the input method lifecycle, or other behavior not represented by JVM tests:
 
-Use the [feature proposal template](https://github.com/aytekaksu/better-florisboard/issues/new?template=feature_request.yml)
-to suggest an idea or improvement.
+```shell
+./gradlew connectedDebugAndroidTest
+```
 
-### Feedback
+Do not add `clean` to routine commands. It makes local and CI builds slower
+without improving correctness.
 
-For general feedback, open an
-[issue](https://github.com/aytekaksu/better-florisboard/issues/new) with enough
-context to make it actionable.
+## Change requirements
 
-## Code contributions
+Keep each pull request focused and describe:
 
-You are always welcome to contribute new features or work on existing issues, there are a lot to choose from :) It is always best to quickly ask if someone is already working on this issue to avoid duplicate issues.
+- the user-visible or architectural result;
+- the behavior and privacy invariants affected;
+- failure and cancellation behavior;
+- the exact verification commands that actually ran;
+- any tests not run and why.
 
-> [!NOTE]
-> If you intend to implement a bigger feature please coordinate with us so we can prevent that there's a major difference in expected implementation.
+Prefer tests at the cheapest level which proves the behavior:
 
-If you need help understanding the code, ask in the relevant issue or pull
-request. Issues marked `good first issue` are intended to be approachable.
+1. Pure unit or property test.
+2. Robolectric or deterministic editor integration test.
+3. Instrumented fake-provider or touch test.
+4. Manual APK check for behavior automation cannot yet prove.
 
-### System requirements for development
+Never claim a command passed if it did not run. Do not make tests reproduce the
+same implementation algorithm; assert observable results and invariants.
 
-- Desktop PC with Linux or WSL2 (Windows)
-  - MacOS and Windows without WSL2 probably works too however there's no official support
-- At least 16GB of RAM (because of Android Studio / IntelliJ)
-- The following tools must be installed:
-  - Android Studio (bundles SDK and NDK) or IntelliJ with Android and Compose plugin
-  - Java 17
-  - CMake 3.22+
-  - Clang 15+
-  - Git
-  - [Rust](https://www.rust-lang.org/tools/install)
-- Utilities (optional)
-  - Python 3.10+
-  - Bash, realpath, grep, ...
+## Privacy and diagnostics
 
-> [!IMPORTANT]
-> If using IntelliJ IDEA you have to enable `Future AGP Versions` otherwise AGP 9.0.0 will not work with your IDE.
-> How to do this is described in this [comment on YouTrack](https://youtrack.jetbrains.com/issue/IDEA-348937/2024.1-Beta-missing-option-to-enable-sync-with-future-AGP-versions#focus=Comments-27-11721710.0-0)
+Do not log or export typed text, candidate text, clipboard contents, dictionary
+entries, raw touch paths, or target-application content. Diagnostics should use
+bounded counts, opaque IDs, state transitions, duration buckets, and typed
+failure categories.
 
-### Manual build without Android Studio
+Any change to permissions, exported components, provider payloads, persistence,
+or external intents must explain its threat model and include a regression
+test.
 
-If you want to manually build the project without Android Studio you must ensure that the Android SDK and NDK are properly installed on your system. Then issue
+## Translations
 
-```./gradlew clean && ./gradlew assembleDebug```
+This fork is not currently connected to the upstream FlorisBoard Crowdin
+project. Do not contact upstream maintainers or use their Crowdin project for
+fork-specific text.
 
-and Gradle should take care of every build task.
+During this development phase, change only the English source file at
+`app/src/main/res/values/strings.xml`. Do not edit generated/localized
+`values-*/strings.xml` files in ordinary pull requests. Open an issue before
+translation work; a fork-owned translation workflow will be documented when it
+is ready.
 
-## Donating
+## Bug reports and proposals
 
-You can also show your support by buying me a coffee, so I can stay up all night and chase away bugs or add new cool stuff :)
-See the `Sponsors` button for available options!
+- Use the [bug report](https://github.com/aytekaksu/Better-FlorisBoard/issues/new?template=bug_report.yml)
+  or [crash report](https://github.com/aytekaksu/Better-FlorisBoard/issues/new?template=crash_report.yml)
+  template for defects.
+- Use the [feature proposal](https://github.com/aytekaksu/Better-FlorisBoard/issues/new?template=feature_request.yml)
+  template for new behavior.
+- Use a normal [issue](https://github.com/aytekaksu/Better-FlorisBoard/issues/new)
+  for other actionable feedback.
+
+Prefer the app's crash report when available. Before sharing ADB output, remove
+typed text, clipboard data, application content, paths, account data, and other
+personal information.

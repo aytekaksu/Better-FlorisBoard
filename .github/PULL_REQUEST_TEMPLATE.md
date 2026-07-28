@@ -1,14 +1,25 @@
 ## Description
 
-<!-- Explain what changed, why it changed, and how you verified it. -->
+<!-- Explain the result and why this is the smallest safe way to achieve it. -->
 
-## APK testing
+## Safety impact
 
-For each change in the pull request, a workflow is run, which produces a debug artifact APK. Go to Checks -> FlorisBoard CI -> `app-debug.apk` and download the APK. It installs under the `dev.patrickgold.florisboard.debug` namespace and will not mess with your main installation.
+- Behavior or state-machine invariants changed:
+- Privacy, permissions, persistence, or external data flow changed:
+- Failure, fallback, cancellation, or lifecycle behavior changed:
+- Performance-sensitive path changed:
+
+## Verification
+
+<!-- List exact commands and manual checks which actually ran. State what was not run. -->
 
 ## Checklist
 
-- [ ] I have read and understood the [contribution guidelines](https://github.com/aytekaksu/better-florisboard/blob/main/CONTRIBUTING.md).
-- [ ] I have read and understood the [AI-assisted contribution policy](https://github.com/aytekaksu/better-florisboard/blob/main/AI_POLICY.md).
+- [ ] I have read the [contribution guidelines](https://github.com/aytekaksu/Better-FlorisBoard/blob/main/CONTRIBUTING.md).
+- [ ] I have read the [AI-assisted contribution policy](https://github.com/aytekaksu/Better-FlorisBoard/blob/main/AI_POLICY.md).
 - [ ] I understand and take responsibility for every change in this pull request.
 - [ ] I have described the testing I performed and have not fabricated results.
+- [ ] I added or updated tests for changed behavior, or explained why no test applies.
+- [ ] I updated the relevant [feature document](https://github.com/aytekaksu/Better-FlorisBoard/blob/main/docs/features/README.md), or this change does not alter its behavior, ownership, privacy rules, failure handling, performance budget, or test commands.
+- [ ] I did not add sensitive keyboard content to logs, diagnostics, fixtures, or screenshots.
+- [ ] I considered cancellation, stale results, process/lifecycle loss, and rollback where they apply.
