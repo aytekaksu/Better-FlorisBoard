@@ -21,6 +21,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.os.SystemClock
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.view.animation.AccelerateInterpolator
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -35,7 +36,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -80,8 +81,10 @@ import dev.patrickgold.florisboard.ime.keyboard.FlorisImeSizing
 import dev.patrickgold.florisboard.ime.keyboard.KeyData
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.SpaceBarMode
+import dev.patrickgold.florisboard.ime.keyboard.invalidatesPredictionHints
 import dev.patrickgold.florisboard.ime.keyboard.manualSelectionEndpointIsStart
 import dev.patrickgold.florisboard.ime.keyboard.setManualSelectionEndpoint
+import dev.patrickgold.florisboard.ime.nlp.plugin.PredictionHintLease
 import dev.patrickgold.florisboard.ime.popup.ExceptionsForKeyCodes
 import dev.patrickgold.florisboard.ime.popup.PopupUiController
 import dev.patrickgold.florisboard.ime.popup.rememberPopupUiController
@@ -103,9 +106,6 @@ import dev.patrickgold.florisboard.lib.devtools.LogTopic
 import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import dev.patrickgold.florisboard.lib.toIntOffset
 import dev.patrickgold.jetpref.datastore.model.collectAsState
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.onFailure
-import kotlinx.coroutines.isActive
 import org.florisboard.lib.android.isOrientationLandscape
 import org.florisboard.lib.compose.DisposableLifecycleEffect
 import org.florisboard.lib.snygg.SnyggSelector
@@ -140,6 +140,48 @@ internal fun <T> finishGlideDrawingState(
     return fadingPoints.isNotEmpty()
 }
 
+internal enum class KeyMoveAction {
+    KEEP,
+    CANCEL,
+    TRANSFER,
+}
+
+internal fun KeyData.shouldCommitBeforeAdditionalPointer(): Boolean {
+    return (type == KeyType.CHARACTER || type == KeyType.NUMERIC) &&
+        code != KeyCode.SPACE &&
+        code != KeyCode.CJK_SPACE
+}
+
+internal fun shouldCommitDeleteSwipeSelection(action: SwipeAction): Boolean {
+    return action != SwipeAction.SELECT_CHARACTERS_PRECISELY &&
+        action != SwipeAction.SELECT_WORDS_PRECISELY
+}
+
+private enum class KeyActivationSource(
+    val emitsPressFeedback: Boolean,
+) {
+    PHYSICAL_DOWN(emitsPressFeedback = true),
+    POINTER_MOVE(emitsPressFeedback = false),
+}
+
+internal fun resolveKeyMoveAction(
+    activeKey: TextKey,
+    candidateKey: TextKey?,
+    pointerX: Float,
+    pointerY: Float,
+    hysteresisDistance: Float,
+): KeyMoveAction {
+    if (candidateKey === activeKey) return KeyMoveAction.KEEP
+    if (activeKey.containsWithHysteresis(pointerX, pointerY, hysteresisDistance)) {
+        return KeyMoveAction.KEEP
+    }
+    return if (candidateKey != null) {
+        KeyMoveAction.TRANSFER
+    } else {
+        KeyMoveAction.CANCEL
+    }
+}
+
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -160,33 +202,38 @@ fun TextKeyboardLayout(
     val glideTrailStyle = rememberSnyggThemeQuery(FlorisImeUi.GlideTrail.elementName)
     val glideTrailColor = glideTrailStyle.foreground(default = Color.Green)
 
-    val controller = remember { TextKeyboardLayoutController(context) }.also {
-        it.keyboard = keyboard
-        if (glideEnabled && keyboard.mode == KeyboardMode.CHARACTERS) {
-            val keys = keyboard.keys().asSequence().toList()
-            glideTypingManager.setLayout(keys)
-        }
+    val controller = remember(keyboard) {
+        TextKeyboardLayoutController(context, keyboard)
     }
-    val touchEventChannel = remember { Channel<MotionEvent>(64) }
-
+    DisposableEffect(controller, configuration.smallestScreenWidthDp, density) {
+        controller.updateTouchThresholds(
+            smallestScreenWidthDp = configuration.smallestScreenWidthDp,
+            density = density,
+        )
+        onDispose { }
+    }
     fun resetAllKeys() {
         try {
+            glideTypingManager.cancelPendingInput()
             val event = MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
-            controller.onTouchEventInternal(event)
-            controller.popupUiController.hide()
-            event.recycle()
+            try {
+                controller.onTouchEventInternal(event)
+                controller.popupUiController.hide()
+            } finally {
+                event.recycle()
+            }
         } catch (_: Throwable) {
             // Ignore
         }
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(controller, glideTypingManager) {
         controller.glideTypingDetector.registerListener(controller)
-        controller.glideTypingDetector.registerListener(glideTypingManager)
+        glideTypingManager.attachDetector(controller.glideTypingDetector)
         onDispose {
-            controller.glideTypingDetector.unregisterListener(controller)
-            controller.glideTypingDetector.unregisterListener(glideTypingManager)
             resetAllKeys()
+            controller.glideTypingDetector.unregisterListener(controller)
+            glideTypingManager.detachDetector(controller.glideTypingDetector)
         }
     }
 
@@ -211,14 +258,7 @@ fun TextKeyboardLayout(
                     MotionEvent.ACTION_UP,
                     MotionEvent.ACTION_CANCEL,
                         -> {
-                        val clonedEvent = MotionEvent.obtain(event)
-                        touchEventChannel
-                            .trySend(clonedEvent)
-                            .onFailure {
-                                // Make sure to prevent MotionEvent memory leakage
-                                // in case the input channel is full
-                                clonedEvent.recycle()
-                            }
+                        controller.onTouchEvent(event)
                         return@pointerInteropFilter true
                     }
                 }
@@ -262,7 +302,7 @@ fun TextKeyboardLayout(
 
         val desiredKey = remember(
             keyboard, keyboardWidth, keyboardHeight, keyMarginH, keyMarginV,
-            keyboardRowBaseHeight, evaluator
+            keyboardRowBaseHeight, evaluator.version,
         ) {
             TextKey(data = TextKeyData.UNSPECIFIED).also { desiredKey ->
                 desiredKey.touchBounds.apply {
@@ -281,6 +321,17 @@ fun TextKeyboardLayout(
                 desiredKey.visibleBounds.applyFrom(desiredKey.touchBounds).deflateBy(keyMarginH, keyMarginV)
                 keyboard.layout(keyboardWidth, keyboardHeight, desiredKey, true)
             }
+        }
+        val autocorrectInputLayout = remember(
+            keyboard,
+            desiredKey,
+            keyboardWidth,
+            keyboardHeight,
+        ) {
+            keyboard.snapshotAutocorrectInputLayout(keyboardWidth, keyboardHeight)
+        }
+        SideEffect {
+            controller.autocorrectInputLayout = autocorrectInputLayout
         }
 
         val desiredKeyHack = rememberUpdatedState(desiredKey) // TODO quick'n'dirty hack
@@ -332,6 +383,25 @@ fun TextKeyboardLayout(
         popupUiController.evaluator = evaluator
         popupUiController.keyHintConfiguration = prefs.keyboard.keyHintConfiguration()
         controller.popupUiController = popupUiController
+        val configureGlide = glideEnabled && keyboard.mode == KeyboardMode.CHARACTERS
+        DisposableEffect(controller, glideTypingManager, configureGlide) {
+            if (!configureGlide) {
+                resetAllKeys()
+            }
+            onDispose { }
+        }
+        DisposableEffect(controller, glideTypingManager, autocorrectInputLayout, configureGlide) {
+            if (configureGlide) {
+                val layoutChanged = glideTypingManager.setLayout(
+                    keys = keyboard.keys().asSequence().toList(),
+                    inputLayout = autocorrectInputLayout,
+                )
+                if (layoutChanged) {
+                    controller.glideTypingDetector.cancel()
+                }
+            }
+            onDispose { }
+        }
         val debugShowTouchBoundaries by prefs.devtools.showKeyTouchBoundaries.collectAsState()
         val keyHintPlacement by prefs.keyboard.keyHintPlacement.collectAsState()
         for (textKey in keyboard.keys()) {
@@ -342,14 +412,6 @@ fun TextKeyboardLayout(
         }
 
         popupUiController.RenderPopups()
-    }
-
-    LaunchedEffect(Unit) {
-        for (event in touchEventChannel) {
-            if (!isActive) break
-            controller.onTouchEventInternal(event)
-            event.recycle()
-        }
     }
 }
 
@@ -468,18 +530,21 @@ private fun TextKeyButton(
     }
 }
 
-@Suppress("unused_parameter")
 private class TextKeyboardLayoutController(
-    context: Context,
+    private val context: Context,
+    private val keyboard: TextKeyboard,
 ) : SwipeGesture.Listener, GlideTypingGesture.Listener {
     private val prefs by FlorisPreferenceStore
     private val autocorrectPluginManager by context.autocorrectPluginManager()
     private val editorInstance by context.editorInstance()
+    private val glideTypingManager by context.glideTypingManager()
     private val keyboardManager by context.keyboardManager()
 
     private val inputEventDispatcher get() = keyboardManager.inputEventDispatcher
     private val inputFeedbackController get() = FlorisImeService.inputFeedbackController()
     private val keyHintConfiguration = prefs.keyboard.keyHintConfiguration()
+    private var touchSlop = 0f
+    private var keyHysteresisDistance = 0f
     private val pointerMap: PointerMap<TouchPointer> = PointerMap { TouchPointer() }
     lateinit var popupUiController: PopupUiController
 
@@ -492,19 +557,59 @@ private class TextKeyboardLayoutController(
     private var fadingGlideAnimator: ValueAnimator? = null
     private val swipeGestureDetector = SwipeGesture.Detector(this)
 
-    lateinit var keyboard: TextKeyboard
     var size = Size.Zero
+    var autocorrectInputLayout = AutocorrectInputLayoutSnapshot(
+        mode = keyboard.mode,
+        width = 0f,
+        height = 0f,
+        keys = emptyList(),
+    )
+        set(value) {
+            if (field != value) {
+                field = value
+                autocorrectPluginManager.onInputLayoutChanged(value)
+            }
+        }
 
     val isGlideEnabled: Boolean get() = prefs.glide.enabled.get() && editorInstance.activeInfo.isRichInputEditor &&
         keyboardManager.activeState.keyVariation != KeyVariation.PASSWORD
 
+    fun updateTouchThresholds(
+        smallestScreenWidthDp: Int,
+        density: Float,
+    ) {
+        touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
+        keyHysteresisDistance = if (smallestScreenWidthDp >= 600) {
+            maxOf(touchSlop, 40f * density)
+        } else {
+            touchSlop
+        }
+    }
+
+    fun onTouchEvent(event: MotionEvent) {
+        onTouchEventInternal(event)
+    }
+
     fun onTouchEventInternal(event: MotionEvent) {
         flogDebug { "event=$event" }
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && pointerMap.size > 0) {
+            for (pointer in pointerMap) {
+                swipeGestureDetector.onTouchCancel(event, pointer)
+                onTouchCancelInternal(event, pointer)
+            }
+            pointerMap.clear()
+        }
         swipeGestureDetector.onTouchEvent(event)
         if (isGlideEnabled && keyboard.mode == KeyboardMode.CHARACTERS) {
-            val glidePointer = pointerMap.findById(0)
+            val glidePointer = pointerMap.findById(glideTypingDetector.activePointerId)
             val isNotBlocked = glidePointer?.hasTriggeredLongPress != true
-            if (isNotBlocked && glideTypingDetector.onTouchEvent(event, glidePointer?.initialKey)) {
+            val pointerIndex = event.findPointerIndex(glideTypingDetector.activePointerId)
+            val currentKey = pointerIndex.takeIf { it >= 0 }?.let {
+                keyboard.getKeyForPos(event.getX(it), event.getY(it))
+            }
+            val initialKeyData = glidePointer?.initialKeyData
+                ?.takeIf { glidePointer.startedOnVisibleKey }
+            if (isNotBlocked && glideTypingDetector.onTouchEvent(event, initialKeyData, currentKey)) {
                 for (pointer in pointerMap) {
                     if (pointer.activeKey != null) {
                         onTouchCancelInternal(event, pointer)
@@ -524,8 +629,9 @@ private class TextKeyboardLayoutController(
                 val pointerId = event.getPointerId(pointerIndex)
                 val pointer = pointerMap.add(pointerId, pointerIndex)
                 if (pointer != null) {
+                    pointer.leasePredictionHints()
                     swipeGestureDetector.onTouchDown(event, pointer)
-                    onTouchDownInternal(event, pointer)
+                    onTouchDownInternal(event, pointer, KeyActivationSource.PHYSICAL_DOWN)
                 }
             }
             MotionEvent.ACTION_POINTER_DOWN -> {
@@ -537,18 +643,18 @@ private class TextKeyboardLayoutController(
                     onTouchCancelInternal(event, oldPointer)
                     pointerMap.removeById(oldPointer.id)
                 }
-                // Search for active character keys and cancel them
+                // Commit active text keys before admitting the additional pointer.
                 for (pointer in pointerMap) {
-                    val activeKey = pointer.activeKey
-                    if (activeKey != null && popupUiController.isSuitableForPopups(activeKey)) {
+                    if (pointer.activeKeyData?.shouldCommitBeforeAdditionalPointer() == true) {
                         swipeGestureDetector.onTouchCancel(event, pointer)
                         onTouchUpInternal(event, pointer)
                     }
                 }
                 val pointer = pointerMap.add(pointerId, pointerIndex)
                 if (pointer != null) {
+                    pointer.leasePredictionHints()
                     swipeGestureDetector.onTouchDown(event, pointer)
-                    onTouchDownInternal(event, pointer)
+                    onTouchDownInternal(event, pointer, KeyActivationSource.PHYSICAL_DOWN)
                 }
             }
             MotionEvent.ACTION_MOVE -> {
@@ -558,16 +664,16 @@ private class TextKeyboardLayoutController(
                     if (pointer != null) {
                         pointer.index = pointerIndex
                         val alwaysTriggerOnMove = (pointer.hasTriggeredGestureMove
-                            && (pointer.initialKey?.computedData?.code == KeyCode.DELETE
+                            && (pointer.initialKeyData?.code == KeyCode.DELETE
                             && prefs.gestures.deleteKeySwipeLeft.get().let {
                                 it == SwipeAction.DELETE_CHARACTERS_PRECISELY || it == SwipeAction.SELECT_CHARACTERS_PRECISELY
                             }
-                            || pointer.initialKey?.computedData?.code == KeyCode.SPACE
-                            || pointer.initialKey?.computedData?.code == KeyCode.CJK_SPACE))
+                            || pointer.initialKeyData?.code == KeyCode.SPACE
+                            || pointer.initialKeyData?.code == KeyCode.CJK_SPACE))
                         if (swipeGestureDetector.onTouchMove(event, pointer, alwaysTriggerOnMove) || pointer.hasTriggeredGestureMove) {
-                            pointer.hasTriggeredGestureMove = true
-                            pointer.activeKey?.let { activeKey ->
-                                inputEventDispatcher.sendCancel(activeKey.computedDataOnDown)
+                            if (!pointer.hasTriggeredGestureMove) {
+                                pointer.hasTriggeredGestureMove = true
+                                cancelPressedKey(pointer)
                             }
                         } else {
                             onTouchMoveInternal(event, pointer)
@@ -582,11 +688,12 @@ private class TextKeyboardLayoutController(
                 if (pointer != null) {
                     pointer.index = pointerIndex
                     if (swipeGestureDetector.onTouchUp(event, pointer) || pointer.hasTriggeredGestureMove) {
-                        if (pointer.hasTriggeredGestureMove && pointer.initialKey?.computedData?.code == KeyCode.DELETE) {
-                            val selection = editorInstance.activeContent.selection
-                            if (selection.isSelectionMode) {
-                                editorInstance.deleteBackwards(OperationUnit.CHARACTERS)
-                            }
+                        if (
+                            pointer.hasTriggeredGestureMove &&
+                            pointer.initialKeyData?.code == KeyCode.DELETE &&
+                            shouldCommitDeleteSwipeSelection(prefs.gestures.deleteKeySwipeLeft.get())
+                        ) {
+                            commitDeleteSwipeSelection()
                         }
                         onTouchCancelInternal(event, pointer)
                     } else {
@@ -603,13 +710,9 @@ private class TextKeyboardLayoutController(
                         pointer.index = pointerIndex
                         if (swipeGestureDetector.onTouchUp(event, pointer) || pointer.hasTriggeredGestureMove) {
                             if (pointer.hasTriggeredGestureMove &&
-                                pointer.initialKey?.computedData?.code == KeyCode.DELETE &&
-                                prefs.gestures.deleteKeySwipeLeft.get() != SwipeAction.SELECT_CHARACTERS_PRECISELY &&
-                                prefs.gestures.deleteKeySwipeLeft.get() != SwipeAction.SELECT_WORDS_PRECISELY) {
-                                val selection = editorInstance.activeContent.selection
-                                if (selection.isSelectionMode) {
-                                    editorInstance.deleteBackwards(OperationUnit.CHARACTERS)
-                                }
+                                pointer.initialKeyData?.code == KeyCode.DELETE &&
+                                shouldCommitDeleteSwipeSelection(prefs.gestures.deleteKeySwipeLeft.get())) {
+                                commitDeleteSwipeSelection()
                             }
                             onTouchCancelInternal(event, pointer)
                         } else {
@@ -632,21 +735,49 @@ private class TextKeyboardLayoutController(
         }
     }
 
-    private fun onTouchDownInternal(event: MotionEvent, pointer: TouchPointer) {
+    private fun onTouchDownInternal(
+        event: MotionEvent,
+        pointer: TouchPointer,
+        source: KeyActivationSource,
+        keyOverride: TextKey? = null,
+        dataOverride: KeyData? = null,
+    ) {
         flogDebug(LogTopic.TEXT_KEYBOARD_VIEW) { "pointer=$pointer" }
 
-        val key = keyboard.getKeyForPos(
-            event.getX(pointer.index),
-            event.getY(pointer.index),
-            autocorrectPluginManager.boostedCodePoints(),
+        val x = event.getX(pointer.index)
+        val y = event.getY(pointer.index)
+        if (pointer.initialKeyData == null) {
+            pointer.startedOnVisibleKey = keyboard.getVisibleKeyForPos(x, y) != null
+        }
+        val key = keyOverride ?: keyboard.getKeyForPos(
+            x,
+            y,
+            pointer.boostedCodePoints,
         )
-        if (key != null && key.isEnabled) {
-            key.computedDataOnDown = key.computedData
-            pointer.pressedKeyInfo = inputEventDispatcher.sendDown(
-                data = key.computedData,
+        if (
+            key != null &&
+            key.isEnabled &&
+            !(source == KeyActivationSource.POINTER_MOVE && key.computedData.type == KeyType.MODIFIER)
+        ) {
+            val downData = dataOverride ?: key.computedData
+            val hasPopupLongPress = popupUiController.isSuitableForPopups(key) &&
+                key.computedPopups.getPopupKeys(keyHintConfiguration).isNotEmpty()
+            val allowTransferredPopupLongPress = hasPopupLongPress && when (downData.code) {
+                KeyCode.SPACE,
+                KeyCode.CJK_SPACE,
+                KeyCode.SHIFT,
+                KeyCode.LANGUAGE_SWITCH,
+                    -> false
+                else -> true
+            }
+            val pressedKeyInfo = inputEventDispatcher.sendDown(
+                data = downData,
+                allowLongPress = source == KeyActivationSource.PHYSICAL_DOWN ||
+                    allowTransferredPopupLongPress,
+                allowRepeat = source == KeyActivationSource.PHYSICAL_DOWN,
                 onLongPress = onLongPress@ {
                     pointer.hasTriggeredLongPress = true
-                    when (key.computedData.code) {
+                    when (downData.code) {
                         KeyCode.SPACE, KeyCode.CJK_SPACE -> {
                             when (prefs.gestures.spaceBarLongPress.get()) {
                                 SwipeAction.NO_ACTION,
@@ -659,9 +790,11 @@ private class TextKeyboardLayoutController(
                             true
                         }
                         KeyCode.SHIFT -> {
-                            if (inputEventDispatcher.isUninterruptedEventSequence(key.computedData)) {
+                            if (inputEventDispatcher.isUninterruptedEventSequence(downData)) {
                                 inputEventDispatcher.sendDownUp(TextKeyData.CAPS_LOCK)
-                                inputFeedbackController?.keyLongPress(key.computedData)
+                                if (source == KeyActivationSource.PHYSICAL_DOWN) {
+                                    inputFeedbackController?.keyLongPress(downData)
+                                }
                             }
                             // We always return false here to prevent blockade for the up touch event
                             false
@@ -671,12 +804,11 @@ private class TextKeyboardLayoutController(
                             true
                         }
                         else -> {
-                            if (popupUiController.isSuitableForPopups(key) && key.computedPopups.getPopupKeys(
-                                    keyHintConfiguration
-                                ).isNotEmpty()
-                            ) {
+                            if (hasPopupLongPress) {
                                 popupUiController.extend(key, size)
-                                inputFeedbackController?.keyLongPress(key.computedData)
+                                if (source == KeyActivationSource.PHYSICAL_DOWN) {
+                                    inputFeedbackController?.keyLongPress(downData)
+                                }
                                 true
                             } else {
                                 false
@@ -685,41 +817,87 @@ private class TextKeyboardLayoutController(
                     }
                 },
             )
+            if (pressedKeyInfo == null) {
+                pointer.activeKey = null
+                pointer.activeKeyData = null
+                pointer.pressedKeyInfo = null
+                pointer.activeInputLayout = null
+                return
+            }
+            if (downData.invalidatesPredictionHints()) {
+                autocorrectPluginManager.consumePredictionHints(pointer.predictionHintLease)
+            }
+            if (pointer.initialKeyData == null) {
+                pointer.initialKeyData = downData
+            }
+            pointer.activeKeyData = downData
+            pointer.pressedKeyInfo = pressedKeyInfo
             if (prefs.keyboard.popupEnabled.get() && popupUiController.isSuitableForPopups(key)) {
                 popupUiController.show(key)
             }
-            inputFeedbackController?.keyPress(key.computedData)
-            key.isPressed = true
-            if (pointer.initialKey == null) {
-                pointer.initialKey = key
+            if (source.emitsPressFeedback) {
+                inputFeedbackController?.keyPress(downData)
             }
+            key.isPressed = true
             pointer.activeKey = key
+            pointer.activeInputLayout = autocorrectInputLayout
+            pointer.activeKeyX = x
+            pointer.activeKeyY = y
         } else {
             pointer.activeKey = null
+            pointer.activeKeyData = null
+            pointer.pressedKeyInfo = null
+            pointer.activeInputLayout = null
         }
+    }
+
+    private fun TouchPointer.leasePredictionHints() {
+        predictionHintLease = autocorrectPluginManager.leaseBoostedCodePoints()
+        boostedCodePoints = predictionHintLease.codePoints
     }
 
     private fun onTouchMoveInternal(event: MotionEvent, pointer: TouchPointer) {
         flogDebug(LogTopic.TEXT_KEYBOARD_VIEW) { "pointer=$pointer" }
 
-        val initialKey = pointer.initialKey
-        val activeKey = pointer.activeKey
-        if (initialKey != null && activeKey != null) {
-            if (popupUiController.isShowingExtendedPopup) {
-                val x = event.getX(pointer.index)
-                val y = event.getY(pointer.index)
-                if (!popupUiController.propagateMotionEvent(activeKey, x, y)) {
-                    onTouchCancelInternal(event, pointer)
-                    onTouchDownInternal(event, pointer)
-                }
+        val activeKey = pointer.activeKey ?: return
+        val x = event.getX(pointer.index)
+        val y = event.getY(pointer.index)
+        pointer.activeKeyX = x
+        pointer.activeKeyY = y
+        if (
+            popupUiController.isShowingExtendedPopup &&
+            !popupUiController.propagateMotionEvent(activeKey, x, y)
+        ) {
+            onTouchCancelInternal(event, pointer)
+            onTouchDownInternal(event, pointer, KeyActivationSource.POINTER_MOVE)
+        } else if (!popupUiController.isShowingExtendedPopup) {
+            val hysteresisDistance = if (pointer.activeKeyData?.type == KeyType.MODIFIER) {
+                touchSlop
             } else {
-                if ((event.getX(pointer.index) < activeKey.visibleBounds.left - 0.1f * activeKey.visibleBounds.width)
-                    || (event.getX(pointer.index) > activeKey.visibleBounds.right + 0.1f * activeKey.visibleBounds.width)
-                    || (event.getY(pointer.index) < activeKey.visibleBounds.top - 0.35f * activeKey.visibleBounds.height)
-                    || (event.getY(pointer.index) > activeKey.visibleBounds.bottom + 0.35f * activeKey.visibleBounds.height)
-                ) {
+                keyHysteresisDistance
+            }
+            val candidateKey = keyboard.getKeyForPos(x, y, pointer.boostedCodePoints)
+            when (
+                resolveKeyMoveAction(
+                    activeKey = activeKey,
+                    candidateKey = candidateKey,
+                    pointerX = x,
+                    pointerY = y,
+                    hysteresisDistance = hysteresisDistance,
+                )
+            ) {
+                KeyMoveAction.KEEP -> Unit
+                KeyMoveAction.CANCEL -> onTouchCancelInternal(event, pointer)
+                KeyMoveAction.TRANSFER -> {
+                    val targetData = candidateKey?.computedData
                     onTouchCancelInternal(event, pointer)
-                    onTouchDownInternal(event, pointer)
+                    onTouchDownInternal(
+                        event = event,
+                        pointer = pointer,
+                        source = KeyActivationSource.POINTER_MOVE,
+                        keyOverride = candidateKey,
+                        dataOverride = targetData,
+                    )
                 }
             }
         }
@@ -727,84 +905,117 @@ private class TextKeyboardLayoutController(
 
     private fun onTouchUpInternal(event: MotionEvent, pointer: TouchPointer) {
         flogDebug(LogTopic.TEXT_KEYBOARD_VIEW) { "pointer=$pointer" }
-        pointer.pressedKeyInfo?.cancelJobs()
-        pointer.pressedKeyInfo = null
-
+        if (pointer.index in 0 until event.pointerCount) {
+            pointer.activeKeyX = event.getX(pointer.index)
+            pointer.activeKeyY = event.getY(pointer.index)
+        }
         if (pointer.hasTriggeredMassSelection) {
             pointer.hasTriggeredMassSelection = false
-            editorInstance.massSelection.end()
+            inputEventDispatcher.dispatchInputEvent {
+                editorInstance.massSelection.end()
+            }
         }
+        commitActiveKey(pointer)
+    }
 
-        val initialKey = pointer.initialKey
+    private fun commitActiveKey(pointer: TouchPointer) {
         val activeKey = pointer.activeKey
-        if (initialKey != null && activeKey != null) {
-            activeKey.isPressed = false
-            if (popupUiController.isSuitableForPopups(activeKey)) {
-                val retData = popupUiController.getActiveKeyData(activeKey)
-                if (retData != null && !pointer.hasTriggeredGestureMove) {
-                    if (retData == activeKey.computedData) {
-                        if (activeKey.computedData != activeKey.computedDataOnDown) {
-                            inputEventDispatcher.sendCancel(activeKey.computedDataOnDown)
-                            recordInputTouch(activeKey.computedData, event, pointer)
-                            inputEventDispatcher.sendDownUp(activeKey.computedData)
-                        } else {
-                            recordInputTouch(activeKey.computedDataOnDown, event, pointer)
-                            inputEventDispatcher.sendUp(activeKey.computedDataOnDown)
-                        }
-                    } else {
-                        inputEventDispatcher.sendCancel(activeKey.computedDataOnDown)
-                        recordInputTouch(retData, event, pointer)
-                        inputEventDispatcher.sendDownUp(retData)
-                    }
-                } else {
-                    inputEventDispatcher.sendCancel(activeKey.computedDataOnDown)
-                }
-                popupUiController.hide()
+        val downData = pointer.activeKeyData
+        val pressedKeyInfo = pointer.pressedKeyInfo
+        if (activeKey != null && downData != null && pressedKeyInfo != null) {
+            val ownsPressedKey = inputEventDispatcher.isPressed(downData, pressedKeyInfo)
+            if (ownsPressedKey || !inputEventDispatcher.isPressed(downData.code)) {
+                activeKey.isPressed = false
+            }
+            val hasPopups = popupUiController.isSuitableForPopups(activeKey)
+            val outputData = if (pointer.hasTriggeredGestureMove) {
+                null
+            } else if (hasPopups) {
+                popupUiController.getActiveKeyData(activeKey)
             } else {
-                if (pointer.hasTriggeredGestureMove) {
-                    inputEventDispatcher.sendCancel(activeKey.computedDataOnDown)
-                } else {
-                    if (activeKey.computedData != activeKey.computedDataOnDown) {
-                        inputEventDispatcher.sendCancel(activeKey.computedDataOnDown)
-                        recordInputTouch(activeKey.computedData, event, pointer)
-                        inputEventDispatcher.sendDownUp(activeKey.computedData)
-                    } else {
-                        recordInputTouch(activeKey.computedDataOnDown, event, pointer)
-                        inputEventDispatcher.sendUp(activeKey.computedDataOnDown)
+                activeKey.computedData
+            }
+            when {
+                outputData == null -> {
+                    if (ownsPressedKey) {
+                        inputEventDispatcher.sendCancel(downData, pressedKeyInfo)
+                    }
+                }
+                outputData == downData -> {
+                    if (ownsPressedKey) {
+                        if (!pressedKeyInfo.blockUp) {
+                            val inputTouch = captureInputTouch(downData, pointer)
+                            inputEventDispatcher.dispatchInputEvent {
+                                recordInputTouch(inputTouch)
+                            }
+                        }
+                        inputEventDispatcher.sendUp(downData, pressedKeyInfo)
+                    }
+                }
+                else -> {
+                    if (
+                        ownsPressedKey &&
+                        inputEventDispatcher.sendCancel(downData, pressedKeyInfo)
+                    ) {
+                        val inputTouch = captureInputTouch(outputData, pointer)
+                        inputEventDispatcher.dispatchInputEvent {
+                            recordInputTouch(inputTouch)
+                        }
+                        inputEventDispatcher.sendDownUp(outputData)
                     }
                 }
             }
-            pointer.activeKey = null
+            if (hasPopups) {
+                popupUiController.hide()
+            }
         }
+        pointer.activeKey = null
+        pointer.activeKeyData = null
+        pointer.pressedKeyInfo = null
+        pointer.activeInputLayout = null
         pointer.hasTriggeredGestureMove = false
     }
 
-    private fun recordInputTouch(data: KeyData, event: MotionEvent, pointer: TouchPointer) {
-        autocorrectPluginManager.recordInputTouch(
+    private fun captureInputTouch(data: KeyData, pointer: TouchPointer): InputTouch {
+        val inputLayout = pointer.activeInputLayout
+        return InputTouch(
             data = data,
-            keyboard = keyboard,
-            x = event.getX(pointer.index),
-            y = event.getY(pointer.index),
-            width = size.width,
-            height = size.height,
+            inputLayout = inputLayout,
+            isLayoutCompatible = inputLayout?.isTraceCompatibleWith(autocorrectInputLayout) == true,
+            x = pointer.activeKeyX,
+            y = pointer.activeKeyY,
             isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+        )
+    }
+
+    private fun recordInputTouch(inputTouch: InputTouch) {
+        val inputLayout = inputTouch.inputLayout
+        if (inputLayout == null || !inputTouch.isLayoutCompatible) {
+            autocorrectPluginManager.invalidateInputTrace()
+            return
+        }
+        autocorrectPluginManager.recordInputTouch(
+            data = inputTouch.data,
+            inputLayout = inputLayout,
+            x = inputTouch.x,
+            y = inputTouch.y,
+            isPrivateSession = inputTouch.isPrivateSession,
         )
     }
 
     private fun onTouchCancelInternal(event: MotionEvent, pointer: TouchPointer) {
         flogDebug(LogTopic.TEXT_KEYBOARD_VIEW) { "pointer=$pointer" }
-        pointer.pressedKeyInfo?.cancelJobs()
-        pointer.pressedKeyInfo = null
 
         if (pointer.hasTriggeredMassSelection) {
             pointer.hasTriggeredMassSelection = false
-            editorInstance.massSelection.end()
+            inputEventDispatcher.dispatchInputEvent {
+                editorInstance.massSelection.end()
+            }
         }
 
         val activeKey = pointer.activeKey
+        cancelPressedKey(pointer)
         if (activeKey != null) {
-            activeKey.isPressed = false
-            inputEventDispatcher.sendCancel(activeKey.computedDataOnDown)
             if (popupUiController.isSuitableForPopups(activeKey)) {
                 popupUiController.hide()
             }
@@ -813,31 +1024,51 @@ private class TextKeyboardLayoutController(
         pointer.hasTriggeredGestureMove = false
     }
 
+    private fun cancelPressedKey(pointer: TouchPointer) {
+        val activeKeyData = pointer.activeKeyData
+        val pressedKeyInfo = pointer.pressedKeyInfo
+        if (activeKeyData != null && pressedKeyInfo != null) {
+            val ownsPressedKey = inputEventDispatcher.isPressed(activeKeyData, pressedKeyInfo)
+            if (ownsPressedKey || !inputEventDispatcher.isPressed(activeKeyData.code)) {
+                pointer.activeKey?.isPressed = false
+            }
+            if (ownsPressedKey) {
+                inputEventDispatcher.sendCancel(activeKeyData, pressedKeyInfo)
+            }
+        } else {
+            pointer.activeKey?.isPressed = false
+        }
+        pointer.activeKeyData = null
+        pointer.pressedKeyInfo = null
+        pointer.activeInputLayout = null
+    }
+
     override fun onSwipe(event: SwipeGesture.Event): Boolean {
         val pointer = pointerMap.findById(event.pointerId) ?: return false
-        val initialKey = pointer.initialKey ?: return when (prefs.gestures.swipeActivationArea.get()) {
-            SwipeActivationArea.KEYS_ONLY -> false
-            SwipeActivationArea.ENTIRE_KEYBOARD -> handleKeyboardSwipe(event, pointer)
+        if (!pointer.startedOnVisibleKey) {
+            return when (prefs.gestures.swipeActivationArea.get()) {
+                SwipeActivationArea.KEYS_ONLY -> false
+                SwipeActivationArea.ENTIRE_KEYBOARD -> handleKeyboardSwipe(event, pointer)
+            }
         }
+        val initialKeyData = pointer.initialKeyData ?: return false
         val activeKey = pointer.activeKey
+        val activeKeyData = pointer.activeKeyData
         flogDebug(LogTopic.TEXT_KEYBOARD_VIEW)
 
-        return when (initialKey.computedData.code) {
+        return when (initialKeyData.code) {
             KeyCode.DELETE -> handleDeleteSwipe(event)
             KeyCode.SPACE, KeyCode.CJK_SPACE -> handleSpaceSwipe(event)
             else -> when {
-                (initialKey.computedData.code == KeyCode.SHIFT && activeKey?.computedData?.code == KeyCode.SPACE ||
-                    initialKey.computedData.code == KeyCode.SHIFT && activeKey?.computedData?.code == KeyCode.CJK_SPACE) &&
+                (initialKeyData.code == KeyCode.SHIFT && activeKeyData?.code == KeyCode.SPACE ||
+                    initialKeyData.code == KeyCode.SHIFT && activeKeyData?.code == KeyCode.CJK_SPACE) &&
                     event.type == SwipeGesture.Type.TOUCH_MOVE -> handleSpaceSwipe(event)
-                initialKey.computedData.code == KeyCode.SHIFT && activeKey?.computedData?.code != KeyCode.SHIFT &&
+                initialKeyData.code == KeyCode.SHIFT && activeKeyData?.code != KeyCode.SHIFT &&
                     event.type == SwipeGesture.Type.TOUCH_UP -> {
-                    activeKey?.let {
-                        inputEventDispatcher.sendUp(popupUiController.getActiveKeyData(it) ?: it.computedDataOnDown)
-                    }
-                    inputEventDispatcher.sendCancel(TextKeyData.SHIFT)
+                    commitActiveKey(pointer)
                     true
                 }
-                initialKey.computedData.code > KeyCode.SPACE && !popupUiController.isShowingExtendedPopup ->
+                initialKeyData.code > KeyCode.SPACE && !popupUiController.isShowingExtendedPopup ->
                     handleKeyboardSwipe(event, pointer)
                 else -> false
             }
@@ -845,7 +1076,11 @@ private class TextKeyboardLayoutController(
     }
 
     private fun handleKeyboardSwipe(event: SwipeGesture.Event, pointer: TouchPointer): Boolean {
-        if (isGlideEnabled || pointer.hasTriggeredGestureMove || event.type != SwipeGesture.Type.TOUCH_UP) {
+        if (
+            isGlideEnabled && pointer.startedOnVisibleKey ||
+            pointer.hasTriggeredGestureMove ||
+            event.type != SwipeGesture.Type.TOUCH_UP
+        ) {
             return false
         }
         val swipeAction = when (event.direction) {
@@ -872,48 +1107,22 @@ private class TextKeyboardLayoutController(
                     if (abs(event.relUnitCountX) > 0) {
                         inputFeedbackController?.gestureMovingSwipe(TextKeyData.DELETE)
                     }
-                    val activeSelection = editorInstance.activeContent.selection
-                    if (activeSelection.isValid) {
-                        if (!inputEventDispatcher.isPressed(KeyCode.SHIFT)) {
-                            // Backward select
-                            editorInstance.setSelectionSurrounding(
-                                n = -event.absUnitCountX - 1,
-                                unit = OperationUnit.CHARACTERS,
-                                scope = OperationScope.BEFORE_CURSOR,
-                            )
-                        } else {
-                            // Forward select
-                            editorInstance.setSelectionSurrounding(
-                                n = -event.absUnitCountX - 1,
-                                unit = OperationUnit.CHARACTERS,
-                                scope = OperationScope.AFTER_CURSOR,
-                            )
-                        }
-                    }
+                    updateDeleteSwipeSelection(
+                        n = -event.absUnitCountX - 1,
+                        unit = OperationUnit.CHARACTERS,
+                        isShiftPressed = inputEventDispatcher.isPressed(KeyCode.SHIFT),
+                    )
                     true
                 }
                 SwipeAction.DELETE_WORDS_PRECISELY, SwipeAction.SELECT_WORDS_PRECISELY -> {
                     if (abs(event.relUnitCountX) > 0) {
                         inputFeedbackController?.gestureMovingSwipe(TextKeyData.DELETE)
                     }
-                    val activeSelection = editorInstance.activeContent.selection
-                    if (activeSelection.isValid) {
-                        if (!inputEventDispatcher.isPressed(KeyCode.SHIFT)) {
-                            // Backward select
-                            editorInstance.setSelectionSurrounding(
-                                n = -event.absUnitCountX / 2 - 1,
-                                unit = OperationUnit.WORDS,
-                                scope = OperationScope.BEFORE_CURSOR,
-                            )
-                        } else {
-                            // Forward select
-                            editorInstance.setSelectionSurrounding(
-                                n = -event.absUnitCountX / 2 - 1,
-                                unit = OperationUnit.WORDS,
-                                scope = OperationScope.AFTER_CURSOR,
-                            )
-                        }
-                    }
+                    updateDeleteSwipeSelection(
+                        n = -event.absUnitCountX / 2 - 1,
+                        unit = OperationUnit.WORDS,
+                        isShiftPressed = inputEventDispatcher.isPressed(KeyCode.SHIFT),
+                    )
                     true
                 }
                 else -> false
@@ -931,6 +1140,34 @@ private class TextKeyboardLayoutController(
         }
     }
 
+    private fun commitDeleteSwipeSelection() {
+        inputEventDispatcher.dispatchInputEvent {
+            if (editorInstance.activeContent.selection.isSelectionMode) {
+                editorInstance.deleteBackwards(OperationUnit.CHARACTERS)
+            }
+        }
+    }
+
+    private fun updateDeleteSwipeSelection(
+        n: Int,
+        unit: OperationUnit,
+        isShiftPressed: Boolean,
+    ) {
+        inputEventDispatcher.dispatchInputEvent {
+            if (editorInstance.activeContent.selection.isValid) {
+                editorInstance.setSelectionSurrounding(
+                    n = n,
+                    unit = unit,
+                    scope = if (isShiftPressed) {
+                        OperationScope.AFTER_CURSOR
+                    } else {
+                        OperationScope.BEFORE_CURSOR
+                    },
+                )
+            }
+        }
+    }
+
     private fun handleSpaceSwipe(event: SwipeGesture.Event): Boolean {
         val pointer = pointerMap.findById(event.pointerId) ?: return false
 
@@ -943,11 +1180,9 @@ private class TextKeyboardLayoutController(
                             val count = if (!pointer.hasTriggeredGestureMove) it - 1 else it
                             if (count > 0) {
                                 inputFeedbackController?.gestureMovingSwipe(TextKeyData.SPACE)
-                                if (!pointer.hasTriggeredMassSelection) {
-                                    pointer.hasTriggeredMassSelection = true
-                                    editorInstance.massSelection.begin()
-                                }
-                                moveCursorFromSpacebar(pointer, -count)
+                                val beginMassSelection = !pointer.hasTriggeredMassSelection
+                                pointer.hasTriggeredMassSelection = true
+                                moveCursorFromSpacebar(pointer, -count, beginMassSelection)
                             }
                         }
                         true
@@ -962,11 +1197,9 @@ private class TextKeyboardLayoutController(
                             val count = if (!pointer.hasTriggeredGestureMove) it - 1 else it
                             if (count > 0) {
                                 inputFeedbackController?.gestureMovingSwipe(TextKeyData.SPACE)
-                                if (!pointer.hasTriggeredMassSelection) {
-                                    pointer.hasTriggeredMassSelection = true
-                                    editorInstance.massSelection.begin()
-                                }
-                                moveCursorFromSpacebar(pointer, count)
+                                val beginMassSelection = !pointer.hasTriggeredMassSelection
+                                pointer.hasTriggeredMassSelection = true
+                                moveCursorFromSpacebar(pointer, count, beginMassSelection)
                             }
                         }
                         true
@@ -1021,43 +1254,58 @@ private class TextKeyboardLayoutController(
         }
     }
 
-    private fun moveCursorFromSpacebar(pointer: TouchPointer, steps: Int) {
+    private fun moveCursorFromSpacebar(
+        pointer: TouchPointer,
+        steps: Int,
+        beginMassSelection: Boolean,
+    ) {
         val select = keyboardManager.activeState.isManualSelectionMode ||
             inputEventDispatcher.isPressed(KeyCode.SHIFT)
-        val directMovementSucceeded = if (select) {
-            val establishedMovingStart = keyboardManager.activeState
-                .takeIf { it.isManualSelectionMode }
-                ?.manualSelectionEndpointIsStart
-            val state = pointer.selectionDragState ?: SelectionDragState.create(
-                editorInstance.activeContent.selection,
-                steps,
-                establishedMovingStart,
-            )
-            if (state != null) {
-                val next = editorInstance.moveSelectionBy(state, steps)
-                if (next != null) {
-                    pointer.selectionDragState = next
-                    if (keyboardManager.activeState.isManualSelectionMode) {
-                        keyboardManager.activeState.batchEdit {
-                            it.setManualSelectionEndpoint(next.isMovingSelectionStart)
+        val isManualSelectionMode = keyboardManager.activeState.isManualSelectionMode
+        val establishedMovingStart = keyboardManager.activeState
+            .takeIf { isManualSelectionMode }
+            ?.manualSelectionEndpointIsStart
+        val selectionDragSession = pointer.selectionDragSession
+        inputEventDispatcher.dispatchInputEvent {
+            if (beginMassSelection) {
+                editorInstance.massSelection.begin()
+            }
+            val directMovementSucceeded = if (select) {
+                val state = selectionDragSession.state ?: SelectionDragState.create(
+                    editorInstance.activeContent.selection,
+                    steps,
+                    establishedMovingStart,
+                )
+                if (state != null) {
+                    val next = editorInstance.moveSelectionBy(state, steps)
+                    if (next != null) {
+                        selectionDragSession.state = next
+                        if (isManualSelectionMode) {
+                            keyboardManager.activeState.batchEdit {
+                                it.setManualSelectionEndpoint(next.isMovingSelectionStart)
+                            }
                         }
                     }
+                    next != null
+                } else {
+                    false
                 }
-                next != null
             } else {
-                false
+                selectionDragSession.state = null
+                editorInstance.moveCursorBy(steps)
             }
-        } else {
-            pointer.selectionDragState = null
-            editorInstance.moveCursorBy(steps)
-        }
-        if (shouldFallbackSpacebarMovementToArrow(
-                isRawInputEditor = editorInstance.activeInfo.isRawInputEditor,
-                directMovementSucceeded = directMovementSucceeded,
-            )
-        ) {
-            val arrowCode = if (steps < 0) KeyCode.ARROW_LEFT else KeyCode.ARROW_RIGHT
-            keyboardManager.handleArrow(arrowCode, abs(steps))
+            if (shouldFallbackSpacebarMovementToArrow(
+                    isRawInputEditor = editorInstance.activeInfo.isRawInputEditor,
+                    directMovementSucceeded = directMovementSucceeded,
+                )
+            ) {
+                val arrowCode = if (steps < 0) KeyCode.ARROW_LEFT else KeyCode.ARROW_RIGHT
+                keyboardManager.handleArrow(
+                    code = arrowCode,
+                    count = abs(steps),
+                    isShiftPressedOverride = select,
+                )
+            }
         }
     }
 
@@ -1131,27 +1379,54 @@ private class TextKeyboardLayoutController(
     }
 
     private class TouchPointer : Pointer() {
-        var initialKey: TextKey? = null
+        var initialKeyData: KeyData? = null
         var activeKey: TextKey? = null
         var hasTriggeredGestureMove: Boolean = false
         var hasTriggeredLongPress: Boolean = false
         var hasTriggeredMassSelection: Boolean = false
-        var selectionDragState: SelectionDragState? = null
+        var selectionDragSession = SelectionDragSession()
+        var activeKeyData: KeyData? = null
         var pressedKeyInfo: InputEventDispatcher.PressedKeyInfo? = null
+        var activeInputLayout: AutocorrectInputLayoutSnapshot? = null
+        var predictionHintLease: PredictionHintLease = PredictionHintLease.Empty
+        var boostedCodePoints: Set<Int> = emptySet()
+        var startedOnVisibleKey: Boolean = false
+        var activeKeyX: Float = 0f
+        var activeKeyY: Float = 0f
 
         override fun reset() {
             super.reset()
-            initialKey = null
+            initialKeyData = null
             activeKey = null
             hasTriggeredGestureMove = false
             hasTriggeredLongPress = false
             hasTriggeredMassSelection = false
-            selectionDragState = null
+            selectionDragSession = SelectionDragSession()
+            activeKeyData = null
             pressedKeyInfo = null
+            activeInputLayout = null
+            predictionHintLease = PredictionHintLease.Empty
+            boostedCodePoints = emptySet()
+            startedOnVisibleKey = false
+            activeKeyX = 0f
+            activeKeyY = 0f
         }
 
         override fun toString(): String {
-            return "${TouchPointer::class.simpleName} { id=$id, index=$index, initialKey=$initialKey, activeKey=$activeKey }"
+            return "${TouchPointer::class.simpleName} { id=$id, index=$index, initialKeyData=$initialKeyData, activeKey=$activeKey }"
         }
     }
+
+    private class SelectionDragSession(
+        var state: SelectionDragState? = null,
+    )
+
+    private data class InputTouch(
+        val data: KeyData,
+        val inputLayout: AutocorrectInputLayoutSnapshot?,
+        val isLayoutCompatible: Boolean,
+        val x: Float,
+        val y: Float,
+        val isPrivateSession: Boolean,
+    )
 }

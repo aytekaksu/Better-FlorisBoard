@@ -19,8 +19,14 @@ package dev.patrickgold.florisboard.ime.text.keyboard
 import dev.patrickgold.florisboard.ime.keyboard.Key
 import dev.patrickgold.florisboard.ime.keyboard.Keyboard
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
+import dev.patrickgold.florisboard.ime.keyboard.isAutocorrectTraceInput
+import dev.patrickgold.florisboard.ime.keyboard.isPredictiveInput
+import dev.patrickgold.florisboard.ime.keyboard.isWordInput
+import dev.patrickgold.florisboard.ime.keyboard.primaryCodePoint
 import dev.patrickgold.florisboard.ime.popup.PopupMapping
-import dev.patrickgold.florisboard.ime.text.key.KeyType
+import dev.patrickgold.florisboard.lib.FlorisRect
+import org.florisboard.autocorrect.api.AutocorrectKeyGeometry
+import org.florisboard.autocorrect.api.AutocorrectPluginContract
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -45,6 +51,12 @@ class TextKeyboard(
         return null
     }
 
+    fun getVisibleKeyForPos(pointerX: Float, pointerY: Float): TextKey? {
+        return keys().asSequence().firstOrNull { key ->
+            key.isEnabled && key.isVisible && key.visibleBounds.contains(pointerX, pointerY)
+        }
+    }
+
     fun getKeyForPos(
         pointerX: Float,
         pointerY: Float,
@@ -52,31 +64,54 @@ class TextKeyboard(
     ): TextKey? {
         val regularKey = getKeyForPos(pointerX, pointerY)
         if (
+            mode != KeyboardMode.CHARACTERS ||
             boostedCodePoints.isEmpty() ||
-            regularKey?.computedData?.type?.let { it != KeyType.CHARACTER } == true
+            regularKey != null &&
+            (!regularKey.isEnabled || !regularKey.computedData.isWordInput(mode))
         ) {
             return regularKey
         }
-        return keys().asSequence()
-            .filter {
-                it.isEnabled &&
-                    it.computedData.type == KeyType.CHARACTER &&
-                    it.computedData.code in boostedCodePoints
+
+        var primaryKey: TextKey? = null
+        var minDistance = Float.POSITIVE_INFINITY
+        for (key in keys()) {
+            val keyCodePoint = key.computedData.primaryCodePoint()
+            if (
+                !key.isEnabled ||
+                keyCodePoint == null ||
+                !key.computedData.isPredictiveInput(mode, boostedCodePoints)
+            ) {
+                continue
             }
-            .mapNotNull { key ->
-                val bounds = key.touchBounds
-                val dx = maxOf(bounds.left - pointerX, 0f, pointerX - bounds.right)
-                val dy = maxOf(bounds.top - pointerY, 0f, pointerY - bounds.bottom)
-                val distance = sqrt(dx * dx + dy * dy)
-                key.takeIf { distance <= minOf(bounds.width, bounds.height) * 0.5f }
-                    ?.let { it to distance }
+            val bounds = key.hitTestBounds()
+            val distance = bounds.distanceToEdge(pointerX, pointerY)
+            if (distance > bounds.minDimension * 0.5f) {
+                continue
             }
-            .minWithOrNull(
-                compareBy<Pair<TextKey, Float>> { it.second }
-                    .thenByDescending { it.first.computedData.code },
-            )
-            ?.first
-            ?: regularKey
+            if (
+                distance < minDistance ||
+                distance == minDistance &&
+                (primaryKey == null ||
+                    keyCodePoint > (primaryKey.computedData.primaryCodePoint() ?: Int.MIN_VALUE))
+            ) {
+                primaryKey = key
+                minDistance = distance
+            }
+        }
+
+        if (regularKey != null && regularKey.isEnabled) {
+            val distance = regularKey.hitTestBounds().distanceToCenter(pointerX, pointerY)
+            if (
+                distance < minDistance ||
+                distance == minDistance &&
+                (primaryKey == null ||
+                    (regularKey.computedData.primaryCodePoint() ?: Int.MIN_VALUE) >
+                    (primaryKey.computedData.primaryCodePoint() ?: Int.MIN_VALUE))
+            ) {
+                primaryKey = regularKey
+            }
+        }
+        return primaryKey ?: regularKey
     }
 
     override fun layout(
@@ -216,4 +251,83 @@ class TextKeyboard(
             return next
         }
     }
+}
+
+internal fun TextKey.hitTestBounds(): FlorisRect {
+    return visibleBounds.takeUnless { it.isEmpty() } ?: touchBounds
+}
+
+internal data class AutocorrectInputLayoutSnapshot(
+    val mode: KeyboardMode,
+    val width: Float,
+    val height: Float,
+    val keys: List<AutocorrectKeyGeometry>,
+)
+
+internal fun AutocorrectInputLayoutSnapshot.isTraceCompatibleWith(
+    other: AutocorrectInputLayoutSnapshot,
+): Boolean {
+    if (
+        mode != other.mode ||
+        width != other.width ||
+        height != other.height ||
+        keys.size != other.keys.size
+    ) {
+        return false
+    }
+    return keys.indices.all { index ->
+        val first = keys[index]
+        val second = other.keys[index]
+        first.left == second.left &&
+            first.top == second.top &&
+            first.right == second.right &&
+            first.bottom == second.bottom &&
+            first.text.equals(second.text, ignoreCase = true)
+    }
+}
+
+internal fun TextKeyboard.snapshotAutocorrectInputLayout(
+    width: Float,
+    height: Float,
+): AutocorrectInputLayoutSnapshot {
+    val keys = if (width > 0f && height > 0f) {
+        keys().asSequence().mapNotNull { key ->
+            val data = key.computedData
+            val bounds = key.hitTestBounds()
+            if (
+                !key.isEnabled ||
+                !key.isVisible ||
+                bounds.isEmpty() ||
+                !data.isAutocorrectTraceInput(mode)
+            ) {
+                return@mapNotNull null
+            }
+            AutocorrectKeyGeometry(
+                text = data.asString(isForDisplay = false),
+                left = bounds.left / width,
+                top = bounds.top / height,
+                right = bounds.right / width,
+                bottom = bounds.bottom / height,
+            )
+        }.take(AutocorrectPluginContract.MAX_TRACE_KEY_COUNT).toList()
+    } else {
+        emptyList()
+    }
+    return AutocorrectInputLayoutSnapshot(mode, width, height, keys)
+}
+
+internal fun TextKey.containsWithHysteresis(x: Float, y: Float, distance: Float): Boolean {
+    return hitTestBounds().distanceToEdge(x, y) < distance
+}
+
+private fun FlorisRect.distanceToEdge(x: Float, y: Float): Float {
+    val dx = maxOf(left - x, 0f, x - right)
+    val dy = maxOf(top - y, 0f, y - bottom)
+    return sqrt(dx * dx + dy * dy)
+}
+
+private fun FlorisRect.distanceToCenter(x: Float, y: Float): Float {
+    val dx = x - center.x
+    val dy = y - center.y
+    return sqrt(dx * dx + dy * dy)
 }

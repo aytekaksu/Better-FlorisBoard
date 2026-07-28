@@ -17,7 +17,22 @@
 package dev.patrickgold.florisboard.ime.text.gestures
 
 import dev.patrickgold.florisboard.ime.core.Subtype
-import dev.patrickgold.florisboard.ime.text.keyboard.TextKey
+
+data class GlideTypingKey(
+    /** Stable layout-local identity of this physical key. */
+    val id: Int,
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float,
+    /** NFC text emitted by this key; it may contain more than one Unicode code point. */
+    val output: String,
+) {
+    val width get() = right - left
+    val height get() = bottom - top
+    val centerX get() = (left + right) * 0.5f
+    val centerY get() = (top + bottom) * 0.5f
+}
 
 /**
  * Inherit this to be able to handle gesture typing. Takes in raw pointer data, and
@@ -34,17 +49,7 @@ interface GlideTypingClassifier {
     /**
      * Change the layout of the gesture classifier.
      */
-    fun setLayout(keyViews: List<TextKey>, subtype: Subtype)
-
-    /**
-     * Change the word data of the gesture classifier.
-     */
-    fun setWordData(subtype: Subtype)
-
-    /**
-     * Process a completed gesture and find its location.
-     */
-    fun initGestureFromPointerData(pointerData: GlideTypingGesture.Detector.PointerData)
+    suspend fun setLayout(keys: List<GlideTypingKey>, subtype: Subtype)
 
     /**
      * Generate suggestions to show to the user.
@@ -52,7 +57,7 @@ interface GlideTypingClassifier {
      * @param maxSuggestionCount The maximum number of suggestions that are accepted.
      * @param gestureCompleted Whether the gesture is finished. (e.g to use a different algorithm for in progress words)
      */
-    fun getSuggestions(maxSuggestionCount: Int, gestureCompleted: Boolean): List<CharSequence>
+    suspend fun getSuggestions(maxSuggestionCount: Int, gestureCompleted: Boolean): List<CharSequence>
 
     fun clear()
 }

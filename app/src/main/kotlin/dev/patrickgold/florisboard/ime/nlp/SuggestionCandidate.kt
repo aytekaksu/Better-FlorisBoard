@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.ui.graphics.vector.ImageVector
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
+import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.media.emoji.Emoji
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
@@ -131,6 +132,10 @@ interface SuggestionCandidate {
     val replacement: SuggestionReplacement?
         get() = null
 
+    /** Editor snapshot which produced this context-free candidate, if known. */
+    val originContent: EditorContent?
+        get() = null
+
     /**
      * Controls whether a separator-triggered auto-commit should insert the separator.
      */
@@ -155,6 +160,7 @@ data class WordSuggestionCandidate(
     override val isEligibleForUserRemoval: Boolean = true,
     override val sourceProvider: SuggestionProvider? = null,
     override val kind: SuggestionCandidateKind = SuggestionCandidateKind.OTHER,
+    override var originContent: EditorContent? = null,
 ) : SuggestionCandidate {
     override val icon: ImageVector? = null
 }
@@ -209,8 +215,23 @@ data class EmojiSuggestionCandidate(
     override val isEligibleForUserRemoval: Boolean = false,
     override val icon: ImageVector? = null,
     override val sourceProvider: SuggestionProvider? = null,
+    override var originContent: EditorContent? = null,
 ) : SuggestionCandidate {
     override val text = emoji.value
     override val secondaryText = if (showName) emoji.name else null
     override val kind = SuggestionCandidateKind.EMOJI
+}
+
+/**
+ * Binds host candidates in place so provider callbacks receive the exact candidate they produced.
+ * Clipboard candidates intentionally remain context-free, while custom candidates can supply their
+ * own immutable [SuggestionCandidate.originContent].
+ */
+internal fun SuggestionCandidate.bindOriginContent(content: EditorContent): SuggestionCandidate {
+    if (this is ClipboardSuggestionCandidate) return this
+    when (this) {
+        is WordSuggestionCandidate -> originContent = content
+        is EmojiSuggestionCandidate -> originContent = content
+    }
+    return this
 }

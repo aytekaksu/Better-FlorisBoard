@@ -22,6 +22,7 @@ import dev.patrickgold.florisboard.ime.popup.PopupSet
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyType
 import dev.patrickgold.florisboard.ime.text.key.KeyVariation
+import java.text.Normalizer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -105,6 +106,80 @@ interface KeyData : AbstractKeyData {
         return type == KeyType.CHARACTER && (code == KeyCode.SPACE || code == KeyCode.CJK_SPACE
             || code == KeyCode.HALF_SPACE || code == KeyCode.KESHIDA)
     }
+}
+
+/**
+ * Returns whether this key can participate in predictive word input on the given keyboard.
+ */
+fun KeyData.isWordInput(keyboardMode: KeyboardMode): Boolean {
+    if (keyboardMode != KeyboardMode.CHARACTERS || isWordSeparatorSpace()) return false
+    if (type != KeyType.CHARACTER && type != KeyType.NUMERIC) return false
+    val codePoint = primaryCodePoint() ?: return false
+    if (type == KeyType.NUMERIC) return Character.isDigit(codePoint)
+    val category = Character.getType(codePoint)
+    return Character.isAlphabetic(codePoint) ||
+        Character.isDigit(codePoint) ||
+        codePoint == '\''.code ||
+        codePoint == '\u2019'.code ||
+        codePoint == '\u200C'.code ||
+        codePoint == '\u200D'.code ||
+        category == Character.CONNECTOR_PUNCTUATION.toInt() ||
+        category == Character.NON_SPACING_MARK.toInt() ||
+        category == Character.ENCLOSING_MARK.toInt() ||
+        category == Character.COMBINING_SPACING_MARK.toInt()
+}
+
+/** Returns whether this key is eligible for a provider's predictive touch adjustment. */
+fun KeyData.isPredictiveInput(
+    keyboardMode: KeyboardMode,
+    predictedCodePoints: Set<Int>,
+): Boolean {
+    if (keyboardMode != KeyboardMode.CHARACTERS || isWordSeparatorSpace()) return false
+    return (type == KeyType.CHARACTER || type == KeyType.NUMERIC) &&
+        primaryCodePoint() in predictedCodePoints
+}
+
+/** Returns whether admitting this key makes prediction hints for the next key obsolete. */
+internal fun KeyData.invalidatesPredictionHints() = type != KeyType.MODIFIER
+
+/** Returns whether this key should be represented in an autocorrect provider's touch geometry. */
+fun KeyData.isAutocorrectTraceInput(keyboardMode: KeyboardMode): Boolean {
+    if (keyboardMode != KeyboardMode.CHARACTERS || isWordSeparatorSpace()) return false
+    if (type != KeyType.CHARACTER && type != KeyType.NUMERIC) return false
+    val codePoint = primaryCodePoint() ?: return false
+    return type == KeyType.CHARACTER || type == KeyType.NUMERIC && Character.isDigit(codePoint)
+}
+
+internal fun KeyData.primaryCodePoint(): Int? {
+    if (code > 0) return code
+    val text = asString(isForDisplay = false)
+    return text.takeIf(String::isNotEmpty)?.codePointAt(0)
+}
+
+internal fun codePointCaseAndBaseVariants(codePoint: Int): Set<Int> {
+    if (!Character.isValidCodePoint(codePoint)) return emptySet()
+    return buildSet {
+        fun addCaseVariants(value: Int) {
+            add(value)
+            add(Character.toLowerCase(value))
+            val upper = Character.toUpperCase(value)
+            add(upper)
+            add(Character.toLowerCase(upper))
+        }
+
+        addCaseVariants(codePoint)
+        toList().forEach { value ->
+            val base = Normalizer.normalize(
+                String(Character.toChars(value)),
+                Normalizer.Form.NFD,
+            ).codePointAt(0)
+            addCaseVariants(base)
+        }
+    }
+}
+
+private fun KeyData.isWordSeparatorSpace(): Boolean {
+    return code == KeyCode.SPACE || code == KeyCode.CJK_SPACE
 }
 
 /**

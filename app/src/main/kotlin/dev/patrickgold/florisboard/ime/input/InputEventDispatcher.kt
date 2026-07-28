@@ -40,6 +40,121 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.florisboard.lib.kotlin.guardedByLock
 
+internal fun interface PendingInputBarrier {
+    fun cancel()
+}
+
+/**
+ * Keeps semantic input callbacks ordered around asynchronous input operations without delaying
+ * raw touch handling, feedback, long presses, or key-repeat timers.
+ */
+internal class OrderedInputEventQueue {
+    private sealed interface Entry
+
+    private class Event(val action: () -> Unit) : Entry
+
+    private class Barrier(
+        val onLaterInputQueued: () -> Unit,
+        val start: ((() -> Unit) -> Unit),
+    ) : Entry {
+        var isComplete = false
+        var wasLaterInputSignalled = false
+    }
+
+    private val entries = ArrayDeque<Entry>()
+    private var activeBarrier: Barrier? = null
+    private var isDraining = false
+
+    @Synchronized
+    fun dispatch(action: () -> Unit) {
+        if (activeBarrier == null && (entries.isEmpty() || isDraining)) {
+            action()
+        } else {
+            signalLaterInput()
+            entries.addLast(Event(action))
+            drain()
+        }
+    }
+
+    @Synchronized
+    fun defer(
+        onLaterInputQueued: () -> Unit = {},
+        start: ((() -> Unit) -> Unit),
+    ): PendingInputBarrier {
+        val barrier = Barrier(onLaterInputQueued, start)
+        if (isDraining && activeBarrier == null) {
+            startBarrier(barrier)
+        } else {
+            signalLaterInput()
+            entries.addLast(barrier)
+            drain()
+        }
+        return PendingInputBarrier { complete(barrier) }
+    }
+
+    @Synchronized
+    fun invalidate() {
+        activeBarrier?.isComplete = true
+        activeBarrier = null
+        entries.clear()
+    }
+
+    private fun signalLaterInput() {
+        val barrier = activeBarrier ?: return
+        if (barrier.wasLaterInputSignalled) return
+        barrier.wasLaterInputSignalled = true
+        // Hooks must be fast and non-blocking. They may complete this barrier reentrantly.
+        barrier.onLaterInputQueued()
+    }
+
+    @Synchronized
+    private fun complete(barrier: Barrier) {
+        if (barrier.isComplete) return
+        barrier.isComplete = true
+        if (activeBarrier === barrier) activeBarrier = null
+        drain()
+    }
+
+    private fun drain() {
+        if (isDraining || activeBarrier != null) return
+        isDraining = true
+        var firstError: Throwable? = null
+        try {
+            while (activeBarrier == null && entries.isNotEmpty()) {
+                try {
+                    when (val entry = entries.removeFirst()) {
+                        is Event -> entry.action()
+                        is Barrier -> startBarrier(entry)
+                    }
+                } catch (error: Throwable) {
+                    if (firstError == null) {
+                        firstError = error
+                    } else {
+                        firstError.addSuppressed(error)
+                    }
+                }
+            }
+        } finally {
+            isDraining = false
+        }
+        firstError?.let { throw it }
+    }
+
+    private fun startBarrier(barrier: Barrier) {
+        if (barrier.isComplete) return
+        activeBarrier = barrier
+        try {
+            barrier.start { complete(barrier) }
+        } catch (error: Throwable) {
+            complete(barrier)
+            throw error
+        }
+        if (activeBarrier === barrier && entries.isNotEmpty()) {
+            signalLaterInput()
+        }
+    }
+}
+
 class InputEventDispatcher private constructor(private val repeatableKeyCodes: IntArray) {
     companion object {
         private val DoubleTapTimeout = ViewConfiguration.getDoubleTapTimeout().toLong()
@@ -54,12 +169,63 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
     private val pressedKeys = guardedByLock { SparseArrayCompat<PressedKeyInfo>() }
     private var lastKeyEventDown: EventData = EventData(0L, TextKeyData.UNSPECIFIED)
     private var lastKeyEventUp: EventData = EventData(0L, TextKeyData.UNSPECIFIED)
+    private val receiverQueue = OrderedInputEventQueue()
+    private val activeReceiverState = ThreadLocal<ReceiverState?>()
 
     /**
      * The input key event register. If null, the dispatcher will still process input, but won't dispatch them to an
      * event receiver.
      */
     var keyEventReceiver: InputKeyEventReceiver? = null
+    var keyRepeatFeedbackReceiver: ((KeyData) -> Unit)? = null
+
+    internal fun deferInputEvents(
+        onLaterInputQueued: () -> Unit = {},
+        start: ((() -> Unit) -> Unit),
+    ): PendingInputBarrier {
+        return receiverQueue.defer(onLaterInputQueued, start)
+    }
+
+    internal fun dispatchInputEvent(action: () -> Unit) {
+        receiverQueue.dispatch(action)
+    }
+
+    internal fun invalidatePendingInputEvents() {
+        receiverQueue.invalidate()
+        lastKeyEventDown = EventData(0L, TextKeyData.UNSPECIFIED)
+        lastKeyEventUp = EventData(0L, TextKeyData.UNSPECIFIED)
+        activeReceiverState.remove()
+    }
+
+    private suspend fun dispatchToReceiver(
+        eventTime: Long = SystemClock.uptimeMillis(),
+        isStillValid: () -> Boolean = { true },
+        action: InputKeyEventReceiver.() -> Unit,
+    ) {
+        val receiver = keyEventReceiver ?: return
+        val state = ReceiverState(
+            pressedKeyCodes = pressedKeys.withLock { keys ->
+                IntArray(keys.size()) { index -> keys.keyAt(index) }
+            },
+            lastKeyEventDown = lastKeyEventDown,
+            lastKeyEventUp = lastKeyEventUp,
+            eventTime = eventTime,
+        )
+        receiverQueue.dispatch receiverDispatch@ {
+            if (!isStillValid()) return@receiverDispatch
+            val previousState = activeReceiverState.get()
+            activeReceiverState.set(state)
+            try {
+                receiver.action()
+            } finally {
+                if (previousState == null) {
+                    activeReceiverState.remove()
+                } else {
+                    activeReceiverState.set(previousState)
+                }
+            }
+        }
+    }
 
     private fun determineLongPressDelay(data: KeyData): Long {
         val delayMillis = prefs.keyboard.longPressDelay.get().toLong()
@@ -95,6 +261,8 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
 
     fun sendDown(
         data: KeyData,
+        allowLongPress: Boolean = true,
+        allowRepeat: Boolean = true,
         onLongPress: () -> Boolean = { false },
         onRepeat: () -> Boolean = { true },
     ) = runBlocking {
@@ -102,21 +270,40 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
         val eventTime = SystemClock.uptimeMillis()
         val result = pressedKeys.withLock { pressedKeys ->
             if (pressedKeys.containsKey(data.code)) return@withLock null
-            val pressedKeyInfo = PressedKeyInfo(eventTime).also { pressedKeyInfo ->
-                pressedKeyInfo.job = scope.launch {
+            val pressedKeyInfo = PressedKeyInfo(eventTime, data).also { pressedKeyInfo ->
+                if (allowLongPress || allowRepeat) pressedKeyInfo.job = scope.launch {
                     val longPressDelay = determineLongPressDelay(data)
                     delay(longPressDelay)
-                    val longPressResult = withContext(Dispatchers.Main) { onLongPress() }
-                    if (longPressResult) {
-                        pressedKeyInfo.blockUp = true
-                    } else if (repeatableKeyCodes.contains(data.code)) {
+                    val longPressResult = if (allowLongPress) {
+                        withContext(Dispatchers.Main.immediate) {
+                            if (!isPressed(data, pressedKeyInfo)) return@withContext false
+                            onLongPress().also { handled ->
+                                if (handled) pressedKeyInfo.blockUp = true
+                            }
+                        }
+                    } else {
+                        false
+                    }
+                    if (!longPressResult && allowRepeat && repeatableKeyCodes.contains(data.code)) {
                         val repeatData = determineRepeatData(data)
                         val repeatDelay = determineRepeatDelay(repeatData)
                         while (isActive) {
-                            val onRepeatResult = withContext(Dispatchers.Main) { onRepeat() }
-                            if (onRepeatResult) {
-                                keyEventReceiver?.onInputKeyRepeat(repeatData)
-                                pressedKeyInfo.blockUp = true
+                            withContext(Dispatchers.Main.immediate) {
+                                if (
+                                    isPressed(data, pressedKeyInfo) &&
+                                    onRepeat() &&
+                                    isPressed(data, pressedKeyInfo)
+                                ) {
+                                    keyRepeatFeedbackReceiver?.invoke(repeatData)
+                                    dispatchToReceiver(
+                                        isStillValid = {
+                                            isPressed(data, pressedKeyInfo)
+                                        },
+                                    ) {
+                                        pressedKeyInfo.blockUp = true
+                                        onInputKeyRepeat(repeatData)
+                                    }
+                                }
                             }
                             delay(repeatDelay)
                         }
@@ -127,29 +314,36 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
             return@withLock pressedKeyInfo
         }
         if (result != null) {
-            keyEventReceiver?.onInputKeyDown(data)
+            dispatchToReceiver(eventTime) { onInputKeyDown(data) }
             lastKeyEventDown = EventData(eventTime, data)
         }
         result
     }
 
-    fun sendUp(data: KeyData) = runBlocking {
+    fun sendUp(
+        data: KeyData,
+        expected: PressedKeyInfo? = null,
+    ): Boolean = runBlocking {
         flogDebug { data.toString() }
         val (result, isBlocked) = pressedKeys.withLock { pressedKeys ->
-            if (pressedKeys.containsKey(data.code)) {
-                val pressedKeyInfo = pressedKeys.removeAndReturn(data.code)?.also { it.cancelJobs() }
-                return@withLock true to (pressedKeyInfo?.blockUp == true)
+            val pressedKeyInfo = pressedKeys[data.code]
+            if (pressedKeyInfo != null && (expected == null || pressedKeyInfo === expected)) {
+                pressedKeys.remove(data.code)
+                pressedKeyInfo.cancelJobs()
+                return@withLock true to pressedKeyInfo.blockUp
             }
             return@withLock false to false
         }
         if (result) {
             if (!isBlocked) {
-                keyEventReceiver?.onInputKeyUp(data)
-                lastKeyEventUp = EventData(SystemClock.uptimeMillis(), data)
+                val eventTime = SystemClock.uptimeMillis()
+                dispatchToReceiver(eventTime) { onInputKeyUp(data) }
+                lastKeyEventUp = EventData(eventTime, data)
             } else {
-                keyEventReceiver?.onInputKeyCancel(data)
+                dispatchToReceiver { onInputKeyCancel(data) }
             }
         }
+        result
     }
 
     fun sendDownUp(data: KeyData) = runBlocking {
@@ -158,24 +352,30 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
             pressedKeys.removeAndReturn(data.code)?.also { it.cancelJobs() }
         }
         val eventData = EventData(SystemClock.uptimeMillis(), data)
-        keyEventReceiver?.onInputKeyDown(data)
+        dispatchToReceiver(eventData.time) { onInputKeyDown(data) }
         lastKeyEventDown = eventData
-        keyEventReceiver?.onInputKeyUp(data)
+        dispatchToReceiver(eventData.time) { onInputKeyUp(data) }
         lastKeyEventUp = eventData
     }
 
-    fun sendCancel(data: KeyData) = runBlocking {
+    fun sendCancel(
+        data: KeyData,
+        expected: PressedKeyInfo? = null,
+    ): Boolean = runBlocking {
         flogDebug { data.toString() }
         val result = pressedKeys.withLock { pressedKeys ->
-            if (pressedKeys.containsKey(data.code)) {
-                pressedKeys.removeAndReturn(data.code)?.also { it.cancelJobs() }
+            val pressedKeyInfo = pressedKeys[data.code]
+            if (pressedKeyInfo != null && (expected == null || pressedKeyInfo === expected)) {
+                pressedKeys.remove(data.code)
+                pressedKeyInfo.cancelJobs()
                 return@withLock true
             }
             return@withLock false
         }
         if (result) {
-            keyEventReceiver?.onInputKeyCancel(data)
+            dispatchToReceiver { onInputKeyCancel(data) }
         }
+        result
     }
 
     /**
@@ -186,25 +386,31 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
      * @return True if the given [code] is currently down, false otherwise.
      */
     fun isPressed(code: Int): Boolean = runBlocking {
-        pressedKeys.withLock { it.containsKey(code) }
+        activeReceiverState.get()?.pressedKeyCodes?.contains(code)
+            ?: pressedKeys.withLock { it.containsKey(code) }
     }
 
     fun isAnyPressed(): Boolean = runBlocking {
-        pressedKeys.withLock { it.isNotEmpty() }
+        activeReceiverState.get()?.pressedKeyCodes?.isNotEmpty()
+            ?: pressedKeys.withLock { it.isNotEmpty() }
     }
 
     fun isConsecutiveDown(data: KeyData): Boolean {
-        val event = lastKeyEventDown
-        return event.data.code == data.code && (SystemClock.uptimeMillis() - event.time) < DoubleTapTimeout
+        val state = activeReceiverState.get()
+        val event = state?.lastKeyEventDown ?: lastKeyEventDown
+        val eventTime = state?.eventTime ?: SystemClock.uptimeMillis()
+        return event.data.code == data.code && (eventTime - event.time) < DoubleTapTimeout
     }
 
     fun isConsecutiveUp(data: KeyData): Boolean {
-        val event = lastKeyEventUp
-        return event.data.code == data.code && (SystemClock.uptimeMillis() - event.time) < DoubleTapTimeout
+        val state = activeReceiverState.get()
+        val event = state?.lastKeyEventUp ?: lastKeyEventUp
+        val eventTime = state?.eventTime ?: SystemClock.uptimeMillis()
+        return event.data.code == data.code && (eventTime - event.time) < DoubleTapTimeout
     }
 
     fun isUninterruptedEventSequence(data: KeyData): Boolean {
-        return lastKeyEventDown.data.code == data.code
+        return (activeReceiverState.get()?.lastKeyEventDown ?: lastKeyEventDown).data.code == data.code
     }
 
     fun isRepeatable(data: KeyData): Boolean {
@@ -212,8 +418,32 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
     }
 
     fun isRepeatableCodeLastDown(): Boolean {
-        val event = lastKeyEventDown
+        val event = activeReceiverState.get()?.lastKeyEventDown ?: lastKeyEventDown
         return repeatableKeyCodes.contains(event.data.code)
+    }
+
+    internal fun isPressed(data: KeyData, expected: PressedKeyInfo): Boolean = runBlocking {
+        pressedKeys.withLock { it[data.code] === expected }
+    }
+
+    internal fun resetPressedKeys() = runBlocking {
+        pressedKeys.withLock { keys ->
+            for (index in 0 until keys.size()) {
+                keys.valueAt(index).cancelJobs()
+            }
+            keys.clear()
+        }
+    }
+
+    internal fun cancelPressedKeys() = runBlocking {
+        val cancelledData = pressedKeys.withLock { keys ->
+            List(keys.size()) { index ->
+                keys.valueAt(index).also { it.cancelJobs() }.data
+            }.also { keys.clear() }
+        }
+        cancelledData.forEach { data ->
+            dispatchToReceiver { onInputKeyCancel(data) }
+        }
     }
 
     /**
@@ -221,11 +451,15 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
      */
     fun close() {
         keyEventReceiver = null
+        keyRepeatFeedbackReceiver = null
+        receiverQueue.invalidate()
+        resetPressedKeys()
         scope.cancel()
     }
 
     data class PressedKeyInfo(
         val eventTimeDown: Long,
+        val data: KeyData,
         var job: Job? = null,
         var blockUp: Boolean = false,
     ) {
@@ -237,6 +471,13 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
     data class EventData(
         val time: Long,
         val data: KeyData,
+    )
+
+    private data class ReceiverState(
+        val pressedKeyCodes: IntArray,
+        val lastKeyEventDown: EventData,
+        val lastKeyEventUp: EventData,
+        val eventTime: Long,
     )
 }
 

@@ -57,9 +57,13 @@ import dev.patrickgold.florisboard.ime.nlp.SuggestionSeparatorBehavior
 import dev.patrickgold.florisboard.ime.nlp.WordSuggestionCandidate
 import dev.patrickgold.florisboard.ime.input.InputShiftState
 import dev.patrickgold.florisboard.ime.keyboard.KeyData
-import dev.patrickgold.florisboard.ime.text.key.KeyType
-import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboard
+import dev.patrickgold.florisboard.ime.keyboard.codePointCaseAndBaseVariants
+import dev.patrickgold.florisboard.ime.keyboard.isAutocorrectTraceInput
+import dev.patrickgold.florisboard.ime.text.keyboard.AutocorrectInputLayoutSnapshot
+import dev.patrickgold.florisboard.ime.text.keyboard.isTraceCompatibleWith
 import dev.patrickgold.florisboard.keyboardManager
+import dev.patrickgold.florisboard.lib.lowercase
+import dev.patrickgold.florisboard.lib.uppercase
 import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -84,7 +88,6 @@ import org.florisboard.autocorrect.api.AutocorrectCapsMode
 import org.florisboard.autocorrect.api.AutocorrectEditorFlags
 import org.florisboard.autocorrect.api.AutocorrectInputTrace
 import org.florisboard.autocorrect.api.AutocorrectInputMode
-import org.florisboard.autocorrect.api.AutocorrectKeyGeometry
 import org.florisboard.autocorrect.api.AutocorrectPluginContract
 import org.florisboard.autocorrect.api.AutocorrectPluginHostSetting
 import org.florisboard.autocorrect.api.AutocorrectPluginUi
@@ -146,6 +149,29 @@ internal fun isCurrentAutocorrectCandidate(
     candidateSessionId == admittedSessionId &&
     candidateEditorGeneration == activeEditorGeneration
 
+internal fun predictionCodePointVariants(
+    codePoints: Set<Int>,
+    subtype: Subtype,
+): Set<Int> {
+    if (codePoints.isEmpty()) return emptySet()
+    return buildSet {
+        for (codePoint in codePoints) {
+            if (!Character.isValidCodePoint(codePoint)) continue
+            addAll(codePointCaseAndBaseVariants(codePoint))
+            val text = String(Character.toChars(codePoint))
+            sequenceOf(
+                text.lowercase(subtype.primaryLocale),
+                text.uppercase(subtype.primaryLocale),
+                text.uppercase(subtype.primaryLocale).lowercase(subtype.primaryLocale),
+            ).forEach { variant ->
+                if (variant.codePointCount(0, variant.length) == 1) {
+                    addAll(codePointCaseAndBaseVariants(variant.codePointAt(0)))
+                }
+            }
+        }
+    }
+}
+
 internal fun hasDictionaryMutationAccess(
     uiClientCount: Int,
     selectedProviderId: String,
@@ -154,6 +180,20 @@ internal fun hasDictionaryMutationAccess(
 ) = uiClientCount > 0 &&
     providerId == selectedProviderId &&
     grantProviderId == providerId
+
+internal data class PredictionHintLease(
+    val requestId: Long,
+    val codePoints: Set<Int>,
+) {
+    companion object {
+        val Empty = PredictionHintLease(-1L, emptySet())
+    }
+}
+
+internal fun isPredictionHintLeaseCurrent(
+    lease: PredictionHintLease?,
+    latestRequestId: Long,
+) = lease == null || lease.requestId == latestRequestId
 
 /**
  * Discovers and talks to a user-selected external autocorrect service.
@@ -220,11 +260,9 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     private val pendingPluginUiDocumentJobs = mutableSetOf<Job>()
     private var pendingProviderBind: AutocorrectPluginDescriptor? = null
     private var serviceConnection: ServiceConnection? = null
-    private var traceKeyboard: TextKeyboard? = null
-    private var traceWidth = 0f
-    private var traceHeight = 0f
-    private var traceKeys = emptyList<AutocorrectKeyGeometry>()
     private val tracePoints = mutableListOf<AutocorrectTouchPoint>()
+    private var traceInputLayout: AutocorrectInputLayoutSnapshot? = null
+    private var isInputTraceInvalid = false
     private val providerPackageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent ?: return
@@ -445,10 +483,48 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         it.id == prefs.suggestion.autocorrectPluginComponent.get()
     }
 
-    fun boostedCodePoints(): Set<Int> {
-        if (prefs.suggestion.autocorrectPluginComponent.get().isBlank()) return emptySet()
+    @Synchronized
+    internal fun leaseBoostedCodePoints(): PredictionHintLease {
         val accessibility = appContext.getSystemService(AccessibilityManager::class.java)
-        return boostedCodePoints.takeUnless { accessibility?.isEnabled == true }.orEmpty()
+        val session = activeSession
+        val selectedProviderId = prefs.suggestion.autocorrectPluginComponent.get()
+        val editorInfo = editorInstance.activeInfo
+        val isEligible =
+            accessibility?.isTouchExplorationEnabled != true &&
+                prefs.suggestion.enabled.get() &&
+                editorInfo.inputAttributes.allowsAutocorrectPluginSession(
+                    isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                    isRawInputEditor = editorInfo.isRawInputEditor,
+                ) &&
+                session != null &&
+                admittedSessionId == session.sessionId &&
+                selectedProviderId == activeProviderId &&
+                activeProviderId == boundProviderId &&
+                remote != null
+        if (!isEligible) {
+            consumePredictionHints()
+            return PredictionHintLease.Empty
+        }
+        val requestId = latestSuggestionRequestId
+        if (requestId < 0L) return PredictionHintLease.Empty
+        return PredictionHintLease(
+            requestId = requestId,
+            codePoints = predictionCodePointVariants(
+                boostedCodePoints,
+                subtypeManager.activeSubtype,
+            ),
+        )
+    }
+
+    @Synchronized
+    internal fun consumePredictionHints(lease: PredictionHintLease? = null) {
+        if (!isPredictionHintLeaseCurrent(lease, latestSuggestionRequestId)) return
+        boostedCodePoints = emptySet()
+        val requestId = latestSuggestionRequestId.takeIf { it >= 0L } ?: return
+        latestSuggestionRequestId = -1L
+        val pending = pendingSuggestions.remove(requestId) ?: return
+        pending.cancel()
+        send(AutocorrectPluginContract.MSG_CANCEL, Bundle())
     }
 
     private fun sendPluginUiMessage(what: Int, itemId: String, value: String? = null) {
@@ -608,62 +684,82 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     }
 
     @Synchronized
-    fun recordInputTouch(
+    internal fun recordInputTouch(
         data: KeyData,
-        keyboard: TextKeyboard,
+        inputLayout: AutocorrectInputLayoutSnapshot,
         x: Float,
         y: Float,
-        width: Float,
-        height: Float,
         isPrivateSession: Boolean,
     ) {
+        if (isInputTraceInvalid) return
+        val width = inputLayout.width
+        val height = inputLayout.height
         if (
+            !prefs.suggestion.enabled.get() ||
             prefs.suggestion.autocorrectPluginComponent.get().isBlank() ||
-            isPrivateSession ||
-            data.type != KeyType.CHARACTER ||
+            !editorInstance.activeInfo.inputAttributes.allowsAutocorrectPluginSession(
+                isPrivateSession = isPrivateSession,
+                isRawInputEditor = editorInstance.activeInfo.isRawInputEditor,
+            ) ||
+            !data.isAutocorrectTraceInput(inputLayout.mode) ||
             width <= 0f ||
             height <= 0f
         ) {
             return
         }
         val text = data.asString(isForDisplay = false).takeIf { it.isNotBlank() } ?: return
-        if (traceKeyboard !== keyboard || traceWidth != width || traceHeight != height) {
-            traceKeyboard = keyboard
-            traceWidth = width
-            traceHeight = height
-            traceKeys = keyboard.keys().asSequence().mapNotNull { key ->
-                val keyData = key.computedData
-                if (keyData.type != KeyType.CHARACTER) return@mapNotNull null
-                AutocorrectKeyGeometry(
-                    text = keyData.asString(isForDisplay = false),
-                    left = key.touchBounds.left / width,
-                    top = key.touchBounds.top / height,
-                    right = key.touchBounds.right / width,
-                    bottom = key.touchBounds.bottom / height,
-                )
-            }.take(AutocorrectPluginContract.MAX_TRACE_KEY_COUNT).toList()
+        val previousLayout = traceInputLayout
+        if (previousLayout != null && !previousLayout.isTraceCompatibleWith(inputLayout)) {
+            invalidateInputTrace()
+            return
         }
+        if (previousLayout == null) traceInputLayout = inputLayout
         if (tracePoints.size < AutocorrectPluginContract.MAX_TRACE_POINT_COUNT) {
             tracePoints.add(AutocorrectTouchPoint(text, x / width, y / height))
         }
     }
 
     @Synchronized
+    internal fun onInputLayoutChanged(inputLayout: AutocorrectInputLayoutSnapshot) {
+        traceInputLayout?.let { previousLayout ->
+            if (previousLayout.isTraceCompatibleWith(inputLayout)) {
+                traceInputLayout = inputLayout
+            } else {
+                invalidateInputTrace()
+            }
+        }
+    }
+
+    @Synchronized
+    internal fun invalidateInputTrace() {
+        resetInputTrace()
+        isInputTraceInvalid = true
+    }
+
+    @Synchronized
     fun clearInputTrace() {
+        resetInputTrace()
+        isInputTraceInvalid = false
+    }
+
+    private fun resetInputTrace() {
         tracePoints.clear()
-        boostedCodePoints = emptySet()
+        traceInputLayout = null
+        consumePredictionHints()
     }
 
     @Synchronized
     private fun inputTraceFor(content: EditorContent): AutocorrectInputTrace {
+        if (isInputTraceInvalid) return AutocorrectInputTrace.Empty
         val points = tracePoints.toList()
-        return if (points.joinToString(separator = "", transform = AutocorrectTouchPoint::text) ==
+        if (
+            points.joinToString(separator = "", transform = AutocorrectTouchPoint::text) !=
             content.currentWordText
         ) {
-            AutocorrectInputTrace(traceKeys, points)
-        } else {
-            AutocorrectInputTrace.Empty
+            clearInputTrace()
+            return AutocorrectInputTrace.Empty
         }
+        return AutocorrectInputTrace(traceInputLayout?.keys.orEmpty(), points)
     }
 
     override suspend fun create() = Unit
@@ -766,6 +862,9 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     internal fun captureEditorGeneration() = editorGeneration
 
     @Synchronized
+    internal fun isCurrentEditorGeneration(generation: Long) = generation == editorGeneration
+
+    @Synchronized
     fun finishSession() {
         editorGeneration++
         finishCurrentSession()
@@ -835,18 +934,34 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         }
         val text = content?.text.orEmpty()
         val cursor = content?.localSelection?.start ?: 0
-        val windowStart =
+        var windowStart =
             (cursor - AutocorrectPluginContract.MAX_CONTEXT_CHARS).coerceAtLeast(0)
-        val windowEnd = minOf(
+        if (
+            windowStart > 0 &&
+            windowStart < text.length &&
+            Character.isLowSurrogate(text[windowStart]) &&
+            Character.isHighSurrogate(text[windowStart - 1])
+        ) {
+            windowStart++
+        }
+        var windowEnd = minOf(
             text.length,
             maxOf(cursor, windowStart + AutocorrectPluginContract.MAX_CONTEXT_CHARS),
         )
+        if (
+            windowEnd > windowStart &&
+            windowEnd < text.length &&
+            Character.isHighSurrogate(text[windowEnd - 1]) &&
+            Character.isLowSurrogate(text[windowEnd])
+        ) {
+            windowEnd--
+        }
         fun EditorRange?.inWindow() = this?.takeIf {
             isValid && start >= windowStart && end <= windowEnd
         }?.translatedBy(-windowStart) ?: EditorRange.Unspecified
         val composing = content?.localComposing.inWindow()
         val currentWord = content?.localCurrentWord.inWindow()
-        val localCursor = cursor - windowStart
+        val localCursor = (cursor - windowStart).coerceIn(0, windowEnd - windowStart)
         return AutocorrectRequest(
             sessionId = session.sessionId,
             requestId = nextId.getAndIncrement(),
@@ -918,7 +1033,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             inputTrace = inputTraceFor(content),
         ) ?: return AutocorrectPluginSuggestionBatch(emptyList(), handled = false)
         return AutocorrectPluginSuggestionBatch(
-            candidates = result.candidates.map {
+            candidates = result.candidates.mapNotNull {
                 it.toSuggestionCandidate(session.sessionId, content)
             },
             handled = result.handled,
@@ -956,7 +1071,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             inputTrace = inputTrace,
         ) ?: return AutocorrectPluginSuggestionBatch(emptyList(), handled = false)
         return AutocorrectPluginSuggestionBatch(
-            candidates = result.candidates.map {
+            candidates = result.candidates.mapNotNull {
                 it.toSuggestionCandidate(session.sessionId, content)
             },
             handled = result.handled,
@@ -1726,11 +1841,17 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             when (message.what) {
                 AutocorrectPluginContract.MSG_SUGGESTIONS -> {
                     val (requestId, result) = suggestionResultFromBundle(message.data)
-                    val pending = pendingSuggestions.remove(requestId) ?: return
-                    if (requestId == latestSuggestionRequestId) {
-                        boostedCodePoints = result.boostedCodePoints.takeIf {
-                            result.handled
-                        }.orEmpty()
+                    val (pending, isLatest) = synchronized(this@AutocorrectPluginManager) {
+                        val pending = pendingSuggestions.remove(requestId) ?: return
+                        val isLatest = requestId == latestSuggestionRequestId
+                        if (isLatest) {
+                            boostedCodePoints = result.boostedCodePoints.takeIf {
+                                result.handled
+                            }.orEmpty()
+                        }
+                        pending to isLatest
+                    }
+                    if (isLatest) {
                         pending.complete(result)
                     } else {
                         pending.cancel()
@@ -1811,9 +1932,12 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     private fun AutocorrectCandidate.toSuggestionCandidate(
         sessionId: Long,
         content: EditorContent,
-    ): ExternalAutocorrectCandidate {
-        val localReplacement = EditorRange(replacementStart, replacementEnd).takeIf { range ->
-            range.isValid && range.end <= content.text.length
+    ): ExternalAutocorrectCandidate? {
+        if (!isAutocorrectReplacementInContent(replacementStart, replacementEnd, content.text.length)) {
+            return null
+        }
+        val localReplacement = replacementStart.takeIf { it >= 0 }?.let {
+            EditorRange(replacementStart, replacementEnd)
         }
         return ExternalAutocorrectCandidate(
             pluginSessionId = sessionId,
@@ -1828,6 +1952,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                 isEligibleForUserRemoval = removable,
                 sourceProvider = this@AutocorrectPluginManager,
                 kind = kind.toSuggestionCandidateKind(),
+                originContent = content,
             ),
             replacement = localReplacement?.let { range ->
                 SuggestionReplacement(
@@ -1870,6 +1995,16 @@ internal fun AutocorrectCandidateKind.toSuggestionCandidateKind() = when (this) 
     AutocorrectCandidateKind.COMPLETION -> SuggestionCandidateKind.COMPLETION
     AutocorrectCandidateKind.NEXT_WORD -> SuggestionCandidateKind.NEXT_WORD
     AutocorrectCandidateKind.EMOJI -> SuggestionCandidateKind.EMOJI
+}
+
+internal fun isAutocorrectReplacementInContent(
+    replacementStart: Int,
+    replacementEnd: Int,
+    contentLength: Int,
+): Boolean = when {
+    replacementStart == -1 && replacementEnd == -1 -> true
+    replacementStart < 0 || replacementEnd < replacementStart -> false
+    else -> replacementEnd <= contentLength
 }
 
 private fun InputShiftState.toAutocorrectCapsMode() = when (this) {

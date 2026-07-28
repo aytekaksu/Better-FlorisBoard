@@ -20,7 +20,9 @@ import android.content.Context
 import android.view.MotionEvent
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
-import dev.patrickgold.florisboard.ime.text.key.KeyCode
+import dev.patrickgold.florisboard.ime.keyboard.KeyData
+import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
+import dev.patrickgold.florisboard.ime.keyboard.isWordInput
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKey
 import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import dev.patrickgold.florisboard.lib.util.ViewUtils
@@ -33,7 +35,7 @@ import kotlin.math.sqrt
 class GlideTypingGesture {
     /**
      * Class which detects swipes based on given [MotionEvent]s. Only supports single-finger swipes
-     * and ignores additional pointers provided, if any.
+     * and cancels detection for the rest of a touch sequence if another pointer appears.
      */
     class Detector(context: Context) {
         private val prefs by FlorisPreferenceStore
@@ -42,11 +44,12 @@ class GlideTypingGesture {
         private val listeners: ArrayList<Listener> = arrayListOf()
         private var pointerId: Int = -1
         private var thresholdScale = 1f
+        private var suppressedUntilNextDown = false
+        val activePointerId: Int get() = pointerId
 
         companion object {
             private const val MAX_DETECT_TIME = 500
             private const val VELOCITY_THRESHOLD = 0.10 // dp per ms
-            private val SWIPE_GESTURE_KEYS = arrayOf(KeyCode.DELETE, KeyCode.SHIFT, KeyCode.SPACE, KeyCode.CJK_SPACE)
         }
 
         /**
@@ -54,15 +57,20 @@ class GlideTypingGesture {
          *
          * @return whether or not the event was interpreted as part of a gesture.
          */
-        fun onTouchEvent(event: MotionEvent, initialKey: TextKey?): Boolean {
+        fun onTouchEvent(event: MotionEvent, initialKeyData: KeyData?, currentKey: TextKey?): Boolean {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN,
                 MotionEvent.ACTION_POINTER_DOWN -> {
                     if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-                        resetState()
+                        cancel()
+                        suppressedUntilNextDown = false
                         thresholdScale = if (prefs.glide.sensitive.get()) 0.5f else 1f
+                    } else if (pointerId != -1) {
+                        cancel()
+                        suppressedUntilNextDown = true
+                        return false
                     }
-                    if (pointerId != -1) {
+                    if (suppressedUntilNextDown || pointerId != -1) {
                         // if we already have another pointer, we don't care
                         return false
                     }
@@ -78,12 +86,11 @@ class GlideTypingGesture {
                     return false
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    if (pointerId != event.getPointerId(event.actionIndex)) {
-                        // not our pointer.
+                    if (suppressedUntilNextDown) return false
+                    val pointerIndex = event.findPointerIndex(pointerId)
+                    if (pointerIndex < 0) {
                         return false
                     }
-
-                    val pointerIndex = event.findPointerIndex(pointerId)
                     for (i in 0..event.historySize) {
                         val pos = when (i) {
                             event.historySize -> Position(
@@ -109,7 +116,8 @@ class GlideTypingGesture {
                             if (
                                 dist > keySize * thresholdScale &&
                                 (dist / time) > VELOCITY_THRESHOLD * thresholdScale &&
-                                initialKey?.computedData?.code !in SWIPE_GESTURE_KEYS
+                                initialKeyData?.isWordInput(KeyboardMode.CHARACTERS) == true &&
+                                currentKey.isGlideKey()
                             ) {
                                 pointerData.isActuallyGesture = true
                                 // Let listener know all those points need to be added.
@@ -144,10 +152,7 @@ class GlideTypingGesture {
                     return false
                 }
                 MotionEvent.ACTION_CANCEL -> {
-                    if (pointerData.isActuallyGesture == true) {
-                        listeners.forEach { it.onGlideCancelled() }
-                    }
-                    resetState()
+                    cancel()
                 }
                 else -> return false
             }
@@ -162,12 +167,26 @@ class GlideTypingGesture {
             listeners.remove(listener)
         }
 
+        fun cancel() {
+            if (pointerData.isActuallyGesture == true) {
+                listeners.forEach { it.onGlideCancelled() }
+            }
+            resetState()
+        }
+
         private fun resetState() {
             pointerData.apply {
                 positions.clear()
                 isActuallyGesture = null
             }
             pointerId = -1
+        }
+
+        private fun TextKey?.isGlideKey(): Boolean {
+            val key = this ?: return false
+            return key.isEnabled &&
+                key.isVisible &&
+                key.computedData.isWordInput(KeyboardMode.CHARACTERS)
         }
 
         data class PointerData(
