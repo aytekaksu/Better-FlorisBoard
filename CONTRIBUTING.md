@@ -6,8 +6,10 @@ correctness, testing, licensing, and description.
 
 All contributions must be in English and follow the
 [code of conduct](CODE_OF_CONDUCT.md) and
-[AI-assisted contribution policy](AI_POLICY.md). Anyone may propose a change;
-only [@aytekaksu](https://github.com/aytekaksu) may approve and merge it.
+[AI-assisted contribution policy](AI_POLICY.md). Anyone may propose a change.
+Only [@aytekaksu](https://github.com/aytekaksu) may accept and merge outside
+contributions. Maintainer-authored pull requests do not require self-approval,
+but every pull request must pass the protected CI checks before merging.
 
 ## Before writing code
 
