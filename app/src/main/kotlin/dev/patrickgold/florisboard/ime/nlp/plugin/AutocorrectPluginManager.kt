@@ -66,6 +66,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
@@ -156,8 +157,7 @@ internal fun isCurrentAutocorrectCandidate(
 class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     companion object {
         const val ProviderId = "org.florisboard.nlp.providers.external-autocorrect"
-        private const val CONNECTION_TIMEOUT_MS = 350L
-        private const val RESPONSE_TIMEOUT_MS = 1_000L
+        private const val REMOVAL_RESPONSE_TIMEOUT_MS = 1_000L
         private const val FINISH_TIMEOUT_MS = 2_000L
         private const val UI_RESPONSE_TIMEOUT_MS = 1_500L
         private const val UI_OPERATION_TIMEOUT_MS = 120_000L
@@ -978,9 +978,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         allowPossiblyOffensive: Boolean,
         inputTrace: AutocorrectInputTrace,
     ): AutocorrectSuggestionResult? {
-        val service = withTimeoutOrNull(CONNECTION_TIMEOUT_MS) {
-            connectionReady.await()
-        } ?: return null
+        val service = awaitProviderResult(connectionReady) ?: return null
 
         val (requestId, deferred) = synchronized(this) {
             if (
@@ -1021,17 +1019,18 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             }
             requestId to deferred
         }
-        val result = withTimeoutOrNull(RESPONSE_TIMEOUT_MS) {
-            deferred.await()
-        }
-        if (result == null && pendingSuggestions.remove(requestId, deferred)) {
-            synchronized(this) {
-                if (
-                    activeSession?.sessionId == session.sessionId &&
-                    requestId == latestSuggestionRequestId
-                ) {
-                    boostedCodePoints = emptySet()
-                    send(AutocorrectPluginContract.MSG_CANCEL, Bundle(), service)
+        val result = try {
+            awaitProviderResult(deferred)
+        } finally {
+            if (pendingSuggestions.remove(requestId, deferred)) {
+                synchronized(this) {
+                    if (
+                        activeSession?.sessionId == session.sessionId &&
+                        requestId == latestSuggestionRequestId
+                    ) {
+                        boostedCodePoints = emptySet()
+                        send(AutocorrectPluginContract.MSG_CANCEL, Bundle(), service)
+                    }
                 }
             }
         }
@@ -1113,7 +1112,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             requestId to deferred
         }
         val removed = try {
-            withTimeoutOrNull(RESPONSE_TIMEOUT_MS) {
+            withTimeoutOrNull(REMOVAL_RESPONSE_TIMEOUT_MS) {
                 deferred.await()
             } ?: false
         } catch (error: CancellationException) {
@@ -1839,6 +1838,20 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                 AutocorrectSeparatorBehavior.DEFAULT -> SuggestionSeparatorBehavior.DEFAULT
             },
         )
+    }
+}
+
+/**
+ * Provider work is bounded by the active request/session, not a wall-clock timeout. A cold local
+ * model may legitimately take longer than a warm one; superseding input and session cleanup cancel
+ * the deferred instead.
+ */
+internal suspend fun <T> awaitProviderResult(result: Deferred<T>): T? {
+    return try {
+        result.await()
+    } catch (error: CancellationException) {
+        if (!currentCoroutineContext().isActive) throw error
+        null
     }
 }
 
