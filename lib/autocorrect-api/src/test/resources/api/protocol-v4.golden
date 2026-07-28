@@ -1,0 +1,294 @@
+# Autocorrect plugin protocol v4
+contract.ACTION_BIND_PROVIDER=org.florisboard.autocorrect.api.action.BIND_PROVIDER
+contract.MAX_BOOSTED_CODE_POINT_COUNT=64
+contract.MAX_CANDIDATES=16
+contract.MAX_CANDIDATE_ID_CHARS=256
+contract.MAX_CANDIDATE_TEXT_CHARS=256
+contract.MAX_CONTEXT_CHARS=512
+contract.MAX_GESTURE_POINT_COUNT=128
+contract.MAX_SECONDARY_TEXT_CHARS=128
+contract.MAX_TRACE_KEY_COUNT=64
+contract.MAX_TRACE_POINT_COUNT=48
+contract.MAX_USER_DICTIONARY_LANGUAGE_TAGS=16
+contract.MAX_USER_DICTIONARY_LANGUAGE_TAG_CHARS=64
+contract.MAX_USER_DICTIONARY_PAGE_SIZE=128
+contract.MAX_USER_DICTIONARY_TEXT_CHARS=256
+contract.META_PROTOCOL_VERSION=org.florisboard.autocorrect.api.PROTOCOL_VERSION
+contract.MSG_ACCEPTED=3
+contract.MSG_CANCEL=7
+contract.MSG_FINISH_SESSION=6
+contract.MSG_FINISH_SESSION_RESULT=104
+contract.MSG_GET_PLUGIN_UI=8
+contract.MSG_HOST_USER_DICTIONARY_REQUEST=105
+contract.MSG_HOST_USER_DICTIONARY_RESULT=14
+contract.MSG_INVOKE_PLUGIN_UI_ACTION=10
+contract.MSG_PLUGIN_UI_CLOSED=12
+contract.MSG_PLUGIN_UI_DOCUMENT=13
+contract.MSG_PLUGIN_UI_RESULT=103
+contract.MSG_REMOVE=5
+contract.MSG_REMOVE_RESULT=102
+contract.MSG_REVERTED=4
+contract.MSG_SET_PLUGIN_UI_VALUE=9
+contract.MSG_START_SESSION=1
+contract.MSG_SUGGEST=2
+contract.MSG_SUGGESTIONS=101
+contract.MSG_TEXT_EVENT=11
+contract.PROTOCOL_VERSION=4
+enum.AutocorrectAcceptanceKind=MANUAL,AUTO_CORRECTION,GESTURE
+enum.AutocorrectCandidateKind=TYPED,CORRECTION,COMPLETION,NEXT_WORD,EMOJI
+enum.AutocorrectCapsMode=UNSPECIFIED,UNSHIFTED,SHIFTED_MANUAL,SHIFTED_AUTOMATIC,CAPS_LOCK
+enum.AutocorrectInputMode=TYPING,GESTURE
+enum.AutocorrectPluginHostSetting=NONE,GLIDE_ENABLED,GLIDE_SENSITIVE
+enum.AutocorrectPluginUiIcon=NONE,SETTINGS,MODEL,DICTIONARY,TUNE,DOWNLOAD,UPLOAD,DELETE,REFRESH,INFO,ADD
+enum.AutocorrectPluginUiItemKind=NAVIGATION,SWITCH,SLIDER,CHOICE,TEXT,ACTION,DOCUMENT_IMPORT,DOCUMENT_EXPORT,INFO,PROGRESS,EXTERNAL_LINK
+enum.AutocorrectPluginUiSurface=APP,KEYBOARD,BOTH
+enum.AutocorrectSeparatorBehavior=DEFAULT,INSERT,OMIT
+enum.AutocorrectTextEventKind=COMMIT_TYPED,COMMIT_GESTURE,DELETE_BACKWARD,DELETE_FORWARD
+enum.AutocorrectUserDictionaryOperation=QUERY,UPSERT,DELETE
+enum.AutocorrectUserDictionaryStatus=OK,UNAVAILABLE,DENIED,INVALID
+bundle.startSession=Bundle{
+  allowPersonalizedLearning=Boolean(true)
+  capsMode=Int(2)
+  editorFlags=Int(3)
+  inputType=Int(1)
+  preferredEmojiSkinToneModifier=Int(127997)
+  primaryLanguageTag=String("en-US")
+  secondaryLanguageTags=List[
+    String("de-DE")
+  ]
+  sessionId=Long(7)
+}
+bundle.suggest=Bundle{
+  allowPossiblyOffensive=Boolean(true)
+  composingEnd=Int(4)
+  composingStart=Int(0)
+  currentWordEnd=Int(4)
+  currentWordStart=Int(0)
+  inputTrace=Bundle{
+    gesturePoints=List[
+      Bundle{
+        elapsedTimeMillis=Int(17)
+        x=Float(0.5)
+        y=Float(1.0)
+      }
+    ]
+    keys=List[
+      Bundle{
+        bottom=Float(0.4)
+        left=Float(0.1)
+        right=Float(0.3)
+        text=String("a")
+        top=Float(0.2)
+      }
+    ]
+    mode=String("GESTURE")
+    points=List[
+      Bundle{
+        text=String("a")
+        x=Float(0.25)
+        y=Float(0.75)
+      }
+    ]
+  }
+  maxCandidateCount=Int(3)
+  requestCapsMode=String("SHIFTED_AUTOMATIC")
+  requestId=Long(11)
+  selectionEnd=Int(4)
+  selectionStart=Int(4)
+  sessionId=Long(7)
+  text=String("word")
+}
+bundle.suggestions=Bundle{
+  boostedCodePoints=IntArray[97, 128512]
+  candidates=List[
+    Bundle{
+      autoCommit=Boolean(true)
+      confidence=Double(0.75)
+      id=String("candidate-1")
+      kind=String("CORRECTION")
+      removable=Boolean(true)
+      replacementEnd=Int(4)
+      replacementStart=Int(0)
+      secondaryText=String("noun")
+      separatorBehavior=String("INSERT")
+      text=String("word")
+      visible=Boolean(true)
+    }
+  ]
+  handled=Boolean(true)
+  requestId=Long(11)
+}
+bundle.candidateAccepted=Bundle{
+  acceptanceKind=String("AUTO_CORRECTION")
+  id=String("candidate-1")
+  sessionId=Long(7)
+}
+bundle.candidateReverted=Bundle{
+  id=String("candidate-1")
+  sessionId=Long(7)
+}
+bundle.remove=Bundle{
+  id=String("candidate-1")
+  requestId=Long(12)
+  sessionId=Long(7)
+}
+bundle.removeResult=Bundle{
+  removed=Boolean(true)
+  requestId=Long(12)
+}
+bundle.finishLegacy=Bundle{
+  sessionId=Long(7)
+}
+bundle.finishWithSnapshot=Bundle{
+  finalRequest=Bundle{
+    allowPossiblyOffensive=Boolean(true)
+    composingEnd=Int(4)
+    composingStart=Int(0)
+    currentWordEnd=Int(4)
+    currentWordStart=Int(0)
+    inputTrace=Bundle{
+      gesturePoints=List[]
+      keys=List[]
+      mode=String("TYPING")
+      points=List[]
+    }
+    maxCandidateCount=Int(3)
+    requestCapsMode=String("SHIFTED_AUTOMATIC")
+    requestId=Long(11)
+    selectionEnd=Int(4)
+    selectionStart=Int(4)
+    sessionId=Long(7)
+    text=String("word")
+  }
+  hasFinalRequest=Boolean(true)
+  sessionId=Long(7)
+}
+bundle.cancel=Bundle{}
+bundle.textEvent=Bundle{
+  kind=String("COMMIT_TYPED")
+  sessionId=Long(7)
+  text=String("word")
+}
+bundle.pluginUiRequest=Bundle{
+  languageTags=List[
+    String("en-US")
+    String("de-DE")
+  ]
+  requestId=Long(20)
+}
+bundle.pluginUiMutation=Bundle{
+  itemId=String("mode")
+  requestId=Long(21)
+  value=String("balanced")
+}
+bundle.pluginUiAction=Bundle{
+  itemId=String("download")
+  requestId=Long(22)
+  value=null
+}
+bundle.pluginUiDocument=Bundle{
+  displayName=String("model.bin")
+  fileDescriptor=ParcelFileDescriptor
+  itemId=String("model")
+  mimeType=String("application/octet-stream")
+  requestId=Long(23)
+  write=Boolean(false)
+}
+bundle.pluginUiResult=Bundle{
+  requestId=Long(20)
+  successful=Boolean(true)
+  ui=Bundle{
+    appRoot=String("root")
+    keyboardRoot=String("root")
+    pages=List[
+      Bundle{
+        id=String("root")
+        items=List[
+          Bundle{
+            confirmation=String("Apply?")
+            documentMimeTypes=List[]
+            documentSuggestedName=null
+            enabled=Boolean(true)
+            hostSetting=String("NONE")
+            icon=String("TUNE")
+            id=String("mode")
+            kind=String("CHOICE")
+            maximum=Double(1.0)
+            minimum=Double(0.0)
+            options=List[
+              Bundle{
+                title=String("Fast")
+                value=String("fast")
+              }
+              Bundle{
+                title=String("Balanced")
+                value=String("balanced")
+              }
+            ]
+            step=Double(0.0)
+            summary=String("Prediction mode")
+            target=null
+            title=String("Mode")
+            value=String("balanced")
+          }
+        ]
+        summary=String("Settings")
+        surface=String("BOTH")
+        title=String("Provider")
+      }
+    ]
+  }
+}
+bundle.pluginUiClosed=Bundle{}
+bundle.dictionaryQuery=Bundle{
+  udAfterId=Long(9)
+  udEntry=null
+  udId=Long(0)
+  udLanguageTags=List[
+    String("en-US")
+  ]
+  udLimit=Int(32)
+  udOperation=String("QUERY")
+  udOriginUiRequestId=Long(0)
+  udRequestId=Long(30)
+}
+bundle.dictionaryUpsert=Bundle{
+  udAfterId=Long(0)
+  udEntry=Bundle{
+    udFrequency=Int(200)
+    udId=Long(19)
+    udLanguageTag=String("en-US")
+    udShortcut=String("fb")
+    udWord=String("FlorisBoard")
+  }
+  udId=Long(0)
+  udLanguageTags=List[]
+  udLimit=Int(128)
+  udOperation=String("UPSERT")
+  udOriginUiRequestId=Long(20)
+  udRequestId=Long(31)
+}
+bundle.dictionaryDelete=Bundle{
+  udAfterId=Long(0)
+  udEntry=null
+  udId=Long(19)
+  udLanguageTags=List[]
+  udLimit=Int(128)
+  udOperation=String("DELETE")
+  udOriginUiRequestId=Long(20)
+  udRequestId=Long(32)
+}
+bundle.dictionaryResult=Bundle{
+  udEntries=List[
+    Bundle{
+      udFrequency=Int(200)
+      udId=Long(19)
+      udLanguageTag=String("en-US")
+      udShortcut=String("fb")
+      udWord=String("FlorisBoard")
+    }
+  ]
+  udNextAfterId=Long(19)
+  udRequestId=Long(30)
+  udStatus=String("OK")
+}

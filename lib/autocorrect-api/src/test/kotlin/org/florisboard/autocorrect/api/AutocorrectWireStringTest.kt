@@ -17,13 +17,13 @@
 package org.florisboard.autocorrect.api
 
 import android.os.Bundle
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
-@RunWith(AndroidJUnit4::class)
+@RunWith(RobolectricTestRunner::class)
 class AutocorrectWireStringTest {
     @Test
     fun candidateRoundTripKeepsPairsAndDropsOnlyDanglingHighSurrogates() {
