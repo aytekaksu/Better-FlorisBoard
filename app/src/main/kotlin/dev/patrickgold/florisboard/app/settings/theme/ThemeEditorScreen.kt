@@ -61,6 +61,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -96,7 +97,6 @@ import dev.patrickgold.jetpref.material.ui.JetPrefAlertDialog
 import dev.patrickgold.jetpref.material.ui.JetPrefDropdown
 import dev.patrickgold.jetpref.material.ui.JetPrefListItem
 import dev.patrickgold.jetpref.material.ui.JetPrefTextField
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.florisboard.lib.android.showLongToastSync
 import org.florisboard.lib.color.MaterialYouFlagsSaver
@@ -295,7 +295,7 @@ fun ThemeEditorScreen(
                 oldFocusState = isImeVisible
                 focusManager.clearFocus()
             } else {
-                delay(250)
+                withFrameNanos { }
                 when (displayKbdAfterDialogs) {
                     DisplayKbdAfterDialogs.ALWAYS -> {
                         previewFieldController.focusRequester.requestFocus()

@@ -26,16 +26,18 @@ import android.widget.inline.InlineContentView
 import androidx.annotation.RequiresApi
 import dev.patrickgold.florisboard.lib.devtools.flogInfo
 import dev.patrickgold.florisboard.lib.devtools.flogWarning
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 
 data class NlpInlineAutofillSuggestion(
     val info: InlineSuggestionInfo,
@@ -43,11 +45,10 @@ data class NlpInlineAutofillSuggestion(
 )
 
 object NlpInlineAutofill {
-    private val currentSequenceId = AtomicInteger(0)
-
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-
-    private val setterGuard = Mutex()
+    private val requestGuard = Any()
+    private var currentSequenceId = 0
+    private var inflationJob: Job? = null
 
     val suggestions: StateFlow<List<NlpInlineAutofillSuggestion>>
         field = MutableStateFlow(emptyList())
@@ -56,63 +57,73 @@ object NlpInlineAutofill {
 
     @RequiresApi(Build.VERSION_CODES.R)
     fun showInlineSuggestions(context: Context, rawSuggestions: List<InlineSuggestion>): Boolean {
-        val sequenceId = generateSequenceId()
-
         if (rawSuggestions.isEmpty()) {
-            clearInlineSuggestions(sequenceId)
+            clearInlineSuggestions()
             return false
         }
 
-        scope.launch {
-            val size = Size(ViewGroup.LayoutParams.WRAP_CONTENT, suggestionsChipHeightPx)
-            val latch = CountDownLatch(rawSuggestions.size)
-            val suggestionsArray = Array<NlpInlineAutofillSuggestion?>(rawSuggestions.size) { null }
+        val (sequenceId, job) = synchronized(requestGuard) {
+            val sequenceId = ++currentSequenceId
+            val job = scope.launch(start = CoroutineStart.LAZY) {
+                val size = Size(ViewGroup.LayoutParams.WRAP_CONTENT, suggestionsChipHeightPx)
+                val inflatedSuggestions = awaitInlineSuggestionInflations(rawSuggestions) {
+                    rawSuggestion, complete ->
+                    rawSuggestion.inflate(context, size, context.mainExecutor) { view ->
+                        complete(NlpInlineAutofillSuggestion(rawSuggestion.info, view))
+                    }
+                }.sortedByDescending { it.info.isPinned }
 
-            flogInfo { "showInlineSuggestions: [${sequenceId}] start inflating suggestions" }
-            for ((index, rawSuggestion) in rawSuggestions.withIndex()) {
-                rawSuggestion.inflate(context, size, context.mainExecutor) { view ->
-                    suggestionsArray[index] = NlpInlineAutofillSuggestion(rawSuggestion.info, view)
-                    latch.countDown()
+                flogInfo { "showInlineSuggestions: [${sequenceId}] successfully inflated " +
+                    "${inflatedSuggestions.count { it.view != null }} out of ${inflatedSuggestions.size} suggestions" }
+                if (publishIfCurrent(sequenceId) { suggestions.value = inflatedSuggestions }) {
+                    flogInfo { "showInlineSuggestions: [${sequenceId}] setting suggestions" }
+                } else {
+                    flogWarning { "showInlineSuggestions: [${sequenceId}] seqId != current, skip setting suggestions" }
                 }
             }
-
-            if (!latch.await(2_000, TimeUnit.MILLISECONDS)) {
-                flogWarning { "showInlineSuggestions: [${sequenceId}] timed out while waiting for all " +
-                    "suggestions to inflate" }
-                return@launch
-            }
-
-            val inflatedSuggestions = suggestionsArray.filterNotNull().sortedByDescending { it.info.isPinned }
-            setterGuard.lock()
-            flogInfo { "showInlineSuggestions: [${sequenceId}] successfully inflated " +
-                "${inflatedSuggestions.count { it.view != null }} out of ${inflatedSuggestions.size} suggestions" }
-            if (currentSequenceId.get() == sequenceId) {
-                flogInfo { "showInlineSuggestions: [${sequenceId}] setting suggestions" }
-                suggestions.value = inflatedSuggestions
-            } else {
-                flogWarning { "showInlineSuggestions: [${sequenceId}] seqId != current, skip setting suggestions" }
-            }
-            setterGuard.unlock()
+            flogInfo { "showInlineSuggestions: [${sequenceId}] start inflating suggestions" }
+            inflationJob?.cancel()
+            inflationJob = job
+            sequenceId to job
         }
+        job.invokeOnCompletion {
+            synchronized(requestGuard) {
+                if (inflationJob === job) inflationJob = null
+            }
+        }
+        job.start()
 
         return true
     }
 
     fun clearInlineSuggestions() {
-        // Increment sequence id to invalidate eventual pending suggestions
-        clearInlineSuggestions(generateSequenceId())
-    }
-
-    private fun clearInlineSuggestions(sequenceId: Int) {
-        scope.launch {
-            setterGuard.lock()
+        synchronized(requestGuard) {
+            val sequenceId = ++currentSequenceId
+            inflationJob?.cancel()
+            inflationJob = null
             flogInfo { "clearInlineSuggestions: [${sequenceId}] clearing suggestions" }
             suggestions.value = emptyList()
-            setterGuard.unlock()
         }
     }
 
-    private fun generateSequenceId(): Int {
-        return currentSequenceId.incrementAndGet()
+    private inline fun publishIfCurrent(sequenceId: Int, publish: () -> Unit): Boolean {
+        return synchronized(requestGuard) {
+            if (currentSequenceId != sequenceId) return@synchronized false
+            publish()
+            true
+        }
     }
+}
+
+internal suspend fun <I, O> awaitInlineSuggestionInflations(
+    inputs: List<I>,
+    start: (I, (O) -> Unit) -> Unit,
+): List<O> = coroutineScope {
+    inputs.map { input ->
+        async(start = CoroutineStart.UNDISPATCHED) {
+            val result = CompletableDeferred<O>()
+            start(input) { output -> result.complete(output) }
+            result.await()
+        }
+    }.awaitAll()
 }

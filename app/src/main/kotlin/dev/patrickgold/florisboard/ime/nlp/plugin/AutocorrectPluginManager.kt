@@ -33,7 +33,6 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.os.RemoteException
-import android.os.SystemClock
 import android.provider.OpenableColumns
 import android.text.InputType
 import android.view.accessibility.AccessibilityManager
@@ -68,17 +67,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import org.florisboard.autocorrect.api.AutocorrectAcceptanceKind
 import org.florisboard.autocorrect.api.AutocorrectCandidate
 import org.florisboard.autocorrect.api.AutocorrectCandidateKind
@@ -148,26 +146,25 @@ internal fun isCurrentAutocorrectCandidate(
     candidateSessionId == admittedSessionId &&
     candidateEditorGeneration == activeEditorGeneration
 
+internal fun hasDictionaryMutationAccess(
+    uiClientCount: Int,
+    selectedProviderId: String,
+    providerId: String,
+    grantProviderId: String?,
+) = uiClientCount > 0 &&
+    providerId == selectedProviderId &&
+    grantProviderId == providerId
+
 /**
  * Discovers and talks to a user-selected external autocorrect service.
  *
- * This manager never starts a service. It binds for an active typing session and unbinds as soon as
- * input finishes, which leaves Android in full control of the provider process lifetime.
+ * This manager never starts a service. It binds while typing, provider UI, or ordered
+ * session-finalization work needs the service and releases the binding when that demand ends.
  */
 class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     companion object {
         const val ProviderId = "org.florisboard.nlp.providers.external-autocorrect"
-        private const val REMOVAL_RESPONSE_TIMEOUT_MS = 1_000L
-        private const val FINISH_TIMEOUT_MS = 2_000L
-        private const val UI_RESPONSE_TIMEOUT_MS = 1_500L
-        private const val UI_OPERATION_TIMEOUT_MS = 120_000L
-        private const val DICTIONARY_ACTION_TIMEOUT_MS = 10_000L
     }
-
-    private data class DictionaryMutationGrant(
-        val providerId: String,
-        val expiresAtMillis: Long,
-    )
 
     private val appContext by context.appContext()
     private val editorInstance by context.editorInstance()
@@ -184,7 +181,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         ConcurrentHashMap<AutocorrectPluginHostSetting, Boolean>()
     private val pendingPluginUiOperations = mutableSetOf<Long>()
     private val pendingDictionaryMutationActions =
-        mutableMapOf<Long, DictionaryMutationGrant>()
+        mutableMapOf<Long, String>()
     private val hostSettingMutationGuard = Mutex()
     private val providerQueryGuard = Mutex()
     private val userDictionaryMutationGuard = Mutex()
@@ -218,7 +215,9 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     @Volatile private var providerQueryRevision = 0L
     @Volatile private var boostedCodePoints = emptySet<Int>()
     @Volatile private var uiClientCount = 0
+    private var pluginUiLifecycleRevision = 0L
     private var preparingPluginUiDocuments = 0
+    private val pendingPluginUiDocumentJobs = mutableSetOf<Job>()
     private var pendingProviderBind: AutocorrectPluginDescriptor? = null
     private var serviceConnection: ServiceConnection? = null
     private var traceKeyboard: TextKeyboard? = null
@@ -285,6 +284,8 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     fun releasePluginUi() {
         uiClientCount = (uiClientCount - 1).coerceAtLeast(0)
         if (uiClientCount == 0) {
+            invalidatePluginUiDocuments()
+            pendingPluginUiOperations.clear()
             pendingDictionaryMutationActions.clear()
             send(AutocorrectPluginContract.MSG_PLUGIN_UI_CLOSED, Bundle())
             providerPluginUi = null
@@ -352,6 +353,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         val expectedProviderId = prefs.suggestion.autocorrectPluginComponent.get()
         if (
             remote == null ||
+            uiClientCount == 0 ||
             expectedProviderId.isBlank() ||
             expectedProviderId != boundProviderId
         ) {
@@ -359,7 +361,9 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             return
         }
         preparingPluginUiDocuments++
-        scope.launch(Dispatchers.IO) {
+        val uiLifecycleRevision = pluginUiLifecycleRevision
+        lateinit var job: Job
+        job = scope.launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
             try {
                 val sent = runCatching {
                     val resolver = appContext.contentResolver
@@ -383,7 +387,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                         sendPluginUiOperation(
                             what = AutocorrectPluginContract.MSG_PLUGIN_UI_DOCUMENT,
                             expectedProviderId = expectedProviderId,
-                            keepLoading = true,
+                            expectedUiLifecycleRevision = uiLifecycleRevision,
                         ) { requestId ->
                             pluginUiDocumentBundle(
                                 requestId = requestId,
@@ -396,11 +400,27 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                         } != null
                     } ?: false
                 }.getOrDefault(false)
-                if (!sent) _pluginUiError.value = true
+                if (!sent) {
+                    synchronized(this@AutocorrectPluginManager) {
+                        if (
+                            uiClientCount > 0 &&
+                            pluginUiLifecycleRevision == uiLifecycleRevision
+                        ) {
+                            _pluginUiError.value = true
+                        }
+                    }
+                }
             } finally {
-                finishPluginUiDocumentPreparation()
+                finishPluginUiDocumentPreparation(uiLifecycleRevision)
             }
         }
+        pendingPluginUiDocumentJobs.add(job)
+        job.invokeOnCompletion {
+            synchronized(this) {
+                pendingPluginUiDocumentJobs.remove(job)
+            }
+        }
+        job.start()
     }
 
     @Synchronized
@@ -444,15 +464,20 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     private fun sendPluginUiOperation(
         what: Int,
         expectedProviderId: String,
-        keepLoading: Boolean = false,
+        expectedUiLifecycleRevision: Long? = null,
         data: (Long) -> Bundle,
     ): Long? {
+        val isCurrentUiLifecycle =
+            expectedUiLifecycleRevision == null ||
+                expectedUiLifecycleRevision == pluginUiLifecycleRevision
         val service = remote?.takeIf {
-            expectedProviderId.isNotBlank() &&
+            isCurrentUiLifecycle &&
+                uiClientCount > 0 &&
+                expectedProviderId.isNotBlank() &&
                 expectedProviderId == boundProviderId &&
                 expectedProviderId == prefs.suggestion.autocorrectPluginComponent.get()
         } ?: run {
-            _pluginUiError.value = true
+            if (isCurrentUiLifecycle) _pluginUiError.value = true
             return null
         }
         val requestId = nextId.getAndIncrement()
@@ -461,10 +486,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         _pluginUiLoading.value = true
         pendingPluginUiOperations.add(requestId)
         if (what == AutocorrectPluginContract.MSG_INVOKE_PLUGIN_UI_ACTION) {
-            pendingDictionaryMutationActions[requestId] = DictionaryMutationGrant(
-                providerId = expectedProviderId,
-                expiresAtMillis = SystemClock.elapsedRealtime() + DICTIONARY_ACTION_TIMEOUT_MS,
-            )
+            pendingDictionaryMutationActions[requestId] = expectedProviderId
         }
         if (!send(what, data(requestId), service)) {
             pendingPluginUiOperations.remove(requestId)
@@ -472,19 +494,6 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             _pluginUiError.value = true
             _pluginUiLoading.value = false
             return null
-        }
-        expirePluginUiOperation(
-            requestId = requestId,
-            timeoutMillis = if (keepLoading) {
-                UI_OPERATION_TIMEOUT_MS
-            } else {
-                UI_RESPONSE_TIMEOUT_MS
-            },
-        )
-        if (what == AutocorrectPluginContract.MSG_INVOKE_PLUGIN_UI_ACTION) {
-            pendingDictionaryMutationActions[requestId]?.let { grant ->
-                expireDictionaryMutationAction(requestId, grant)
-            }
         }
         return requestId
     }
@@ -503,8 +512,6 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         ) {
             _pluginUiError.value = true
             _pluginUiLoading.value = false
-        } else {
-            expirePluginUiRequest(requestId)
         }
     }
 
@@ -521,37 +528,6 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         }
     }
 
-    private fun expirePluginUiRequest(requestId: Long) {
-        scope.launch {
-            delay(UI_RESPONSE_TIMEOUT_MS)
-            if (latestPluginUiRequestId == requestId && _pluginUiLoading.value) {
-                _pluginUiError.value = true
-                _pluginUiLoading.value = false
-            }
-        }
-    }
-
-    private fun expirePluginUiOperation(requestId: Long, timeoutMillis: Long) {
-        scope.launch {
-            delay(timeoutMillis)
-            if (finishPluginUiOperation(requestId)) {
-                _pluginUiError.value = true
-            }
-        }
-    }
-
-    private fun expireDictionaryMutationAction(
-        requestId: Long,
-        grant: DictionaryMutationGrant,
-    ) {
-        scope.launch {
-            delay(DICTIONARY_ACTION_TIMEOUT_MS)
-            synchronized(this@AutocorrectPluginManager) {
-                pendingDictionaryMutationActions.remove(requestId, grant)
-            }
-        }
-    }
-
     @Synchronized
     private fun finishPluginUiOperation(requestId: Long): Boolean {
         if (!pendingPluginUiOperations.remove(requestId)) return false
@@ -564,9 +540,18 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     }
 
     @Synchronized
-    private fun finishPluginUiDocumentPreparation() {
+    private fun finishPluginUiDocumentPreparation(uiLifecycleRevision: Long) {
+        if (pluginUiLifecycleRevision != uiLifecycleRevision) return
         preparingPluginUiDocuments = (preparingPluginUiDocuments - 1).coerceAtLeast(0)
         releaseBindingIfIdle()
+    }
+
+    private fun invalidatePluginUiDocuments() {
+        pluginUiLifecycleRevision++
+        preparingPluginUiDocuments = 0
+        val jobs = pendingPluginUiDocumentJobs.toList()
+        pendingPluginUiDocumentJobs.clear()
+        jobs.forEach(Job::cancel)
     }
 
     private fun hasInFlightPluginUiOperation() =
@@ -771,12 +756,10 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         ) {
             return
         }
-        if (admittedSessionId == session.sessionId ||
-            send(AutocorrectPluginContract.MSG_START_SESSION, session.toBundle(), service)
-        ) {
-            admittedSessionId = session.sessionId
-            connectionReady.complete(service)
-        }
+        if (admittedSessionId == session.sessionId) return
+        if (!send(AutocorrectPluginContract.MSG_START_SESSION, session.toBundle(), service)) return
+        admittedSessionId = session.sessionId
+        connectionReady.complete(service)
     }
 
     @Synchronized
@@ -786,6 +769,24 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     fun finishSession() {
         editorGeneration++
         finishCurrentSession()
+    }
+
+    @Synchronized
+    fun onSelectedProviderChanged() {
+        editorGeneration++
+        endSession()
+        if (uiClientCount > 0) {
+            send(AutocorrectPluginContract.MSG_PLUGIN_UI_CLOSED, Bundle())
+        }
+        providerPluginUi = null
+        _pluginUi.value = null
+        pendingHostSettingValues.clear()
+        unbind(clearSession = true)
+        if (uiClientCount > 0) {
+            _pluginUiError.value = false
+            _pluginUiLoading.value = true
+            connectPluginUi()
+        }
     }
 
     @Synchronized
@@ -810,12 +811,10 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         ) {
             val finalRequest = buildFinalRequest(session)
             pendingSessionFinishes.add(session.sessionId)
-            if (send(
+            if (!send(
                 what = AutocorrectPluginContract.MSG_FINISH_SESSION,
                 data = finishSessionBundle(session.sessionId, finalRequest),
             )) {
-                expireSessionFinish(session.sessionId)
-            } else {
                 pendingSessionFinishes.remove(session.sessionId)
             }
         }
@@ -864,24 +863,17 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         )
     }
 
-    private fun expireSessionFinish(sessionId: Long) {
-        scope.launch {
-            delay(FINISH_TIMEOUT_MS)
-            completeSessionFinish(sessionId)
-        }
-    }
+    private fun wantsProvider(providerId: String) =
+        providerId.isNotBlank() &&
+            ((activeSession != null && activeProviderId == providerId) ||
+                (uiClientCount > 0 &&
+                    prefs.suggestion.autocorrectPluginComponent.get() == providerId))
 
     @Synchronized
     private fun completeSessionFinish(sessionId: Long) {
         if (!pendingSessionFinishes.remove(sessionId) || pendingSessionFinishes.isNotEmpty()) return
         releaseBindingIfIdle()
     }
-
-    private fun wantsProvider(providerId: String) =
-        providerId.isNotBlank() &&
-            ((activeSession != null && activeProviderId == providerId) ||
-                (uiClientCount > 0 &&
-                    prefs.suggestion.autocorrectPluginComponent.get() == providerId))
 
     override suspend fun suggest(
         subtype: Subtype,
@@ -1111,16 +1103,11 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             }
             requestId to deferred
         }
-        val removed = try {
-            withTimeoutOrNull(REMOVAL_RESPONSE_TIMEOUT_MS) {
-                deferred.await()
-            } ?: false
-        } catch (error: CancellationException) {
-            if (!currentCoroutineContext().isActive) throw error
-            false
+        return try {
+            awaitProviderResult(deferred) ?: false
+        } finally {
+            pendingRemovals.remove(requestId, deferred)
         }
-        pendingRemovals.remove(requestId, deferred)
-        return removed
     }
 
     override suspend fun getListOfWords(subtype: Subtype): List<String> = emptyList()
@@ -1128,10 +1115,24 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     override suspend fun getFrequencyForWord(subtype: Subtype, word: String): Double = 0.0
 
     override suspend fun destroy() {
-        _keyboardUiVisible.value = false
-        uiClientCount = 0
-        pendingDictionaryMutationActions.clear()
-        finishSession()
+        synchronized(this) {
+            _keyboardUiVisible.value = false
+            if (uiClientCount > 0) {
+                send(AutocorrectPluginContract.MSG_PLUGIN_UI_CLOSED, Bundle())
+            }
+            uiClientCount = 0
+            pendingPluginUiOperations.clear()
+            pendingDictionaryMutationActions.clear()
+            pendingSessionFinishes.clear()
+            pendingHostSettingValues.clear()
+            providerPluginUi = null
+            _pluginUi.value = null
+            _pluginUiLoading.value = false
+            _pluginUiError.value = false
+            editorGeneration++
+            endSession()
+            unbind(clearSession = true)
+        }
     }
 
     @Synchronized
@@ -1205,16 +1206,13 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         admittedSessionId = -1L
         remote = null
         boostedCodePoints = emptySet()
+        invalidatePluginUiDocuments()
         pendingPluginUiOperations.clear()
         pendingDictionaryMutationActions.clear()
         connectionReady.complete(null)
         connectionReady = CompletableDeferred()
         failPending()
         when {
-            hasInFlightPluginUiOperation() -> {
-                pendingProviderBind = queuedProvider?.takeIf { wantsProvider(it.id) }
-                if (uiClientCount > 0) _pluginUiLoading.value = true
-            }
             queuedProvider != null && wantsProvider(queuedProvider.id) -> {
                 unbind(clearSession = false)
                 bind(queuedProvider)
@@ -1268,10 +1266,12 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         if (!wantsProvider(descriptor.id)) return
         if (boundProviderId == descriptor.id && serviceConnection != null) return
         if (boundProviderId.isNotBlank() && boundProviderId != descriptor.id) {
-            if (pendingSessionFinishes.isNotEmpty() || hasInFlightPluginUiOperation()) {
+            if (pendingSessionFinishes.isNotEmpty()) {
                 pendingProviderBind = descriptor
                 return
             }
+            pendingPluginUiOperations.clear()
+            pendingDictionaryMutationActions.clear()
             unbind(clearSession = false)
         }
         val connection = createServiceConnection()
@@ -1335,6 +1335,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         pendingProviderBind = null
         pendingSessionFinishes.clear()
         boostedCodePoints = emptySet()
+        invalidatePluginUiDocuments()
         pendingPluginUiOperations.clear()
         pendingDictionaryMutationActions.clear()
         if (clearSession) {
@@ -1482,12 +1483,15 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             }
             AutocorrectUserDictionaryOperation.UPSERT,
             AutocorrectUserDictionaryOperation.DELETE -> {
-                val grant = pendingDictionaryMutationActions[request.originUiRequestId]
+                val grantedProviderId =
+                    pendingDictionaryMutationActions[request.originUiRequestId]
                 if (
-                    uiClientCount > 0 &&
-                    providerId == selectedProviderId &&
-                    grant?.providerId == providerId &&
-                    SystemClock.elapsedRealtime() < grant.expiresAtMillis
+                    hasDictionaryMutationAccess(
+                        uiClientCount = uiClientCount,
+                        selectedProviderId = selectedProviderId,
+                        providerId = providerId,
+                        grantProviderId = grantedProviderId,
+                    )
                 ) {
                     emptyList()
                 } else {
@@ -1513,7 +1517,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     ) {
         if (request.operation != AutocorrectUserDictionaryOperation.QUERY) {
             pendingDictionaryMutationActions[request.originUiRequestId]
-                ?.takeIf { it.providerId == providerId }
+                ?.takeIf { it == providerId }
                 ?.let { pendingDictionaryMutationActions.remove(request.originUiRequestId, it) }
         }
     }

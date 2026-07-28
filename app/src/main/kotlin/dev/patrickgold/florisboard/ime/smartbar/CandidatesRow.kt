@@ -32,6 +32,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +51,7 @@ import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.subtypeManager
 import dev.patrickgold.jetpref.datastore.model.collectAsState
+import kotlinx.coroutines.launch
 import org.florisboard.lib.compose.conditional
 import org.florisboard.lib.compose.florisHorizontalScroll
 import org.florisboard.lib.snygg.SnyggSelector
@@ -98,6 +100,7 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
     val keyboardManager by context.keyboardManager()
     val nlpManager by context.nlpManager()
     val subtypeManager by context.subtypeManager()
+    val scope = rememberCoroutineScope()
 
     val displayMode by prefs.suggestion.displayMode.collectAsState()
     val matchKeyAppearance by prefs.suggestion.matchKeyAppearance.collectAsState()
@@ -166,7 +169,13 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
                         // Can't use candidate directly
                         val candidateItem = candidates[n]
                         if (candidateItem.isEligibleForUserRemoval) {
-                            nlpManager.removeSuggestion(subtypeManager.activeSubtype, candidateItem)
+                            scope.launch {
+                                nlpManager.removeSuggestion(
+                                    subtypeManager.activeSubtype,
+                                    candidateItem,
+                                )
+                            }
+                            true
                         } else {
                             false
                         }

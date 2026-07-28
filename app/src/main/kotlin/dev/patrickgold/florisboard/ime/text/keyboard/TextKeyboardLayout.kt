@@ -19,6 +19,7 @@ package dev.patrickgold.florisboard.ime.text.keyboard
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.animation.AccelerateInterpolator
 import androidx.compose.foundation.border
@@ -1062,7 +1063,7 @@ private class TextKeyboardLayoutController(
 
     override fun onGlideAddPoint(point: GlideTypingGesture.Detector.Position) {
         if (shouldCollectGlideDrawingPoint(isGlideEnabled, prefs.glide.showTrail.get())) {
-            glideDataForDrawing.add(point to System.currentTimeMillis())
+            glideDataForDrawing.add(point to SystemClock.uptimeMillis())
         }
     }
 
@@ -1105,7 +1106,7 @@ private class TextKeyboardLayoutController(
         var drawnPoints = 0
         var prevX = gestureData.lastOrNull()?.first?.x ?: 0.0f
         var prevY = gestureData.lastOrNull()?.first?.y ?: 0.0f
-        val time = System.currentTimeMillis()
+        val time = SystemClock.uptimeMillis()
 
         outer@ for (i in gestureData.size - 1 downTo 1) {
             if (time - gestureData[i - 1].second > prefs.glide.trailDuration.get()) break
