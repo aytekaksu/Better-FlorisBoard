@@ -170,52 +170,58 @@ class HanShapeBasedLanguageProvider(val context: Context) : SpellingProvider, Su
             refreshLanguagePacks()
         }
         if (content.composingText.isEmpty()) {
-            return emptyList();
+            return emptyList()
         }
-        val (languagePackItem, languagePackExtension) = getLanguagePack(subtype) ?: return emptyList();
-        val layout: String = languagePackItem.hanShapeBasedTable
-        try {
+        val (languagePackItem, languagePackExtension) =
+            getLanguagePack(subtype) ?: return emptyList()
+        val layout = languagePackItem.hanShapeBasedTable
+        return try {
             val database = languagePackExtension.hanShapeBasedSQLiteDatabase
-            val cur = database.query(layout, arrayOf ( "code", "text" ), "code LIKE ? || '%'", arrayOf(content.composingText), "", "", "code ASC, weight DESC", "$maxCandidateCount");
-            cur.moveToFirst();
-            val rowCount = cur.getCount();
-            flogDebug { "Query was '${content.composingText}'" }
-            val suggestions = buildList {
-                for (n in 0 until rowCount) {
-                    val code = cur.getString(0);
-                    val word = cur.getString(1);
-                    cur.moveToNext();
-                    add(WordSuggestionCandidate(
-                        text = "$word",
-                        secondaryText = code,
-                        confidence = 0.5,
-                        isEligibleForAutoCommit = n == 0,
-                        // We set ourselves as the source provider so we can get notify events for our candidate
-                        sourceProvider = this@HanShapeBasedLanguageProvider,
-                    ))
+            database.query(
+                layout,
+                arrayOf("code", "text"),
+                "code LIKE ? || '%'",
+                arrayOf(content.composingText),
+                null,
+                null,
+                "code ASC, weight DESC",
+                maxCandidateCount.toString(),
+            ).use { cursor ->
+                val suggestions = buildList {
+                    while (cursor.moveToNext()) {
+                        add(
+                            WordSuggestionCandidate(
+                                text = cursor.getString(1),
+                                secondaryText = cursor.getString(0),
+                                confidence = 0.5,
+                                isEligibleForAutoCommit = isEmpty(),
+                                sourceProvider = this@HanShapeBasedLanguageProvider,
+                            ),
+                        )
+                    }
                 }
+                flogDebug { "Dictionary query completed, resultCount=${suggestions.size}" }
+                suggestions
             }
-            return suggestions
         } catch (e: IllegalStateException) {
-            flogError { "Invalid layout '${layout}' not found" }
-            return emptyList();
+            flogError { "Invalid dictionary layout: layout=$layout" }
+            emptyList()
         } catch (e: SQLiteException) {
-            flogError { "SQLiteException: layout=$layout, composing=${content.composingText}, error='${e}'" }
-            return emptyList();
+            flogError { "Dictionary query failed: layout=$layout, error=${e::class.simpleName}" }
+            emptyList()
         }
     }
 
     override suspend fun notifySuggestionAccepted(subtype: Subtype, candidate: SuggestionCandidate) {
-        // We can use flogDebug, flogInfo, flogWarning and flogError for debug logging, which is a wrapper for Logcat
-        flogDebug { candidate.toString() }
+        flogDebug { "Suggestion accepted, kind=${candidate::class.simpleName}" }
     }
 
     override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {
-        flogDebug { candidate.toString() }
+        flogDebug { "Suggestion reverted, kind=${candidate::class.simpleName}" }
     }
 
     override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
-        flogDebug { candidate.toString() }
+        flogDebug { "Suggestion removal requested, kind=${candidate::class.simpleName}" }
         return false
     }
 
@@ -292,7 +298,7 @@ class HanShapeBasedLanguageProvider(val context: Context) : SpellingProvider, Su
                 next = it.previous()
             }
             if (start != end) {
-                flogDebug { "Determined $start - $end as composing: ${textBeforeSelection.substring(start, end)}" }
+                flogDebug { "Determined composing range length=${end - start}" }
                 EditorRange(start, end)
             } else {
                 flogDebug { "Determined Unspecified as composing" }

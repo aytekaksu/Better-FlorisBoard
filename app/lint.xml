@@ -1,3 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <lint>
-    <issue id="ExtraTranslation" severity="warning"/>
+    <issue id="ExtraTranslation" severity="warning" />
+
+    <!--
+        AGP 9.0.0 lint crashes in UElementAsPsiDetector while resolving the
+        lambda in Flog.kt. Keep this detector disabled, rather than ignoring
+        lint failures, until the upstream lint/K2 bug is fixed.
+        See config/quality/README.md for the reproduction and removal check.
+    -->
+    <issue id="UElementAsPsi" severity="ignore" />
+
+    <!--
+        Once the detector above is skipped for its crashing file, the same
+        lint/K2 expression-type failure occurs in data-flow detectors while
+        inspecting LaunchUtils.kt.
+    -->
+    <issue id="IntentReset" severity="ignore" />
+    <issue id="ShowToast" severity="ignore" />
 </lint>

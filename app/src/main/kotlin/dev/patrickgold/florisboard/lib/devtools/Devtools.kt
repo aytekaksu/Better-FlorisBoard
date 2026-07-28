@@ -20,6 +20,7 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
 import android.os.Debug
+import android.os.Process
 import dev.patrickgold.florisboard.BuildConfig
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceModel
@@ -28,13 +29,14 @@ import dev.patrickgold.florisboard.lib.titlecase
 import dev.patrickgold.florisboard.lib.util.TimeUtils
 import dev.patrickgold.florisboard.lib.util.UnitUtils
 import dev.patrickgold.florisboard.subtypeManager
-import java.io.BufferedReader
 import java.io.IOException
-import java.io.InputStreamReader
 import org.florisboard.lib.android.systemService
 
 @Suppress("MemberVisibilityCanBePrivate")
 object Devtools {
+    private const val MaxExportedLogcatLines = 500
+    private const val MaxExportedLogcatChars = 128 * 1024
+
     fun generateDebugLog(context: Context, prefs: FlorisPreferenceModel? = null, includeLogcat: Boolean = false): String {
         return buildString {
             append(generateDebugLogHeader(context, prefs))
@@ -152,13 +154,25 @@ object Devtools {
 
     fun generateLogcatDump(withTitle: Boolean = true): String {
         return buildString {
-            if (withTitle) appendLine("======= LOGCAT =======")
+            if (withTitle) appendLine("======= APP LOGCAT (REVIEW BEFORE SHARING) =======")
             try {
-                val process = Runtime.getRuntime().exec("logcat -d")
-                val bufferedReader = BufferedReader(InputStreamReader(process.inputStream))
-                var line: String?
-                while (bufferedReader.readLine().also { line = it } != null) {
-                    appendLine(line)
+                val process = Runtime.getRuntime().exec(
+                    arrayOf(
+                        "logcat",
+                        "-d",
+                        "--pid=${Process.myPid()}",
+                        "-t",
+                        MaxExportedLogcatLines.toString(),
+                    ),
+                )
+                process.inputStream.bufferedReader().useLines { lines ->
+                    for (line in lines) {
+                        if (length + line.length + 1 > MaxExportedLogcatChars) {
+                            appendLine("[logcat truncated]")
+                            break
+                        }
+                        appendLine(line)
+                    }
                 }
             } catch (_: IOException) {
                 appendLine("Failed to retrieve.")

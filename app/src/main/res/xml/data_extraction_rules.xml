@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <!-- Keyboard settings and dictionaries may contain sensitive personal data. -->
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <include
+            domain="root"
+            path="jetpref_datastore"/>
+        <include
+            domain="file"
+            path="ime"/>
+        <include
+            domain="database"
+            path="floris_user_dictionary"/>
+    </cloud-backup>
+    <device-transfer>
+        <include
+            domain="root"
+            path="jetpref_datastore"/>
+        <include
+            domain="file"
+            path="ime"/>
+        <include
+            domain="database"
+            path="floris_user_dictionary"/>
+    </device-transfer>
+</data-extraction-rules>

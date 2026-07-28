@@ -59,25 +59,31 @@ data class ImeFormFactor(
          * @param boundsDp The root window bounds in dp.
          */
         fun of(boundsDp: DpRect): ImeFormFactor {
-            typealias BP = WindowSizeClass.Companion
+            val breakpoints = WindowSizeClass.Companion
             val sizeClass = WindowSizeClass.BREAKPOINTS_V2.computeWindowSizeClass(
                 widthDp = boundsDp.width.value,
                 heightDp = boundsDp.height.value,
             )
             val typeGuess = when {
-                sizeClass.isWidthAtLeastBreakpoint(BP.WIDTH_DP_EXTRA_LARGE_LOWER_BOUND) -> {
+                sizeClass.isWidthAtLeastBreakpoint(breakpoints.WIDTH_DP_EXTRA_LARGE_LOWER_BOUND) -> {
                     Type.DESKTOP
                 }
-                sizeClass.isWidthAtLeastBreakpoint(BP.WIDTH_DP_LARGE_LOWER_BOUND) -> {
+                sizeClass.isWidthAtLeastBreakpoint(breakpoints.WIDTH_DP_LARGE_LOWER_BOUND) -> {
                     Type.LARGE_TABLET
                 }
-                sizeClass.isAtLeastBreakpoint(BP.WIDTH_DP_MEDIUM_LOWER_BOUND, BP.HEIGHT_DP_EXPANDED_LOWER_BOUND) -> {
+                sizeClass.isAtLeastBreakpoint(
+                    breakpoints.WIDTH_DP_MEDIUM_LOWER_BOUND,
+                    breakpoints.HEIGHT_DP_EXPANDED_LOWER_BOUND,
+                ) -> {
                     Type.TABLET_PORTRAIT
                 }
-                sizeClass.isAtLeastBreakpoint(BP.WIDTH_DP_EXPANDED_LOWER_BOUND, BP.HEIGHT_DP_MEDIUM_LOWER_BOUND) -> {
+                sizeClass.isAtLeastBreakpoint(
+                    breakpoints.WIDTH_DP_EXPANDED_LOWER_BOUND,
+                    breakpoints.HEIGHT_DP_MEDIUM_LOWER_BOUND,
+                ) -> {
                     Type.TABLET_LANDSCAPE
                 }
-                sizeClass.isHeightAtLeastBreakpoint(BP.HEIGHT_DP_MEDIUM_LOWER_BOUND) -> {
+                sizeClass.isHeightAtLeastBreakpoint(breakpoints.HEIGHT_DP_MEDIUM_LOWER_BOUND) -> {
                     Type.PHONE_PORTRAIT
                 }
                 else -> Type.PHONE_LANDSCAPE

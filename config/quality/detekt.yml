@@ -1,0 +1,30 @@
+config:
+  validation: true
+  warningsAsErrors: true
+
+# Keep limits strict enough to reject new monoliths without forcing small,
+# cohesive state-machine functions into unnatural shapes.
+complexity:
+  ComplexCondition:
+    allowedConditions: 4
+  CyclomaticComplexMethod:
+    allowedComplexity: 14
+    ignoreSingleWhenExpression: true
+  LargeClass:
+    allowedLines: 700
+  LongMethod:
+    allowedLines: 80
+  TooManyFunctions:
+    allowedFunctionsPerFile: 30
+    allowedFunctionsPerClass: 25
+    allowedFunctionsPerInterface: 20
+    allowedFunctionsPerObject: 25
+    allowedFunctionsPerEnum: 20
+
+style:
+  ReturnCount:
+    max: 4
+
+# Findings present in the initial fork-owned scope are recorded in the checked-in
+# baseline. It is a debt ratchet: new findings fail without requiring a global
+# cleanup, and resolved entries should be removed rather than replaced.

@@ -1,0 +1,3140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.0.0" type="baseline" client="gradle" dependencies="true" name="AGP (9.0.0)" variant="all" version="9.0.0">
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                append(String.format(&quot;%.2f&quot;, usedMemInPercentage))"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/lib/devtools/Devtools.kt"
+            line="234"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                append(String.format(&quot;%.2f&quot;, usedMemInPercentage))"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/lib/devtools/Devtools.kt"
+            line="255"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                append(String.format(&quot;%.2f&quot;, usedMemInPercentage))"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/lib/devtools/Devtools.kt"
+            line="276"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="            sizeBytes >= GiB -> String.format(&quot;%.2f GiB&quot;, sizeBytes / GiB)"
+        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/lib/util/UnitUtils.kt"
+            line="26"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="            sizeBytes >= MiB -> String.format(&quot;%.2f MiB&quot;, sizeBytes / MiB)"
+        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/lib/util/UnitUtils.kt"
+            line="27"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="            sizeBytes >= KiB -> String.format(&quot;%.2f KiB&quot;, sizeBytes / KiB)"
+        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/lib/util/UnitUtils.kt"
+            line="28"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="            else -> String.format(&quot;%d bytes&quot;)"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/lib/util/UnitUtils.kt"
+            line="29"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="InvalidManifestAttribute"
+        message="Attribute `launchMode` on `&lt;activity-alias>` `dev.patrickgold.florisboard.SettingsLauncherAlias` is invalid, and will be silently ignored. This attribute is always ignored on `&lt;activity-alias>`."
+        errorLine1="            android:launchMode=&quot;singleTask&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="104"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="InvalidManifestAttribute"
+        message="Attribute `theme` on `&lt;activity-alias>` `dev.patrickgold.florisboard.SettingsLauncherAlias` is invalid, and will be silently ignored. This attribute is always ignored on `&lt;activity-alias>`."
+        errorLine1="            android:theme=&quot;@style/FlorisAppTheme.Splash&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="107"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of Gradle than 9.4.1 is available: 9.6.1"
+        errorLine1="distributionUrl=https\://services.gradle.org/distributions/gradle-9.4.1-bin.zip"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../gradle/wrapper/gradle-wrapper.properties"
+            line="4"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of com.android.application than 9.0.0 is available: 9.3.1. (There is also a newer version of 9.0.𝑥 available, if upgrading to 9.3.1 is difficult: 9.0.1)"
+        errorLine1="android-gradle-plugin = &quot;9.0.0&quot;"
+        errorLine2="                        ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="3"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of com.android.library than 9.0.0 is available: 9.3.1. (There is also a newer version of 9.0.𝑥 available, if upgrading to 9.3.1 is difficult: 9.0.1)"
+        errorLine1="android-gradle-plugin = &quot;9.0.0&quot;"
+        errorLine2="                        ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="3"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of com.android.test than 9.0.0 is available: 9.3.1. (There is also a newer version of 9.0.𝑥 available, if upgrading to 9.3.1 is difficult: 9.0.1)"
+        errorLine1="android-gradle-plugin = &quot;9.0.0&quot;"
+        errorLine2="                        ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="3"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.compose:compose-bom than 2026.03.01 is available: 2026.06.01"
+        errorLine1="androidx-compose-bom = &quot;2026.03.01&quot;"
+        errorLine2="                       ~~~~~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="7"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.core:core-ktx than 1.18.0 is available: 1.19.0"
+        errorLine1="androidx-core = &quot;1.18.0&quot;"
+        errorLine2="                ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="8"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.navigation:navigation-compose than 2.9.7 is available: 2.9.8"
+        errorLine1="androidx-navigation = &quot;2.9.7&quot;"
+        errorLine2="                      ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="12"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of org.jetbrains.kotlin:kotlin-reflect than 2.3.20 is available: 2.4.0"
+        errorLine1="kotlin = &quot;2.3.20&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="19"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of com.google.devtools.ksp than 2.3.5 is available: 2.3.8"
+        errorLine1="ksp = &quot;2.3.5&quot;"
+        errorLine2="      ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="22"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.test.uiautomator:uiautomator than 2.3.0 is available: 2.4.0"
+        errorLine1="androidx-test-uiautomator = &quot;2.3.0&quot;"
+        errorLine2="                            ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="34"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.coil-kt.coil3:coil-compose than 3.4.0 is available: 3.5.0"
+        errorLine1="coil = &quot;3.4.0&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="17"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.coil-kt.coil3:coil-gif than 3.4.0 is available: 3.5.0"
+        errorLine1="coil = &quot;3.4.0&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="17"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlin.android than 2.3.20 is available: 2.4.10"
+        errorLine1="kotlin = &quot;2.3.20&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="19"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlin.jvm than 2.3.20 is available: 2.4.10"
+        errorLine1="kotlin = &quot;2.3.20&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="19"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlin.plugin.compose than 2.3.20 is available: 2.4.10"
+        errorLine1="kotlin = &quot;2.3.20&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="19"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlin.plugin.serialization than 2.3.20 is available: 2.4.10"
+        errorLine1="kotlin = &quot;2.3.20&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="19"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-android than 1.10.2 is available: 1.11.0"
+        errorLine1="kotlinx-coroutines = &quot;1.10.2&quot;"
+        errorLine2="                     ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="20"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-test than 1.10.2 is available: 1.11.0"
+        errorLine1="kotlinx-coroutines = &quot;1.10.2&quot;"
+        errorLine2="                     ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="20"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.materialkolor:material-kolor-android than 4.1.1 is available: 5.0.0"
+        errorLine1="material-kolor = &quot;4.1.1&quot;"
+        errorLine2="                 ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="23"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.mikepenz.aboutlibraries.plugin.android than 14.0.1 is available: 15.0.4"
+        errorLine1="mikepenz-aboutlibraries = &quot;14.0.1&quot;"
+        errorLine2="                          ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="24"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.mikepenz:aboutlibraries-compose-m3 than 14.0.1 is available: 15.0.4"
+        errorLine1="mikepenz-aboutlibraries = &quot;14.0.1&quot;"
+        errorLine2="                          ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="24"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.mikepenz:aboutlibraries-core than 14.0.1 is available: 15.0.4"
+        errorLine1="mikepenz-aboutlibraries = &quot;14.0.1&quot;"
+        errorLine2="                          ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="24"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.kotest than 6.1.11 is available: 6.2.3"
+        errorLine1="kotest = &quot;6.1.11&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="36"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.kotest:kotest-assertions-core than 6.1.11 is available: 6.2.3"
+        errorLine1="kotest = &quot;6.1.11&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="36"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.kotest:kotest-property than 6.1.11 is available: 6.2.3"
+        errorLine1="kotest = &quot;6.1.11&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="36"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.kotest:kotest-runner-junit5 than 6.1.11 is available: 6.2.3"
+        errorLine1="kotest = &quot;6.1.11&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="36"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlinx.kover than 0.9.8 is available: 0.9.9"
+        errorLine1="kotlinx-kover = &quot;0.9.8&quot;"
+        errorLine2="                ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="38"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="RestrictedApi"
+        message="EmojiCompat.reset can only be called from within the same library (androidx.emoji2:emoji2)"
+        errorLine1="        private val instance: EmojiCompat? = if (config != null) EmojiCompat.reset(config) else null"
+        errorLine2="                                                                             ~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat.kt"
+            line="115"
+            column="78"/>
+    </issue>
+
+    <issue
+        id="VisibleForTests"
+        message="This method should only be accessed from tests or within private scope"
+        errorLine1="            EmojiCompat.reset(instance)"
+        errorLine2="                        ~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat.kt"
+            line="89"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="ComposableNaming"
+        message="Composable functions that return Unit should start with an uppercase letter"
+        errorLine1="private fun FlorisScreenScope.content("
+        errorLine2="                              ~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/app/setup/SetupScreen.kt"
+            line="105"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="ComposableNaming"
+        message="Composable functions that return Unit should start with an uppercase letter"
+        errorLine1="private fun footer(context: Context) {"
+        errorLine2="            ~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/app/setup/SetupScreen.kt"
+            line="178"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="LocalContextConfigurationRead"
+        message="Reading Configuration using LocalContext.current.resources.configuration"
+        errorLine1="        mutableStateOf(context.resources.configuration.keyboard != Configuration.KEYBOARD_NOKEYS)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/app/settings/advanced/PhysicalKeyboardScreen.kt"
+            line="41"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="LocalContextResourcesRead"
+        message="Reading Resources using LocalContext.current.resources"
+        errorLine1="        LocalContext.current.resources,"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/compose/FlorisCanvasIcon.kt"
+            line="37"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ModifierFactoryExtensionFunction"
+        message="Modifier factory functions should be extensions on Modifier"
+        errorLine1="internal fun pluginUiItemModifier("
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginUiPresentation.kt"
+            line="61"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/compose/FlorisButtons.kt"
+            line="183"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggBox.kt"
+            line="63"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggButton.kt"
+            line="65"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggChip.kt"
+            line="57"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggChip.kt"
+            line="94"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggColumn.kt"
+            line="55"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggIcon.kt"
+            line="58"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggIcon.kt"
+            line="96"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggIcon.kt"
+            line="134"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggIconButton.kt"
+            line="61"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggListItem.kt"
+            line="64"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggRow.kt"
+            line="56"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggSpacer.kt"
+            line="52"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggText.kt"
+            line="65"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StringFormatInvalid"
+        message="Incorrect formatting string `ext__validation__hint_value_above_50_percent`; missing conversion character in &apos;`% s`&apos;?"
+        errorLine1="    &lt;string name=&quot;ext__validation__hint_value_above_50_percent&quot;>Qualquer valor acima de 50% se comportará como se você definisse 50%, considere diminuir o tamanho da porcentagem&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="654"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StringFormatInvalid"
+        message="Incorrect formatting string `ext__validation__hint_value_above_50_percent`; missing conversion character in &apos;`%, c`&apos;?"
+        errorLine1="    &lt;string name=&quot;ext__validation__hint_value_above_50_percent&quot;>Qualquer valor acima de 50% se comportará como se você definisse 50%, considere diminuir o tamanho da porcentagem&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="654"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StringFormatInvalid"
+        message="Incorrect formatting string `ext__validation__hint_value_above_50_percent`; missing conversion character in &apos;`% e`&apos;?"
+        errorLine1="    &lt;string name=&quot;ext__validation__hint_value_above_50_percent&quot;>Qualsevol valor superior al 50% es comportarà com si fos el 50%, considera de disminuir-ne el percentatge&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ca/strings.xml"
+            line="689"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StringFormatInvalid"
+        message="Incorrect formatting string `ext__validation__hint_value_above_50_percent`; missing conversion character in &apos;`%, c`&apos;?"
+        errorLine1="    &lt;string name=&quot;ext__validation__hint_value_above_50_percent&quot;>Qualsevol valor superior al 50% es comportarà com si fos el 50%, considera de disminuir-ne el percentatge&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ca/strings.xml"
+            line="689"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StringFormatInvalid"
+        message="Incorrect formatting string `ext__validation__hint_value_above_50_percent`; missing conversion character in &apos;`% s`&apos;?"
+        errorLine1="    &lt;string name=&quot;ext__validation__hint_value_above_50_percent&quot;>Qualquer valor acima de 50% se comportará como se você definisse 50%, considere diminuir o tamanho da percentagem&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="786"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StringFormatInvalid"
+        message="Incorrect formatting string `ext__validation__hint_value_above_50_percent`; missing conversion character in &apos;`%, c`&apos;?"
+        errorLine1="    &lt;string name=&quot;ext__validation__hint_value_above_50_percent&quot;>Qualquer valor acima de 50% se comportará como se você definisse 50%, considere diminuir o tamanho da percentagem&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="786"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StringFormatInvalid"
+        message="Incorrect formatting string `ext__validation__hint_value_above_50_percent`; missing conversion character in &apos;`% s`&apos;?"
+        errorLine1="    &lt;string name=&quot;ext__validation__hint_value_above_50_percent&quot;>Cualquier valor superior al 50% se comportará como si fuese el 50%, considere la posibilidad de disminuir el porcentaje&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="788"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StringFormatInvalid"
+        message="Incorrect formatting string `ext__validation__hint_value_above_50_percent`; missing conversion character in &apos;`%, c`&apos;?"
+        errorLine1="    &lt;string name=&quot;ext__validation__hint_value_above_50_percent&quot;>Cualquier valor superior al 50% se comportará como si fuese el 50%, considere la posibilidad de disminuir el porcentaje&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="788"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;it&quot; (Italian) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__hours__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="819"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;it&quot; (Italian) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__minutes__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="823"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;it&quot; (Italian) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__seconds__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="827"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;it&quot; (Italian) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__items__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="831"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__hours__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="836"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__minutes__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="840"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__seconds__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="844"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__items__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="848"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__characters__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="852"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__candidates__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="856"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;ca&quot; (Catalan) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__hours__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-ca/strings.xml"
+            line="903"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
+        errorLine1="    &lt;plurals name=&quot;unit__hours__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="905"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;ca&quot; (Catalan) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__minutes__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-ca/strings.xml"
+            line="907"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
+        errorLine1="    &lt;plurals name=&quot;unit__minutes__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="909"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;ca&quot; (Catalan) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__seconds__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-ca/strings.xml"
+            line="911"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
+        errorLine1="    &lt;plurals name=&quot;unit__seconds__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="913"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;ca&quot; (Catalan) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__items__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-ca/strings.xml"
+            line="915"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
+        errorLine1="    &lt;plurals name=&quot;unit__items__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="917"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;ca&quot; (Catalan) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__characters__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-ca/strings.xml"
+            line="919"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
+        errorLine1="    &lt;plurals name=&quot;unit__characters__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="921"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;ca&quot; (Catalan) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__candidates__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-ca/strings.xml"
+            line="923"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
+        errorLine1="    &lt;plurals name=&quot;unit__candidates__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="925"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__hours__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="1009"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;es&quot; (Spanish) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__hours__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="1011"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__minutes__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="1013"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;es&quot; (Spanish) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__minutes__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="1015"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__seconds__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="1017"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;es&quot; (Spanish) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__seconds__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="1019"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__items__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="1021"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;es&quot; (Spanish) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__items__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="1023"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__characters__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="1025"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;es&quot; (Spanish) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__characters__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="1027"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__candidates__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="1029"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;es&quot; (Spanish) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__candidates__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="1031"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="&quot;Standart&quot; is a common misspelling; did you mean &quot;Standard&quot;?"
+        errorLine1="    &lt;string name=&quot;pref__keyboard__merge_hint_popups_enabled__summary&quot; comment=&quot;Preference summary&quot;>Fügt Akzente zu Symbol-Popups des Standart Layout hinzu&lt;/string>"
+        errorLine2="                                                                                                                                     ~~~~~~~~">
+        <location
+            file="src/main/res/values-de/strings.xml"
+            line="334"
+            column="134"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="&quot;Boas vindas&quot; is a common misspelling; did you mean &quot;Boas-vindas&quot;?"
+        errorLine1="    &lt;string name=&quot;setup__title&quot; comment=&quot;Title of Setup&quot;>Boas vindas!&lt;/string>"
+        errorLine2="                                                         ~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="544"
+            column="58"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="Repeated word &quot;ayrı&quot; in message: possible typo"
+        errorLine1="    &lt;string name=&quot;setup__enable_ime__description&quot;>Android, kullanabilmeniz için her özel klavyenin ayrı ayrı etkinleştirilmesini gerektirir. Sistem &lt;i>Dil ve Giriş&lt;/i> Ayarlarını açın, orada \&quot;{app_name}\&quot; öğesini etkinleştirin.&lt;/string>"
+        errorLine2="                                                                                                   ~~~~~~~~~">
+        <location
+            file="src/main/res/values-tr/strings.xml"
+            line="552"
+            column="100"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="Repeated word &quot;tekrar&quot; in message: possible typo"
+        errorLine1="    &lt;string name=&quot;crash_multiple_notification__title&quot; comment=&quot;Title of the notification for consecutive crashes&quot;>FlorisBoard tekrar tekrar çalışmayı durduruyor gibi görünüyor…&lt;/string>"
+        errorLine2="                                                                                                                              ~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-tr/strings.xml"
+            line="614"
+            column="127"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="&quot;Inicio&quot; is a common misspelling; did you mean &quot;Início&quot;?"
+        errorLine1="    &lt;string name=&quot;enum__shape_corner__bottom_start&quot; comment=&quot;Enum value label&quot;>Inicio do fundo&lt;/string>"
+        errorLine2="                                                                               ~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="950"
+            column="80"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="&quot;caracter&quot; is a common misspelling; did you mean &quot;carácter&quot;?"
+        errorLine1="    &lt;string name=&quot;enum__swipe_action__delete_character&quot; comment=&quot;Enum value label&quot;>Borrar caracter antes del cursor&lt;/string>"
+        errorLine2="                                                                                          ~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="975"
+            column="91"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Alternar el correutor automáticu&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ast-rES/strings.xml"
+            line="47"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>غیر فعال کردن تصحیح خودکار&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fa/strings.xml"
+            line="53"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Ndiz / Fik autokorrigjuesin&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-sq-rAL/strings.xml"
+            line="54"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Skru av/på autoretting&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-no/strings.xml"
+            line="62"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>چالاککردنی ڕاستکردنەوەی نووسین&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ckb/strings.xml"
+            line="79"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>자동 수정 켜기 / 끄기&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ko-rKR/strings.xml"
+            line="81"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Zapnúť automatické opravy&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-sk/strings.xml"
+            line="81"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Slå stavekontrol til/fra&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-da/strings.xml"
+            line="86"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Alternar correção automática&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="86"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Autokorrektur umschalten&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de/strings.xml"
+            line="87"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Active ou désactive la correction automatique&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="87"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Увімкнути автовиправлення&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-uk/strings.xml"
+            line="87"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>تمكين التصحيح التلقائي&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ar/strings.xml"
+            line="88"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Habilita la correcció automàtica&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ca/strings.xml"
+            line="88"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>(Mal)aktivigi aŭtokorektadon&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-eo/strings.xml"
+            line="88"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Attiva o disattiva correzione automatica&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="88"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>מתג תיקון אוטומטי&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-iw/strings.xml"
+            line="88"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>自動修正の切り替え&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="88"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Pārslēgt automātisko labošanu&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-lv-rLV/strings.xml"
+            line="88"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Autocorrectie schakelen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nl/strings.xml"
+            line="88"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Přepnout automatickou opravu&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-cs/strings.xml"
+            line="90"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Alihkan koreksi otomatis&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-in/strings.xml"
+            line="90"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Alternar correção automática&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="90"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Otomatik düzeltmeyi aç/kapat&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-tr/strings.xml"
+            line="90"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Превключва автоматичните поправки&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-bg/strings.xml"
+            line="91"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Activar la autocorrección&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="91"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Automatikus javítás be/ki&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-hu/strings.xml"
+            line="91"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Przełącz autokorektę&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pl/strings.xml"
+            line="91"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>Включить автоисправление&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ru/strings.xml"
+            line="91"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;quick_action__toggle_autocorrect__tooltip&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>自动更正开关&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="91"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} hora&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="837"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} minuto&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="841"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} segundo&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="845"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} item&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="849"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} caractere&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="853"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} candidato&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="857"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} година&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-uk/strings.xml"
+            line="862"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} хвилина&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-uk/strings.xml"
+            line="868"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} секунда&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-uk/strings.xml"
+            line="874"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} елемент&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-uk/strings.xml"
+            line="880"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} символ&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-uk/strings.xml"
+            line="886"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} пропозиція&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-uk/strings.xml"
+            line="892"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} heure&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="906"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} minute&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="910"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} seconde&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="914"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} élément&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="918"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} caractère&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="922"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} candidat&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="926"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;zero&apos;` matches more than one specific number in this locale (0, 10~20, 30, 40, 50, 60, 100, 1000, 10000, 100000, 1000000, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;zero&quot;>{v} stundu&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-lv-rLV/strings.xml"
+            line="968"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} stunda&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-lv-rLV/strings.xml"
+            line="969"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;zero&apos;` matches more than one specific number in this locale (0, 10~20, 30, 40, 50, 60, 100, 1000, 10000, 100000, 1000000, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;zero&quot;>{v} minūšu&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-lv-rLV/strings.xml"
+            line="973"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} minūte&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-lv-rLV/strings.xml"
+            line="974"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;zero&apos;` matches more than one specific number in this locale (0, 10~20, 30, 40, 50, 60, 100, 1000, 10000, 100000, 1000000, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;zero&quot;>{v} sekunžu&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-lv-rLV/strings.xml"
+            line="978"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} sekunde&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-lv-rLV/strings.xml"
+            line="979"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;zero&apos;` matches more than one specific number in this locale (0, 10~20, 30, 40, 50, 60, 100, 1000, 10000, 100000, 1000000, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;zero&quot;>{v} vienumu&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-lv-rLV/strings.xml"
+            line="983"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} vienums&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-lv-rLV/strings.xml"
+            line="984"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;zero&apos;` matches more than one specific number in this locale (0, 10~20, 30, 40, 50, 60, 100, 1000, 10000, 100000, 1000000, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;zero&quot;>{v} rakstzīmju&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-lv-rLV/strings.xml"
+            line="988"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} rakstzīme&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-lv-rLV/strings.xml"
+            line="989"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;zero&apos;` matches more than one specific number in this locale (0, 10~20, 30, 40, 50, 60, 100, 1000, 10000, 100000, 1000000, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;zero&quot;>{v} izvēles iespēju&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-lv-rLV/strings.xml"
+            line="993"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} izvēles iespēja&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-lv-rLV/strings.xml"
+            line="994"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} hora&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="1010"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} minuto&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="1014"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} segundo&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="1018"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} item&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="1022"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} час&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ru/strings.xml"
+            line="1022"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} caractere&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="1026"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} минута&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ru/strings.xml"
+            line="1028"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} candidato&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="1030"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} секунда&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ru/strings.xml"
+            line="1034"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} элемент&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ru/strings.xml"
+            line="1040"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} символ&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ru/strings.xml"
+            line="1046"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} предложение&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ru/strings.xml"
+            line="1052"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="StringFormatCount"
+        message="Inconsistent number of arguments in formatting string `crash_dialog__report_instructions`; found both 0 here and 1 in values/strings.xml"
+        errorLine1="    &lt;string name=&quot;crash_dialog__report_instructions&quot; comment=&quot;Issue tracker report instructions for the crash dialog. The %s placeholder is the name of the crash report template and always in English/LTR.&quot;>بەهۆی هەڵەیەکی لەناکاو تەختەکلیل  لەکارکەوت...\nبەکارهێنەری بەرێز لەکاتی بوونی کێشە یان وەستانی لەناکاوی بەرنامەکە تکایە ئەم بەشە فەرامۆش مەکەو هاوکاربە لە چارەسەرکردنیدا\n"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-ckb/strings.xml"
+            line="452"
+            column="5"/>
+        <location
+            file="src/main/res/values/strings.xml"
+            line="700"
+            column="5"
+            message="Conflicting number of arguments (1) here"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 26. Merge all the resources in this folder into `mipmap-anydpi`.">
+        <location
+            file="src/main/res/mipmap-anydpi-v26"/>
+    </issue>
+
+    <issue
+        id="UnnecessaryArrayInit"
+        message="This initialization lambda (`{ 0 }`) is unnecessary and is less efficient"
+        errorLine1="            popupIndices = IntArray(n) { 0 }"
+        errorLine2="                                       ~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/ime/popup/PopupUiController.kt"
+            line="208"
+            column="40"/>
+    </issue>
+
+    <issue
+        id="HandlerLeak"
+        message="This `Handler` class should be static or leaks might occur (dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager.ReplyHandler)"
+        errorLine1="    private inner class ReplyHandler("
+        errorLine2="                        ~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginManager.kt"
+            line="2319"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="HandlerLeak"
+        message="This `Handler` class should be static or leaks might occur (org.florisboard.autocorrect.api.AutocorrectPluginService.IncomingHandler)"
+        errorLine1="    private inner class IncomingHandler("
+        errorLine2="                        ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/org/florisboard/autocorrect/api/AutocorrectPluginService.kt"
+            line="278"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="        mutableStateOf(0)"
+        errorLine2="        ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/app/ext/ExtensionListScreen.kt"
+            line="102"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.colorAccentDark` appears to be unused"
+        errorLine1="    &lt;color name=&quot;colorAccentDark&quot;>#F57C00&lt;/color>&lt;!-- Orange 700 -->"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="6"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.colorSuccess` appears to be unused"
+        errorLine1="    &lt;color name=&quot;colorSuccess&quot;>@color/colorPrimary&lt;/color>&lt;!-- Green 500 -->"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="8"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.textColorSuccess` appears to be unused"
+        errorLine1="    &lt;color name=&quot;textColorSuccess&quot;>#FFFFFF&lt;/color>&lt;!-- White -->"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="9"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.colorWarning` appears to be unused"
+        errorLine1="    &lt;color name=&quot;colorWarning&quot;>#FFFF00&lt;/color>&lt;!-- Yellow A200 -->"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="10"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.textColorWarning` appears to be unused"
+        errorLine1="    &lt;color name=&quot;textColorWarning&quot;>#000000&lt;/color>&lt;!-- Black -->"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="11"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.colorError` appears to be unused"
+        errorLine1="    &lt;color name=&quot;colorError&quot;>#B00020&lt;/color>&lt;!-- Red 1000? -->"
+        errorLine2="           ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="12"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.textColorError` appears to be unused"
+        errorLine1="    &lt;color name=&quot;textColorError&quot;>#FFFFFF&lt;/color>&lt;!-- White -->"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="13"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.cardViewBackgroundColor` appears to be unused"
+        errorLine1="    &lt;color name=&quot;cardViewBackgroundColor&quot;>#FFFFFF&lt;/color>&lt;!-- White -->"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="17"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.navigationBarColor` appears to be unused"
+        errorLine1="    &lt;color name=&quot;navigationBarColor&quot;>#000000&lt;/color>&lt;!-- Black -->"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="18"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.toolbarForegroundColor` appears to be unused"
+        errorLine1="    &lt;color name=&quot;toolbarForegroundColor&quot;>#000000&lt;/color>&lt;!-- Black -->"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="19"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.windowBackground` appears to be unused"
+        errorLine1="    &lt;color name=&quot;windowBackground&quot;>#FAFAFA&lt;/color>&lt;!-- Gray 50 -->"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="20"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.dimen.key_height` appears to be unused"
+        errorLine1="    &lt;dimen name=&quot;key_height&quot;>42dp&lt;/dimen>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/dimens.xml"
+            line="4"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.key_popup__threedots_alt` appears to be unused"
+        errorLine1="    &lt;string name=&quot;key_popup__threedots_alt&quot; comment=&quot;Content description for the three-dots icon in a key popup&quot;>Three-dot icon. If visible, indicates that more letters can be used if longer pressed.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="6"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.one_handed__close_btn_content_description` appears to be unused"
+        errorLine1="    &lt;string name=&quot;one_handed__close_btn_content_description&quot; comment=&quot;Content description for the one-handed close button&quot;>Close one-handed mode.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="9"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.one_handed__move_start_btn_content_description` appears to be unused"
+        errorLine1="    &lt;string name=&quot;one_handed__move_start_btn_content_description&quot; comment=&quot;Content description for the one-handed move to left button&quot;>Move keyboard to the left.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="10"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.one_handed__move_end_btn_content_description` appears to be unused"
+        errorLine1="    &lt;string name=&quot;one_handed__move_end_btn_content_description&quot; comment=&quot;Content description for the one-handed move to right button&quot;>Move keyboard to the right.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="11"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.media__tab__emojis` appears to be unused"
+        errorLine1="    &lt;string name=&quot;media__tab__emojis&quot; comment=&quot;Tab description for emojis in the media UI&quot;>Emojis&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="15"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.media__tab__emoticons` appears to be unused"
+        errorLine1="    &lt;string name=&quot;media__tab__emoticons&quot; comment=&quot;Tab description for emoticons in the media UI&quot;>Emoticons&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="16"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.media__tab__kaomoji` appears to be unused"
+        errorLine1="    &lt;string name=&quot;media__tab__kaomoji&quot; comment=&quot;Tab description for kaomoji in the media UI&quot;>Kaomoji&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="17"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.prefs__media__emoji_preferred_hair_style` appears to be unused"
+        errorLine1="    &lt;string name=&quot;prefs__media__emoji_preferred_hair_style&quot;>Preferred emoji hair style&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="19"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.emoji__category__smileys_emotion` appears to be unused"
+        errorLine1="    &lt;string name=&quot;emoji__category__smileys_emotion&quot; comment=&quot;Emoji category name&quot;>Smileys &amp;amp; Emotions&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="40"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.emoji__category__people_body` appears to be unused"
+        errorLine1="    &lt;string name=&quot;emoji__category__people_body&quot; comment=&quot;Emoji category name&quot;>People &amp;amp; Body&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="41"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.emoji__category__animals_nature` appears to be unused"
+        errorLine1="    &lt;string name=&quot;emoji__category__animals_nature&quot; comment=&quot;Emoji category name&quot;>Animals &amp;amp; Nature&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="42"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.emoji__category__food_drink` appears to be unused"
+        errorLine1="    &lt;string name=&quot;emoji__category__food_drink&quot; comment=&quot;Emoji category name&quot;>Food &amp;amp; Drink&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="43"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.emoji__category__travel_places` appears to be unused"
+        errorLine1="    &lt;string name=&quot;emoji__category__travel_places&quot; comment=&quot;Emoji category name&quot;>Travel &amp;amp; Places&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="44"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.emoji__category__activities` appears to be unused"
+        errorLine1="    &lt;string name=&quot;emoji__category__activities&quot; comment=&quot;Emoji category name&quot;>Activities&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="45"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.emoji__category__objects` appears to be unused"
+        errorLine1="    &lt;string name=&quot;emoji__category__objects&quot; comment=&quot;Emoji category name&quot;>Objects&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="46"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.emoji__category__symbols` appears to be unused"
+        errorLine1="    &lt;string name=&quot;emoji__category__symbols&quot; comment=&quot;Emoji category name&quot;>Symbols&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="47"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.emoji__category__flags` appears to be unused"
+        errorLine1="    &lt;string name=&quot;emoji__category__flags&quot; comment=&quot;Emoji category name&quot;>Flags&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="48"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.quick_action__toggle_autocorrect__tooltip` appears to be unused"
+        errorLine1="    &lt;string name=&quot;quick_action__toggle_autocorrect__tooltip&quot;>تمكين التصحيح التلقائي&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ar/strings.xml"
+            line="88"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings__help` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings__help&quot; comment=&quot;General label for help buttons in Settings&quot;>Help&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="122"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings__default` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings__default&quot; comment=&quot;General string which is used when a preference has the default value set&quot;>Default&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="123"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings__localization__subtype_error_layout_not_installed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings__localization__subtype_error_layout_not_installed&quot; comment=&quot;Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID&quot;>{layout_id} (not installed)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="163"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings__localization__group_layouts__label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings__localization__group_layouts__label&quot; comment=&quot;Label of layouts group&quot;>Layouts&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="164"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings__theme_manager__title_manage` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings__theme_manager__title_manage&quot; comment=&quot;Title of the theme manager screen for managing installed and custom themes&quot;>Manage installed themes&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="177"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.pref__theme__source_assets` appears to be unused"
+        errorLine1="    &lt;string name=&quot;pref__theme__source_assets&quot; comment=&quot;Label for the theme source field&quot;>FlorisBoard App Assets&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="178"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.pref__theme__source_internal` appears to be unused"
+        errorLine1="    &lt;string name=&quot;pref__theme__source_internal&quot; comment=&quot;Label for the theme source field&quot;>Internal Storage&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="179"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.pref__theme__source_external` appears to be unused"
+        errorLine1="    &lt;string name=&quot;pref__theme__source_external&quot; comment=&quot;Label for the theme source field&quot;>External Provider&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="180"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings__theme_editor__rule_groups` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings__theme_editor__rule_groups&quot;>Groups&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="195"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings__theme_editor__property_value_color_dialog_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings__theme_editor__property_value_color_dialog_title&quot;>Edit color string&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="218"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings__theme_editor__component_meta_is_borderless` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings__theme_editor__component_meta_is_borderless&quot;>Is borderless&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="222"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.pref__input_feedback__any_feat_gesture_moving_swipe__summary` appears to be unused"
+        errorLine1="    &lt;string name=&quot;pref__input_feedback__any_feat_gesture_moving_swipe__summary&quot; comment=&quot;Preference summary&quot;>e.g. cursor control swipe&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="447"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.pref__smartbar__shared_actions_auto_expand_collapse__summary` appears to be unused"
+        errorLine1="    &lt;string name=&quot;pref__smartbar__shared_actions_auto_expand_collapse__summary&quot; comment=&quot;Preference summary&quot;>Auto-expands/collapses the shared action row based on current state&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="486"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.about__app_icon_content_description` appears to be unused"
+        errorLine1="    &lt;string name=&quot;about__app_icon_content_description&quot; comment=&quot;Content description of app icon in About&quot;>App icon of FlorisBoard&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="608"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.about__view_licenses` appears to be unused"
+        errorLine1="    &lt;string name=&quot;about__view_licenses&quot; comment=&quot;Label of View licenses button in About&quot;>Open source licenses&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="609"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.about__view_privacy_policy` appears to be unused"
+        errorLine1="    &lt;string name=&quot;about__view_privacy_policy&quot; comment=&quot;Label of View privacy policy button in About&quot;>Privacy policy&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="610"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.about__view_source_code` appears to be unused"
+        errorLine1="    &lt;string name=&quot;about__view_source_code&quot; comment=&quot;Label of View source code button in About&quot;>Source code&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="611"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.about__license__title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;about__license__title&quot; comment=&quot;Title of Open-source licenses dialog&quot;>Open-source licenses&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="613"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.about__project_license__error_reason_asset_manager_null` appears to be unused"
+        errorLine1="    &lt;string name=&quot;about__project_license__error_reason_asset_manager_null&quot; comment=&quot;Error text if asset manager is null&quot;>Asset manager reference is null&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="627"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.backup_and_restore__back_up__files_ime_spelling` appears to be unused"
+        errorLine1="    &lt;string name=&quot;backup_and_restore__back_up__files_ime_spelling&quot;>Spelling extensions / dictionaries&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="675"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.backup_and_restore__restore__metadata_error_nothing_to_restore` appears to be unused"
+        errorLine1="    &lt;string name=&quot;backup_and_restore__restore__metadata_error_nothing_to_restore&quot;>This backup archive does not contain any files to restore, please select another one.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="690"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.clip__clear_history` appears to be unused"
+        errorLine1="    &lt;string name=&quot;clip__clear_history&quot;>Clear history&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="729"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.clip__back_to_text_input` appears to be unused"
+        errorLine1="    &lt;string name=&quot;clip__back_to_text_input&quot;>Back to text input&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="734"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.clip__cant_paste` appears to be unused"
+        errorLine1="    &lt;string name=&quot;clip__cant_paste&quot;>This app doesn\&apos;t allow pasting this content.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="735"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.clipboard__cleared_full_history` appears to be unused"
+        errorLine1="    &lt;string name=&quot;clipboard__cleared_full_history&quot;>Cleared full history&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="738"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ext__meta__components` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ext__meta__components&quot;>Bundled components&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="820"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ext__editor__edit_component__title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ext__editor__edit_component__title&quot;>Edit component&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="855"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ext__import__file_skip_ext_incorrect_type` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ext__import__file_skip_ext_incorrect_type&quot; comment=&quot;Reason string when file is of incorrect extension serial type&quot;>Expected an extension archive of serial type \&quot;{expected_serial_type}\&quot; but was \&quot;{actual_serial_type}\&quot;.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="869"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ext__import__file_skip_ext_not_supported` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ext__import__file_skip_ext_not_supported&quot; comment=&quot;Reason string when file is loaded in incorrect context&quot;>Expected a media file (image, audio, font, etc.) but found an extension archive.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="870"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ext__import__file_skip_media_not_supported` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ext__import__file_skip_media_not_supported&quot; comment=&quot;Reason string when file is loaded in incorrect context&quot;>Expected an extension archive but found a media file (image, audio, font, etc.).&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="871"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ext__home__manage_extensions` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ext__home__manage_extensions&quot;>Manage installed extensions&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="903"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.action__export_file` appears to be unused"
+        errorLine1="    &lt;string name=&quot;action__export_file&quot;>Import file&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="927"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.action__export_files` appears to be unused"
+        errorLine1="    &lt;string name=&quot;action__export_files&quot;>Import files&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="928"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.action__import_files` appears to be unused"
+        errorLine1="    &lt;string name=&quot;action__import_files&quot;>Import files&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="931"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.action__done` appears to be unused"
+        errorLine1="    &lt;string name=&quot;action__done&quot;>Done&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="934"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.action__select` appears to be unused"
+        errorLine1="    &lt;string name=&quot;action__select&quot;>Select&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="937"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.action__select_dir` appears to be unused"
+        errorLine1="    &lt;string name=&quot;action__select_dir&quot;>Select directory&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="938"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.action__select_dirs` appears to be unused"
+        errorLine1="    &lt;string name=&quot;action__select_dirs&quot;>Select directories&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="939"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.error__details` appears to be unused"
+        errorLine1="    &lt;string name=&quot;error__details&quot;>Details&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="946"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.error__invalid` appears to be unused"
+        errorLine1="    &lt;string name=&quot;error__invalid&quot;>Invalid&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="947"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.state__enabled` appears to be unused"
+        errorLine1="    &lt;string name=&quot;state__enabled&quot;>Enabled&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="968"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.state__no_dir_selected` appears to be unused"
+        errorLine1="    &lt;string name=&quot;state__no_dir_selected&quot;>No directory selected&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="969"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.state__no_dirs_selected` appears to be unused"
+        errorLine1="    &lt;string name=&quot;state__no_dirs_selected&quot;>No directories selected&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="970"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.enum__emoji_hair_style__default` appears to be unused"
+        errorLine1="    &lt;string name=&quot;enum__emoji_hair_style__default&quot; comment=&quot;Enum value label&quot;>{emoji} Default hair&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1024"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.enum__emoji_hair_style__red_hair` appears to be unused"
+        errorLine1="    &lt;string name=&quot;enum__emoji_hair_style__red_hair&quot; comment=&quot;Enum value label&quot;>{emoji} Red hair&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1025"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.enum__emoji_hair_style__curly_hair` appears to be unused"
+        errorLine1="    &lt;string name=&quot;enum__emoji_hair_style__curly_hair&quot; comment=&quot;Enum value label&quot;>{emoji} Curly hair&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1026"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.enum__emoji_hair_style__white_hair` appears to be unused"
+        errorLine1="    &lt;string name=&quot;enum__emoji_hair_style__white_hair&quot; comment=&quot;Enum value label&quot;>{emoji} White hair&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1027"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.enum__emoji_hair_style__bald` appears to be unused"
+        errorLine1="    &lt;string name=&quot;enum__emoji_hair_style__bald&quot; comment=&quot;Enum value label&quot;>{emoji} Bald&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1028"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.unit__hours__symbol` appears to be unused"
+        errorLine1="    &lt;string name=&quot;unit__hours__symbol&quot; translatable=&quot;false&quot;>{v} h&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1179"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.unit__minutes__symbol` appears to be unused"
+        errorLine1="    &lt;string name=&quot;unit__minutes__symbol&quot; translatable=&quot;false&quot;>{v} m&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1180"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.unit__seconds__symbol` appears to be unused"
+        errorLine1="    &lt;string name=&quot;unit__seconds__symbol&quot; translatable=&quot;false&quot;>{v} s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1181"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.plurals.unit__hours__written` appears to be unused"
+        errorLine1="    &lt;plurals name=&quot;unit__hours__written&quot;>"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1188"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.key__dotted_circle` appears to be unused"
+        errorLine1="    &lt;string name=&quot;key__dotted_circle&quot; translatable=&quot;false&quot;>&amp;#9676;&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings_dont_translate.xml"
+            line="24"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.media__tab__emoticons_label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;media__tab__emoticons_label&quot; translatable=&quot;false&quot;>;-)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings_dont_translate.xml"
+            line="29"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.media__tab__kaomoji_label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;media__tab__kaomoji_label&quot; translatable=&quot;false&quot;>(^-^*)/&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings_dont_translate.xml"
+            line="30"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;emoji__history__empty_message&quot; comment=&quot;Message if the emoji history is empty&quot;>Nenhum emoji usado ainda... Que tal começar agora? Eles aparecerão aqui.&lt;/string>"
+        errorLine2="                                                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="45"
+            column="98"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;emoji__history__empty_message&quot; comment=&quot;Message if the emoji history is empty&quot;>Nenhum emoji usado ainda... Que tal começar agora? Eles irão aparecer aqui.&lt;/string>"
+        errorLine2="                                                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="46"
+            column="98"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;about__title&quot; comment=&quot;Title of About activity&quot;>Informacije o...&lt;/string>"
+        errorLine2="                                                                  ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-bs/strings.xml"
+            line="53"
+            column="67"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;settings__theme_editor__code_recording_placeholder&quot;>در حال ضبط...&lt;/string>"
+        errorLine2="                                                                      ~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fa/strings.xml"
+            line="132"
+            column="71"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;crash_dialog__report_instructions&quot; comment=&quot;Issue tracker report instructions for the crash dialog. The %s placeholder is the name of the crash report template and always in English/LTR.&quot;>بەهۆی هەڵەیەکی لەناکاو تەختەکلیل  لەکارکەوت...\nبەکارهێنەری بەرێز لەکاتی بوونی کێشە یان وەستانی لەناکاوی بەرنامەکە تکایە ئەم بەشە فەرامۆش مەکەو هاوکاربە لە چارەسەرکردنیدا\n"
+        errorLine2="                                                                                                                                                                                                              ^">
+        <location
+            file="src/main/res/values-ckb/strings.xml"
+            line="452"
+            column="207"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;settings__other__title&quot; comment=&quot;Title of Other settings&quot;>其他杂项...&lt;/string>"
+        errorLine2="                                                                            ~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="521"
+            column="77"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;ext__import__file_skip_ext_not_supported&quot; comment=&quot;Reason string when file is loaded in incorrect context&quot;>Era esperado um arquivo de mídia (imagem, áudio, font, etc...) porém foi encontrado um arquivo de extensão.&lt;/string>"
+        errorLine2="                                                                                                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="644"
+            column="126"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;ext__import__file_skip_media_not_supported&quot; comment=&quot;Reason string when file is loaded in incorrect context&quot;>Era esperado um arquivo de extensão, porém foi encontrado um arquivo de mídia (image, audio, font, etc...).&lt;/string>"
+        errorLine2="                                                                                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="645"
+            column="128"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;ext__import__file_skip_ext_not_supported&quot; comment=&quot;Reason string when file is loaded in incorrect context&quot;>Era esperado um ficheiro de mídia (imagem, áudio, font, etc...) mas foi encontrado um ficheiro de extensão.&lt;/string>"
+        errorLine2="                                                                                                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="761"
+            column="126"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;ext__import__file_skip_media_not_supported&quot; comment=&quot;Reason string when file is loaded in incorrect context&quot;>Era esperado um ficheiro de extensão, mas foi encontrado um ficheiro de média (image, audio, font, etc...).&lt;/string>"
+        errorLine2="                                                                                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="762"
+            column="128"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                    val mediaUri = Uri.parse(values.getAsString(Columns.MediaUri))"
+        errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/ime/clipboard/provider/ClipboardMediaProvider.kt"
+            line="141"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                Uri.parse(resources.getString(R.string.florisboard__issue_tracker_url))"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/lib/crashutility/CrashDialogActivity.kt"
+            line="130"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="            context.getSharedPreferences(SHARED_PREFS_FILE, Context.MODE_PRIVATE)"
+        errorLine2="            ^">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/lib/crashutility/CrashUtility.kt"
+            line="236"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                else -> FlorisRef(Uri.parse(str))"
+        errorLine2="                                  ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/lib/io/FlorisRef.kt"
+            line="156"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                    url.startsWith(URL_MAILTO_PREFIX) -> Uri.parse(url)"
+        errorLine2="                                                         ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/lib/io/FlorisRef.kt"
+            line="171"
+            column="58"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                else -> Uri.parse(&quot;$URL_HTTPS_PREFIX$url&quot;).normalizeScheme()"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/lib/io/FlorisRef.kt"
+            line="172"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(target)).apply {"
+        errorLine2="                                            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/patrickgold/florisboard/lib/util/LaunchUtils.kt"
+            line="76"
+            column="45"/>
+    </issue>
+
+</issues>

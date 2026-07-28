@@ -1,0 +1,91 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:AutocorrectPluginManager.kt:AutocorrectPluginManager$!prefs.suggestion.enabled.get() || prefs.suggestion.autocorrectPluginComponent.get().isBlank() || !editorInstance.activeInfo.inputAttributes.allowsAutocorrectPluginSession( isPrivateSession = isPrivateSession, isRawInputEditor = editorInstance.activeInfo.isRawInputEditor, ) || !data.isAutocorrectTraceInput(inputLayout.mode) || width &lt;= 0f || height &lt;= 0f</ID>
+    <ID>ComplexCondition:AutocorrectPluginManager.kt:AutocorrectPluginManager$!releaseBindingIfIdle() &amp;&amp; hadSession &amp;&amp; uiClientCount &gt; 0 &amp;&amp; remote != null &amp;&amp; prefs.suggestion.autocorrectPluginComponent.get() == boundProviderId</ID>
+    <ID>ComplexCondition:AutocorrectPluginManager.kt:AutocorrectPluginManager$activeSession?.sessionId != session.sessionId || admittedSessionId != session.sessionId || remote !== service || boundProviderId != activeProviderId</ID>
+    <ID>ComplexCondition:AutocorrectPluginManager.kt:AutocorrectPluginManager$uiClientCount == 0 || providerId.isBlank() || providerId != boundProviderId || remote == null</ID>
+    <ID>ComplexCondition:AutocorrectPluginManager.kt:windowEnd &gt; windowStart &amp;&amp; windowEnd &lt; text.length &amp;&amp; Character.isHighSurrogate(text[windowEnd - 1]) &amp;&amp; Character.isLowSurrogate(text[windowEnd])</ID>
+    <ID>ComplexCondition:AutocorrectPluginManager.kt:windowStart &gt; 0 &amp;&amp; windowStart &lt; text.length &amp;&amp; Character.isLowSurrogate(text[windowStart]) &amp;&amp; Character.isHighSurrogate(text[windowStart - 1])</ID>
+    <ID>ComplexCondition:AutocorrectUserDictionary.kt:(operation == AutocorrectUserDictionaryOperation.UPSERT &amp;&amp; (originUiRequestId == 0L || entry == null)) || (operation == AutocorrectUserDictionaryOperation.DELETE &amp;&amp; (originUiRequestId == 0L || entryId == 0L))</ID>
+    <ID>ComplexCondition:AutocorrectUserDictionary.kt:requestId == null || requestId &lt;= 0L || rawEntries == null || rawNextAfterId == null || rawNextAfterId &lt; 0L || rawEntries.size &gt; AutocorrectPluginContract.MAX_USER_DICTIONARY_PAGE_SIZE || entryBundles.size != rawEntries.size || entries.size != entryBundles.size</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized private fun ensureSession: AutocorrectSession?</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$private fun handleUserDictionaryRequest</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$private fun performUserDictionaryRequest: AutocorrectUserDictionaryPage</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$private fun reconcileSelectedProvider</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$private suspend fun requestCandidates: AutocorrectProviderSuggestionResult?</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager.ReplyHandler$override fun handleMessage</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectPluginManager.kt:internal fun EditorContent.buildAutocorrectWireRequest: AutocorrectWireRequest?</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectPluginService.kt:AutocorrectPluginService.IncomingHandler$override fun handleMessage</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectPluginService.kt:HostUserDictionaryClient$private fun AutocorrectUserDictionaryPage.validatedFor: AutocorrectUserDictionaryPage</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectPluginUi.kt:@Composable fun AutocorrectPluginUiHost</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginUiItem</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectPluginUiKeyboard.kt:@Composable private fun KeyboardPluginUiItem</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectProtocolV4GoldenTest.kt:AutocorrectProtocolV4GoldenTest$private fun Any?.canonicalValue: String</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectPublicApiCompatibilityTest.kt:AutocorrectPublicApiCompatibilityTest$private fun classSignature: String</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectUserDictionary.kt:fun userDictionaryRequestFromBundle: AutocorrectUserDictionaryRequest?</ID>
+    <ID>FunctionNaming:AutocorrectPluginUi.kt:@Composable fun AutocorrectPluginUiHost</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable internal fun AppPluginUiPage</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun &lt;I&gt; AppPluginDocumentItem</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginChoiceListItem</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginListItem</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginUiItem</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginValueDialog</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiKeyboard.kt:@Composable internal fun KeyboardPluginUiPage</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiKeyboard.kt:@Composable private fun KeyboardPluginUiItem</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiPresentation.kt:@Composable internal fun PluginListItem</ID>
+    <ID>LargeClass:AutocorrectPluginManager.kt:AutocorrectPluginManager : SuggestionProvider</ID>
+    <ID>LongMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized internal fun sendPluginUiDocument</ID>
+    <ID>LongMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized private fun ensureSession: AutocorrectSession?</ID>
+    <ID>LongMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$private fun handleUserDictionaryRequest</ID>
+    <ID>LongMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$private fun performUserDictionaryRequest: AutocorrectUserDictionaryPage</ID>
+    <ID>LongMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$private suspend fun requestCandidates: AutocorrectProviderSuggestionResult?</ID>
+    <ID>LongMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager.ReplyHandler$override fun handleMessage</ID>
+    <ID>LongMethod:AutocorrectPluginService.kt:AutocorrectPluginService.IncomingHandler$override fun handleMessage</ID>
+    <ID>LongMethod:AutocorrectPluginUi.kt:@Composable fun AutocorrectPluginUiHost</ID>
+    <ID>LongMethod:AutocorrectPluginUi.kt:@Suppress("DEPRECATION") private fun Bundle.toPluginUiItem: AutocorrectPluginUiItem?</ID>
+    <ID>LongMethod:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginUiItem</ID>
+    <ID>LongMethod:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginValueDialog</ID>
+    <ID>LongMethod:AutocorrectPluginUiKeyboard.kt:@Composable private fun KeyboardPluginUiItem</ID>
+    <ID>LongMethod:AutocorrectProtocolV4GoldenTest.kt:AutocorrectProtocolV4GoldenTest$private fun buildGoldenFixture: String</ID>
+    <ID>LongMethod:AutocorrectPublicApiCompatibilityTest.kt:AutocorrectPublicApiCompatibilityTest$private fun classSignature: String</ID>
+    <ID>MagicNumber:AutocorrectPluginContract.kt:0x1F3FB</ID>
+    <ID>MagicNumber:AutocorrectPluginContract.kt:0x1F3FF</ID>
+    <ID>MagicNumber:AutocorrectPluginContract.kt:AutocorrectRequest.Companion$3</ID>
+    <ID>MagicNumber:AutocorrectPluginUiFormatting.kt:1_001L</ID>
+    <ID>ReturnCount:AutocorrectPluginContract.kt:AutocorrectCandidate.Companion$internal fun fromBundle: AutocorrectCandidate?</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized fun notifyTextEvent</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized internal fun consumePredictionHints</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized internal fun leaseBoostedCodePoints: PredictionHintLease</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized internal fun recordInputTouch</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized private fun bind</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized private fun ensureSession: AutocorrectSession?</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized private fun inputTraceFor: AutocorrectInputTrace</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized private fun sendPluginUiOperation: Long?</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$override suspend fun removeSuggestion: Boolean</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$private fun admitSession</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$private fun handleUserDictionaryRequest</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$private fun reconcileSelectedProvider</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$private fun releaseBindingIfIdle: Boolean</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$private suspend fun requestCandidates: AutocorrectProviderSuggestionResult?</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$private suspend fun suggestEligibleContent: AutocorrectPluginSuggestionBatch</ID>
+    <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager.ReplyHandler$override fun handleMessage</ID>
+    <ID>ReturnCount:AutocorrectPluginService.kt:AutocorrectPluginService.IncomingHandler$override fun handleMessage</ID>
+    <ID>ReturnCount:AutocorrectPluginService.kt:BindingHostAuthorization$fun accepts: Boolean</ID>
+    <ID>ReturnCount:AutocorrectPluginService.kt:HostUserDictionaryClient$private suspend fun request: AutocorrectUserDictionaryPage</ID>
+    <ID>ReturnCount:AutocorrectPluginUi.kt:@Suppress("DEPRECATION") internal fun Bundle.pluginUiDocument: AutocorrectPluginDocument?</ID>
+    <ID>ReturnCount:AutocorrectPluginUi.kt:@Suppress("DEPRECATION") private fun Bundle.toPluginUiItem: AutocorrectPluginUiItem?</ID>
+    <ID>ReturnCount:AutocorrectPluginUi.kt:@Suppress("DEPRECATION") private fun Bundle.toPluginUiPage: AutocorrectPluginUiPage?</ID>
+    <ID>ReturnCount:AutocorrectUserDictionary.kt:fun userDictionaryRequestFromBundle: AutocorrectUserDictionaryRequest?</ID>
+    <ID>ReturnCount:AutocorrectUserDictionary.kt:private fun AutocorrectUserDictionaryEntry.validated: AutocorrectUserDictionaryEntry?</ID>
+    <ID>ReturnCount:AutocorrectUserDictionary.kt:private fun Bundle.toDictionaryEntry: AutocorrectUserDictionaryEntry?</ID>
+    <ID>TooGenericExceptionCaught:AutocorrectPluginService.kt:AutocorrectPluginService.IncomingHandler$error: Exception</ID>
+    <ID>TooManyFunctions:AutocorrectPluginContract.kt:org.florisboard.autocorrect.api.AutocorrectPluginContract.kt</ID>
+    <ID>TooManyFunctions:AutocorrectPluginManager.kt:AutocorrectPluginManager : SuggestionProvider</ID>
+    <ID>TooManyFunctions:AutocorrectPluginManager.kt:dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager.kt</ID>
+    <ID>TooManyFunctions:AutocorrectPluginService.kt:AutocorrectPluginService : Service</ID>
+    <ID>TooManyFunctions:AutocorrectPluginUi.kt:org.florisboard.autocorrect.api.AutocorrectPluginUi.kt</ID>
+    <ID>TooManyFunctions:AutocorrectUserDictionary.kt:org.florisboard.autocorrect.api.AutocorrectUserDictionary.kt</ID>
+  </CurrentIssues>
+</SmellBaseline>
