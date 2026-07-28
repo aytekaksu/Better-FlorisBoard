@@ -40,9 +40,6 @@ class TextKey(override val data: AbstractKeyData) : Key(data) {
     var computedNumberHint: KeyData? = null
     var computedHintData: KeyData = TextKeyData.UNSPECIFIED
 
-    // This should exclusively be set and used by the TextKeyboardLayout
-    var computedDataOnDown: KeyData = TextKeyData.UNSPECIFIED
-
     fun compute(evaluator: ComputingEvaluator) {
         val keyboard = evaluator.keyboard as? TextKeyboard ?: return
         val keyboardMode = keyboard.mode

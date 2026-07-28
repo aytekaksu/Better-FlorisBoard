@@ -634,7 +634,7 @@ class MultiTextKeyData(
 internal fun asString(data: KeyData, isForDisplay: Boolean) : String {
     return buildString {
         if (isForDisplay || data.code == KeyCode.URI_COMPONENT_TLD || data.code < KeyCode.SPACE) {
-            if (Unicode.isNonSpacingMark(data.code) && !data.label.startsWith("◌")) {
+            if (data.code > 0 && Unicode.isNonSpacingMark(data.code) && !data.label.startsWith("◌")) {
                 append("◌")
             }
             append(data.label)

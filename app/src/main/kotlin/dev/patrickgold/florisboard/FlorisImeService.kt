@@ -258,6 +258,7 @@ class FlorisImeService : LifecycleInputMethodService() {
     private val prefs by FlorisPreferenceStore
     private val autocorrectPluginManager by autocorrectPluginManager()
     val editorInstance by editorInstance()
+    private val glideTypingManager by glideTypingManager()
     private val keyboardManager by keyboardManager()
     private val nlpManager by nlpManager()
     private val subtypeManager by subtypeManager()
@@ -353,6 +354,7 @@ class FlorisImeService : LifecycleInputMethodService() {
     }
 
     override fun onDestroy() {
+        glideTypingManager.cancelPendingInput()
         autocorrectPluginManager.hideKeyboardPluginUi()
         nlpManager.finishAutocorrectSession()
         super.onDestroy()
@@ -362,6 +364,7 @@ class FlorisImeService : LifecycleInputMethodService() {
 
     override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
         flogInfo { "restarting=$restarting info=${info?.debugSummarize()}" }
+        glideTypingManager.cancelPendingInput()
         nlpManager.finishAutocorrectSession()
         super.onStartInput(info, restarting)
         if (info == null) return
@@ -371,6 +374,7 @@ class FlorisImeService : LifecycleInputMethodService() {
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         flogInfo { "restarting=$restarting info=${info?.debugSummarize()}" }
+        glideTypingManager.cancelPendingInput()
         super.onStartInputView(info, restarting)
         if (info == null) return
         val editorInfo = FlorisEditorInfo.wrap(info)
@@ -413,6 +417,7 @@ class FlorisImeService : LifecycleInputMethodService() {
 
     override fun onFinishInputView(finishingInput: Boolean) {
         flogInfo { "finishing=$finishingInput" }
+        glideTypingManager.cancelPendingInput()
         autocorrectPluginManager.hideKeyboardPluginUi()
         nlpManager.finishAutocorrectSession()
         super.onFinishInputView(finishingInput)
@@ -421,6 +426,7 @@ class FlorisImeService : LifecycleInputMethodService() {
 
     override fun onFinishInput() {
         flogInfo { "(no args)" }
+        glideTypingManager.cancelPendingInput()
         autocorrectPluginManager.hideKeyboardPluginUi()
         nlpManager.finishAutocorrectSession()
         super.onFinishInput()
@@ -467,6 +473,8 @@ class FlorisImeService : LifecycleInputMethodService() {
 
     override fun onUpdateExtractingVisibility(info: EditorInfo?) {
         if (info != null) {
+            glideTypingManager.cancelPendingInput()
+            nlpManager.finishAutocorrectSession()
             editorInstance.handleStartInputView(FlorisEditorInfo.wrap(info), isRestart = true)
         }
         when (prefs.keyboard.landscapeInputUiMode.get()) {

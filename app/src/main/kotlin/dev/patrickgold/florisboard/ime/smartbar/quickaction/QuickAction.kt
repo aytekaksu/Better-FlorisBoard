@@ -64,8 +64,11 @@ sealed class QuickAction {
     @SerialName("insert_text")
     data class InsertText(val data: String) : QuickAction() {
         override fun onPointerUp(context: Context) {
-            val editorInstance by context.editorInstance()
-            editorInstance.commitText(data)
+            val keyboardManager by context.keyboardManager()
+            keyboardManager.inputEventDispatcher.dispatchInputEvent {
+                val editorInstance by context.editorInstance()
+                editorInstance.commitText(data)
+            }
         }
     }
 }

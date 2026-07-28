@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.R
+import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.ime.input.LocalInputFeedbackController
 import dev.patrickgold.florisboard.ime.theme.FlorisImeTheme
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
@@ -57,6 +58,8 @@ import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
 @SuppressLint("ViewConstructor")
 class ExtractedInputRootView(val ims: FlorisImeService, eet: ExtractEditText?) : FrameLayout(ims) {
+    private val keyboardManager by ims.keyboardManager()
+
     val composeView: ComposeView
     val extractEditText: ExtractEditText
 
@@ -133,10 +136,15 @@ class ExtractedInputRootView(val ims: FlorisImeService, eet: ExtractEditText?) :
                             SnyggButton(
                                 FlorisImeUi.ExtractedLandscapeInputAction.elementName,
                                 onClick = {
-                                    if (activeEditorInfo.extractedActionId != 0) {
-                                        ims.currentInputConnection?.performEditorAction(activeEditorInfo.extractedActionId)
-                                    } else {
-                                        ims.editorInstance.performEnterAction(activeEditorInfo.imeOptions.action)
+                                    val actionId = activeEditorInfo.extractedActionId
+                                    val action = activeEditorInfo.imeOptions.action
+                                    keyboardManager.inputEventDispatcher.dispatchInputEvent {
+                                        if (actionId != 0) {
+                                            ims.currentInputConnection
+                                                ?.performEditorAction(actionId)
+                                        } else {
+                                            ims.editorInstance.performEnterAction(action)
+                                        }
                                     }
                                 },
                                 modifier = Modifier.padding(horizontal = 8.dp),

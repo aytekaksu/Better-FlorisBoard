@@ -17,7 +17,6 @@
 package dev.patrickgold.florisboard.ime.keyboard
 
 import android.content.Context
-import android.icu.lang.UCharacter
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.compose.runtime.getValue
@@ -127,7 +126,12 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             KeyCode.UNDO,
             KeyCode.REDO,
         )
-    ).also { it.keyEventReceiver = this }
+    ).also {
+        it.keyEventReceiver = this
+        it.keyRepeatFeedbackReceiver = { data ->
+            FlorisImeService.inputFeedbackController()?.keyRepeatedAction(data)
+        }
+    }
 
     init {
         scope.launch(Dispatchers.Main.immediate) {
@@ -163,6 +167,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 updateActiveEvaluators()
             }
             subtypeManager.activeSubtypeFlow.collectLatestIn(scope) {
+                autocorrectPluginManager.clearInputTrace()
                 reevaluateInputShiftState()
                 updateActiveEvaluators()
                 editorInstance.refreshComposing()
@@ -233,6 +238,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     }
 
     fun resetSuggestions(content: EditorContent) {
+        autocorrectPluginManager.consumePredictionHints()
         if (!(activeState.isComposingEnabled || nlpManager.isSuggestionOn())) {
             nlpManager.clearSuggestions()
             return
@@ -294,14 +300,23 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     fun commitCandidate(
         candidate: SuggestionCandidate,
         acceptanceKind: AutocorrectAcceptanceKind = AutocorrectAcceptanceKind.MANUAL,
-    ): Boolean {
-        return commitCandidateResult(candidate, acceptanceKind) == EditorEditResult.SUCCESS
+    ) {
+        val expectedContent = editorInstance.activeContent
+        inputEventDispatcher.dispatchInputEvent {
+            if (!isQueuedCandidateContextCurrent(candidate, expectedContent, editorInstance.activeContent)) {
+                return@dispatchInputEvent
+            }
+            commitCandidateResult(candidate, acceptanceKind)
+        }
     }
 
     private fun commitCandidateResult(
         candidate: SuggestionCandidate,
         acceptanceKind: AutocorrectAcceptanceKind,
     ): EditorEditResult {
+        if (!isCandidateOriginCurrent(candidate, editorInstance.activeContent)) {
+            return EditorEditResult.NOT_APPLICABLE
+        }
         if (!autocorrectPluginManager.canCommitCandidate(candidate)) {
             return EditorEditResult.NOT_APPLICABLE
         }
@@ -339,14 +354,17 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         return candidate to result
     }
 
-    fun commitGesture(word: String) {
+    fun commitGesture(word: String): Boolean {
         autocorrectPluginManager.clearInputTrace()
         val committedWord = fixCase(word)
-        editorInstance.commitGesture(committedWord)
-        autocorrectPluginManager.notifyTextEvent(
-            committedWord,
-            AutocorrectTextEventKind.COMMIT_GESTURE,
-        )
+        return editorInstance.commitGesture(committedWord).also { committed ->
+            if (committed) {
+                autocorrectPluginManager.notifyTextEvent(
+                    committedWord,
+                    AutocorrectTextEventKind.COMMIT_GESTURE,
+                )
+            }
+        }
     }
 
     fun commitGesture(candidate: SuggestionCandidate): Boolean {
@@ -383,8 +401,13 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     /**
      * Handles [KeyCode] arrow and move events, behaves differently depending on text selection.
      */
-    fun handleArrow(code: Int, count: Int = 1) = editorInstance.apply {
-        val isShiftPressed = activeState.isManualSelectionMode || inputEventDispatcher.isPressed(KeyCode.SHIFT)
+    fun handleArrow(
+        code: Int,
+        count: Int = 1,
+        isShiftPressedOverride: Boolean? = null,
+    ) = editorInstance.apply {
+        val isShiftPressed = isShiftPressedOverride
+            ?: (activeState.isManualSelectionMode || inputEventDispatcher.isPressed(KeyCode.SHIFT))
         val content = activeContent
         val selection = content.selection
         when (code) {
@@ -914,9 +937,9 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                         }
                     }
                     else -> when (data.type) {
-                        KeyType.CHARACTER, KeyType.NUMERIC ->{
+                        KeyType.CHARACTER, KeyType.NUMERIC -> {
                             val text = data.asString(isForDisplay = false)
-                            if (!UCharacter.isUAlphabetic(UCharacter.codePointAt(text, 0))) {
+                            if (!data.isWordInput(activeState.keyboardMode)) {
                                 val typedWord = editorInstance.activeContent.currentWordText
                                 val (_, commitResult) = commitAutoCorrectionCandidate()
                                 if (commitResult == EditorEditResult.NOT_APPLICABLE) {
@@ -961,7 +984,6 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     }
 
     override fun onInputKeyRepeat(data: KeyData) {
-        FlorisImeService.inputFeedbackController()?.keyRepeatedAction(data)
         when (data.code) {
             KeyCode.ARROW_DOWN,
             KeyCode.ARROW_LEFT,
@@ -985,11 +1007,17 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     fun onHardwareKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         when (keyCode) {
             KeyEvent.KEYCODE_SPACE -> {
-                handleHardwareKeyboardSpace()
+                inputEventDispatcher.dispatchInputEvent(::handleHardwareKeyboardSpace)
                 return true
             }
             KeyEvent.KEYCODE_ENTER -> {
-                handleEnter()
+                inputEventDispatcher.sendDownUp(
+                    TextKeyData(
+                        type = KeyType.ENTER_EDITING,
+                        code = KeyCode.ENTER,
+                        label = "enter",
+                    ),
+                )
                 return true
             }
             KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> {
@@ -1176,3 +1204,20 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         }
     }
 }
+
+internal fun isQueuedCandidateContextCurrent(
+    candidate: SuggestionCandidate,
+    expectedContent: EditorContent,
+    currentContent: EditorContent,
+): Boolean = candidate is ClipboardSuggestionCandidate ||
+    candidate.replacement != null ||
+    candidate.originContent?.let { it == expectedContent && it == currentContent }
+        ?: (expectedContent == currentContent)
+
+internal fun isCandidateOriginCurrent(
+    candidate: SuggestionCandidate,
+    currentContent: EditorContent,
+): Boolean = candidate is ClipboardSuggestionCandidate ||
+    candidate.replacement != null ||
+    candidate.originContent == null ||
+    candidate.originContent == currentContent

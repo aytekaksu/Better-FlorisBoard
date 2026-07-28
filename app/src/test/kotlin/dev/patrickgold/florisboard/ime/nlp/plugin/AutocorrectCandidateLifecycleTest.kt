@@ -101,6 +101,13 @@ class AutocorrectCandidateLifecycleTest : FunSpec({
             )
     }
 
+    test("explicit replacement ranges must fit the editor snapshot") {
+        isAutocorrectReplacementInContent(-1, -1, 4) shouldBe true
+        isAutocorrectReplacementInContent(0, 4, 4) shouldBe true
+        isAutocorrectReplacementInContent(100, 104, 4) shouldBe false
+        isAutocorrectReplacementInContent(3, 1, 4) shouldBe false
+    }
+
     test("latest candidate request is the only one allowed to publish") {
         val revisions = CandidateRequestRevision()
         val stale = revisions.next()

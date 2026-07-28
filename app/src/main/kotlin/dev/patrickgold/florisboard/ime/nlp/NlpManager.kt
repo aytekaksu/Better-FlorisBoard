@@ -35,13 +35,19 @@ import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginSuggestionBat
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
 import dev.patrickgold.florisboard.subtypeManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -75,6 +81,96 @@ internal class CandidateRequestRevision {
     @Synchronized
     fun publishIfCurrent(revision: Long, publish: () -> Unit) =
         (revision == current).also { if (it) publish() }
+}
+
+internal data class RevisionedPreload<T>(
+    val revision: Long,
+    val value: T,
+)
+
+internal class GlideTypingLexiconKey(
+    val subtype: Subtype,
+) {
+    private val locales = subtype.locales()
+    private val suggestionProvider = subtype.nlpProviders.suggestion
+
+    override fun equals(other: Any?) =
+        other is GlideTypingLexiconKey &&
+            locales == other.locales &&
+            suggestionProvider == other.suggestionProvider
+
+    override fun hashCode() = 31 * locales.hashCode() + suggestionProvider.hashCode()
+}
+
+/**
+ * Serializes preloads for a key and exposes only data produced after the latest preload completed.
+ */
+internal class AsyncPreloadCache<K, V>(
+    private val scope: CoroutineScope,
+    private val maxEntries: Int = 5,
+    private val load: suspend (K) -> V,
+) {
+    private val guard = Any()
+    private val latest = LinkedHashMap<K, Deferred<RevisionedPreload<V>>>(maxEntries, 0.75f, true)
+    private var nextRevision = 0L
+
+    init {
+        require(maxEntries > 0)
+    }
+
+    fun preload(key: K): Deferred<RevisionedPreload<V>> {
+        val pending = synchronized(guard) {
+            createPreload(key)
+        }
+        pending.start()
+        return pending
+    }
+
+    suspend fun await(key: K): RevisionedPreload<V> {
+        while (true) {
+            val pending = synchronized(guard) { latest[key] ?: createPreload(key) }
+            pending.start()
+            val value = try {
+                pending.await()
+            } catch (error: Exception) {
+                if (pending.isCancelled) {
+                    synchronized(guard) {
+                        if (latest[key] === pending) latest.remove(key)
+                    }
+                }
+                throw error
+            }
+            if (synchronized(guard) { latest[key] === pending }) {
+                return value
+            }
+        }
+    }
+
+    private fun createPreload(key: K): Deferred<RevisionedPreload<V>> {
+        val previous = latest[key]
+        val revision = ++nextRevision
+        return scope.async(start = CoroutineStart.LAZY) {
+            val previousValue = try {
+                previous?.await()
+            } catch (error: CancellationException) {
+                if (!currentCoroutineContext().isActive) throw error
+                null
+            } catch (_: Exception) {
+                null
+            }
+            val value = load(key)
+            previousValue?.takeIf { it.value == value } ?: RevisionedPreload(revision, value)
+        }.also { pending ->
+            latest[key] = pending
+            while (latest.size > maxEntries) {
+                latest.entries.iterator().run {
+                    val evicted = next().value
+                    remove()
+                    evicted.cancel()
+                }
+            }
+        }
+    }
 }
 
 internal class AutomaticSmartbarMutations {
@@ -137,6 +233,11 @@ class NlpManager(context: Context) {
     private val candidateRequestRevision = CandidateRequestRevision()
     private val automaticSmartbarMutations = AutomaticSmartbarMutations()
     private val sharedActionsAnimationSuppression = SharedActionsAnimationSuppressionTracker()
+    private val glideTypingWords = AsyncPreloadCache<GlideTypingLexiconKey, List<String>>(scope) { key ->
+        val subtype = key.subtype
+        preloadProviders(subtype)
+        getBuiltInSuggestionProvider(subtype).getListOfWords(subtype).toList()
+    }
     private val suggestionJobGuard = Any()
     private val internalSuggestionsGuard = Any()
     private var suggestionJob: Job? = null
@@ -225,14 +326,20 @@ class NlpManager(context: Context) {
     }
 
     fun preload(subtype: Subtype) {
-        scope.launch {
-            emojiSuggestionProvider.preload(subtype)
-            providers.withLock { providers ->
-                subtype.nlpProviders.forEach { _, providerId ->
-                    providers[providerId]?.let { provider ->
-                        provider.createIfNecessary()
-                        provider.preload(subtype)
-                    }
+        if (prefs.glide.enabled.get()) {
+            glideTypingWords.preload(GlideTypingLexiconKey(subtype))
+        } else {
+            scope.launch { preloadProviders(subtype) }
+        }
+    }
+
+    private suspend fun preloadProviders(subtype: Subtype) {
+        emojiSuggestionProvider.preload(subtype)
+        providers.withLock { providers ->
+            subtype.nlpProviders.forEach { _, providerId ->
+                providers[providerId]?.let { provider ->
+                    provider.createIfNecessary()
+                    provider.preload(subtype)
                 }
             }
         }
@@ -352,8 +459,8 @@ class NlpManager(context: Context) {
             candidateRequestRevision.publishIfCurrent(revision) {
                 synchronized(internalSuggestionsGuard) {
                     internalSuggestions = buildList {
-                        addAll(emojiSuggestions)
-                        addAll(suggestions)
+                        emojiSuggestions.forEach { add(it.bindOriginContent(content)) }
+                        suggestions.forEach { add(it.bindOriginContent(content)) }
                     }
                 }
             }
@@ -407,9 +514,8 @@ class NlpManager(context: Context) {
         }
     }
 
-    fun getListOfWords(subtype: Subtype): List<String> {
-        return runBlocking { getBuiltInSuggestionProvider(subtype).getListOfWords(subtype) }
-    }
+    internal suspend fun getGlideTypingWordData(subtype: Subtype) =
+        glideTypingWords.await(GlideTypingLexiconKey(subtype))
 
     fun getFrequencyForWord(subtype: Subtype, word: String): Double {
         return runBlocking { getBuiltInSuggestionProvider(subtype).getFrequencyForWord(subtype, word) }

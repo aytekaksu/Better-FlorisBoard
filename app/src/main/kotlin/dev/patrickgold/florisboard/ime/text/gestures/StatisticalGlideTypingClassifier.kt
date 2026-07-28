@@ -21,10 +21,12 @@ import androidx.collection.LruCache
 import androidx.collection.SparseArrayCompat
 import androidx.collection.set
 import dev.patrickgold.florisboard.ime.core.Subtype
-import dev.patrickgold.florisboard.ime.keyboard.KeyData
-import dev.patrickgold.florisboard.ime.text.key.KeyCode
-import dev.patrickgold.florisboard.ime.text.keyboard.TextKey
+import dev.patrickgold.florisboard.ime.keyboard.codePointCaseAndBaseVariants
+import dev.patrickgold.florisboard.lib.lowercase
+import dev.patrickgold.florisboard.lib.uppercase
 import dev.patrickgold.florisboard.nlpManager
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import java.text.Normalizer
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -36,10 +38,6 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sqrt
 
-private fun TextKey.baseCode(): Int {
-    return (data as? KeyData)?.code ?: KeyCode.UNSPECIFIED
-}
-
 /**
  * Classifies gestures by comparing them with an "ideal gesture".
  *
@@ -49,16 +47,20 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
     private val nlpManager by context.nlpManager()
 
     private val gesture = Gesture()
-    private var keysByCharacter: SparseArrayCompat<TextKey> = SparseArrayCompat()
+    private var keyIndex = KeyIndex.Empty
     private var words: List<String> = emptyList()
-    private var keys: ArrayList<TextKey> = arrayListOf()
+    private var keys: ArrayList<GlideTypingKey> = arrayListOf()
     private lateinit var pruner: Pruner
     private var wordDataSubtype: Subtype? = null
+    private var wordDataRevision = -1L
     private var layoutSubtype: Subtype? = null
     private var currentSubtype: Subtype? = null
     val ready: Boolean
-        get() = currentSubtype == layoutSubtype && wordDataSubtype == layoutSubtype && wordDataSubtype != null
-    private val prunerCache = LruCache<Subtype, Pruner>(PRUNER_CACHE_SIZE)
+        get() = keys.isNotEmpty() &&
+            currentSubtype == layoutSubtype &&
+            wordDataSubtype == layoutSubtype &&
+            wordDataSubtype != null
+    private val prunerCache = LruCache<PrunerCacheKey, Pruner>(PRUNER_CACHE_SIZE)
 
     /**
      * The minimum distance between points to be added to a gesture.
@@ -101,6 +103,210 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
          * For multiple subtypes, the pruner is cached.
          */
         private const val PRUNER_CACHE_SIZE = 5
+        private const val MAX_WORD_TOKENIZATIONS = 32
+
+        private fun geometryWord(word: String): String {
+            return Normalizer.normalize(word, Normalizer.Form.NFC)
+        }
+
+        private fun isGeometryIgnorable(codePoint: Int): Boolean {
+            return when (Character.getType(codePoint)) {
+                Character.NON_SPACING_MARK.toInt(),
+                Character.COMBINING_SPACING_MARK.toInt(),
+                Character.ENCLOSING_MARK.toInt(),
+                Character.FORMAT.toInt(),
+                Character.CONNECTOR_PUNCTUATION.toInt(),
+                Character.DASH_PUNCTUATION.toInt(),
+                Character.START_PUNCTUATION.toInt(),
+                Character.END_PUNCTUATION.toInt(),
+                Character.INITIAL_QUOTE_PUNCTUATION.toInt(),
+                Character.FINAL_QUOTE_PUNCTUATION.toInt(),
+                Character.OTHER_PUNCTUATION.toInt() -> true
+                else -> false
+            }
+        }
+
+        internal fun buildKeyIndex(keys: List<GlideTypingKey>, subtype: Subtype): KeyIndex {
+            return KeyIndex.build(keys, subtype)
+        }
+    }
+
+    internal class KeyIndex private constructor(
+        private val directByCharacter: SparseArrayCompat<GlideTypingKey>,
+        private val aliasesByCharacter: SparseArrayCompat<GlideTypingKey>,
+        private val directTokens: Map<Int, List<OutputToken>>,
+        private val aliasTokens: Map<Int, List<OutputToken>>,
+    ) {
+        private data class OutputToken(val text: String, val key: GlideTypingKey)
+
+        fun keyForCodePoint(codePoint: Int): GlideTypingKey? {
+            directByCharacter[codePoint]?.let { return it }
+            aliasesByCharacter[codePoint]?.let { return it }
+            val variants = codePointCaseAndBaseVariants(codePoint)
+            variants.forEach { variant ->
+                directByCharacter[variant]?.let { return it }
+            }
+            variants.forEach { variant ->
+                aliasesByCharacter[variant]?.let { return it }
+            }
+            return null
+        }
+
+        fun tokenize(word: String): List<List<GlideTypingKey>> {
+            val text = geometryWord(word)
+            if (text.isEmpty()) return emptyList()
+            val memo = hashMapOf<Int, List<List<GlideTypingKey>>>()
+
+            fun tokenizeAt(index: Int): List<List<GlideTypingKey>> {
+                if (index >= text.length) return listOf(emptyList())
+                memo[index]?.let { return it }
+
+                val codePoint = text.codePointAt(index)
+                val nextIndex = index + Character.charCount(codePoint)
+                val directMatches = directTokens[codePoint]
+                    .orEmpty()
+                    .filter { text.startsWith(it.text, index) }
+                val matches = buildList {
+                    addAll(directMatches)
+                    addAll(
+                        aliasTokens[codePoint]
+                            .orEmpty()
+                            .filter {
+                                it.text.codePointCount(0, it.text.length) > 1 &&
+                                    text.startsWith(it.text, index)
+                            },
+                    )
+                    val hasExactDirectKey = directMatches.any { it.text.length == nextIndex - index }
+                    if (!hasExactDirectKey) {
+                        keyForCodePoint(codePoint)?.let { key ->
+                            add(OutputToken(text.substring(index, nextIndex), key))
+                        }
+                    }
+                }.distinct()
+
+                val tokenizations = if (matches.isEmpty()) {
+                    // Contractions and composed scripts may contain non-key punctuation, format
+                    // characters or marks. Bridge those, but never invent geometry for an
+                    // unavailable letter, digit or symbol.
+                    if (isGeometryIgnorable(codePoint)) tokenizeAt(nextIndex) else emptyList()
+                } else {
+                    val branches = matches.map { match ->
+                        tokenizeAt(index + match.text.length).map { suffix ->
+                            listOf(match.key) + suffix
+                        }
+                    }
+                    buildList {
+                        var branchIndex = 0
+                        while (size < MAX_WORD_TOKENIZATIONS) {
+                            var added = false
+                            for (branch in branches) {
+                                if (branchIndex < branch.size) {
+                                    add(branch[branchIndex])
+                                    added = true
+                                }
+                                if (size >= MAX_WORD_TOKENIZATIONS) break
+                            }
+                            if (!added) break
+                            branchIndex += 1
+                        }
+                    }.distinct()
+                }
+                return tokenizations.take(MAX_WORD_TOKENIZATIONS).also { memo[index] = it }
+            }
+
+            return tokenizeAt(0).filter { it.isNotEmpty() }
+        }
+
+        companion object {
+            val Empty = KeyIndex(SparseArrayCompat(), SparseArrayCompat(), emptyMap(), emptyMap())
+
+            fun fromCharacterMap(keysByCharacter: SparseArrayCompat<GlideTypingKey>): KeyIndex {
+                val directTokens = buildList {
+                    for (index in 0 until keysByCharacter.size()) {
+                        val codePoint = keysByCharacter.keyAt(index)
+                        add(OutputToken(String(Character.toChars(codePoint)), keysByCharacter.valueAt(index)))
+                    }
+                }
+                return KeyIndex(
+                    directByCharacter = keysByCharacter,
+                    aliasesByCharacter = SparseArrayCompat(),
+                    directTokens = directTokens.groupBy { it.text.codePointAt(0) },
+                    aliasTokens = emptyMap(),
+                )
+            }
+
+            fun build(keys: List<GlideTypingKey>, subtype: Subtype): KeyIndex {
+                val directByCharacter = SparseArrayCompat<GlideTypingKey>()
+                val directTokens = keys.mapNotNull { key ->
+                    val output = geometryWord(key.output)
+                    output.takeIf(String::isNotEmpty)?.let { OutputToken(it, key) }
+                }
+                directTokens.forEach { token ->
+                    if (
+                        token.text.codePointCount(0, token.text.length) == 1 &&
+                        directByCharacter.indexOfKey(token.text.codePointAt(0)) < 0
+                    ) {
+                        directByCharacter[token.text.codePointAt(0)] = token.key
+                    }
+                }
+
+                val directOutputs = directTokens.mapTo(hashSetOf(), OutputToken::text)
+                val localeAliasClaims = linkedMapOf<String, GlideTypingKey?>()
+                val fallbackAliasClaims = linkedMapOf<String, GlideTypingKey?>()
+                fun claim(
+                    claims: MutableMap<String, GlideTypingKey?>,
+                    alias: String,
+                    key: GlideTypingKey,
+                ) {
+                    if (alias.isEmpty() || alias in directOutputs || alias == key.output) return
+                    if (!claims.containsKey(alias)) {
+                        claims[alias] = key
+                    } else if (claims[alias] != key) {
+                        claims[alias] = null
+                    }
+                }
+                directTokens.forEach { token ->
+                    sequenceOf(
+                        token.text.lowercase(subtype.primaryLocale),
+                        token.text.uppercase(subtype.primaryLocale),
+                    ).forEach { alias ->
+                        claim(localeAliasClaims, geometryWord(alias), token.key)
+                    }
+                    if (token.text.codePointCount(0, token.text.length) == 1) {
+                        codePointCaseAndBaseVariants(token.text.codePointAt(0)).forEach { variant ->
+                            claim(
+                                fallbackAliasClaims,
+                                String(Character.toChars(variant)),
+                                token.key,
+                            )
+                        }
+                    }
+                }
+                val aliasClaims = fallbackAliasClaims
+                    .filterKeys { it !in localeAliasClaims }
+                    .toMutableMap()
+                    .apply { putAll(localeAliasClaims) }
+
+                val aliasesByCharacter = SparseArrayCompat<GlideTypingKey>()
+                val aliasTokens = aliasClaims.mapNotNull { (text, key) ->
+                    key?.let { OutputToken(text, it) }
+                }
+                aliasTokens.forEach { token ->
+                    if (token.text.codePointCount(0, token.text.length) == 1) {
+                        aliasesByCharacter[token.text.codePointAt(0)] = token.key
+                    }
+                }
+                val tokenOrder = compareByDescending<OutputToken> { it.text.length }.thenBy { it.key.id }
+                return KeyIndex(
+                    directByCharacter = directByCharacter,
+                    aliasesByCharacter = aliasesByCharacter,
+                    directTokens = directTokens.groupBy { it.text.codePointAt(0) }
+                        .mapValues { (_, tokens) -> tokens.sortedWith(tokenOrder) },
+                    aliasTokens = aliasTokens.groupBy { it.text.codePointAt(0) }
+                        .mapValues { (_, tokens) -> tokens.sortedWith(tokenOrder) },
+                )
+            }
+        }
     }
 
     override fun addGesturePoint(position: GlideTypingGesture.Detector.Position) {
@@ -116,45 +322,40 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         }
     }
 
-    override fun setLayout(keyViews: List<TextKey>, subtype: Subtype) {
+    override suspend fun setLayout(keys: List<GlideTypingKey>, subtype: Subtype) {
         setWordData(subtype)
         // stop duplicate calls
-        if (layoutSubtype == subtype && keys == keyViews) {
+        if (layoutSubtype == subtype && this.keys == keys) {
             return
         }
 
-        // if only layout changed but not subtype
-        val layoutChanged = layoutSubtype == subtype
-
-        keysByCharacter.clear()
-        keys.clear()
-        keyViews.forEach {
-            keysByCharacter[it.baseCode()] = it
-            keys.add(it)
-        }
+        keyIndex = buildKeyIndex(keys, subtype)
+        this.keys.clear()
+        this.keys.addAll(keys)
         layoutSubtype = subtype
-        distanceThresholdSquared = (keyViews.first().visibleBounds.width / 4).toInt()
+        currentSubtype = null
+        distanceThresholdSquared = (keys.firstOrNull()?.width?.div(4) ?: 0f).toInt()
         distanceThresholdSquared *= distanceThresholdSquared
+        lruSuggestionCache.evictAll()
 
-        if (
-            (wordDataSubtype == layoutSubtype)
-            || layoutChanged // should force a re-initialize
-        ) {
-            initializePruner(layoutChanged)
+        if (keys.isNotEmpty() && wordDataSubtype == layoutSubtype) {
+            initializePruner()
         }
     }
 
-    override fun setWordData(subtype: Subtype) {
+    private suspend fun setWordData(subtype: Subtype) {
+        val wordData = nlpManager.getGlideTypingWordData(subtype)
         // stop duplicate calls..
-        if (wordDataSubtype == subtype) {
+        if (wordDataSubtype == subtype && wordDataRevision == wordData.revision) {
             return
         }
 
-        this.words = nlpManager.getListOfWords(subtype)
-
+        this.words = wordData.value
         this.wordDataSubtype = subtype
+        this.wordDataRevision = wordData.revision
+        lruSuggestionCache.evictAll()
         if (wordDataSubtype == layoutSubtype) {
-            initializePruner(false)
+            initializePruner()
         }
     }
 
@@ -162,33 +363,34 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
      * Exists because Pruner requires both word data and layout are initialized,
      * however we don't know what order they're initialized in.
      */
-    private fun initializePruner(invalidateCache: Boolean) {
+    private fun initializePruner() {
         val currentSubtype = this.layoutSubtype!!
-        val cached = when {
-            invalidateCache -> null
-            else -> prunerCache.get(currentSubtype)
-        }
+        val cacheKey = PrunerCacheKey(currentSubtype, wordDataRevision, keys.toList())
+        val cached = prunerCache.get(cacheKey)
         if (cached == null) {
-            this.pruner = Pruner(PRUNING_LENGTH_THRESHOLD, this.words, keysByCharacter)
-            prunerCache.put(currentSubtype, this.pruner)
+            this.pruner = Pruner(
+                lengthThreshold = PRUNING_LENGTH_THRESHOLD,
+                words = this.words,
+                keyIndex = keyIndex,
+            )
+            prunerCache.put(cacheKey, this.pruner)
         } else {
             this.pruner = cached
         }
         this.currentSubtype = currentSubtype
     }
 
-    override fun initGestureFromPointerData(pointerData: GlideTypingGesture.Detector.PointerData) {
-        for (position in pointerData.positions) {
-            addGesturePoint(position)
-        }
-    }
-
     private val lruSuggestionCache = LruCache<Pair<Gesture, Int>, List<String>>(SUGGESTION_CACHE_SIZE)
-    override fun getSuggestions(maxSuggestionCount: Int, gestureCompleted: Boolean): List<String> {
-        return when (val cached = lruSuggestionCache.get(Pair(this.gesture, maxSuggestionCount))) {
+
+    override suspend fun getSuggestions(maxSuggestionCount: Int, gestureCompleted: Boolean): List<String> {
+        val cacheKey = Pair(this.gesture, maxSuggestionCount)
+        return when (val cached = lruSuggestionCache.get(cacheKey)) {
             null -> {
                 val suggestions = unCachedGetSuggestions(maxSuggestionCount)
-                lruSuggestionCache.put(Pair(this.gesture.clone(), maxSuggestionCount), suggestions)
+                lruSuggestionCache.put(
+                    Pair(this.gesture.clone(), maxSuggestionCount),
+                    suggestions,
+                )
 
                 suggestions
             }
@@ -198,19 +400,20 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         }
     }
 
-    private fun unCachedGetSuggestions(maxSuggestionCount: Int): List<String> {
+    private suspend fun unCachedGetSuggestions(maxSuggestionCount: Int): List<String> {
         val candidates = arrayListOf<String>()
         val candidateWeights = arrayListOf<Float>()
         val key = keys.firstOrNull() ?: return listOf()
-        val radius = min(key.visibleBounds.height, key.visibleBounds.width)
+        val radius = min(key.height, key.width)
         var remainingWords = pruner.pruneByExtremities(gesture, this.keys)
         val userGesture = gesture.resample(SAMPLING_POINTS)
         val normalizedUserGesture: Gesture = userGesture.normalizeByBoxSide()
-        remainingWords = pruner.pruneByLength(gesture, remainingWords, keysByCharacter, keys)
+        remainingWords = pruner.pruneByLength(gesture, remainingWords, keys)
 
         for (i in remainingWords.indices) {
+            currentCoroutineContext().ensureActive()
             val word = remainingWords[i]
-            val idealGestures = Gesture.generateIdealGestures(word, keysByCharacter)
+            val idealGestures = Gesture.generateIdealGestures(word, keyIndex)
 
             for (idealGesture in idealGestures) {
                 val wordGesture = idealGesture.resample(SAMPLING_POINTS)
@@ -254,6 +457,12 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         gesture.clear()
     }
 
+    private data class PrunerCacheKey(
+        val subtype: Subtype,
+        val wordDataRevision: Long,
+        val keys: List<GlideTypingKey>,
+    )
+
     private fun calcLocationDistance(gesture1: Gesture, gesture2: Gesture): Float {
         var totalDistance = 0.0f
         for (i in 0 until SAMPLING_POINTS) {
@@ -288,15 +497,20 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         return totalDistance
     }
 
-    class Pruner(
+    class Pruner internal constructor(
         /**
          * The length difference between a user gesture and a word gesture above which a word will
          * be pruned.
          */
         private val lengthThreshold: Double,
         words: List<String>,
-        keysByCharacter: SparseArrayCompat<TextKey>,
+        private val keyIndex: KeyIndex,
     ) {
+        constructor(
+            lengthThreshold: Double,
+            words: List<String>,
+            keysByCharacter: SparseArrayCompat<GlideTypingKey>,
+        ) : this(lengthThreshold, words, KeyIndex.fromCharacterMap(keysByCharacter))
 
         /** A tree that provides fast access to words based on their first and last letter.  */
         private val wordTree = Collections.synchronizedMap(HashMap<Pair<Int, Int>, ArrayList<String>>())
@@ -311,9 +525,9 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
          */
         fun pruneByExtremities(
             userGesture: Gesture,
-            keys: Iterable<TextKey>,
+            keys: Iterable<GlideTypingKey>,
         ): ArrayList<String> {
-            val remainingWords = ArrayList<String>()
+            val remainingWords = linkedSetOf<String>()
             val startX = userGesture.getFirstX()
             val startY = userGesture.getFirstY()
             val endX = userGesture.getLastX()
@@ -329,7 +543,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                     }
                 }
             }
-            return remainingWords
+            return ArrayList(remainingWords)
         }
 
         /**
@@ -340,56 +554,41 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
          * @param words A list of words to consider.
          * @return A list of words that remained after pruning the input list by length.
          */
-        fun pruneByLength(
+        suspend fun pruneByLength(
             userGesture: Gesture,
             words: ArrayList<String>,
-            keysByCharacter: SparseArrayCompat<TextKey>,
-            keys: List<TextKey>,
+            keys: List<GlideTypingKey>,
         ): ArrayList<String> {
             val remainingWords = ArrayList<String>()
 
             val key = keys.firstOrNull() ?: return arrayListOf()
-            val radius = min(key.visibleBounds.height, key.visibleBounds.width)
+            val radius = min(key.height, key.width)
             val userLength = userGesture.getLength()
             for (word in words) {
-                val idealGestures = Gesture.generateIdealGestures(word, keysByCharacter)
-                for (idealGesture in idealGestures) {
-                    val wordIdealLength = getCachedIdealLength(word, idealGesture)
+                currentCoroutineContext().ensureActive()
+                val idealGestures = Gesture.generateIdealGestures(word, keyIndex)
+                for (wordIdealLength in getCachedIdealLengths(word, idealGestures)) {
                     if (abs(userLength - wordIdealLength) < lengthThreshold * radius) {
                         remainingWords.add(word)
+                        break
                     }
                 }
             }
             return remainingWords
         }
 
-        private val cachedIdealLength = ConcurrentHashMap<String, Float>()
-        private fun getCachedIdealLength(word: String, idealGesture: Gesture): Float {
-            return cachedIdealLength.getOrPut(word) { idealGesture.getLength() }
+        private val cachedIdealLengths = ConcurrentHashMap<String, List<Float>>()
+        private fun getCachedIdealLengths(word: String, idealGestures: List<Gesture>): List<Float> {
+            return cachedIdealLengths.getOrPut(word) { idealGestures.map(Gesture::getLength) }
         }
 
         companion object {
-            private fun getFirstKeyLastKey(
+            private fun getFirstKeyLastKeys(
                 word: String,
-                keysByCharacter: SparseArrayCompat<TextKey>,
-            ): Pair<Int, Int>? {
-                val firstLetter = word[0]
-                val lastLetter = word[word.length - 1]
-                val firstBaseChar = Normalizer.normalize(firstLetter.toString(), Normalizer.Form.NFD)[0]
-                val lastBaseChar = Normalizer.normalize(lastLetter.toString(), Normalizer.Form.NFD)[0]
-                return when {
-                    keysByCharacter.indexOfKey(firstBaseChar.code) < 0 || keysByCharacter.indexOfKey(lastBaseChar.code) < 0 -> {
-                        null
-                    }
-                    else -> {
-                        val firstKey = keysByCharacter[firstBaseChar.code]
-                        val lastKey = keysByCharacter[lastBaseChar.code]
-                        if (firstKey != null && lastKey != null) {
-                            firstKey.baseCode() to lastKey.baseCode()
-                        } else {
-                            null
-                        }
-                    }
+                keyIndex: KeyIndex,
+            ): Set<Pair<Int, Int>> {
+                return keyIndex.tokenize(word).mapTo(linkedSetOf()) { keys ->
+                    keys.first().id to keys.last().id
                 }
             }
 
@@ -403,14 +602,13 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
              * @return A list of the n closest keys.
              */
             private fun findNClosestKeys(
-                x: Float, y: Float, n: Int, keys: Iterable<TextKey>
+                x: Float, y: Float, n: Int, keys: Iterable<GlideTypingKey>
             ): Iterable<Int> {
-                val keyDistances = HashMap<TextKey, Float>()
+                val keyDistances = HashMap<GlideTypingKey, Float>()
                 for (key in keys) {
-                    val visibleBoundsCenter = key.visibleBounds.center
                     val distance = Gesture.distance(
-                        visibleBoundsCenter.x,
-                        visibleBoundsCenter.y,
+                        key.centerX,
+                        key.centerY,
                         x,
                         y
                     )
@@ -418,15 +616,14 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                 }
 
                 return keyDistances.entries.sortedWith { c1, c2 -> c1.value.compareTo(c2.value) }.take(n)
-                    .map { it.key.baseCode() }
+                    .map { it.key.id }
             }
         }
 
         init {
             synchronized(wordTree) {
                 for (word in words) {
-                    val keyPair = getFirstKeyLastKey(word, keysByCharacter)
-                    keyPair?.let {
+                    getFirstKeyLastKeys(word, keyIndex).forEach { keyPair ->
                         wordTree.getOrPut(keyPair) { arrayListOf() }.add(word)
                     }
                 }
@@ -443,76 +640,57 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             // TODO: Find out optimal max size
             private const val MAX_SIZE = 500
 
-            fun generateIdealGestures(word: String, keysByCharacter: SparseArrayCompat<TextKey>): List<Gesture> {
-                val idealGesture = Gesture()
-                val idealGestureWithLoops = Gesture()
-                var previousLetter = '\u0000'
-                var hasLoops = false
+            fun generateIdealGestures(
+                word: String,
+                keysByCharacter: SparseArrayCompat<GlideTypingKey>,
+            ): List<Gesture> {
+                return generateIdealGestures(word, KeyIndex.fromCharacterMap(keysByCharacter))
+            }
 
-                // Add points for each key
-                for (c in word) {
-                    val lc = Character.toLowerCase(c)
-                    var key = keysByCharacter[lc.code]
-                    if (key == null) {
-                        // Try finding the base character instead, e.g., the "e" key instead of "é"
-                        val baseCharacter: Char = Normalizer.normalize(lc.toString(), Normalizer.Form.NFD)[0]
-                        key = keysByCharacter[baseCharacter.code]
-                        if (key == null) {
-                            continue
+            internal fun generateIdealGestures(
+                word: String,
+                keyIndex: KeyIndex,
+            ): List<Gesture> {
+                return keyIndex.tokenize(word).flatMap { wordKeys ->
+                    val idealGesture = Gesture()
+                    val idealGestureWithLoops = Gesture()
+                    var previousKey: GlideTypingKey? = null
+                    var hasLoops = false
+
+                    wordKeys.forEach { key ->
+                        // Add a little loop on a repeated physical key so that words such as
+                        // "pool" and "poll" can still be distinguished.
+                        if (previousKey == key) {
+                            idealGestureWithLoops.addPoint(
+                                key.centerX + key.width / 4.0f,
+                                key.centerY + key.height / 4.0f,
+                            )
+                            idealGestureWithLoops.addPoint(
+                                key.centerX + key.width / 4.0f,
+                                key.centerY - key.height / 4.0f,
+                            )
+                            idealGestureWithLoops.addPoint(
+                                key.centerX - key.width / 4.0f,
+                                key.centerY - key.height / 4.0f,
+                            )
+                            idealGestureWithLoops.addPoint(
+                                key.centerX - key.width / 4.0f,
+                                key.centerY + key.height / 4.0f,
+                            )
+                            hasLoops = true
                         }
+                        idealGesture.addPoint(key.centerX, key.centerY)
+                        idealGestureWithLoops.addPoint(key.centerX, key.centerY)
+                        previousKey = key
                     }
-                    val visibleBoundsCenter = key.visibleBounds.center
-
-                    // We adda little loop on  the key for duplicate letters
-                    // so that we can differentiate words like pool and poll, lull and lul, etc...
-                    if (previousLetter == lc) {
-                        // bottom right
-                        idealGestureWithLoops.addPoint(
-                            visibleBoundsCenter.x + key.visibleBounds.width / 4.0f,
-                            visibleBoundsCenter.y + key.visibleBounds.height / 4.0f
-                        )
-                        // top right
-                        idealGestureWithLoops.addPoint(
-                            visibleBoundsCenter.x + key.visibleBounds.width / 4.0f,
-                            visibleBoundsCenter.y - key.visibleBounds.height / 4.0f
-                        )
-                        // top left
-                        idealGestureWithLoops.addPoint(
-                            visibleBoundsCenter.x - key.visibleBounds.width / 4.0f,
-                            visibleBoundsCenter.y - key.visibleBounds.height / 4.0f
-                        )
-                        // bottom left
-                        idealGestureWithLoops.addPoint(
-                            visibleBoundsCenter.x - key.visibleBounds.width / 4.0f,
-                            visibleBoundsCenter.y + key.visibleBounds.height / 4.0f
-                        )
-                        hasLoops = true
-
-                        idealGesture.addPoint(
-                            visibleBoundsCenter.x,
-                            visibleBoundsCenter.y
-                        )
-                    } else {
-                        idealGesture.addPoint(
-                            visibleBoundsCenter.x,
-                            visibleBoundsCenter.y
-                        )
-                        idealGestureWithLoops.addPoint(
-                            visibleBoundsCenter.x,
-                            visibleBoundsCenter.y
-                        )
-                    }
-                    previousLetter = lc
-                }
-                return when (hasLoops) {
-                    true -> listOf(idealGesture, idealGestureWithLoops)
-                    false -> listOf(idealGesture)
+                    if (hasLoops) listOf(idealGesture, idealGestureWithLoops) else listOf(idealGesture)
                 }
             }
 
             fun distance(x1: Float, y1: Float, x2: Float, y2: Float): Float {
                 return sqrt((x1 - x2).pow(2) + (y1 - y2).pow(2))
             }
+
         }
 
         val isEmpty: Boolean
@@ -660,9 +838,11 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         }
 
         override fun hashCode(): Int {
-            var result = xs.contentHashCode()
-            result = 31 * result + ys.contentHashCode()
-            result = 31 * result + size
+            var result = size
+            for (i in 0 until size) {
+                result = 31 * result + xs[i].hashCode()
+                result = 31 * result + ys[i].hashCode()
+            }
             return result
         }
     }

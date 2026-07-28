@@ -25,6 +25,7 @@ import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardHistoryDao
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardHistoryDatabase
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
+import dev.patrickgold.florisboard.keyboardManager
 import java.io.Closeable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -91,6 +92,7 @@ class ClipboardManager(
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
     private val editorInstance by context.editorInstance()
+    private val keyboardManager by context.keyboardManager()
     private val systemClipboardManager = context.systemService(AndroidClipboardManager::class)
 
     private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -376,10 +378,11 @@ class ClipboardManager(
     }
 
     fun pasteItem(item: ClipboardItem) {
-        val editorInstance by appContext.editorInstance()
-        editorInstance.commitClipboardItem(item).also { result ->
-            if (!result) {
-                appContext.showShortToastSync("Failed to paste item.")
+        keyboardManager.inputEventDispatcher.dispatchInputEvent {
+            editorInstance.commitClipboardItem(item).also { result ->
+                if (!result) {
+                    appContext.showShortToastSync("Failed to paste item.")
+                }
             }
         }
     }

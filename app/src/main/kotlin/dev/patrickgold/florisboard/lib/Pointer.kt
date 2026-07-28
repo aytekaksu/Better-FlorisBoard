@@ -48,8 +48,11 @@ class PointerMap<P : Pointer>(val capacity: Int = 4, init: (Int) -> P) : Iterabl
      * @return The newly added pointer or null if the map is already full.
      */
     fun add(id: Int, index: Int): P? {
+        if (id < 0) return null
+        if (findById(id) != null) return null
         for (pointer in pointers) {
             if (pointer.isNotUsed) {
+                pointer.reset()
                 pointer.id = id
                 pointer.index = index
                 return pointer
@@ -75,6 +78,7 @@ class PointerMap<P : Pointer>(val capacity: Int = 4, init: (Int) -> P) : Iterabl
      * @return The pointer with given [id] or null.
      */
     fun findById(id: Int): P? {
+        if (id < 0) return null
         for (pointer in pointers) {
             if (pointer.id == id) {
                 return pointer
@@ -112,6 +116,7 @@ class PointerMap<P : Pointer>(val capacity: Int = 4, init: (Int) -> P) : Iterabl
      * @return True if a pointer was removed, false otherwise.
      */
     fun removeById(id: Int): Boolean {
+        if (id < 0) return false
         for (pointer in pointers) {
             if (pointer.id == id) {
                 pointer.reset()
