@@ -55,7 +55,6 @@ import kotlinx.coroutines.sync.withLock
 import org.florisboard.autocorrect.api.AutocorrectPluginContract
 import org.florisboard.lib.kotlin.guardedByLock
 import org.florisboard.lib.kotlin.collectLatestIn
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.properties.Delegates
 
@@ -626,10 +625,10 @@ class NlpManager(context: Context) {
     }
 
     private class ProviderInstanceWrapper(val provider: NlpProvider) {
-        private var isInstanceAlive = AtomicBoolean(false)
+        private val lifecycle = NlpProviderLifecycle()
 
         suspend fun createIfNecessary() {
-            if (!isInstanceAlive.getAndSet(true)) provider.create()
+            lifecycle.createIfNecessary(provider::create)
         }
 
         suspend fun preload(subtype: Subtype) {
@@ -637,7 +636,7 @@ class NlpManager(context: Context) {
         }
 
         suspend fun destroyIfNecessary() {
-            if (isInstanceAlive.getAndSet(true)) provider.destroy()
+            lifecycle.destroyIfNecessary(provider::destroy)
         }
     }
 

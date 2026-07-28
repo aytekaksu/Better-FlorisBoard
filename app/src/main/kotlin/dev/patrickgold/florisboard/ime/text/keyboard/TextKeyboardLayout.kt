@@ -102,8 +102,6 @@ import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.lib.FlorisRect
 import dev.patrickgold.florisboard.lib.Pointer
 import dev.patrickgold.florisboard.lib.PointerMap
-import dev.patrickgold.florisboard.lib.devtools.LogTopic
-import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import dev.patrickgold.florisboard.lib.toIntOffset
 import dev.patrickgold.jetpref.datastore.model.collectAsState
 import org.florisboard.lib.android.isOrientationLandscape
@@ -117,59 +115,11 @@ import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-internal fun <T> finishGlideDrawingState(
-    showTrail: Boolean,
-    activePoints: MutableList<T>,
-    fadingPoints: MutableList<T>,
-): Boolean {
-    fadingPoints.clear()
-    if (showTrail) {
-        fadingPoints.addAll(activePoints)
-    }
-    activePoints.clear()
-    return fadingPoints.isNotEmpty()
-}
-
-internal enum class KeyMoveAction {
-    KEEP,
-    CANCEL,
-    TRANSFER,
-}
-
-internal fun KeyData.shouldCommitBeforeAdditionalPointer(): Boolean {
-    return (type == KeyType.CHARACTER || type == KeyType.NUMERIC) &&
-        code != KeyCode.SPACE &&
-        code != KeyCode.CJK_SPACE
-}
-
-internal fun shouldCommitDeleteSwipeSelection(action: SwipeAction): Boolean {
-    return action != SwipeAction.SELECT_CHARACTERS_PRECISELY &&
-        action != SwipeAction.SELECT_WORDS_PRECISELY
-}
-
 private enum class KeyActivationSource(
     val emitsPressFeedback: Boolean,
 ) {
     PHYSICAL_DOWN(emitsPressFeedback = true),
     POINTER_MOVE(emitsPressFeedback = false),
-}
-
-internal fun resolveKeyMoveAction(
-    activeKey: TextKey,
-    candidateKey: TextKey?,
-    pointerX: Float,
-    pointerY: Float,
-    hysteresisDistance: Float,
-): KeyMoveAction {
-    if (candidateKey === activeKey) return KeyMoveAction.KEEP
-    if (activeKey.containsWithHysteresis(pointerX, pointerY, hysteresisDistance)) {
-        return KeyMoveAction.KEEP
-    }
-    return if (candidateKey != null) {
-        KeyMoveAction.TRANSFER
-    } else {
-        KeyMoveAction.CANCEL
-    }
 }
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -581,7 +531,6 @@ private class TextKeyboardLayoutController(
     }
 
     fun onTouchEventInternal(event: MotionEvent) {
-        flogDebug { "event=$event" }
         if (event.actionMasked == MotionEvent.ACTION_DOWN && pointerMap.size > 0) {
             for (pointer in pointerMap) {
                 swipeGestureDetector.onTouchCancel(event, pointer)
@@ -732,8 +681,6 @@ private class TextKeyboardLayoutController(
         keyOverride: TextKey? = null,
         dataOverride: KeyData? = null,
     ) {
-        flogDebug(LogTopic.TEXT_KEYBOARD_VIEW) { "pointer=$pointer" }
-
         val x = event.getX(pointer.index)
         val y = event.getY(pointer.index)
         if (pointer.initialKeyData == null) {
@@ -847,8 +794,6 @@ private class TextKeyboardLayoutController(
     }
 
     private fun onTouchMoveInternal(event: MotionEvent, pointer: TouchPointer) {
-        flogDebug(LogTopic.TEXT_KEYBOARD_VIEW) { "pointer=$pointer" }
-
         val activeKey = pointer.activeKey ?: return
         val x = event.getX(pointer.index)
         val y = event.getY(pointer.index)
@@ -894,7 +839,6 @@ private class TextKeyboardLayoutController(
     }
 
     private fun onTouchUpInternal(event: MotionEvent, pointer: TouchPointer) {
-        flogDebug(LogTopic.TEXT_KEYBOARD_VIEW) { "pointer=$pointer" }
         if (pointer.index in 0 until event.pointerCount) {
             pointer.activeKeyX = event.getX(pointer.index)
             pointer.activeKeyY = event.getY(pointer.index)
@@ -994,8 +938,6 @@ private class TextKeyboardLayoutController(
     }
 
     private fun onTouchCancelInternal(event: MotionEvent, pointer: TouchPointer) {
-        flogDebug(LogTopic.TEXT_KEYBOARD_VIEW) { "pointer=$pointer" }
-
         if (pointer.hasTriggeredMassSelection) {
             pointer.hasTriggeredMassSelection = false
             inputEventDispatcher.dispatchInputEvent {
@@ -1044,8 +986,6 @@ private class TextKeyboardLayoutController(
         val initialKeyData = pointer.initialKeyData ?: return false
         val activeKey = pointer.activeKey
         val activeKeyData = pointer.activeKeyData
-        flogDebug(LogTopic.TEXT_KEYBOARD_VIEW)
-
         return when (initialKeyData.code) {
             KeyCode.DELETE -> handleDeleteSwipe(event)
             KeyCode.SPACE, KeyCode.CJK_SPACE -> handleSpaceSwipe(event)

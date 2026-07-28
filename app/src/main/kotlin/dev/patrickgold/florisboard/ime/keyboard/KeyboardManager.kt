@@ -954,7 +954,9 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                             editorInstance.commitChar(text)
                         }
                         else -> {
-                            flogError(LogTopic.KEY_EVENTS) { "Received unknown key: $data" }
+                            flogError(LogTopic.KEY_EVENTS) {
+                                "Received unsupported key payload type=${data::class.simpleName}"
+                            }
                         }
                     }
                 }
