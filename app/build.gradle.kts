@@ -44,14 +44,14 @@ val projectVersionNameSuffix = projectVersionName.substringAfter("-", "").let { 
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_11)
-        freeCompilerArgs.set(listOf(
-            "-opt-in=kotlin.contracts.ExperimentalContracts",
-            "-jvm-default=enable",
-            "-Xwhen-guards",
-            "-Xexplicit-backing-fields",
-            "-Xcontext-parameters",
-            "-XXLanguage:+LocalTypeAliases",
-        ))
+        freeCompilerArgs.set(
+            listOf(
+                "-opt-in=kotlin.contracts.ExperimentalContracts",
+                "-jvm-default=enable",
+                "-Xexplicit-backing-fields",
+                "-Xcontext-parameters",
+            ),
+        )
     }
 }
 
@@ -138,7 +138,16 @@ configure<ApplicationExtension> {
     }
 
     lint {
-        baseline = file("lint.xml")
+        /*
+         * lint.xml configures detectors. lint-baseline.xml records findings
+         * present when the gate was introduced, so new warnings and errors
+         * fail the gate.
+         */
+        lintConfig = file("lint.xml")
+        baseline = file("lint-baseline.xml")
+        abortOnError = true
+        checkDependencies = true
+        warningsAsErrors = true
     }
 
     testOptions {

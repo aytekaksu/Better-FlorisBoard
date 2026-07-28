@@ -15,6 +15,7 @@ androidx-room = "2.8.4"
 androidx-window = "1.5.1"
 cache4k = "0.14.0"
 coil = "3.4.0"
+detekt = "2.0.0-alpha.5"
 kotlin = "2.3.20"
 kotlinx-coroutines = "1.10.2"
 kotlinx-serialization-json = "1.11.0"
@@ -23,6 +24,7 @@ material-kolor = "4.1.1"
 mikepenz-aboutlibraries = "14.0.1"
 patrickgold-compose-tooltip = "0.2.0-rc02"
 patrickgold-jetpref = "0.3.0"
+spotless = "8.9.0"
 
 # Testing
 androidx-benchmark = "1.4.1"
@@ -32,6 +34,7 @@ androidx-test-runner = "1.7.0"
 androidx-test-uiautomator = "2.3.0"
 junit4 = "4.13.2"
 kotest = "6.1.11"
+ktlint = "1.8.0"
 kotlinx-kover = "0.9.8"
 robolectric = "4.16.1"
 turbine = "1.2.1"
@@ -96,12 +99,14 @@ turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 agp-application = { id = "com.android.application", version.ref = "android-gradle-plugin" }
 agp-library = { id = "com.android.library", version.ref = "android-gradle-plugin" }
 agp-test = { id = "com.android.test", version.ref = "android-gradle-plugin" }
+detekt = { id = "dev.detekt", version.ref = "detekt" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-plugin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 mikepenz-aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "mikepenz-aboutlibraries" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 
 # Testing
 kotest = { id = "io.kotest", version.ref = "kotest" }

@@ -26,6 +26,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+private const val TargetPackage = "dev.patrickgold.florisboard.bench"
+private const val TargetImeService = "$TargetPackage/.FlorisImeService"
+
 /**
  * Run this benchmark from Studio to see startup measurements, and captured system traces
  * for investigating your app's performance from a cold state.
@@ -62,26 +65,31 @@ abstract class AbstractStartupBenchmark(private val startupMode: StartupMode) {
 
     @Test
     fun startupBaselineProfileDisabled() = startup(
-        CompilationMode.Partial(baselineProfileMode = BaselineProfileMode.Disable, warmupIterations = 1)
+        CompilationMode.Partial(
+            baselineProfileMode = BaselineProfileMode.Disable,
+            warmupIterations = 1,
+        ),
     )
 
     @Test
-    fun startupBaselineProfile() = startup(CompilationMode.Partial(baselineProfileMode = BaselineProfileMode.Require))
+    fun startupBaselineProfile() = startup(
+        CompilationMode.Partial(baselineProfileMode = BaselineProfileMode.Require),
+    )
 
     @Test
     fun startupFullCompilation() = startup(CompilationMode.Full())
 
     private fun startup(compilationMode: CompilationMode) = benchmarkRule.measureRepeated(
-        packageName = "dev.patrickgold.florisboard",
+        packageName = TargetPackage,
         metrics = listOf(StartupTimingMetric()),
         compilationMode = compilationMode,
         iterations = 10,
         startupMode = startupMode,
         setupBlock = {
             pressHome()
-            device.executeShellCommand("ime enable dev.patrickgold.florisboard/.FlorisImeService")
-            device.executeShellCommand("ime set dev.patrickgold.florisboard/.FlorisImeService")
-        }
+            device.executeShellCommand("ime enable $TargetImeService")
+            device.executeShellCommand("ime set $TargetImeService")
+        },
     ) {
         startActivityAndWait()
         device.waitForIdle(5000)

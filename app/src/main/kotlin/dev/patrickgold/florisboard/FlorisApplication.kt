@@ -23,7 +23,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Handler
-import android.util.Log
+import android.os.StrictMode
 import androidx.core.os.UserManagerCompat
 import dev.patrickgold.florisboard.app.FlorisPreferenceModel
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
@@ -42,6 +42,7 @@ import dev.patrickgold.florisboard.lib.crashutility.CrashUtility
 import dev.patrickgold.florisboard.lib.devtools.Flog
 import dev.patrickgold.florisboard.lib.devtools.LogTopic
 import dev.patrickgold.florisboard.lib.devtools.flogError
+import dev.patrickgold.florisboard.lib.devtools.flogInfo
 import dev.patrickgold.florisboard.lib.ext.ExtensionManager
 import dev.patrickgold.jetpref.datastore.runtime.initAndroid
 import kotlinx.coroutines.CoroutineScope
@@ -87,6 +88,22 @@ class FlorisApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        if (BuildConfig.DEBUG) {
+            StrictMode.setThreadPolicy(
+                StrictMode.ThreadPolicy.Builder()
+                    .detectAll()
+                    .penaltyLog()
+                    .build(),
+            )
+            StrictMode.setVmPolicy(
+                StrictMode.VmPolicy.Builder()
+                    .detectActivityLeaks()
+                    .detectLeakedClosableObjects()
+                    .detectLeakedRegistrationObjects()
+                    .penaltyLog()
+                    .build(),
+            )
+        }
         FlorisApplicationReference = WeakReference(this)
         try {
             Flog.install(
@@ -117,11 +134,11 @@ class FlorisApplication : Application() {
     fun init() {
         cacheDir?.deleteContentsRecursively()
         scope.launch {
-            val result = FlorisPreferenceStore.initAndroid(
+            FlorisPreferenceStore.initAndroid(
                 context = this@FlorisApplication,
                 datastoreName = FlorisPreferenceModel.NAME,
             )
-            Log.i("PREFS", result.toString())
+            flogInfo { "Preference store initialization completed" }
             preferenceStoreLoaded.value = true
         }
         extensionManager.value.init()
@@ -136,7 +153,7 @@ class FlorisApplication : Application() {
                 try {
                     unregisterReceiver(this)
                 } catch (e: Exception) {
-                    flogError { e.toString() }
+                    flogError { "Failed to unregister unlock receiver: ${e::class.simpleName}" }
                 }
                 mainHandler.post { init() }
             }

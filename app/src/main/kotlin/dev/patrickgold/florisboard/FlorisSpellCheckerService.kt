@@ -102,7 +102,9 @@ class FlorisSpellCheckerService : SpellCheckerService() {
         }
 
         override fun onGetSuggestions(textInfo: TextInfo?, suggestionsLimit: Int): SuggestionsInfo {
-            flogInfo(LogTopic.SPELL_EVENTS) { "text=${textInfo?.text}, limit=$suggestionsLimit" }
+            flogInfo(LogTopic.SPELL_EVENTS) {
+                "suggestions requested, hasText=${textInfo?.text != null}, limit=$suggestionsLimit"
+            }
 
             textInfo?.text ?: return SpellingResult.unspecified().suggestionsInfo
             setupSpellingIfNecessary()

@@ -1,44 +1,202 @@
-name: FlorisBoard CI
+name: Better FlorisBoard CI
 
 on:
   push:
-    branches: [ main ]
-    paths-ignore:
-      - ".github/ISSUE_TEMPLATE/**"
-      - ".github/PULL_REQUEST_TEMPLATE.md"
-      - ".github/FUNDING.yml"
-      - ".dockerignore"
-      - ".editorconfig"
-      - "fastlane/**"
-      - "AI_POLICY.md"
-      - "CODE_OF_CONDUCT.md"
-      - "CONTRIBUTING.md"
-      - "LICENSE"
-      - "README.md"
-      - "ROADMAP.md"
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-quality-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
 
 jobs:
-  build:
+  static-analysis:
+    name: Static analysis
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          persist-credentials: false
           submodules: recursive
 
-      - uses: gradle/actions/wrapper-validation@v4
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
         with:
-          java-version: 17
           distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+
       - name: Set up CMake and Ninja
-        uses: lukka/get-cmake@v4.0.2
-      - name: Build with Gradle
-        run: ./gradlew clean assembleDebug
-      - uses: actions/upload-artifact@v4
+        uses: lukka/get-cmake@ea004816823209b8d1211e47b216185caee12cc5 # v4.0.2
         with:
-          name: app-debug.apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          cmakeVersion: 4.1.2
+
+      - name: Check formatting, Kotlin, Android, and privacy rules
+        run: ./gradlew ciStaticAnalysis --stacktrace
+
+      - name: Upload static-analysis reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: static-analysis-reports
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            build/reports/detekt/**
+            **/build/reports/lint-results-*.html
+            **/build/reports/lint-results-*.xml
+            **/build/reports/lint-results-*.sarif
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+
+      - name: Set up CMake and Ninja
+        uses: lukka/get-cmake@ea004816823209b8d1211e47b216185caee12cc5 # v4.0.2
+        with:
+          cmakeVersion: 4.1.2
+
+      - name: Run JVM and Robolectric tests
+        run: ./gradlew ciUnitTest --stacktrace
+
+      - name: Upload unit-test reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: unit-test-reports
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            **/build/test-results/**
+            **/build/reports/tests/**
+            **/build/reports/kover/**
+
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+
+      - name: Set up CMake and Ninja
+        uses: lukka/get-cmake@ea004816823209b8d1211e47b216185caee12cc5 # v4.0.2
+        with:
+          cmakeVersion: 4.1.2
+
+      - name: Build debug, minified beta, benchmark, and API artifacts
+        run: ./gradlew ciPackage --stacktrace
+
+      - name: Verify packaged privacy invariants
+        shell: bash
+        run: |
+          readonly apk="app/build/outputs/apk/beta/app-beta-unsigned.apk"
+          readonly aapt="$ANDROID_HOME/build-tools/36.0.0/aapt"
+          test -f "$apk"
+          test -x "$aapt"
+
+          permissions="$("$aapt" dump permissions "$apk")"
+          if grep -Fq "android.permission.INTERNET" <<< "$permissions"; then
+            echo "::error::The production-like APK must not request INTERNET permission."
+            exit 1
+          fi
+
+          manifest="$("$aapt" dump xmltree "$apk" AndroidManifest.xml)"
+          if grep -Eq "android:debuggable.*(0xffffffff|0x1)$" <<< "$manifest"; then
+            echo "::error::The production-like APK must not be debuggable."
+            exit 1
+          fi
+          if grep -Fq "EditorHarnessActivity" <<< "$manifest" ||
+            grep -Fq "dev.patrickgold.florisboard.test.action.EDITOR_HARNESS" <<< "$manifest"; then
+            echo "::error::The production-like APK must not contain the debug-only editor harness."
+            exit 1
+          fi
+
+      - name: Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: development-builds
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/beta/app-beta-unsigned.apk
+            benchmark/build/outputs/apk/**/*.apk
+            lib/autocorrect-api/build/outputs/aar/autocorrect-api-release.aar
+
+      - name: Upload packaging reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: packaging-reports
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            app/build/outputs/mapping/beta/**
+            app/build/outputs/logs/**
+            lib/autocorrect-api/build/outputs/logs/**
+
+  # Keep this job id unchanged: branch protection currently requires "build".
+  # It succeeds only when every independent quality lane succeeds.
+  build:
+    needs: [static-analysis, unit-tests, package]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Require every quality job
+        env:
+          STATIC_RESULT: ${{ needs.static-analysis.result }}
+          TEST_RESULT: ${{ needs.unit-tests.result }}
+          PACKAGE_RESULT: ${{ needs.package.result }}
+        run: |
+          test "$STATIC_RESULT" = "success"
+          test "$TEST_RESULT" = "success"
+          test "$PACKAGE_RESULT" = "success"

@@ -16,25 +16,30 @@
 
 plugins {
     alias(libs.plugins.agp.test)
-    alias(libs.plugins.kotlin.android)
+}
+
+val projectMinSdk: String by project
+val projectTargetSdk: String by project
+val projectCompileSdk: String by project
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+    }
 }
 
 android {
     namespace = "dev.patrickgold.florisboard.benchmark"
-    compileSdk = 34
+    compileSdk = projectCompileSdk.toInt()
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-
-    kotlinOptions {
-        jvmTarget = "1.8"
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     defaultConfig {
-        minSdk = 24
-        targetSdk = 34
+        minSdk = projectMinSdk.toInt()
+        targetSdk = projectTargetSdk.toInt()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
