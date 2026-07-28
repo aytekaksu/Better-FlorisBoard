@@ -117,16 +117,6 @@ import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-internal fun shouldFallbackSpacebarMovementToArrow(
-    isRawInputEditor: Boolean,
-    directMovementSucceeded: Boolean,
-): Boolean = isRawInputEditor && !directMovementSucceeded
-
-internal fun shouldCollectGlideDrawingPoint(
-    isGlideEnabled: Boolean,
-    showTrail: Boolean,
-): Boolean = isGlideEnabled && showTrail
-
 internal fun <T> finishGlideDrawingState(
     showTrail: Boolean,
     activePoints: MutableList<T>,
@@ -1170,87 +1160,57 @@ private class TextKeyboardLayoutController(
 
     private fun handleSpaceSwipe(event: SwipeGesture.Event): Boolean {
         val pointer = pointerMap.findById(event.pointerId) ?: return false
-
-        return when (event.type) {
-            SwipeGesture.Type.TOUCH_MOVE -> when (event.direction) {
-                SwipeGesture.Direction.LEFT -> {
-                    val action = prefs.gestures.spaceBarSwipeLeft.get()
-                    if (action == SwipeAction.MOVE_CURSOR_LEFT) {
-                        abs(event.relUnitCountX).let {
-                            val count = if (!pointer.hasTriggeredGestureMove) it - 1 else it
-                            if (count > 0) {
-                                inputFeedbackController?.gestureMovingSwipe(TextKeyData.SPACE)
-                                val beginMassSelection = !pointer.hasTriggeredMassSelection
-                                pointer.hasTriggeredMassSelection = true
-                                moveCursorFromSpacebar(pointer, -count, beginMassSelection)
-                            }
-                        }
-                        true
-                    } else {
-                        action != SwipeAction.NO_ACTION
-                    }
-                }
-                SwipeGesture.Direction.RIGHT -> {
-                    val action = prefs.gestures.spaceBarSwipeRight.get()
-                    if (action == SwipeAction.MOVE_CURSOR_RIGHT) {
-                        abs(event.relUnitCountX).let {
-                            val count = if (!pointer.hasTriggeredGestureMove) it - 1 else it
-                            if (count > 0) {
-                                inputFeedbackController?.gestureMovingSwipe(TextKeyData.SPACE)
-                                val beginMassSelection = !pointer.hasTriggeredMassSelection
-                                pointer.hasTriggeredMassSelection = true
-                                moveCursorFromSpacebar(pointer, count, beginMassSelection)
-                            }
-                        }
-                        true
-                    } else {
-                        action != SwipeAction.NO_ACTION
-                    }
-                }
-                else -> false
+        val action: SwipeAction
+        val cursorAction: SwipeAction
+        val directionSign: Int
+        when (event.direction) {
+            SwipeGesture.Direction.LEFT -> {
+                action = prefs.gestures.spaceBarSwipeLeft.get()
+                cursorAction = SwipeAction.MOVE_CURSOR_LEFT
+                directionSign = -1
             }
-            SwipeGesture.Type.TOUCH_UP -> when (event.direction) {
-                SwipeGesture.Direction.LEFT -> {
-                    prefs.gestures.spaceBarSwipeLeft.get().let {
-                        when {
-                            it == SwipeAction.NO_ACTION -> {
-                                false
-                            }
-                            it != SwipeAction.MOVE_CURSOR_LEFT -> {
-                                keyboardManager.executeSwipeAction(it)
-                                true
-                            }
-                            else -> {
-                                false
-                            }
-                        }
-                    }
-                }
-                SwipeGesture.Direction.RIGHT -> {
-                    prefs.gestures.spaceBarSwipeRight.get().let {
-                        when {
-                            it == SwipeAction.NO_ACTION -> {
-                                false
-                            }
-                            it != SwipeAction.MOVE_CURSOR_RIGHT -> {
-                                keyboardManager.executeSwipeAction(it)
-                                true
-                            }
-                            else -> {
-                                false
-                            }
-                        }
-                    }
-                }
-                else -> {
-                    if (event.absUnitCountY < -6) {
-                        keyboardManager.executeSwipeAction(prefs.gestures.spaceBarSwipeUp.get())
-                        true
-                    } else {
-                        false
-                    }
+            SwipeGesture.Direction.RIGHT -> {
+                action = prefs.gestures.spaceBarSwipeRight.get()
+                cursorAction = SwipeAction.MOVE_CURSOR_RIGHT
+                directionSign = 1
+            }
+            else -> {
+                return if (
+                    event.type == SwipeGesture.Type.TOUCH_UP &&
+                    event.absUnitCountY < -6
+                ) {
+                    keyboardManager.executeSwipeAction(prefs.gestures.spaceBarSwipeUp.get())
+                    true
+                } else {
+                    false
                 }
             }
+        }
+        return when {
+            event.type == SwipeGesture.Type.TOUCH_UP && action != cursorAction -> {
+                if (action == SwipeAction.NO_ACTION) {
+                    false
+                } else {
+                    keyboardManager.executeSwipeAction(action)
+                    true
+                }
+            }
+            event.type == SwipeGesture.Type.TOUCH_MOVE && action == cursorAction -> {
+                val units = abs(event.relUnitCountX)
+                val count = if (pointer.hasTriggeredGestureMove) units else units - 1
+                if (count > 0) {
+                    inputFeedbackController?.gestureMovingSwipe(TextKeyData.SPACE)
+                    val beginMassSelection = !pointer.hasTriggeredMassSelection
+                    pointer.hasTriggeredMassSelection = true
+                    moveCursorFromSpacebar(
+                        pointer,
+                        directionSign * count,
+                        beginMassSelection,
+                    )
+                }
+                true
+            }
+            else -> action != SwipeAction.NO_ACTION && action != cursorAction
         }
     }
 
@@ -1294,11 +1254,7 @@ private class TextKeyboardLayoutController(
                 selectionDragSession.state = null
                 editorInstance.moveCursorBy(steps)
             }
-            if (shouldFallbackSpacebarMovementToArrow(
-                    isRawInputEditor = editorInstance.activeInfo.isRawInputEditor,
-                    directMovementSucceeded = directMovementSucceeded,
-                )
-            ) {
+            if (editorInstance.activeInfo.isRawInputEditor && !directMovementSucceeded) {
                 val arrowCode = if (steps < 0) KeyCode.ARROW_LEFT else KeyCode.ARROW_RIGHT
                 keyboardManager.handleArrow(
                     code = arrowCode,
@@ -1310,7 +1266,7 @@ private class TextKeyboardLayoutController(
     }
 
     override fun onGlideAddPoint(point: GlideTypingGesture.Detector.Position) {
-        if (shouldCollectGlideDrawingPoint(isGlideEnabled, prefs.glide.showTrail.get())) {
+        if (isGlideEnabled && prefs.glide.showTrail.get()) {
             glideDataForDrawing.add(point to SystemClock.uptimeMillis())
         }
     }

@@ -76,7 +76,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">دۆخی نادیار</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">چالاککردنی دۆخی نادیار</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">ڕاستکردنەوە</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">چالاککردنی ڕاستکردنەوەی نووسین</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">گەڕانی دەنگی</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">کردنەوەی تایبەتمەندی گەڕانی دەنگی</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">دۆخی یەکدەست</string>

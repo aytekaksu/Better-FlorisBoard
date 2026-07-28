@@ -47,50 +47,7 @@ class TextKeyboardLayoutStateTest : FunSpec({
         }
     }
 
-    context("spacebar movement fallback") {
-        test("raw cursor movement falls back when direct movement is unavailable") {
-            shouldFallbackSpacebarMovementToArrow(
-                isRawInputEditor = true,
-                directMovementSucceeded = false,
-            ) shouldBe true
-        }
-
-        test("raw selection movement falls back when direct movement is unavailable") {
-            shouldFallbackSpacebarMovementToArrow(
-                isRawInputEditor = true,
-                directMovementSucceeded = false,
-            ) shouldBe true
-        }
-
-        test("rich cursor boundary does not send a fallback command") {
-            shouldFallbackSpacebarMovementToArrow(
-                isRawInputEditor = false,
-                directMovementSucceeded = true,
-            ) shouldBe false
-        }
-
-        test("rich selection boundary does not send a fallback command") {
-            shouldFallbackSpacebarMovementToArrow(
-                isRawInputEditor = false,
-                directMovementSucceeded = true,
-            ) shouldBe false
-        }
-
-        test("rich direct movement failure does not send a fallback command") {
-            shouldFallbackSpacebarMovementToArrow(
-                isRawInputEditor = false,
-                directMovementSucceeded = false,
-            ) shouldBe false
-        }
-    }
-
     context("glide drawing state") {
-        test("points are collected only while glide trail drawing is enabled") {
-            shouldCollectGlideDrawingPoint(isGlideEnabled = true, showTrail = true) shouldBe true
-            shouldCollectGlideDrawingPoint(isGlideEnabled = true, showTrail = false) shouldBe false
-            shouldCollectGlideDrawingPoint(isGlideEnabled = false, showTrail = true) shouldBe false
-        }
-
         test("completed visible trail moves active points into the fading trail") {
             val activePoints = mutableListOf(1, 2)
             val fadingPoints = mutableListOf(0)

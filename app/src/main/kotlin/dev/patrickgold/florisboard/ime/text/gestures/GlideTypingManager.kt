@@ -45,7 +45,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -55,7 +54,6 @@ import kotlinx.coroutines.withContext
 import org.florisboard.autocorrect.api.AutocorrectGesturePoint
 import org.florisboard.autocorrect.api.AutocorrectInputMode
 import org.florisboard.autocorrect.api.AutocorrectInputTrace
-import org.florisboard.autocorrect.api.AutocorrectKeyGeometry
 import org.florisboard.autocorrect.api.AutocorrectPluginContract
 import java.text.Normalizer
 
@@ -84,7 +82,6 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
     private var previewJob: Job? = null
     private var completionJob: Job? = null
     @Volatile private var pendingGlide: PendingGlide? = null
-    private val queuedGlides = mutableSetOf<QueuedGlide>()
     @Volatile private var previewGeneration = 0L
     private var publishedPreviewGeneration: Long? = null
     private var lastTime = SystemClock.uptimeMillis()
@@ -96,9 +93,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
         gesturePoints.clear()
         ++previewGeneration
         clearPublishedPreview(completedGeneration)
-        val points = data.positions.map {
-            GlideTypingGesture.Detector.Position(it.x, it.y, it.elapsedTimeMillis)
-        }
+        val points = data.positions.toList()
         val revision = layoutRevision
         if (revision == null || subtypeManager.activeSubtype != revision.subtype) {
             return
@@ -108,11 +103,10 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
             trace = gestureTrace(points, revision),
             revision = revision,
         )
-        queuedGlides.add(queued)
         keyboardManager.inputEventDispatcher.deferInputEvents(
             onLaterInputQueued = { pendingGlide?.cancelProviderAttempt() },
             start = start@ { onResolved ->
-                if (!queuedGlides.remove(queued) || subtypeManager.activeSubtype != revision.subtype) {
+                if (subtypeManager.activeSubtype != revision.subtype) {
                     onResolved()
                     return@start
                 }
@@ -164,24 +158,22 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
         pendingGlide = pending
         completionJob = scope.launch {
             try {
-                val result = coroutineScope {
-                    val providerAttempt = async {
-                        autocorrectPluginManager.suggestGesture(
-                            subtype = pending.revision.subtype,
-                            content = pending.content,
-                            maxCandidateCount = MAX_SUGGESTION_COUNT,
-                            allowPossiblyOffensive = pending.allowPossiblyOffensive,
-                            isPrivateSession = pending.isPrivateSession,
-                            inputTrace = pending.trace,
-                            requestEditorGeneration = pending.editorGeneration,
-                        )
-                    }
-                    pending.attachProviderAttempt(providerAttempt)
-                    try {
-                        providerAttempt.await()
-                    } finally {
-                        pending.detachProviderAttempt(providerAttempt)
-                    }
+                val providerAttempt = async {
+                    autocorrectPluginManager.suggestGesture(
+                        subtype = pending.revision.subtype,
+                        content = pending.content,
+                        maxCandidateCount = MAX_SUGGESTION_COUNT,
+                        allowPossiblyOffensive = pending.allowPossiblyOffensive,
+                        isPrivateSession = pending.isPrivateSession,
+                        inputTrace = pending.trace,
+                        requestEditorGeneration = pending.editorGeneration,
+                    )
+                }
+                pending.attachProviderAttempt(providerAttempt)
+                val result = try {
+                    providerAttempt.await()
+                } finally {
+                    pending.detachProviderAttempt(providerAttempt)
                 }
                 if (pendingGlide !== pending) return@launch
                 when {
@@ -242,7 +234,6 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
         val pendingCompletion = completionJob
         pendingGlide = null
         completionJob = null
-        queuedGlides.clear()
         keyboardManager.inputEventDispatcher.invalidatePendingInputEvents()
         keyboardManager.inputEventDispatcher.cancelPressedKeys()
         pendingCompletion?.cancel()
@@ -267,7 +258,6 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
         val suggestions = try {
             classifyWithBuiltInClassifier(
                 points = pending.points,
-                gestureCompleted = true,
                 expectedRevision = pending.revision,
                 expectedEditorGeneration = pending.editorGeneration,
                 requireCurrentLayout = false,
@@ -310,8 +300,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
     }
 
     override fun onGlideAddPoint(point: GlideTypingGesture.Detector.Position) {
-        val normalized = GlideTypingGesture.Detector.Position(point.x, point.y)
-        gesturePoints.add(normalized)
+        gesturePoints.add(point)
         val generation = previewGeneration
 
         val time = SystemClock.uptimeMillis()
@@ -328,7 +317,6 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
                 val suggestions = try {
                     classifyWithBuiltInClassifier(
                         points = points,
-                        gestureCompleted = false,
                         expectedRevision = revision,
                         expectedEditorGeneration = editorGeneration,
                         requireCurrentLayout = true,
@@ -393,10 +381,8 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
         }
         val revision = LayoutRevision(
             subtype = subtype,
-            width = inputLayout.width,
-            height = inputLayout.height,
             classifierKeys = classifierKeys.toList(),
-            traceKeys = inputLayout.keys,
+            inputLayout = inputLayout,
         )
         if (revision == layoutRevision) return false
         layoutRevision = revision
@@ -408,20 +394,10 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
         positions: List<GlideTypingGesture.Detector.Position>,
         revision: LayoutRevision,
     ): AutocorrectInputTrace {
-        val width = revision.width
-        val height = revision.height
+        val width = revision.inputLayout.width
+        val height = revision.inputLayout.height
         if (width <= 0f || height <= 0f || positions.isEmpty()) return AutocorrectInputTrace.Empty
-        val step = (
-            (positions.size + AutocorrectPluginContract.MAX_GESTURE_POINT_COUNT - 1) /
-                AutocorrectPluginContract.MAX_GESTURE_POINT_COUNT
-            ).coerceAtLeast(1)
-        val sampledIndices = (positions.indices step step)
-            .take(AutocorrectPluginContract.MAX_GESTURE_POINT_COUNT - 1)
-            .toMutableList()
-            .apply {
-                if (lastOrNull() != positions.lastIndex) add(positions.lastIndex)
-            }
-        val gesturePoints = sampledIndices.map { index ->
+        val gesturePoints = sampledGestureIndices(positions.size).map { index ->
             positions[index].let { point ->
                 AutocorrectGesturePoint(
                     x = point.x / width,
@@ -431,7 +407,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
             }
         }
         return AutocorrectInputTrace(
-            keys = revision.traceKeys,
+            keys = revision.inputLayout.keys,
             points = emptyList(),
             gesturePoints = gesturePoints,
             mode = AutocorrectInputMode.GESTURE,
@@ -440,7 +416,6 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
 
     private suspend fun classifyWithBuiltInClassifier(
         points: List<GlideTypingGesture.Detector.Position>,
-        gestureCompleted: Boolean,
         expectedRevision: LayoutRevision?,
         expectedEditorGeneration: Long,
         requireCurrentLayout: Boolean,
@@ -468,10 +443,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
             glideTypingClassifier.clear()
             try {
                 points.forEach(glideTypingClassifier::addGesturePoint)
-                glideTypingClassifier.getSuggestions(
-                    maxSuggestionCount = MAX_SUGGESTION_COUNT,
-                    gestureCompleted = gestureCompleted,
-                )
+                glideTypingClassifier.getSuggestions(MAX_SUGGESTION_COUNT)
             } finally {
                 glideTypingClassifier.clear()
             }
@@ -547,11 +519,18 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
 
     private data class LayoutRevision(
         val subtype: Subtype,
-        val width: Float,
-        val height: Float,
         val classifierKeys: List<GlideTypingKey>,
-        val traceKeys: List<AutocorrectKeyGeometry>,
+        val inputLayout: AutocorrectInputLayoutSnapshot,
     )
+}
+
+internal fun sampledGestureIndices(pointCount: Int): IntArray {
+    val sampleCount = minOf(pointCount, AutocorrectPluginContract.MAX_GESTURE_POINT_COUNT)
+    if (sampleCount <= 0) return intArrayOf()
+    if (sampleCount == 1) return intArrayOf(0)
+    return IntArray(sampleCount) { index ->
+        index * (pointCount - 1) / (sampleCount - 1)
+    }
 }
 
 internal fun rebaseGlideAlternatives(

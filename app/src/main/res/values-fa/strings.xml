@@ -50,7 +50,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">ناشناس</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">غیر فعال کردن حالت ناشناس</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">تصحیح خودکار</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">غیر فعال کردن تصحیح خودکار</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">ورودی صدا</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">یک دستی</string>
     <string name="quick_action__noop" comment="Noop=no operation; this action is only used as a placeholder in the actions editor drag and drop screen">هیچ کدام</string>

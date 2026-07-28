@@ -16,8 +16,6 @@
 
 package dev.patrickgold.florisboard.ime.text.gestures
 
-import androidx.collection.SparseArrayCompat
-import androidx.collection.set
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.lib.FlorisLocale
 import io.kotest.core.spec.style.FunSpec
@@ -26,15 +24,26 @@ import io.kotest.matchers.shouldBe
 import java.text.Normalizer
 
 class StatisticalGlideTypingClassifierTest : FunSpec({
+    test("multiple geometries keep only the best score for each word") {
+        val candidates = mutableListOf("alpha", "beta")
+        val weights = mutableListOf(1f, 3f)
+
+        insertRankedCandidate(candidates, weights, "beta", 0.5f, limit = 3)
+        insertRankedCandidate(candidates, weights, "beta", 4f, limit = 3)
+        insertRankedCandidate(candidates, weights, "gamma", 2f, limit = 3)
+        insertRankedCandidate(candidates, weights, "trimmed", 5f, limit = 3)
+
+        candidates shouldBe listOf("beta", "alpha", "gamma")
+        weights shouldBe listOf(0.5f, 1f, 2f)
+    }
+
     test("dedicated accented keys are indexed by their actual code points") {
         val accentedCodePoint = 'é'.code
         val lastCodePoint = 't'.code
         val accentedKey = GlideTypingKey(accentedCodePoint, 0f, 0f, 40f, 40f, "é")
         val lastKey = GlideTypingKey(lastCodePoint, 80f, 0f, 120f, 40f, "t")
-        val keysByCharacter = SparseArrayCompat<GlideTypingKey>().apply {
-            this[accentedCodePoint] = accentedKey
-            this[lastCodePoint] = lastKey
-        }
+        val keys = listOf(accentedKey, lastKey)
+        val keyIndex = StatisticalGlideTypingClassifier.buildKeyIndex(keys, Subtype.DEFAULT)
         val word = "ét"
         val userGesture = StatisticalGlideTypingClassifier.Gesture().apply {
             addPoint(accentedKey.centerX, accentedKey.centerY)
@@ -43,19 +52,17 @@ class StatisticalGlideTypingClassifierTest : FunSpec({
         val pruner = StatisticalGlideTypingClassifier.Pruner(
             lengthThreshold = 8.42,
             words = listOf(word),
-            keysByCharacter = keysByCharacter,
+            keyIndex = keyIndex,
         )
 
-        pruner.pruneByExtremities(userGesture, listOf(accentedKey, lastKey)) shouldContain word
+        pruner.pruneByExtremities(userGesture, keys) shouldContain word
     }
 
     test("accented word endpoints fall back to their base keys") {
         val firstKey = GlideTypingKey('e'.code, 0f, 0f, 40f, 40f, "e")
         val lastKey = GlideTypingKey('t'.code, 80f, 0f, 120f, 40f, "t")
-        val keysByCharacter = SparseArrayCompat<GlideTypingKey>().apply {
-            this['e'.code] = firstKey
-            this['t'.code] = lastKey
-        }
+        val keys = listOf(firstKey, lastKey)
+        val keyIndex = StatisticalGlideTypingClassifier.buildKeyIndex(keys, Subtype.DEFAULT)
         val userGesture = StatisticalGlideTypingClassifier.Gesture().apply {
             addPoint(firstKey.centerX, firstKey.centerY)
             addPoint(lastKey.centerX, lastKey.centerY)
@@ -63,10 +70,10 @@ class StatisticalGlideTypingClassifierTest : FunSpec({
         val pruner = StatisticalGlideTypingClassifier.Pruner(
             lengthThreshold = 8.42,
             words = listOf("ét"),
-            keysByCharacter = keysByCharacter,
+            keyIndex = keyIndex,
         )
 
-        pruner.pruneByExtremities(userGesture, listOf(firstKey, lastKey)) shouldContain "ét"
+        pruner.pruneByExtremities(userGesture, keys) shouldContain "ét"
     }
 
     test("NFD accented words use NFC geometry without changing the candidate spelling") {
@@ -74,12 +81,8 @@ class StatisticalGlideTypingClassifierTest : FunSpec({
         val middleKey = GlideTypingKey('a'.code, 40f, 0f, 80f, 40f, "a")
         val fKey = GlideTypingKey('f'.code, 40f, 0f, 80f, 40f, "f")
         val lastKey = GlideTypingKey('e'.code, 80f, 0f, 120f, 40f, "e")
-        val keysByCharacter = SparseArrayCompat<GlideTypingKey>().apply {
-            this['c'.code] = firstKey
-            this['a'.code] = middleKey
-            this['f'.code] = fKey
-            this['e'.code] = lastKey
-        }
+        val keys = listOf(firstKey, middleKey, fKey, lastKey)
+        val keyIndex = StatisticalGlideTypingClassifier.buildKeyIndex(keys, Subtype.DEFAULT)
         val nfdWord = Normalizer.normalize("café", Normalizer.Form.NFD)
         val userGesture = StatisticalGlideTypingClassifier.Gesture().apply {
             addPoint(firstKey.centerX, firstKey.centerY)
@@ -89,15 +92,15 @@ class StatisticalGlideTypingClassifierTest : FunSpec({
         val pruner = StatisticalGlideTypingClassifier.Pruner(
             lengthThreshold = 8.42,
             words = listOf(nfdWord),
-            keysByCharacter = keysByCharacter,
+            keyIndex = keyIndex,
         )
 
         pruner.pruneByExtremities(
             userGesture,
-            listOf(firstKey, middleKey, lastKey),
+            keys,
         ).single() shouldBe nfdWord
         StatisticalGlideTypingClassifier.Gesture
-            .generateIdealGestures(nfdWord, keysByCharacter)
+            .generateIdealGestures(nfdWord, keyIndex)
             .single()
             .getLastX() shouldBe lastKey.centerX
     }
@@ -123,14 +126,12 @@ class StatisticalGlideTypingClassifierTest : FunSpec({
             40f,
             String(Character.toChars(lastLower)),
         )
-        val keysByCharacter = SparseArrayCompat<GlideTypingKey>().apply {
-            this[firstLower] = firstKey
-            this[lastLower] = lastKey
-        }
+        val keys = listOf(firstKey, lastKey)
+        val keyIndex = StatisticalGlideTypingClassifier.buildKeyIndex(keys, Subtype.DEFAULT)
         val word = String(Character.toChars(firstUpper)) + String(Character.toChars(lastUpper))
 
         val ideal = StatisticalGlideTypingClassifier.Gesture
-            .generateIdealGestures(word, keysByCharacter)
+            .generateIdealGestures(word, keyIndex)
             .single()
         ideal.getFirstX() shouldBe firstKey.centerX
         ideal.getLastX() shouldBe lastKey.centerX
@@ -142,18 +143,16 @@ class StatisticalGlideTypingClassifierTest : FunSpec({
         val pruner = StatisticalGlideTypingClassifier.Pruner(
             lengthThreshold = 8.42,
             words = listOf(word),
-            keysByCharacter = keysByCharacter,
+            keyIndex = keyIndex,
         )
-        pruner.pruneByExtremities(userGesture, listOf(firstKey, lastKey)) shouldContain word
+        pruner.pruneByExtremities(userGesture, keys) shouldContain word
     }
 
     test("Greek final sigma words use the ordinary sigma key") {
         val firstKey = GlideTypingKey('α'.code, 0f, 0f, 40f, 40f, "α")
         val sigmaKey = GlideTypingKey('σ'.code, 80f, 0f, 120f, 40f, "σ")
-        val keysByCharacter = SparseArrayCompat<GlideTypingKey>().apply {
-            this['α'.code] = firstKey
-            this['σ'.code] = sigmaKey
-        }
+        val keys = listOf(firstKey, sigmaKey)
+        val keyIndex = StatisticalGlideTypingClassifier.buildKeyIndex(keys, Subtype.DEFAULT)
         val word = "ας"
         val userGesture = StatisticalGlideTypingClassifier.Gesture().apply {
             addPoint(firstKey.centerX, firstKey.centerY)
@@ -162,12 +161,12 @@ class StatisticalGlideTypingClassifierTest : FunSpec({
         val pruner = StatisticalGlideTypingClassifier.Pruner(
             lengthThreshold = 8.42,
             words = listOf(word),
-            keysByCharacter = keysByCharacter,
+            keyIndex = keyIndex,
         )
 
-        pruner.pruneByExtremities(userGesture, listOf(firstKey, sigmaKey)) shouldContain word
+        pruner.pruneByExtremities(userGesture, keys) shouldContain word
         StatisticalGlideTypingClassifier.Gesture
-            .generateIdealGestures(word, keysByCharacter)
+            .generateIdealGestures(word, keyIndex)
             .single()
             .getLastX() shouldBe sigmaKey.centerX
     }

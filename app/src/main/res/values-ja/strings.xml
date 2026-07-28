@@ -85,7 +85,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">シークレット</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">シークレットモードの切り替え</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">自動修正</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">自動修正の切り替え</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">音声入力</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">音声入力プロバイダを開く</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">片手モード</string>

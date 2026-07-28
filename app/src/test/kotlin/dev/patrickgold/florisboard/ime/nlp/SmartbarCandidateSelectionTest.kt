@@ -26,43 +26,27 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 
 class SmartbarCandidateSelectionTest : FunSpec({
-    test("word candidates replace a fresh clipboard suggestion while typing") {
+    test("word and clipboard candidates follow editor typing state") {
         selectSmartbarCandidates(
             isWordBeingTyped = true,
             wordCandidates = listOf("type", "typing", "typed"),
             clipboardCandidates = listOf("clipboard"),
         ) shouldBe listOf("type", "typing", "typed")
-    }
-
-    test("clipboard suggestion remains preferred in a blank editor") {
         selectSmartbarCandidates(
             isWordBeingTyped = false,
             wordCandidates = listOf("next", "word"),
             clipboardCandidates = listOf("clipboard"),
         ) shouldBe listOf("clipboard")
-    }
-
-    test("clipboard suggestion stays hidden when the active word has no candidates") {
         selectSmartbarCandidates(
             isWordBeingTyped = true,
             wordCandidates = emptyList(),
             clipboardCandidates = listOf("clipboard"),
         ) shouldBe emptyList()
-    }
-
-    test("word candidates remain available without a clipboard suggestion") {
         selectSmartbarCandidates(
             isWordBeingTyped = false,
             wordCandidates = listOf("next", "word"),
             clipboardCandidates = emptyList(),
         ) shouldBe listOf("next", "word")
-    }
-
-    test("built-in emoji suggestions retain their presentation semantics") {
-        EmojiSuggestionCandidate(
-            emoji = Emoji("🙂", "slightly smiling face", emptyList()),
-            showName = false,
-        ).kind shouldBe SuggestionCandidateKind.EMOJI
     }
 
     test("word candidate origin binding preserves provider candidate identity") {

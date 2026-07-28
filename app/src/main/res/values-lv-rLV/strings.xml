@@ -85,7 +85,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Slepenība</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Pārslēgt slepenību</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Autolabošana</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">Pārslēgt automātisko labošanu</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Balss ievade</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Atvērt balss ievades nodrošinātāju</string>
     <string name="quick_action__floating_window_mode" comment="Please mind the limited available space for the quick action strings">Peldošs</string>

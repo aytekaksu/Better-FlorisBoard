@@ -88,7 +88,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">无痕模式</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">无痕模式开关</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">自动更正</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">自动更正开关</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">语音输入</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">打开语音输入提供者</string>
     <string name="quick_action__floating_window_mode" comment="Please mind the limited available space for the quick action strings">浮动</string>

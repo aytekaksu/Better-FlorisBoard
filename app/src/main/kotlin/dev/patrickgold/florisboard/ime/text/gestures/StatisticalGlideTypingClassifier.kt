@@ -48,18 +48,17 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
 
     private val gesture = Gesture()
     private var keyIndex = KeyIndex.Empty
-    private var words: List<String> = emptyList()
-    private var keys: ArrayList<GlideTypingKey> = arrayListOf()
+    private var words = emptyList<String>()
+    private var keys = emptyList<GlideTypingKey>()
     private lateinit var pruner: Pruner
     private var wordDataSubtype: Subtype? = null
     private var wordDataRevision = -1L
     private var layoutSubtype: Subtype? = null
-    private var currentSubtype: Subtype? = null
     val ready: Boolean
         get() = keys.isNotEmpty() &&
-            currentSubtype == layoutSubtype &&
             wordDataSubtype == layoutSubtype &&
-            wordDataSubtype != null
+            wordDataSubtype != null &&
+            ::pruner.isInitialized
     private val prunerCache = LruCache<PrunerCacheKey, Pruner>(PRUNER_CACHE_SIZE)
 
     /**
@@ -220,21 +219,6 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         companion object {
             val Empty = KeyIndex(SparseArrayCompat(), SparseArrayCompat(), emptyMap(), emptyMap())
 
-            fun fromCharacterMap(keysByCharacter: SparseArrayCompat<GlideTypingKey>): KeyIndex {
-                val directTokens = buildList {
-                    for (index in 0 until keysByCharacter.size()) {
-                        val codePoint = keysByCharacter.keyAt(index)
-                        add(OutputToken(String(Character.toChars(codePoint)), keysByCharacter.valueAt(index)))
-                    }
-                }
-                return KeyIndex(
-                    directByCharacter = keysByCharacter,
-                    aliasesByCharacter = SparseArrayCompat(),
-                    directTokens = directTokens.groupBy { it.text.codePointAt(0) },
-                    aliasTokens = emptyMap(),
-                )
-            }
-
             fun build(keys: List<GlideTypingKey>, subtype: Subtype): KeyIndex {
                 val directByCharacter = SparseArrayCompat<GlideTypingKey>()
                 val directTokens = keys.mapNotNull { key ->
@@ -323,38 +307,26 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
     }
 
     override suspend fun setLayout(keys: List<GlideTypingKey>, subtype: Subtype) {
-        setWordData(subtype)
-        // stop duplicate calls
-        if (layoutSubtype == subtype && this.keys == keys) {
-            return
-        }
-
-        keyIndex = buildKeyIndex(keys, subtype)
-        this.keys.clear()
-        this.keys.addAll(keys)
-        layoutSubtype = subtype
-        currentSubtype = null
-        distanceThresholdSquared = (keys.firstOrNull()?.width?.div(4) ?: 0f).toInt()
-        distanceThresholdSquared *= distanceThresholdSquared
-        lruSuggestionCache.evictAll()
-
-        if (keys.isNotEmpty() && wordDataSubtype == layoutSubtype) {
-            initializePruner()
-        }
-    }
-
-    private suspend fun setWordData(subtype: Subtype) {
         val wordData = nlpManager.getGlideTypingWordData(subtype)
-        // stop duplicate calls..
-        if (wordDataSubtype == subtype && wordDataRevision == wordData.revision) {
-            return
-        }
+        val wordsChanged =
+            wordDataSubtype != subtype || wordDataRevision != wordData.revision
+        val layoutChanged = layoutSubtype != subtype || this.keys != keys
+        if (!wordsChanged && !layoutChanged) return
 
-        this.words = wordData.value
-        this.wordDataSubtype = subtype
-        this.wordDataRevision = wordData.revision
+        if (wordsChanged) {
+            words = wordData.value
+            wordDataSubtype = subtype
+            wordDataRevision = wordData.revision
+        }
+        if (layoutChanged) {
+            keyIndex = buildKeyIndex(keys, subtype)
+            this.keys = keys.toList()
+            layoutSubtype = subtype
+            distanceThresholdSquared = (keys.firstOrNull()?.width?.div(4) ?: 0f).toInt()
+            distanceThresholdSquared *= distanceThresholdSquared
+        }
         lruSuggestionCache.evictAll()
-        if (wordDataSubtype == layoutSubtype) {
+        if (keys.isNotEmpty() && wordDataSubtype == layoutSubtype) {
             initializePruner()
         }
     }
@@ -377,12 +349,11 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         } else {
             this.pruner = cached
         }
-        this.currentSubtype = currentSubtype
     }
 
     private val lruSuggestionCache = LruCache<Pair<Gesture, Int>, List<String>>(SUGGESTION_CACHE_SIZE)
 
-    override suspend fun getSuggestions(maxSuggestionCount: Int, gestureCompleted: Boolean): List<String> {
+    override suspend fun getSuggestions(maxSuggestionCount: Int): List<String> {
         val cacheKey = Pair(this.gesture, maxSuggestionCount)
         return when (val cached = lruSuggestionCache.get(cacheKey)) {
             null -> {
@@ -422,31 +393,17 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                 val locationDistance = calcLocationDistance(wordGesture, userGesture)
                 val shapeProbability = calcGaussianProbability(shapeDistance, 0.0f, SHAPE_STD)
                 val locationProbability = calcGaussianProbability(locationDistance, 0.0f, LOCATION_STD * radius)
-                val frequency = 255f * nlpManager.getFrequencyForWord(currentSubtype!!, word).toFloat()
+                val frequency =
+                    255f * nlpManager.getFrequencyForWord(layoutSubtype!!, word).toFloat()
                 val confidence = 1.0f / (shapeProbability * locationProbability * frequency)
 
-                var candidateDistanceSortedIndex = 0
-                var duplicateIndex = Int.MAX_VALUE
-
-                while (candidateDistanceSortedIndex < candidateWeights.size
-                    && candidateWeights[candidateDistanceSortedIndex] <= confidence
-                ) {
-                    if (candidates[candidateDistanceSortedIndex].contentEquals(word)) duplicateIndex =
-                        candidateDistanceSortedIndex
-                    candidateDistanceSortedIndex++
-                }
-                if (candidateDistanceSortedIndex < maxSuggestionCount && candidateDistanceSortedIndex <= duplicateIndex) {
-                    if (duplicateIndex < Int.MAX_VALUE) {
-                        candidateWeights.removeAt(duplicateIndex)
-                        candidates.removeAt(duplicateIndex)
-                    }
-                    candidateWeights.add(candidateDistanceSortedIndex, confidence)
-                    candidates.add(candidateDistanceSortedIndex, word)
-                    if (candidateWeights.size > maxSuggestionCount) {
-                        candidateWeights.removeAt(maxSuggestionCount)
-                        candidates.removeAt(maxSuggestionCount)
-                    }
-                }
+                insertRankedCandidate(
+                    candidates,
+                    candidateWeights,
+                    word,
+                    confidence,
+                    maxSuggestionCount,
+                )
             }
         }
 
@@ -506,12 +463,6 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         words: List<String>,
         private val keyIndex: KeyIndex,
     ) {
-        constructor(
-            lengthThreshold: Double,
-            words: List<String>,
-            keysByCharacter: SparseArrayCompat<GlideTypingKey>,
-        ) : this(lengthThreshold, words, KeyIndex.fromCharacterMap(keysByCharacter))
-
         /** A tree that provides fast access to words based on their first and last letter.  */
         private val wordTree = Collections.synchronizedMap(HashMap<Pair<Int, Int>, ArrayList<String>>())
 
@@ -604,19 +555,9 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             private fun findNClosestKeys(
                 x: Float, y: Float, n: Int, keys: Iterable<GlideTypingKey>
             ): Iterable<Int> {
-                val keyDistances = HashMap<GlideTypingKey, Float>()
-                for (key in keys) {
-                    val distance = Gesture.distance(
-                        key.centerX,
-                        key.centerY,
-                        x,
-                        y
-                    )
-                    keyDistances[key] = distance
-                }
-
-                return keyDistances.entries.sortedWith { c1, c2 -> c1.value.compareTo(c2.value) }.take(n)
-                    .map { it.key.id }
+                return keys.sortedBy { key ->
+                    Gesture.distance(key.centerX, key.centerY, x, y)
+                }.take(n).map(GlideTypingKey::id)
             }
         }
 
@@ -639,13 +580,6 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         companion object {
             // TODO: Find out optimal max size
             private const val MAX_SIZE = 500
-
-            fun generateIdealGestures(
-                word: String,
-                keysByCharacter: SparseArrayCompat<GlideTypingKey>,
-            ): List<Gesture> {
-                return generateIdealGestures(word, KeyIndex.fromCharacterMap(keysByCharacter))
-            }
 
             internal fun generateIdealGestures(
                 word: String,
@@ -845,5 +779,28 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             }
             return result
         }
+    }
+}
+
+internal fun insertRankedCandidate(
+    candidates: MutableList<String>,
+    weights: MutableList<Float>,
+    word: String,
+    weight: Float,
+    limit: Int,
+) {
+    val duplicateIndex = candidates.indexOf(word)
+    if (duplicateIndex >= 0) {
+        if (weights[duplicateIndex] <= weight) return
+        candidates.removeAt(duplicateIndex)
+        weights.removeAt(duplicateIndex)
+    }
+    val insertionIndex = weights.binarySearch(weight).let { if (it < 0) -it - 1 else it }
+    if (insertionIndex >= limit) return
+    candidates.add(insertionIndex, word)
+    weights.add(insertionIndex, weight)
+    if (candidates.size > limit) {
+        candidates.removeAt(limit)
+        weights.removeAt(limit)
     }
 }
