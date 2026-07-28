@@ -49,6 +49,9 @@ jobs:
           "cmake;4.1.2"
           "ndk;29.0.14206865"
 
+      - name: Test contribution governance policy
+        run: bash .github/scripts/require-maintainer-approval-test.sh
+
       - name: Check formatting, Kotlin, Android, and privacy rules
         run: ./gradlew ciStaticAnalysis --stacktrace
 

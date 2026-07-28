@@ -1,0 +1,49 @@
+name: Contribution governance
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
+  pull_request_review:
+    branches: [main]
+    types: [submitted, dismissed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: governance-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  governance:
+    name: governance
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      # pull_request_target must never check out or execute the untrusted PR head.
+      - name: Checkout trusted base policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Require current maintainer approval for outside work
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAINTAINER_LOGIN: aytekaksu
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          gh api --paginate --slurp \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews?per_page=100" |
+            bash .github/scripts/require-maintainer-approval.sh
