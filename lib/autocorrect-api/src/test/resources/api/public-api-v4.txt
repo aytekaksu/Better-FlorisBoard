@@ -1,0 +1,376 @@
+public final enum org.florisboard.autocorrect.api.AutocorrectAcceptanceKind
+  public static final field AUTO_CORRECTION:Lorg/florisboard/autocorrect/api/AutocorrectAcceptanceKind;
+  public static final field GESTURE:Lorg/florisboard/autocorrect/api/AutocorrectAcceptanceKind;
+  public static final field MANUAL:Lorg/florisboard/autocorrect/api/AutocorrectAcceptanceKind;
+
+public final class org.florisboard.autocorrect.api.AutocorrectCandidate
+  public static final field Companion:Lorg/florisboard/autocorrect/api/AutocorrectCandidate$Companion;
+  public constructor(Ljava/lang/String;, Ljava/lang/String;, Ljava/lang/String;, D, Lorg/florisboard/autocorrect/api/AutocorrectCandidateKind;, Z, Z, Z, I, I, Lorg/florisboard/autocorrect/api/AutocorrectSeparatorBehavior;)V
+  public final method getAutoCommit()Z
+  public final method getConfidence()D
+  public final method getId()Ljava/lang/String;
+  public final method getKind()Lorg/florisboard/autocorrect/api/AutocorrectCandidateKind;
+  public final method getRemovable()Z
+  public final method getReplacementEnd()I
+  public final method getReplacementStart()I
+  public final method getSecondaryText()Ljava/lang/String;
+  public final method getSeparatorBehavior()Lorg/florisboard/autocorrect/api/AutocorrectSeparatorBehavior;
+  public final method getText()Ljava/lang/String;
+  public final method getVisible()Z
+
+public final class org.florisboard.autocorrect.api.AutocorrectCandidate$Companion
+
+public final enum org.florisboard.autocorrect.api.AutocorrectCandidateKind
+  public static final field COMPLETION:Lorg/florisboard/autocorrect/api/AutocorrectCandidateKind;
+  public static final field CORRECTION:Lorg/florisboard/autocorrect/api/AutocorrectCandidateKind;
+  public static final field EMOJI:Lorg/florisboard/autocorrect/api/AutocorrectCandidateKind;
+  public static final field NEXT_WORD:Lorg/florisboard/autocorrect/api/AutocorrectCandidateKind;
+  public static final field TYPED:Lorg/florisboard/autocorrect/api/AutocorrectCandidateKind;
+
+public final enum org.florisboard.autocorrect.api.AutocorrectCapsMode
+  public static final field CAPS_LOCK:Lorg/florisboard/autocorrect/api/AutocorrectCapsMode;
+  public static final field SHIFTED_AUTOMATIC:Lorg/florisboard/autocorrect/api/AutocorrectCapsMode;
+  public static final field SHIFTED_MANUAL:Lorg/florisboard/autocorrect/api/AutocorrectCapsMode;
+  public static final field UNSHIFTED:Lorg/florisboard/autocorrect/api/AutocorrectCapsMode;
+  public static final field UNSPECIFIED:Lorg/florisboard/autocorrect/api/AutocorrectCapsMode;
+
+public final class org.florisboard.autocorrect.api.AutocorrectEditorFlags
+  public static final field CODE_LIKE:I
+  public static final field INSTANCE:Lorg/florisboard/autocorrect/api/AutocorrectEditorFlags;
+  public static final field WEB_FIELD:I
+
+public final class org.florisboard.autocorrect.api.AutocorrectGesturePoint
+  public constructor(F, F, I)V
+  public final method getElapsedTimeMillis()I
+  public final method getX()F
+  public final method getY()F
+
+public final enum org.florisboard.autocorrect.api.AutocorrectInputMode
+  public static final field GESTURE:Lorg/florisboard/autocorrect/api/AutocorrectInputMode;
+  public static final field TYPING:Lorg/florisboard/autocorrect/api/AutocorrectInputMode;
+
+public final class org.florisboard.autocorrect.api.AutocorrectInputTrace
+  public static final field Companion:Lorg/florisboard/autocorrect/api/AutocorrectInputTrace$Companion;
+  public constructor(Ljava/util/List;, Ljava/util/List;, Ljava/util/List;, Lorg/florisboard/autocorrect/api/AutocorrectInputMode;)V
+  public final method getGesturePoints()Ljava/util/List;
+  public final method getKeys()Ljava/util/List;
+  public final method getMode()Lorg/florisboard/autocorrect/api/AutocorrectInputMode;
+  public final method getPoints()Ljava/util/List;
+
+public final class org.florisboard.autocorrect.api.AutocorrectInputTrace$Companion
+  public final method getEmpty()Lorg/florisboard/autocorrect/api/AutocorrectInputTrace;
+
+public final class org.florisboard.autocorrect.api.AutocorrectKeyGeometry
+  public constructor(Ljava/lang/String;, F, F, F, F)V
+  public final method getBottom()F
+  public final method getLeft()F
+  public final method getRight()F
+  public final method getText()Ljava/lang/String;
+  public final method getTop()F
+
+public final class org.florisboard.autocorrect.api.AutocorrectPluginContract
+  public static final field ACTION_BIND_PROVIDER:Ljava/lang/String;
+  public static final field INSTANCE:Lorg/florisboard/autocorrect/api/AutocorrectPluginContract;
+  public static final field MAX_BOOSTED_CODE_POINT_COUNT:I
+  public static final field MAX_CANDIDATES:I
+  public static final field MAX_CANDIDATE_ID_CHARS:I
+  public static final field MAX_CANDIDATE_TEXT_CHARS:I
+  public static final field MAX_CONTEXT_CHARS:I
+  public static final field MAX_GESTURE_POINT_COUNT:I
+  public static final field MAX_SECONDARY_TEXT_CHARS:I
+  public static final field MAX_TRACE_KEY_COUNT:I
+  public static final field MAX_TRACE_POINT_COUNT:I
+  public static final field MAX_USER_DICTIONARY_LANGUAGE_TAGS:I
+  public static final field MAX_USER_DICTIONARY_LANGUAGE_TAG_CHARS:I
+  public static final field MAX_USER_DICTIONARY_PAGE_SIZE:I
+  public static final field MAX_USER_DICTIONARY_TEXT_CHARS:I
+  public static final field META_PROTOCOL_VERSION:Ljava/lang/String;
+  public static final field MSG_ACCEPTED:I
+  public static final field MSG_CANCEL:I
+  public static final field MSG_FINISH_SESSION:I
+  public static final field MSG_FINISH_SESSION_RESULT:I
+  public static final field MSG_GET_PLUGIN_UI:I
+  public static final field MSG_HOST_USER_DICTIONARY_REQUEST:I
+  public static final field MSG_HOST_USER_DICTIONARY_RESULT:I
+  public static final field MSG_INVOKE_PLUGIN_UI_ACTION:I
+  public static final field MSG_PLUGIN_UI_CLOSED:I
+  public static final field MSG_PLUGIN_UI_DOCUMENT:I
+  public static final field MSG_PLUGIN_UI_RESULT:I
+  public static final field MSG_REMOVE:I
+  public static final field MSG_REMOVE_RESULT:I
+  public static final field MSG_REVERTED:I
+  public static final field MSG_SET_PLUGIN_UI_VALUE:I
+  public static final field MSG_START_SESSION:I
+  public static final field MSG_SUGGEST:I
+  public static final field MSG_SUGGESTIONS:I
+  public static final field MSG_TEXT_EVENT:I
+  public static final field PROTOCOL_VERSION:I
+
+public final class org.florisboard.autocorrect.api.AutocorrectPluginContractKt
+  public static final method candidateEventBundle(J, Ljava/lang/String;, Lorg/florisboard/autocorrect/api/AutocorrectAcceptanceKind;)Landroid/os/Bundle;
+  public static final method candidatesFromBundle(Landroid/os/Bundle;)Lkotlin/Pair;
+  public static final method finishSessionBundle(J)Landroid/os/Bundle;
+  public static final method finishSessionBundle(J, Lorg/florisboard/autocorrect/api/AutocorrectRequest;)Landroid/os/Bundle;
+  public static final method finishSessionResultFromBundle(Landroid/os/Bundle;)J
+  public static final method removalRequestBundle(J, J, Ljava/lang/String;)Landroid/os/Bundle;
+  public static final method removalResultFromBundle(Landroid/os/Bundle;)Lkotlin/Pair;
+  public static final method suggestionResultFromBundle(Landroid/os/Bundle;)Lkotlin/Pair;
+
+public final class org.florisboard.autocorrect.api.AutocorrectPluginDocument
+  implements Ljava/io/Closeable;
+  public constructor(Ljava/lang/String;, Ljava/lang/String;, Ljava/lang/String;, Z, Landroid/os/ParcelFileDescriptor;)V
+  public method close()V
+  public final method getDisplayName()Ljava/lang/String;
+  public final method getFileDescriptor()Landroid/os/ParcelFileDescriptor;
+  public final method getItemId()Ljava/lang/String;
+  public final method getMimeType()Ljava/lang/String;
+  public final method getWrite()Z
+
+public final enum org.florisboard.autocorrect.api.AutocorrectPluginHostSetting
+  public static final field GLIDE_ENABLED:Lorg/florisboard/autocorrect/api/AutocorrectPluginHostSetting;
+  public static final field GLIDE_SENSITIVE:Lorg/florisboard/autocorrect/api/AutocorrectPluginHostSetting;
+  public static final field NONE:Lorg/florisboard/autocorrect/api/AutocorrectPluginHostSetting;
+
+public abstract class org.florisboard.autocorrect.api.AutocorrectPluginService
+  extends Landroid/app/Service;
+  public constructor()V
+  protected final method getHostUserDictionary()Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryReader;
+  protected method isHostAuthorized(Ljava/util/Set;)Z
+  public final method onBind(Landroid/content/Intent;)Landroid/os/IBinder;
+  public final method onDestroy()V
+  protected method onFinishSession(J, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onFinishSession(J, Lorg/florisboard/autocorrect/api/AutocorrectRequest;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onGetPluginUi(Ljava/util/List;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onHostUnbound()V
+  protected method onHostUnboundCleanup(Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onInvokePluginUiAction(Ljava/lang/String;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onInvokePluginUiAction(Ljava/lang/String;, Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryEditor;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onPluginUiClosed(Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onPluginUiDocument(Lorg/florisboard/autocorrect/api/AutocorrectPluginDocument;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onRemoveSuggestion(J, Ljava/lang/String;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onServiceDestroyed()V
+  protected method onSetPluginUiValue(Ljava/lang/String;, Ljava/lang/String;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onStartSession(Lorg/florisboard/autocorrect/api/AutocorrectSession;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onSuggest(Lorg/florisboard/autocorrect/api/AutocorrectRequest;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onSuggestResult(Lorg/florisboard/autocorrect/api/AutocorrectRequest;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onSuggestionAccepted(J, Ljava/lang/String;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onSuggestionAccepted(J, Ljava/lang/String;, Lorg/florisboard/autocorrect/api/AutocorrectAcceptanceKind;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onSuggestionReverted(J, Ljava/lang/String;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  protected method onTextEvent(Lorg/florisboard/autocorrect/api/AutocorrectTextEvent;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  public final method onUnbind(Landroid/content/Intent;)Z
+  protected final method publishPluginUi(Lorg/florisboard/autocorrect/api/AutocorrectPluginUi;)V
+
+public final class org.florisboard.autocorrect.api.AutocorrectPluginUi
+  public constructor(Ljava/lang/String;, Ljava/lang/String;, Ljava/util/List;)V
+  public final method getAppRootPageId()Ljava/lang/String;
+  public final method getKeyboardRootPageId()Ljava/lang/String;
+  public final method getPages()Ljava/util/List;
+  public final method page(Ljava/lang/String;, Lorg/florisboard/autocorrect/api/AutocorrectPluginUiSurface;)Lorg/florisboard/autocorrect/api/AutocorrectPluginUiPage;
+
+public final enum org.florisboard.autocorrect.api.AutocorrectPluginUiIcon
+  public static final field ADD:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiIcon;
+  public static final field DELETE:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiIcon;
+  public static final field DICTIONARY:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiIcon;
+  public static final field DOWNLOAD:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiIcon;
+  public static final field INFO:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiIcon;
+  public static final field MODEL:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiIcon;
+  public static final field NONE:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiIcon;
+  public static final field REFRESH:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiIcon;
+  public static final field SETTINGS:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiIcon;
+  public static final field TUNE:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiIcon;
+  public static final field UPLOAD:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiIcon;
+
+public final class org.florisboard.autocorrect.api.AutocorrectPluginUiItem
+  public constructor(Ljava/lang/String;, Lorg/florisboard/autocorrect/api/AutocorrectPluginUiItemKind;, Ljava/lang/String;, Ljava/lang/String;, Ljava/lang/String;, Ljava/util/List;, D, D, D, Ljava/lang/String;, Lorg/florisboard/autocorrect/api/AutocorrectPluginUiIcon;, Z, Ljava/lang/String;, Ljava/util/List;, Ljava/lang/String;, Lorg/florisboard/autocorrect/api/AutocorrectPluginHostSetting;)V
+  public final method getConfirmation()Ljava/lang/String;
+  public final method getDocumentMimeTypes()Ljava/util/List;
+  public final method getDocumentSuggestedName()Ljava/lang/String;
+  public final method getEnabled()Z
+  public final method getHostSetting()Lorg/florisboard/autocorrect/api/AutocorrectPluginHostSetting;
+  public final method getIcon()Lorg/florisboard/autocorrect/api/AutocorrectPluginUiIcon;
+  public final method getId()Ljava/lang/String;
+  public final method getKind()Lorg/florisboard/autocorrect/api/AutocorrectPluginUiItemKind;
+  public final method getMaximum()D
+  public final method getMinimum()D
+  public final method getOptions()Ljava/util/List;
+  public final method getStep()D
+  public final method getSummary()Ljava/lang/String;
+  public final method getTarget()Ljava/lang/String;
+  public final method getTitle()Ljava/lang/String;
+  public final method getValue()Ljava/lang/String;
+
+public final enum org.florisboard.autocorrect.api.AutocorrectPluginUiItemKind
+  public static final field ACTION:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiItemKind;
+  public static final field CHOICE:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiItemKind;
+  public static final field DOCUMENT_EXPORT:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiItemKind;
+  public static final field DOCUMENT_IMPORT:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiItemKind;
+  public static final field EXTERNAL_LINK:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiItemKind;
+  public static final field INFO:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiItemKind;
+  public static final field NAVIGATION:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiItemKind;
+  public static final field PROGRESS:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiItemKind;
+  public static final field SLIDER:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiItemKind;
+  public static final field SWITCH:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiItemKind;
+  public static final field TEXT:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiItemKind;
+
+public final class org.florisboard.autocorrect.api.AutocorrectPluginUiKt
+  public static final method pluginUiDocumentBundle(J, Ljava/lang/String;, Ljava/lang/String;, Ljava/lang/String;, Z, Landroid/os/ParcelFileDescriptor;)Landroid/os/Bundle;
+  public static final method pluginUiMutationBundle(J, Ljava/lang/String;, Ljava/lang/String;)Landroid/os/Bundle;
+  public static final method pluginUiRequestBundle(J, Ljava/util/List;)Landroid/os/Bundle;
+  public static final method pluginUiResultFromBundle(Landroid/os/Bundle;)Lorg/florisboard/autocorrect/api/AutocorrectPluginUiResult;
+
+public final class org.florisboard.autocorrect.api.AutocorrectPluginUiOption
+  public constructor(Ljava/lang/String;, Ljava/lang/String;)V
+  public final method getLabel()Ljava/lang/String;
+  public final method getValue()Ljava/lang/String;
+
+public final class org.florisboard.autocorrect.api.AutocorrectPluginUiPage
+  public constructor(Ljava/lang/String;, Ljava/lang/String;, Ljava/lang/String;, Lorg/florisboard/autocorrect/api/AutocorrectPluginUiSurface;, Ljava/util/List;)V
+  public final method getId()Ljava/lang/String;
+  public final method getItems()Ljava/util/List;
+  public final method getSummary()Ljava/lang/String;
+  public final method getSurface()Lorg/florisboard/autocorrect/api/AutocorrectPluginUiSurface;
+  public final method getTitle()Ljava/lang/String;
+
+public final class org.florisboard.autocorrect.api.AutocorrectPluginUiResult
+  public constructor(J, Z, Lorg/florisboard/autocorrect/api/AutocorrectPluginUi;)V
+  public final method getRequestId()J
+  public final method getSuccessful()Z
+  public final method getUi()Lorg/florisboard/autocorrect/api/AutocorrectPluginUi;
+
+public final enum org.florisboard.autocorrect.api.AutocorrectPluginUiSurface
+  public static final field APP:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiSurface;
+  public static final field BOTH:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiSurface;
+  public static final field KEYBOARD:Lorg/florisboard/autocorrect/api/AutocorrectPluginUiSurface;
+  public final method supports(Lorg/florisboard/autocorrect/api/AutocorrectPluginUiSurface;)Z
+
+public final class org.florisboard.autocorrect.api.AutocorrectRequest
+  public static final field Companion:Lorg/florisboard/autocorrect/api/AutocorrectRequest$Companion;
+  public constructor(J, J, Ljava/lang/String;, I, I, I, I, I, I, I, Z, Lorg/florisboard/autocorrect/api/AutocorrectInputTrace;, Lorg/florisboard/autocorrect/api/AutocorrectCapsMode;)V
+  public final method getAllowPossiblyOffensive()Z
+  public final method getCapsMode()Lorg/florisboard/autocorrect/api/AutocorrectCapsMode;
+  public final method getComposingEnd()I
+  public final method getComposingStart()I
+  public final method getCurrentWordEnd()I
+  public final method getCurrentWordStart()I
+  public final method getInputTrace()Lorg/florisboard/autocorrect/api/AutocorrectInputTrace;
+  public final method getMaxCandidateCount()I
+  public final method getRequestId()J
+  public final method getSelectionEnd()I
+  public final method getSelectionStart()I
+  public final method getSessionId()J
+  public final method getText()Ljava/lang/String;
+  public final method toBundle()Landroid/os/Bundle;
+
+public final class org.florisboard.autocorrect.api.AutocorrectRequest$Companion
+
+public final enum org.florisboard.autocorrect.api.AutocorrectSeparatorBehavior
+  public static final field DEFAULT:Lorg/florisboard/autocorrect/api/AutocorrectSeparatorBehavior;
+  public static final field INSERT:Lorg/florisboard/autocorrect/api/AutocorrectSeparatorBehavior;
+  public static final field OMIT:Lorg/florisboard/autocorrect/api/AutocorrectSeparatorBehavior;
+
+public final class org.florisboard.autocorrect.api.AutocorrectSession
+  public static final field Companion:Lorg/florisboard/autocorrect/api/AutocorrectSession$Companion;
+  public constructor(J, Ljava/lang/String;, Ljava/util/List;, I, I, Z, I, I)V
+  public final method getAllowPersonalizedLearning()Z
+  public final method getCapsMode()I
+  public final method getEditorFlags()I
+  public final method getInputType()I
+  public final method getPreferredEmojiSkinToneModifier()I
+  public final method getPrimaryLanguageTag()Ljava/lang/String;
+  public final method getSecondaryLanguageTags()Ljava/util/List;
+  public final method getSessionId()J
+  public final method toBundle()Landroid/os/Bundle;
+
+public final class org.florisboard.autocorrect.api.AutocorrectSession$Companion
+
+public final class org.florisboard.autocorrect.api.AutocorrectSuggestionResult
+  public static final field Companion:Lorg/florisboard/autocorrect/api/AutocorrectSuggestionResult$Companion;
+  public constructor(Ljava/util/List;, Ljava/util/Set;, Z)V
+  public final method getBoostedCodePoints()Ljava/util/Set;
+  public final method getCandidates()Ljava/util/List;
+  public final method getHandled()Z
+
+public final class org.florisboard.autocorrect.api.AutocorrectSuggestionResult$Companion
+  public final method getEmpty()Lorg/florisboard/autocorrect/api/AutocorrectSuggestionResult;
+  public final method getUnhandled()Lorg/florisboard/autocorrect/api/AutocorrectSuggestionResult;
+
+public final class org.florisboard.autocorrect.api.AutocorrectTextEvent
+  public static final field Companion:Lorg/florisboard/autocorrect/api/AutocorrectTextEvent$Companion;
+  public constructor(J, Ljava/lang/String;, Lorg/florisboard/autocorrect/api/AutocorrectTextEventKind;)V
+  public final method getKind()Lorg/florisboard/autocorrect/api/AutocorrectTextEventKind;
+  public final method getSessionId()J
+  public final method getText()Ljava/lang/String;
+  public final method toBundle()Landroid/os/Bundle;
+
+public final class org.florisboard.autocorrect.api.AutocorrectTextEvent$Companion
+
+public final enum org.florisboard.autocorrect.api.AutocorrectTextEventKind
+  public static final field COMMIT_GESTURE:Lorg/florisboard/autocorrect/api/AutocorrectTextEventKind;
+  public static final field COMMIT_TYPED:Lorg/florisboard/autocorrect/api/AutocorrectTextEventKind;
+  public static final field DELETE_BACKWARD:Lorg/florisboard/autocorrect/api/AutocorrectTextEventKind;
+  public static final field DELETE_FORWARD:Lorg/florisboard/autocorrect/api/AutocorrectTextEventKind;
+
+public final class org.florisboard.autocorrect.api.AutocorrectTouchPoint
+  public constructor(Ljava/lang/String;, F, F)V
+  public final method getText()Ljava/lang/String;
+  public final method getX()F
+  public final method getY()F
+
+public abstract interface org.florisboard.autocorrect.api.AutocorrectUserDictionaryEditor
+  implements Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryReader;
+  public abstract method deleteUserDictionaryEntry(J, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+  public abstract method upsertUserDictionaryEntry(Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryEntry;, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+
+public final class org.florisboard.autocorrect.api.AutocorrectUserDictionaryEntry
+  public constructor(J, Ljava/lang/String;, I, Ljava/lang/String;, Ljava/lang/String;)V
+  public final method getFrequency()I
+  public final method getId()J
+  public final method getLanguageTag()Ljava/lang/String;
+  public final method getShortcut()Ljava/lang/String;
+  public final method getWord()Ljava/lang/String;
+
+public final class org.florisboard.autocorrect.api.AutocorrectUserDictionaryKt
+  public static final method userDictionaryDeleteBundle(J, J, J)Landroid/os/Bundle;
+  public static final method userDictionaryQueryBundle(J, Ljava/util/List;, J, I)Landroid/os/Bundle;
+  public static final method userDictionaryRequestFromBundle(Landroid/os/Bundle;)Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryRequest;
+  public static final method userDictionaryResultBundle(J, Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryStatus;, Ljava/util/List;, Ljava/lang/Long;)Landroid/os/Bundle;
+  public static final method userDictionaryResultFromBundle(Landroid/os/Bundle;)Lkotlin/Pair;
+  public static final method userDictionaryUpsertBundle(J, J, Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryEntry;)Landroid/os/Bundle;
+
+public final class org.florisboard.autocorrect.api.AutocorrectUserDictionaryMutationResult
+  public constructor(Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryStatus;, Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryEntry;)V
+  public final method getEntry()Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryEntry;
+  public final method getStatus()Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryStatus;
+  public final method getSuccessful()Z
+
+public final enum org.florisboard.autocorrect.api.AutocorrectUserDictionaryOperation
+  public static final field DELETE:Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryOperation;
+  public static final field QUERY:Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryOperation;
+  public static final field UPSERT:Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryOperation;
+
+public final class org.florisboard.autocorrect.api.AutocorrectUserDictionaryPage
+  public constructor(Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryStatus;, Ljava/util/List;, Ljava/lang/Long;)V
+  public final method getEntries()Ljava/util/List;
+  public final method getNextAfterId()Ljava/lang/Long;
+  public final method getStatus()Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryStatus;
+  public final method getSuccessful()Z
+
+public abstract interface org.florisboard.autocorrect.api.AutocorrectUserDictionaryReader
+  public abstract method queryUserDictionary(Ljava/util/List;, J, I, Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+
+public final class org.florisboard.autocorrect.api.AutocorrectUserDictionaryRequest
+  public constructor(J, Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryOperation;, J, Ljava/util/List;, J, I, J, Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryEntry;)V
+  public final method getAfterId()J
+  public final method getEntry()Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryEntry;
+  public final method getEntryId()J
+  public final method getLanguageTags()Ljava/util/List;
+  public final method getLimit()I
+  public final method getOperation()Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryOperation;
+  public final method getOriginUiRequestId()J
+  public final method getRequestId()J
+
+public final enum org.florisboard.autocorrect.api.AutocorrectUserDictionaryStatus
+  public static final field DENIED:Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryStatus;
+  public static final field INVALID:Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryStatus;
+  public static final field OK:Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryStatus;
+  public static final field UNAVAILABLE:Lorg/florisboard/autocorrect/api/AutocorrectUserDictionaryStatus;
