@@ -119,9 +119,10 @@ depend on a companion keyboard application being installed.
   not infer a target application's identity from these flags.
 - Requests and replies are asynchronous. Providers must expect newer requests to cancel older
   work and should cooperate with coroutine cancellation.
-- Session starts, admitted learning callbacks, and session finishes run in wire order. A finish
-  acknowledgement is sent only after `onFinishSession` returns; FlorisBoard keeps the provider
-  bound until that acknowledgement or a bounded timeout.
+- Session starts, admitted learning callbacks, and session finishes run in wire order. The finish
+  acknowledgement is sent only after `onFinishSession` returns. FlorisBoard keeps the purely bound
+  service alive until that acknowledgement, or until an explicit lifecycle event disconnects it;
+  elapsed wall-clock time never decides whether valid finalization work is discarded.
 - Providers may expose any implementation: dictionaries, finite-state algorithms, native code,
   or on-device language models. No engine-specific behavior is part of the host API.
 - Providers which retain sensitive personalization can override `isHostAuthorized` and accept
@@ -129,9 +130,9 @@ depend on a companion keyboard application being installed.
   and providers can interoperate without a shared signing key.
 
 FlorisBoard falls back to its built-in language provider when the external provider returns
-`Unhandled`, times out, disconnects, or crashes. A successful handled result remains authoritative
-even when its candidate list is empty. Host-owned spelling, emoji, clipboard, candidate display,
-safe editor replacement, and callback behavior remain available.
+`Unhandled`, disconnects, or crashes. A successful handled result remains authoritative even when
+its candidate list is empty. Host-owned spelling, emoji, clipboard, candidate display, safe editor
+replacement, and callback behavior remain available.
 
 ## Provider settings UI
 
@@ -196,7 +197,8 @@ After `onSetPluginUiValue`, `onInvokePluginUiAction`, or `onPluginUiDocument`, t
 fresh UI snapshot. The callback should return `false` for an unknown item, invalid value, or failed
 operation. Long-running user actions can call `publishPluginUi` to push progress while a page is
 open. The provider receives `onPluginUiClosed` when the last host page closes and must stop UI-only
-observation. FlorisBoard does not poll.
+observation. FlorisBoard does not poll or infer failure from elapsed wall-clock time; a current
+operation remains valid until its reply, explicit supersession, page closure, or disconnection.
 
 ### Android personal dictionary
 
@@ -218,10 +220,10 @@ observer, polling, wake-lock, or background-sync mechanism.
 Dictionary writes are available only through the `AutocorrectUserDictionaryEditor` passed to the
 two-argument `onInvokePluginUiAction` callback. The provider may perform multiple bounded reads and
 writes during that explicit action, which supports generic bulk editors. The editor and its
-provider-bound host capability are revoked when the callback returns, the action times out, the
-last provider page closes, or either process disconnects. Locale values are strict canonical
-BCP-47 tags; scripts, regions, variants, extensions, and private-use subtags survive conversion to
-and from Android's storage format.
+provider-bound host capability are revoked when the callback returns, the last provider page
+closes, or either process disconnects. Locale values are strict canonical BCP-47 tags; scripts,
+regions, variants, extensions, and private-use subtags survive conversion to and from Android's
+storage format.
 Frequency values range from 0 through 255; zero remains valid for structured entries such as
 Japanese reading metadata stored in the shortcut field. Providers must treat `UNAVAILABLE`,
 `DENIED`, and `INVALID` as recoverable results and continue ordinary suggestions without the
@@ -230,7 +232,7 @@ personal dictionary.
 The keyboard page is opened through the **Autocorrect provider** quick action. It is available in
 the Smartbar action editor for existing and new configurations. Providers which do not publish
 settings pages can remain suggestion-only; FlorisBoard shows a short unavailable message after the
-optional UI request times out.
+optional UI request fails or the provider disconnects.
 
 ## Reference-engine coverage
 
@@ -280,7 +282,8 @@ The provider is bound only while an eligible input view or an explicit provider-
 active. FlorisBoard uses a non-foreground binding, does not call `startService`, poll the provider,
 acquire a wake lock for it, or schedule background work. It cancels superseded suggestion requests,
 limits text context to 512 UTF-16 code units, accepts at most 16 candidates, bounds tap and gesture
-traces and UI payloads, and unbinds when neither typing nor settings needs the service.
+traces and UI payloads, and unbinds when neither typing, settings, nor admitted session-finalization
+work needs the service.
 
 Provider implementations must not turn a typing session into a started or foreground service.
 They should preload models in `onStartSession`, release session-specific state in

@@ -17,6 +17,7 @@
 package dev.patrickgold.florisboard.ime.text.gestures
 
 import android.content.Context
+import android.os.SystemClock
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.editorInstance
@@ -60,7 +61,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
     private var glideTypingClassifier = StatisticalGlideTypingClassifier(context)
     private var layoutKeys = emptyList<TextKey>()
     private var completionJob: Job? = null
-    private var lastTime = System.currentTimeMillis()
+    private var lastTime = SystemClock.uptimeMillis()
 
     override fun onGlideComplete(data: GlideTypingGesture.Detector.PointerData) {
         val trace = gestureTrace(data.positions)
@@ -121,7 +122,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
 
         this.glideTypingClassifier.addGesturePoint(normalized)
 
-        val time = System.currentTimeMillis()
+        val time = SystemClock.uptimeMillis()
         if (prefs.glide.showPreview.get() && time - lastTime > prefs.glide.previewRefreshDelay.get()) {
             updateSuggestionsAsync(1, false) {}
             lastTime = time

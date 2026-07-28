@@ -37,7 +37,7 @@ class GlideTypingGesture {
      */
     class Detector(context: Context) {
         private val prefs by FlorisPreferenceStore
-        private var pointerData: PointerData = PointerData(mutableListOf(), 0)
+        private var pointerData: PointerData = PointerData(mutableListOf())
         private val keySize = ViewUtils.px2dp(context.resources.getDimension(R.dimen.key_width))
         private val listeners: ArrayList<Listener> = arrayListOf()
         private var pointerId: Int = -1
@@ -68,10 +68,13 @@ class GlideTypingGesture {
                     }
                     val pointerIndex = event.actionIndex
                     pointerId = event.getPointerId(pointerIndex)
-                    pointerData.apply {
-                        positions.add(Position(event.getX(pointerIndex), event.getY(pointerIndex), 0))
-                        startTime = System.currentTimeMillis()
-                    }
+                    pointerData.positions.add(
+                        Position(
+                            event.getX(pointerIndex),
+                            event.getY(pointerIndex),
+                            motionEventElapsedTimeMillis(event.eventTime, event.downTime),
+                        ),
+                    )
                     return false
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -86,19 +89,22 @@ class GlideTypingGesture {
                             event.historySize -> Position(
                                 event.getX(pointerIndex),
                                 event.getY(pointerIndex),
-                                (event.eventTime - event.downTime).toInt(),
+                                motionEventElapsedTimeMillis(event.eventTime, event.downTime),
                             )
                             else -> Position(
                                 event.getHistoricalX(pointerIndex, i),
                                 event.getHistoricalY(pointerIndex, i),
-                                (event.getHistoricalEventTime(i) - event.downTime).toInt(),
+                                motionEventElapsedTimeMillis(
+                                    event.getHistoricalEventTime(i),
+                                    event.downTime,
+                                ),
                             )
                         }
                         pointerData.positions.add(pos)
                         if (pointerData.isActuallyGesture == null) {
                             // evaluate whether is actually a gesture
                             val dist = ViewUtils.px2dp(pointerData.positions[0].dist(pos))
-                            val time = (System.currentTimeMillis() - pointerData.startTime) + 1
+                            val time = pos.elapsedTimeMillis.toLong() + 1L
                             flogDebug { "Distance glided: $dist dp with velocity: ${dist / time} dp/ms" }
                             if (
                                 dist > keySize * thresholdScale &&
@@ -159,7 +165,6 @@ class GlideTypingGesture {
         private fun resetState() {
             pointerData.apply {
                 positions.clear()
-                startTime = 0
                 isActuallyGesture = null
             }
             pointerId = -1
@@ -167,7 +172,6 @@ class GlideTypingGesture {
 
         data class PointerData(
             val positions: MutableList<Position>,
-            var startTime: Long,
             var isActuallyGesture: Boolean? = null,
         )
 
@@ -195,4 +199,8 @@ class GlideTypingGesture {
          */
         fun onGlideCancelled() {}
     }
+}
+
+internal fun motionEventElapsedTimeMillis(eventTime: Long, downTime: Long): Int {
+    return (eventTime - downTime).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
 }

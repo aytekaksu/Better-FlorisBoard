@@ -89,6 +89,28 @@ internal class AutomaticSmartbarMutations {
         }
 }
 
+internal data class SharedActionsAnimationSuppression(
+    val revision: Long,
+    val targetExpanded: Boolean,
+)
+
+internal class SharedActionsAnimationSuppressionTracker {
+    private val mutableSuppression = MutableStateFlow<SharedActionsAnimationSuppression?>(null)
+
+    val suppression = mutableSuppression.asStateFlow()
+
+    fun suppress(revision: Long, targetExpanded: Boolean) {
+        mutableSuppression.value = SharedActionsAnimationSuppression(revision, targetExpanded)
+    }
+
+    fun acknowledge(suppression: SharedActionsAnimationSuppression) =
+        mutableSuppression.compareAndSet(suppression, null)
+
+    fun clear() {
+        mutableSuppression.value = null
+    }
+}
+
 class NlpManager(context: Context) {
     private val blankStrRegex = Regex(BLANK_STR_PATTERN)
 
@@ -114,6 +136,7 @@ class NlpManager(context: Context) {
     private val candidateAssemblyRevision = CandidateAssemblyRevision()
     private val candidateRequestRevision = CandidateRequestRevision()
     private val automaticSmartbarMutations = AutomaticSmartbarMutations()
+    private val sharedActionsAnimationSuppression = SharedActionsAnimationSuppressionTracker()
     private val suggestionJobGuard = Any()
     private val internalSuggestionsGuard = Any()
     private var suggestionJob: Job? = null
@@ -124,6 +147,8 @@ class NlpManager(context: Context) {
     private val _activeCandidatesFlow = MutableStateFlow(listOf<SuggestionCandidate>())
     @Volatile private var autoCommitCandidate: SuggestionCandidate? = null
     val activeCandidatesFlow = _activeCandidatesFlow.asStateFlow()
+    internal val sharedActionsAnimationSuppressionState =
+        sharedActionsAnimationSuppression.suppression
     inline var activeCandidates
         get() = activeCandidatesFlow.value
         private set(v) {
@@ -142,7 +167,7 @@ class NlpManager(context: Context) {
             clearSuggestions()
         }
         prefs.suggestion.autocorrectPluginComponent.asFlow().collectLatestIn(scope) {
-            autocorrectPluginManager.finishSession()
+            autocorrectPluginManager.onSelectedProviderChanged()
             clearSuggestions()
         }
         prefs.clipboard.suggestionEnabled.asFlow().collectLatestIn(scope) {
@@ -369,16 +394,14 @@ class NlpManager(context: Context) {
         return autoCommitCandidate
     }
 
-    fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
-        return runBlocking { candidate.sourceProvider?.removeSuggestion(subtype, candidate) == true }.also { result ->
-            if (result) {
-                scope.launch {
-                    // Need to re-trigger the suggestions algorithm
-                    if (candidate is ClipboardSuggestionCandidate) {
-                        assembleCandidates()
-                    } else {
-                        suggest(subtypeManager.activeSubtype, editorInstance.activeContent)
-                    }
+    suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
+        return (candidate.sourceProvider?.removeSuggestion(subtype, candidate) == true).also { removed ->
+            if (removed) {
+                // Need to re-trigger the suggestions algorithm
+                if (candidate is ClipboardSuggestionCandidate) {
+                    assembleCandidates()
+                } else {
+                    suggest(subtypeManager.activeSubtype, editorInstance.activeContent)
                 }
             }
         }
@@ -441,6 +464,22 @@ class NlpManager(context: Context) {
         setSharedActionsExpanded(isExpanded)
     }
 
+    fun setSharedActionsExpandedByUser(isExpanded: Boolean) {
+        val revision = automaticSmartbarMutations.next()
+        scope.launch {
+            automaticSmartbarMutations.runIfCurrent(revision) {
+                sharedActionsAnimationSuppression.clear()
+                prefs.smartbar.sharedActionsExpanded.set(isExpanded)
+            }
+        }
+    }
+
+    internal fun acknowledgeSharedActionsAnimationSuppression(
+        suppression: SharedActionsAnimationSuppression,
+    ) {
+        sharedActionsAnimationSuppression.acknowledge(suppression)
+    }
+
     private fun setSharedActionsExpanded(isExpanded: Boolean) {
         if (!prefs.smartbar.enabled.get()) {
             return
@@ -448,7 +487,8 @@ class NlpManager(context: Context) {
         val revision = automaticSmartbarMutations.next()
         scope.launch {
             automaticSmartbarMutations.runIfCurrent(revision) {
-                prefs.smartbar.sharedActionsExpandWithAnimation.set(false)
+                if (prefs.smartbar.sharedActionsExpanded.get() == isExpanded) return@runIfCurrent
+                sharedActionsAnimationSuppression.suppress(revision, isExpanded)
                 prefs.smartbar.sharedActionsExpanded.set(isExpanded)
             }
         }

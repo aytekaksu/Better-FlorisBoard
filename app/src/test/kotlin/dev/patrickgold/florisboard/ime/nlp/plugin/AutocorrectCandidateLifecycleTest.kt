@@ -112,7 +112,7 @@ class AutocorrectCandidateLifecycleTest : FunSpec({
         published shouldBe "latest"
     }
 
-    test("provider result remains pending until the active session answers") {
+    test("provider results remain pending until the active lifecycle answers") {
         runTest {
             val providerResult = CompletableDeferred<String>()
             val waiting = async { awaitProviderResult(providerResult) }
@@ -123,6 +123,29 @@ class AutocorrectCandidateLifecycleTest : FunSpec({
             providerResult.complete("candidates")
             waiting.await() shouldBe "candidates"
         }
+    }
+
+    test("provider wait ends when its request lifecycle is cancelled") {
+        runTest {
+            val providerResult = CompletableDeferred<String>()
+            val waiting = async { awaitProviderResult(providerResult) }
+
+            providerResult.cancel()
+
+            waiting.await() shouldBe null
+        }
+    }
+
+    test("dictionary mutation access follows request identity and visible UI lifecycle") {
+        hasDictionaryMutationAccess(
+            uiClientCount = 1,
+            selectedProviderId = "provider",
+            providerId = "provider",
+            grantProviderId = "provider",
+        ) shouldBe true
+        hasDictionaryMutationAccess(0, "provider", "provider", "provider") shouldBe false
+        hasDictionaryMutationAccess(1, "other", "provider", "provider") shouldBe false
+        hasDictionaryMutationAccess(1, "provider", "provider", null) shouldBe false
     }
 
     test("clear prevents an already-running assembly from republishing candidates") {

@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.UnfoldLess
 import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -66,7 +67,6 @@ import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.jetpref.datastore.model.collectAsState
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.compose.horizontalTween
@@ -158,10 +158,12 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
     val sharedActionsTransitionMode by prefs.smartbar.sharedActionsTransitionMode.collectAsState()
     val extendedActionsExpanded by prefs.smartbar.extendedActionsExpanded.collectAsState()
 
-    val shouldAnimate by prefs.smartbar.sharedActionsExpandWithAnimation.collectAsState()
+    val animationSuppression by
+        nlpManager.sharedActionsAnimationSuppressionState.collectAsState()
     val motionMode by prefs.smartbar.motionMode.collectAsState()
     val motionDuration = motionMode.durationMillis(AnimationDuration)
-    val sharedActionsContentMotionDuration = if (shouldAnimate) motionDuration else 0
+    val sharedActionsContentMotionDuration =
+        if (animationSuppression == null) motionDuration else 0
     val sharedActionsToggleTween = tween<Float>(motionDuration)
     val extendedActionsAnimationSpec = when (motionMode) {
         SmartbarMotionMode.STANDARD -> spring<Float>()
@@ -201,10 +203,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
                 if (/* was */ sharedActionsExpanded) {
                     keyboardManager.activeState.isActionsOverflowVisible = false
                 }
-                scope.launch {
-                    prefs.smartbar.sharedActionsExpandWithAnimation.set(true)
-                    prefs.smartbar.sharedActionsExpanded.set(!sharedActionsExpanded)
-                }
+                nlpManager.setSharedActionsExpandedByUser(!sharedActionsExpanded)
             },
         ) {
             val transition = updateTransition(sharedActionsExpanded, label = "sharedActionsExpandedToggleBtn")
@@ -393,11 +392,10 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
         }
     }
 
-    LaunchedEffect(shouldAnimate) {
-        if (!shouldAnimate) {
-            delay(motionDuration.toLong())
-            prefs.smartbar.sharedActionsExpandWithAnimation.set(true)
-        }
+    SideEffect {
+        animationSuppression
+            ?.takeIf { it.targetExpanded == sharedActionsExpanded }
+            ?.let(nlpManager::acknowledgeSharedActionsAnimationSuppression)
     }
 
     SnyggRow(
