@@ -11,6 +11,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  statuses: write
 
 concurrency:
   group: governance-${{ github.event.pull_request.number }}
@@ -18,7 +19,7 @@ concurrency:
 
 jobs:
   governance:
-    name: governance
+    name: Governance evaluator
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 3
@@ -42,8 +43,28 @@ jobs:
         run: |
           set -euo pipefail
 
-          gh api --paginate --slurp \
+          readonly status_endpoint="repos/$GITHUB_REPOSITORY/statuses/$PR_HEAD_SHA"
+          readonly run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+          update_status() {
+            gh api "$status_endpoint" \
+              --method POST \
+              -f context="governance-policy" \
+              -f state="$1" \
+              -f description="$2" \
+              -f target_url="$run_url" \
+              >/dev/null
+          }
+
+          update_status "pending" "Checking maintainer approval policy"
+
+          if gh api --paginate --slurp \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews?per_page=100" |
-            bash .github/scripts/require-maintainer-approval.sh
+            bash .github/scripts/require-maintainer-approval.sh; then
+            update_status "success" "Solo-maintainer governance policy satisfied"
+          else
+            update_status "failure" "Current maintainer approval is required"
+            exit 1
+          fi
