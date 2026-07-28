@@ -85,6 +85,7 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Incognito</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Attiva o disattiva modalità in incognito</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Auto-correz.</string>
+    <string name="quick_action__toggle_autocorrect__tooltip">Attiva o disattiva correzione automatica</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Input vocale</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Apri fornitore d\'immissione di voce</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">A una mano</string>

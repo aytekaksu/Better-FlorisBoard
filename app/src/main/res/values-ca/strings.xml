@@ -85,6 +85,7 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Incògnit</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Passa al mode incògnit</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Correc. auto</string>
+    <string name="quick_action__toggle_autocorrect__tooltip">Habilita la correcció automàtica</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Entrada veu</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Obre el proveïdor d\'entrada de veu</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">Amb una mà</string>

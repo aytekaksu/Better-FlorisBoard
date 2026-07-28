@@ -88,6 +88,7 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Inkognitó</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Inkognitó mód bekapcsolása</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Auto-korrekt</string>
+    <string name="quick_action__toggle_autocorrect__tooltip">Automatikus javítás be/ki</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Hangbevitel</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Hangbevitel szolgáltatójának megnyitása</string>
     <string name="quick_action__floating_window_mode" comment="Please mind the limited available space for the quick action strings">Lebegő</string>
