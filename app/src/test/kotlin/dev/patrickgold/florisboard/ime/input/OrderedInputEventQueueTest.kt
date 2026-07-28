@@ -146,26 +146,6 @@ class OrderedInputEventQueueTest : FunSpec({
         consumed shouldBe listOf("before", "start", "return", "after")
     }
 
-    test("cancelling a barrier releases events but does not invalidate later work") {
-        var cancelledCompletion: (() -> Unit)? = null
-        var nextCompletion: (() -> Unit)? = null
-        val consumed = mutableListOf<Int>()
-        val queue = OrderedInputEventQueue()
-
-        val cancelledBarrier = queue.defer { cancelledCompletion = it }
-        queue.dispatch { consumed.add(1) }
-        cancelledBarrier.cancel()
-        consumed shouldBe listOf(1)
-
-        queue.defer { nextCompletion = it }
-        queue.dispatch { consumed.add(2) }
-        cancelledCompletion?.invoke()
-        consumed shouldBe listOf(1)
-
-        nextCompletion?.invoke()
-        consumed shouldBe listOf(1, 2)
-    }
-
     test("lifecycle invalidation drops old work without affecting a new generation") {
         var oldCompletion: (() -> Unit)? = null
         var newCompletion: (() -> Unit)? = null
@@ -174,7 +154,7 @@ class OrderedInputEventQueueTest : FunSpec({
 
         queue.defer { oldCompletion = it }
         queue.dispatch { consumed.add(1) }
-        val queuedBarrier = queue.defer { error("invalidated barrier must not start") }
+        queue.defer { error("invalidated barrier must not start") }
         queue.dispatch { consumed.add(2) }
         queue.invalidate()
 
@@ -182,8 +162,6 @@ class OrderedInputEventQueueTest : FunSpec({
         queue.defer { newCompletion = it }
         queue.dispatch { consumed.add(4) }
         oldCompletion?.invoke()
-        queuedBarrier.cancel()
-
         consumed shouldBe listOf(3)
         newCompletion?.invoke()
         consumed shouldBe listOf(3, 4)
@@ -258,7 +236,7 @@ class OrderedInputEventQueueTest : FunSpec({
 
         queue.defer { firstCompletion = it }
         queue.dispatch { consumed.add(1) }
-        val failedBarrier = queue.defer { throw IllegalStateException("failed to start") }
+        queue.defer { throw IllegalStateException("failed to start") }
         queue.dispatch { consumed.add(2) }
 
         shouldThrow<IllegalStateException> {
@@ -266,7 +244,6 @@ class OrderedInputEventQueueTest : FunSpec({
         }.message shouldBe "failed to start"
         consumed shouldBe listOf(1, 2)
 
-        failedBarrier.cancel()
         queue.dispatch { consumed.add(3) }
         consumed shouldBe listOf(1, 2, 3)
     }

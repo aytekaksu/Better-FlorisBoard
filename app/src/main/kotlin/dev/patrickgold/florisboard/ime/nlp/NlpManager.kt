@@ -44,10 +44,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -61,22 +61,11 @@ import kotlin.properties.Delegates
 
 private const val BLANK_STR_PATTERN = "^\\s*$"
 
-internal class CandidateAssemblyRevision {
+internal class CandidateRevision {
     private var current = 0L
 
     @Synchronized
     fun next(onAdvance: (Long) -> Unit = {}) = (++current).also(onAdvance)
-
-    @Synchronized
-    fun publishIfCurrent(revision: Long, publish: () -> Unit) =
-        (revision == current).also { if (it) publish() }
-}
-
-internal class CandidateRequestRevision {
-    private var current = 0L
-
-    @Synchronized
-    fun next() = ++current
 
     @Synchronized
     fun publishIfCurrent(revision: Long, publish: () -> Unit) =
@@ -110,8 +99,15 @@ internal class AsyncPreloadCache<K, V>(
     private val maxEntries: Int = 5,
     private val load: suspend (K) -> V,
 ) {
+    private class Entry<V> {
+        var latest: Deferred<RevisionedPreload<V>>? = null
+        val unfinished = mutableSetOf<Deferred<RevisionedPreload<V>>>()
+    }
+
+    private class EvictedException : CancellationException("Preload cache entry was evicted")
+
     private val guard = Any()
-    private val latest = LinkedHashMap<K, Deferred<RevisionedPreload<V>>>(maxEntries, 0.75f, true)
+    private val entries = LinkedHashMap<K, Entry<V>>(maxEntries, 0.75f, true)
     private var nextRevision = 0L
 
     init {
@@ -128,32 +124,37 @@ internal class AsyncPreloadCache<K, V>(
 
     suspend fun await(key: K): RevisionedPreload<V> {
         while (true) {
-            val pending = synchronized(guard) { latest[key] ?: createPreload(key) }
+            currentCoroutineContext().ensureActive()
+            val pending = synchronized(guard) {
+                entries[key]?.latest ?: createPreload(key)
+            }
             pending.start()
             val value = try {
                 pending.await()
+            } catch (error: CancellationException) {
+                currentCoroutineContext().ensureActive()
+                if (error is EvictedException) continue
+                discardFailed(key, pending)
+                throw error
             } catch (error: Exception) {
-                if (pending.isCancelled) {
-                    synchronized(guard) {
-                        if (latest[key] === pending) latest.remove(key)
-                    }
-                }
+                discardFailed(key, pending)
                 throw error
             }
-            if (synchronized(guard) { latest[key] === pending }) {
+            if (synchronized(guard) { entries[key]?.latest === pending }) {
                 return value
             }
         }
     }
 
     private fun createPreload(key: K): Deferred<RevisionedPreload<V>> {
-        val previous = latest[key]
+        val entry = entries[key] ?: Entry<V>().also { entries[key] = it }
+        val previous = entry.latest
         val revision = ++nextRevision
         return scope.async(start = CoroutineStart.LAZY) {
             val previousValue = try {
                 previous?.await()
-            } catch (error: CancellationException) {
-                if (!currentCoroutineContext().isActive) throw error
+            } catch (_: CancellationException) {
+                currentCoroutineContext().ensureActive()
                 null
             } catch (_: Exception) {
                 null
@@ -161,15 +162,34 @@ internal class AsyncPreloadCache<K, V>(
             val value = load(key)
             previousValue?.takeIf { it.value == value } ?: RevisionedPreload(revision, value)
         }.also { pending ->
-            latest[key] = pending
-            while (latest.size > maxEntries) {
-                latest.entries.iterator().run {
+            entry.latest = pending
+            entry.unfinished.add(pending)
+            pending.invokeOnCompletion {
+                synchronized(guard) { entry.unfinished.remove(pending) }
+            }
+            while (entries.size > maxEntries) {
+                entries.entries.iterator().run {
                     val evicted = next().value
                     remove()
-                    evicted.cancel()
+                    cancelUnfinished(evicted)
                 }
             }
         }
+    }
+
+    private fun discardFailed(key: K, pending: Deferred<RevisionedPreload<V>>) {
+        if (!pending.isCancelled) return
+        synchronized(guard) {
+            entries[key]?.takeIf { it.latest === pending }?.let { entry ->
+                entries.remove(key)
+                cancelUnfinished(entry)
+            }
+        }
+    }
+
+    private fun cancelUnfinished(entry: Entry<V>) {
+        val cause = EvictedException()
+        entry.unfinished.toList().asReversed().forEach { it.cancel(cause) }
     }
 }
 
@@ -229,8 +249,8 @@ class NlpManager(context: Context) {
     // lock unnecessary because values constant
     private val providersForceSuggestionOn = mutableMapOf<String, Boolean>()
 
-    private val candidateAssemblyRevision = CandidateAssemblyRevision()
-    private val candidateRequestRevision = CandidateRequestRevision()
+    private val candidateAssemblyRevision = CandidateRevision()
+    private val candidateRequestRevision = CandidateRevision()
     private val automaticSmartbarMutations = AutomaticSmartbarMutations()
     private val sharedActionsAnimationSuppression = SharedActionsAnimationSuppressionTracker()
     private val glideTypingWords = AsyncPreloadCache<GlideTypingLexiconKey, List<String>>(scope) { key ->
@@ -555,18 +575,13 @@ class NlpManager(context: Context) {
         }
     }
 
-    fun autoExpandCollapseSmartbarActions(list1: List<*>?, list2: List<*>?) {
-        // TODO: this is a mess and needs to be cleaned up in v0.5 with the NLP development
-        /*if (keyboardManager.inputEventDispatcher.isRepeatableCodeLastDown()
-            && !keyboardManager.inputEventDispatcher.isPressed(KeyCode.DELETE)
-            && !keyboardManager.inputEventDispatcher.isPressed(KeyCode.FORWARD_DELETE)
-            || keyboardManager.activeState.isActionsOverflowVisible
-        ) {
-            return // We do not auto switch if a repeatable action key was last pressed or if the actions overflow
-                   // menu is visible to prevent annoying UI changes
-        }*/
+    fun autoExpandCollapseSmartbarActions(
+        candidates: List<*>?,
+        inlineSuggestions: List<*>?,
+    ) {
         val isSelection = editorInstance.activeContent.selection.isSelectionMode
-        val isExpanded = list1.isNullOrEmpty() && list2.isNullOrEmpty() || isSelection
+        val isExpanded =
+            candidates.isNullOrEmpty() && inlineSuggestions.isNullOrEmpty() || isSelection
         setSharedActionsExpanded(isExpanded)
     }
 

@@ -40,10 +40,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.florisboard.lib.kotlin.guardedByLock
 
-internal fun interface PendingInputBarrier {
-    fun cancel()
-}
-
 /**
  * Keeps semantic input callbacks ordered around asynchronous input operations without delaying
  * raw touch handling, feedback, long presses, or key-repeat timers.
@@ -80,7 +76,7 @@ internal class OrderedInputEventQueue {
     fun defer(
         onLaterInputQueued: () -> Unit = {},
         start: ((() -> Unit) -> Unit),
-    ): PendingInputBarrier {
+    ) {
         val barrier = Barrier(onLaterInputQueued, start)
         if (isDraining && activeBarrier == null) {
             startBarrier(barrier)
@@ -89,7 +85,6 @@ internal class OrderedInputEventQueue {
             entries.addLast(barrier)
             drain()
         }
-        return PendingInputBarrier { complete(barrier) }
     }
 
     @Synchronized
@@ -182,8 +177,8 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
     internal fun deferInputEvents(
         onLaterInputQueued: () -> Unit = {},
         start: ((() -> Unit) -> Unit),
-    ): PendingInputBarrier {
-        return receiverQueue.defer(onLaterInputQueued, start)
+    ) {
+        receiverQueue.defer(onLaterInputQueued, start)
     }
 
     internal fun dispatchInputEvent(action: () -> Unit) {
@@ -270,7 +265,7 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
         val eventTime = SystemClock.uptimeMillis()
         val result = pressedKeys.withLock { pressedKeys ->
             if (pressedKeys.containsKey(data.code)) return@withLock null
-            val pressedKeyInfo = PressedKeyInfo(eventTime, data).also { pressedKeyInfo ->
+            val pressedKeyInfo = PressedKeyInfo(data).also { pressedKeyInfo ->
                 if (allowLongPress || allowRepeat) pressedKeyInfo.job = scope.launch {
                     val longPressDelay = determineLongPressDelay(data)
                     delay(longPressDelay)
@@ -417,11 +412,6 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
         return repeatableKeyCodes.contains(data.code)
     }
 
-    fun isRepeatableCodeLastDown(): Boolean {
-        val event = activeReceiverState.get()?.lastKeyEventDown ?: lastKeyEventDown
-        return repeatableKeyCodes.contains(event.data.code)
-    }
-
     internal fun isPressed(data: KeyData, expected: PressedKeyInfo): Boolean = runBlocking {
         pressedKeys.withLock { it[data.code] === expected }
     }
@@ -457,8 +447,7 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
         scope.cancel()
     }
 
-    data class PressedKeyInfo(
-        val eventTimeDown: Long,
+    class PressedKeyInfo(
         val data: KeyData,
         var job: Job? = null,
         var blockUp: Boolean = false,

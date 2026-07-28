@@ -28,4 +28,14 @@ class GlideTypingTimingTest : FunSpec({
         motionEventElapsedTimeMillis(eventTime = 99L, downTime = 100L) shouldBe 0
         motionEventElapsedTimeMillis(Long.MAX_VALUE, 0L) shouldBe Int.MAX_VALUE
     }
+
+    test("provider trace sampling fills its budget and preserves both endpoints") {
+        val indices = sampledGestureIndices(129)
+
+        indices.size shouldBe 128
+        indices.first() shouldBe 0
+        indices.last() shouldBe 128
+        indices.toSet().size shouldBe indices.size
+        sampledGestureIndices(3).toList() shouldBe listOf(0, 1, 2)
+    }
 })

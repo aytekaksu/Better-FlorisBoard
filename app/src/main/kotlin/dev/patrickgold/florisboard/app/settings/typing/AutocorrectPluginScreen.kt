@@ -121,7 +121,6 @@ fun AutocorrectPluginScreen() = FlorisScreen {
                 Preference(
                     icon = Icons.Default.Settings,
                     title = stringRes(R.string.settings__autocorrect_plugins__configure_embedded),
-                    summary = provider.label,
                     onClick = {
                         navController.navigate(Routes.Settings.AutocorrectPluginUi)
                     },

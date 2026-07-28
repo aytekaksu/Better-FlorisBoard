@@ -152,12 +152,6 @@ class AutoCorrectionRevertTest : FunSpec({
         }
     }
 
-    test("undo boundary resets to the original replacement start") {
-        val boundary = AbstractEditorInstance.LastCommitPosition(pos = 9)
-        boundary.resetTo(2)
-        boundary.pos shouldBe 2
-    }
-
     test("replacement failures are dirty only when cursor restoration fails") {
         classifyEditorEditResult(
             selectionAccepted = false,

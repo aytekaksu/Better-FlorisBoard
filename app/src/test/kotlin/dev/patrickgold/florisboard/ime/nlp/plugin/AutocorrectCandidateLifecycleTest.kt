@@ -19,8 +19,7 @@ package dev.patrickgold.florisboard.ime.nlp.plugin
 import android.text.InputType
 import dev.patrickgold.florisboard.ime.editor.InputAttributes
 import dev.patrickgold.florisboard.ime.nlp.AutomaticSmartbarMutations
-import dev.patrickgold.florisboard.ime.nlp.CandidateAssemblyRevision
-import dev.patrickgold.florisboard.ime.nlp.CandidateRequestRevision
+import dev.patrickgold.florisboard.ime.nlp.CandidateRevision
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidateKind
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -109,7 +108,7 @@ class AutocorrectCandidateLifecycleTest : FunSpec({
     }
 
     test("latest candidate request is the only one allowed to publish") {
-        val revisions = CandidateRequestRevision()
+        val revisions = CandidateRevision()
         val stale = revisions.next()
         val latest = revisions.next()
         var published = ""
@@ -156,7 +155,7 @@ class AutocorrectCandidateLifecycleTest : FunSpec({
     }
 
     test("clear prevents an already-running assembly from republishing candidates") {
-        val revisions = CandidateAssemblyRevision()
+        val revisions = CandidateRevision()
         var candidates = listOf("old")
         var smartbarExpanded = false
         val runningAssembly = revisions.next()

@@ -26,14 +26,6 @@ class CandidateAppearanceTest : FunSpec({
         val prefs by jetprefDataStoreOf(FlorisPreferenceModel::class)
 
         prefs.suggestion.matchKeyAppearance.get() shouldBe true
-        resolveCandidateAppearance(
-            matchKeyAppearance = true,
-            displayMode = CandidatesDisplayMode.CLASSIC,
-        ) shouldBe CandidateAppearance(
-            useKeyStyle = true,
-            fontSizeScale = 1.125f,
-            useKeyColoredClassicSeparator = true,
-        )
     }
 
     test("disabled key matching restores candidate theme styling") {

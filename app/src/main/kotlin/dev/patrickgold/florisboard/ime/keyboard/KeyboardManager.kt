@@ -656,16 +656,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         }
         val committedCandidate = candidate.takeIf { commitResult == EditorEditResult.SUCCESS }
         // Skip handling changing to characters keyboard and double space periods
-        if (shouldInsertSeparatorAfter(committedCandidate)) {
-            editorInstance.commitText(KeyCode.SPACE.toChar().toString())
-        }
-        if (committedCandidate == null) {
-            autocorrectPluginManager.notifyTextEvent(
-                typedWord,
-                AutocorrectTextEventKind.COMMIT_TYPED,
-            )
-        }
-        autocorrectPluginManager.clearInputTrace()
+        finishSpaceInput(typedWord, committedCandidate)
     }
 
     /**
@@ -700,6 +691,13 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 }
             }
         }
+        finishSpaceInput(typedWord, committedCandidate)
+    }
+
+    private fun finishSpaceInput(
+        typedWord: String,
+        committedCandidate: SuggestionCandidate?,
+    ) {
         if (shouldInsertSeparatorAfter(committedCandidate)) {
             editorInstance.commitText(KeyCode.SPACE.toChar().toString())
         }
@@ -708,8 +706,8 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 typedWord,
                 AutocorrectTextEventKind.COMMIT_TYPED,
             )
+            autocorrectPluginManager.clearInputTrace()
         }
-        autocorrectPluginManager.clearInputTrace()
     }
 
     private fun shouldInsertSeparatorAfter(candidate: SuggestionCandidate?): Boolean {

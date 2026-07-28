@@ -55,9 +55,8 @@ interface GlideTypingClassifier {
      * Generate suggestions to show to the user.
      *
      * @param maxSuggestionCount The maximum number of suggestions that are accepted.
-     * @param gestureCompleted Whether the gesture is finished. (e.g to use a different algorithm for in progress words)
      */
-    suspend fun getSuggestions(maxSuggestionCount: Int, gestureCompleted: Boolean): List<CharSequence>
+    suspend fun getSuggestions(maxSuggestionCount: Int): List<CharSequence>
 
     fun clear()
 }

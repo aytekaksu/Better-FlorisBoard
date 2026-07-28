@@ -86,21 +86,6 @@ class AsyncPreloadCacheTest : FunSpec({
         }
     }
 
-    test("changed refresh content advances its revision") {
-        runTest {
-            var content = listOf("first")
-            val cache = AsyncPreloadCache<String, List<String>>(this) { content }
-
-            val first = cache.preload("en").await()
-            content = listOf("second")
-            val refreshed = cache.preload("en").await()
-
-            refreshed.value shouldBe listOf("second")
-            (refreshed.revision > first.revision) shouldBe true
-            cache.await("en") shouldBe refreshed
-        }
-    }
-
     test("least recently used entry is evicted while an accessed entry is retained") {
         runTest {
             val loadCounts = mutableMapOf<String, Int>()
@@ -122,12 +107,14 @@ class AsyncPreloadCacheTest : FunSpec({
         }
     }
 
-    test("evicting an in-flight entry cancels its orphaned load") {
+    test("eviction cancels the whole unfinished refresh chain") {
         runTest {
             val started = CompletableDeferred<Unit>()
             val cancelled = CompletableDeferred<Unit>()
+            var enLoads = 0
             val cache = AsyncPreloadCache<String, String>(this, maxEntries = 1) { key ->
                 if (key == "en") {
+                    enLoads += 1
                     started.complete(Unit)
                     try {
                         awaitCancellation()
@@ -138,13 +125,71 @@ class AsyncPreloadCacheTest : FunSpec({
                 key
             }
 
-            val evicted = cache.preload("en")
+            val first = cache.preload("en")
             started.await()
-            val retained = cache.preload("tr")
+            val refresh = cache.preload("en")
+            runCurrent()
 
+            cache.preload("tr").await().value shouldBe "tr"
             cancelled.await()
-            evicted.isCancelled shouldBe true
-            retained.await().value shouldBe "tr"
+            first.isCancelled shouldBe true
+            refresh.isCancelled shouldBe true
+            enLoads shouldBe 1
+        }
+    }
+
+    test("await retries when its cache entry is evicted") {
+        runTest {
+            val started = CompletableDeferred<Unit>()
+            var attempts = 0
+            val cache = AsyncPreloadCache<String, String>(this, maxEntries = 1) { key ->
+                if (key == "en" && ++attempts == 1) {
+                    started.complete(Unit)
+                    awaitCancellation()
+                }
+                key
+            }
+            val waiting = async { cache.await("en") }
+            started.await()
+
+            cache.preload("tr")
+            runCurrent()
+
+            waiting.await().value shouldBe "en"
+            attempts shouldBe 2
+        }
+    }
+
+    test("caller and cache-scope cancellation propagate independently") {
+        runTest {
+            val started = CompletableDeferred<Unit>()
+            val scopeLoadStarted = CompletableDeferred<Unit>()
+            val ready = CompletableDeferred<Unit>()
+            val cacheScope = CoroutineScope(coroutineContext + SupervisorJob())
+            val cache = AsyncPreloadCache<String, String>(cacheScope) { key ->
+                if (key == "en") {
+                    started.complete(Unit)
+                    ready.await()
+                    "ready"
+                } else {
+                    scopeLoadStarted.complete(Unit)
+                    awaitCancellation()
+                }
+            }
+            val waiting = async { cache.await("en") }
+            started.await()
+
+            waiting.cancelAndJoin()
+            waiting.isCancelled shouldBe true
+
+            ready.complete(Unit)
+            cache.await("en").value shouldBe "ready"
+
+            val scopeWaiting = async { cache.await("tr") }
+            scopeLoadStarted.await()
+            cacheScope.cancel()
+            scopeWaiting.join()
+            scopeWaiting.isCancelled shouldBe true
         }
     }
 
