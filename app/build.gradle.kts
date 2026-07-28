@@ -175,6 +175,7 @@ kover {
 }
 
 dependencies {
+    implementation(projects.lib.autocorrectHostCore)
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     // testImplementation(composeBom)

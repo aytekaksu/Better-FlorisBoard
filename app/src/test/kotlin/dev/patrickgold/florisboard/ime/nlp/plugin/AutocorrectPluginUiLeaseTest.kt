@@ -19,30 +19,31 @@ package dev.patrickgold.florisboard.ime.nlp.plugin
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
-class AutocorrectPluginUiLeaseTest : FunSpec({
-    test("picker leases only match their active provider lifecycle") {
-        val lease = PluginUiPickerLease(
-            id = 4,
-            providerId = "provider-a",
-            lifecycleRevision = 8,
-        )
-        fun isCurrent(
-            activeIds: Set<Long> = setOf(lease.id),
-            selectedProviderId: String = "provider-a",
-            boundProviderId: String = "provider-a",
-            lifecycleRevision: Long = 8,
-        ) = isCurrentPluginUiPickerLease(
-            lease,
-            activeIds,
-            selectedProviderId,
-            boundProviderId,
-            lifecycleRevision,
-        )
+class AutocorrectPluginUiLeaseTest :
+    FunSpec({
+        test("picker leases only match their active provider lifecycle") {
+            val lease = PluginUiPickerLease(
+                id = 4,
+                providerId = "provider-a",
+                lifecycleRevision = 8,
+            )
+            fun isCurrent(
+                activeIds: Set<Long> = setOf(lease.id),
+                selectedProviderId: String = "provider-a",
+                boundProviderId: String = "provider-a",
+                lifecycleRevision: Long = 8,
+            ) = isCurrentPluginUiPickerLease(
+                lease,
+                activeIds,
+                selectedProviderId,
+                boundProviderId,
+                lifecycleRevision,
+            )
 
-        isCurrent() shouldBe true
-        isCurrent(activeIds = emptySet()) shouldBe false
-        isCurrent(selectedProviderId = "provider-b") shouldBe false
-        isCurrent(boundProviderId = "provider-b") shouldBe false
-        isCurrent(lifecycleRevision = 9) shouldBe false
-    }
-})
+            isCurrent() shouldBe true
+            isCurrent(activeIds = emptySet()) shouldBe false
+            isCurrent(selectedProviderId = "provider-b") shouldBe false
+            isCurrent(boundProviderId = "provider-b") shouldBe false
+            isCurrent(lifecycleRevision = 9) shouldBe false
+        }
+    })

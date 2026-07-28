@@ -64,29 +64,46 @@ class AutocorrectCandidateLifecycleTest : FunSpec({
     test("candidate is current only for its admitted session and editor generation") {
         isCurrentAutocorrectCandidate(
             candidateSessionId = 7,
+            candidateRequestId = 11,
             candidateEditorGeneration = 3,
             activeSessionId = 7,
             admittedSessionId = 7,
+            latestRequestId = 11,
             activeEditorGeneration = 3,
             providerMatches = true,
         ) shouldBe true
     }
 
-    test("editor transition invalidates a visible candidate before it can be committed") {
+    test("a superseded request cannot commit its otherwise current candidate") {
         isCurrentAutocorrectCandidate(
             candidateSessionId = 7,
+            candidateRequestId = 10,
             candidateEditorGeneration = 3,
             activeSessionId = 7,
             admittedSessionId = 7,
+            latestRequestId = 11,
+            activeEditorGeneration = 3,
+            providerMatches = true,
+        ) shouldBe false
+    }
+
+    test("editor transition invalidates a visible candidate before it can be committed") {
+        isCurrentAutocorrectCandidate(
+            candidateSessionId = 7,
+            candidateRequestId = 11,
+            candidateEditorGeneration = 3,
+            activeSessionId = 7,
+            admittedSessionId = 7,
+            latestRequestId = 11,
             activeEditorGeneration = 4,
             providerMatches = true,
         ) shouldBe false
     }
 
     test("stale session, unadmitted, or disconnected candidates cannot be committed") {
-        isCurrentAutocorrectCandidate(7, 3, 8, 8, 3, true) shouldBe false
-        isCurrentAutocorrectCandidate(7, 3, 7, -1, 3, true) shouldBe false
-        isCurrentAutocorrectCandidate(7, 3, 7, 7, 3, false) shouldBe false
+        isCurrentAutocorrectCandidate(7, 11, 3, 8, 8, 11, 3, true) shouldBe false
+        isCurrentAutocorrectCandidate(7, 11, 3, 7, -1, 11, 3, true) shouldBe false
+        isCurrentAutocorrectCandidate(7, 11, 3, 7, 7, 11, 3, false) shouldBe false
     }
 
     test("provider candidate kinds retain their presentation semantics") {
