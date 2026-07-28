@@ -17,7 +17,6 @@
 package dev.patrickgold.florisboard.ime.nlp
 
 import android.content.Context
-import android.os.SystemClock
 import android.util.LruCache
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.autocorrectPluginManager
@@ -38,6 +37,7 @@ import dev.patrickgold.florisboard.lib.util.NetworkUtils
 import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,6 +60,17 @@ internal class CandidateAssemblyRevision {
 
     @Synchronized
     fun next(onAdvance: (Long) -> Unit = {}) = (++current).also(onAdvance)
+
+    @Synchronized
+    fun publishIfCurrent(revision: Long, publish: () -> Unit) =
+        (revision == current).also { if (it) publish() }
+}
+
+internal class CandidateRequestRevision {
+    private var current = 0L
+
+    @Synchronized
+    fun next() = ++current
 
     @Synchronized
     fun publishIfCurrent(revision: Long, publish: () -> Unit) =
@@ -101,9 +112,12 @@ class NlpManager(context: Context) {
     private val providersForceSuggestionOn = mutableMapOf<String, Boolean>()
 
     private val candidateAssemblyRevision = CandidateAssemblyRevision()
+    private val candidateRequestRevision = CandidateRequestRevision()
     private val automaticSmartbarMutations = AutomaticSmartbarMutations()
+    private val suggestionJobGuard = Any()
     private val internalSuggestionsGuard = Any()
-    private var internalSuggestions by Delegates.observable(SystemClock.uptimeMillis() to listOf<SuggestionCandidate>()) { _, _, _ ->
+    private var suggestionJob: Job? = null
+    private var internalSuggestions by Delegates.observable(listOf<SuggestionCandidate>()) { _, _, _ ->
         scope.launch { assembleCandidates() }
     }
 
@@ -243,13 +257,20 @@ class NlpManager(context: Context) {
             || prefs.emoji.suggestionEnabled.get()
             || providerForcesSuggestionOn(subtypeManager.activeSubtype)
 
+    private fun launchLatestSuggestionRequest(block: suspend (Long) -> Unit) {
+        synchronized(suggestionJobGuard) {
+            suggestionJob?.cancel()
+            val revision = candidateRequestRevision.next()
+            suggestionJob = scope.launch { block(revision) }
+        }
+    }
+
     fun suggest(subtype: Subtype, content: EditorContent) {
-        val reqTime = SystemClock.uptimeMillis()
         val requestEditorGeneration = autocorrectPluginManager.captureEditorGeneration()
         if (content.currentWordText.isNotBlank() && !content.selection.isSelectionMode) {
             setSharedActionsExpanded(false)
         }
-        scope.launch {
+        launchLatestSuggestionRequest { revision ->
             val emojiSuggestions = when {
                 prefs.emoji.suggestionEnabled.get() -> {
                     emojiSuggestionProvider.suggest(
@@ -303,9 +324,9 @@ class NlpManager(context: Context) {
                     }
                 }
             }
-            synchronized(internalSuggestionsGuard) {
-                if (internalSuggestions.first < reqTime) {
-                    internalSuggestions = reqTime to buildList {
+            candidateRequestRevision.publishIfCurrent(revision) {
+                synchronized(internalSuggestionsGuard) {
+                    internalSuggestions = buildList {
                         addAll(emojiSuggestions)
                         addAll(suggestions)
                     }
@@ -315,22 +336,31 @@ class NlpManager(context: Context) {
     }
 
     fun suggestDirectly(suggestions: List<SuggestionCandidate>) {
-        val reqTime = SystemClock.uptimeMillis()
-        synchronized(internalSuggestionsGuard) {
-            internalSuggestions = reqTime to suggestions
+        synchronized(suggestionJobGuard) {
+            suggestionJob?.cancel()
+            suggestionJob = null
+            candidateRequestRevision.next()
+            synchronized(internalSuggestionsGuard) {
+                internalSuggestions = suggestions
+            }
         }
     }
 
     fun clearSuggestions() {
-        synchronized(internalSuggestionsGuard) {
-            internalSuggestions = SystemClock.uptimeMillis() to emptyList()
-            candidateAssemblyRevision.next {
-                autoCommitCandidate = null
-                activeCandidates = emptyList()
-                autoExpandCollapseSmartbarActions(
-                    emptyList<SuggestionCandidate>(),
-                    NlpInlineAutofill.suggestions.value,
-                )
+        synchronized(suggestionJobGuard) {
+            suggestionJob?.cancel()
+            suggestionJob = null
+            candidateRequestRevision.next()
+            synchronized(internalSuggestionsGuard) {
+                internalSuggestions = emptyList()
+                candidateAssemblyRevision.next {
+                    autoCommitCandidate = null
+                    activeCandidates = emptyList()
+                    autoExpandCollapseSmartbarActions(
+                        emptyList<SuggestionCandidate>(),
+                        NlpInlineAutofill.suggestions.value,
+                    )
+                }
             }
         }
     }
@@ -368,7 +398,7 @@ class NlpManager(context: Context) {
             isSuggestionOn() -> {
                 val content = editorInstance.activeContent
                 val wordCandidates = synchronized(internalSuggestionsGuard) {
-                    internalSuggestions.second
+                    internalSuggestions
                 }
                 val clipboardCandidates = clipboardSuggestionProvider.suggest(
                     subtype = Subtype.DEFAULT,

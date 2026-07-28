@@ -20,14 +20,18 @@ import android.text.InputType
 import dev.patrickgold.florisboard.ime.editor.InputAttributes
 import dev.patrickgold.florisboard.ime.nlp.AutomaticSmartbarMutations
 import dev.patrickgold.florisboard.ime.nlp.CandidateAssemblyRevision
+import dev.patrickgold.florisboard.ime.nlp.CandidateRequestRevision
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidateKind
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.florisboard.autocorrect.api.AutocorrectCandidateKind
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AutocorrectCandidateLifecycleTest : FunSpec({
     test("stale editor request cannot create a session or send") {
         editorRequestEffects(requestGeneration = 3, activeGeneration = 4) shouldBe emptyList()
@@ -95,6 +99,30 @@ class AutocorrectCandidateLifecycleTest : FunSpec({
                 SuggestionCandidateKind.NEXT_WORD,
                 SuggestionCandidateKind.EMOJI,
             )
+    }
+
+    test("latest candidate request is the only one allowed to publish") {
+        val revisions = CandidateRequestRevision()
+        val stale = revisions.next()
+        val latest = revisions.next()
+        var published = ""
+
+        revisions.publishIfCurrent(stale) { published = "stale" } shouldBe false
+        revisions.publishIfCurrent(latest) { published = "latest" } shouldBe true
+        published shouldBe "latest"
+    }
+
+    test("provider result remains pending until the active session answers") {
+        runTest {
+            val providerResult = CompletableDeferred<String>()
+            val waiting = async { awaitProviderResult(providerResult) }
+
+            testScheduler.advanceTimeBy(2_000)
+            waiting.isCompleted shouldBe false
+
+            providerResult.complete("candidates")
+            waiting.await() shouldBe "candidates"
+        }
     }
 
     test("clear prevents an already-running assembly from republishing candidates") {
