@@ -41,10 +41,13 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
 
-      - name: Set up CMake and Ninja
-        uses: lukka/get-cmake@ea004816823209b8d1211e47b216185caee12cc5 # v4.0.2
-        with:
-          cmakeVersion: 4.1.2
+      - name: Install Android native toolchain
+        run: >-
+          sdkmanager
+          "platforms;android-36"
+          "build-tools;36.0.0"
+          "cmake;4.1.2"
+          "ndk;29.0.14206865"
 
       - name: Check formatting, Kotlin, Android, and privacy rules
         run: ./gradlew ciStaticAnalysis --stacktrace
@@ -83,10 +86,13 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
 
-      - name: Set up CMake and Ninja
-        uses: lukka/get-cmake@ea004816823209b8d1211e47b216185caee12cc5 # v4.0.2
-        with:
-          cmakeVersion: 4.1.2
+      - name: Install Android native toolchain
+        run: >-
+          sdkmanager
+          "platforms;android-36"
+          "build-tools;36.0.0"
+          "cmake;4.1.2"
+          "ndk;29.0.14206865"
 
       - name: Run JVM and Robolectric tests
         run: ./gradlew ciUnitTest --stacktrace
@@ -124,10 +130,13 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
 
-      - name: Set up CMake and Ninja
-        uses: lukka/get-cmake@ea004816823209b8d1211e47b216185caee12cc5 # v4.0.2
-        with:
-          cmakeVersion: 4.1.2
+      - name: Install Android native toolchain
+        run: >-
+          sdkmanager
+          "platforms;android-36"
+          "build-tools;36.0.0"
+          "cmake;4.1.2"
+          "ndk;29.0.14206865"
 
       - name: Build debug, minified beta, benchmark, and API artifacts
         run: ./gradlew ciPackage --stacktrace
