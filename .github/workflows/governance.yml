@@ -21,7 +21,9 @@ permissions:
 
 concurrency:
   group: governance-${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || github.run_id }}
-  cancel-in-progress: true
+  # A completed CI workflow can trigger a fresh evaluation while an owner merge
+  # is being submitted. Serialize those runs so the merge command is not cancelled.
+  cancel-in-progress: false
 
 jobs:
   governance:
