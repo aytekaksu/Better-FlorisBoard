@@ -1,4 +1,4 @@
-# Autocorrect plugin protocol v4
+# Autocorrect plugin protocol v5
 contract.ACTION_BIND_PROVIDER=org.florisboard.autocorrect.api.action.BIND_PROVIDER
 contract.MAX_BOOSTED_CODE_POINT_COUNT=64
 contract.MAX_CANDIDATES=16
@@ -33,7 +33,7 @@ contract.MSG_START_SESSION=1
 contract.MSG_SUGGEST=2
 contract.MSG_SUGGESTIONS=101
 contract.MSG_TEXT_EVENT=11
-contract.PROTOCOL_VERSION=4
+contract.PROTOCOL_VERSION=5
 enum.AutocorrectAcceptanceKind=MANUAL,AUTO_CORRECTION,GESTURE
 enum.AutocorrectCandidateKind=TYPED,CORRECTION,COMPLETION,NEXT_WORD,EMOJI
 enum.AutocorrectCapsMode=UNSPECIFIED,UNSHIFTED,SHIFTED_MANUAL,SHIFTED_AUTOMATIC,CAPS_LOCK
@@ -163,7 +163,9 @@ bundle.finishWithSnapshot=Bundle{
   hasFinalRequest=Boolean(true)
   sessionId=Long(7)
 }
-bundle.cancel=Bundle{}
+bundle.cancel=Bundle{
+  requestId=Long(11)
+}
 bundle.textEvent=Bundle{
   kind=String("COMMIT_TYPED")
   sessionId=Long(7)

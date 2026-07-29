@@ -61,11 +61,11 @@ Declare the service in the provider manifest:
     </intent-filter>
     <meta-data
         android:name="org.florisboard.autocorrect.api.PROTOCOL_VERSION"
-        android:value="4" />
+        android:value="5" />
 </service>
 ```
 
-Protocol version 4 has no settings-activity metadata or provider-activity UI item. Provider
+Protocol version 5 has no settings-activity metadata or provider-activity UI item. Provider
 settings are declarative and are always rendered by FlorisBoard. It acknowledges completed session
 shutdown so the host can keep the service bound until admitted learning callbacks and
 `onFinishSession` finish, and exposes the Android personal dictionary through the keyboard host.
@@ -118,7 +118,10 @@ depend on a companion keyboard application being installed.
   `WEB_FIELD`). Unknown bits are discarded and an omitted field means no traits. Providers must
   not infer a target application's identity from these flags.
 - Requests and replies are asynchronous. Providers must expect newer requests to cancel older
-  work and should cooperate with coroutine cancellation.
+  work and should cooperate with coroutine cancellation. Protocol v5 cancellation carries the
+  exact suggestion request ID; a delayed cancel for an older request must never cancel newer work.
+  The base service enforces this rule and returns `Unhandled` for a suggestion whose session is no
+  longer active, so an admitted host request is never left without a terminal outcome.
 - Session starts, admitted learning callbacks, and session finishes run in wire order. The finish
   acknowledgement is sent only after `onFinishSession` returns. FlorisBoard keeps the purely bound
   service alive until that acknowledgement, or until an explicit lifecycle event disconnects it;

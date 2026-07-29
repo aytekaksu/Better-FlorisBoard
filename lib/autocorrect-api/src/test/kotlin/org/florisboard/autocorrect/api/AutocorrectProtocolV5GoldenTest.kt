@@ -25,24 +25,25 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-class AutocorrectProtocolV4GoldenTest {
+class AutocorrectProtocolV5GoldenTest {
     @Test
-    fun currentConstantsEnumsAndWireShapesMatchTheV4Fixture() {
+    fun currentConstantsEnumsAndWireShapesMatchTheV5Fixture() {
         val actual = buildGoldenFixture()
-        writeReport("protocol-v4.golden", actual)
-        if (updateSnapshot("protocol-v4.golden", actual)) return
-        val expected = requireNotNull(javaClass.getResource("/api/protocol-v4.golden")) {
-            "Missing src/test/resources/api/protocol-v4.golden"
+        writeReport("protocol-v5.golden", actual)
+        if (updateSnapshot("protocol-v5.golden", actual)) return
+        val expected = requireNotNull(javaClass.getResource("/api/protocol-v5.golden")) {
+            "Missing src/test/resources/api/protocol-v5.golden"
         }.readText().trimEnd()
 
         assertEquals(
-            "Protocol v4 changed. Keep old wire identifiers stable; use a new protocol version " +
+            "Protocol v5 changed. Keep old wire identifiers stable; use a new protocol version " +
                 "for incompatible changes. The generated candidate is in the module build reports.",
             expected,
             actual,
         )
     }
 
+    @Suppress("LongMethod")
     private fun buildGoldenFixture(): String {
         val contractFields = AutocorrectPluginContract::class.java.fields
             .filter {
@@ -179,7 +180,7 @@ class AutocorrectProtocolV4GoldenTest {
                 },
                 "finishLegacy" to finishSessionBundle(7L),
                 "finishWithSnapshot" to finishSessionBundle(7L, request),
-                "cancel" to Bundle(),
+                "cancel" to cancellationBundle(11L),
                 "textEvent" to AutocorrectTextEvent(
                     7L,
                     "word",
@@ -213,7 +214,7 @@ class AutocorrectProtocolV4GoldenTest {
         }
 
         return buildString {
-            appendLine("# Autocorrect plugin protocol v4")
+            appendLine("# Autocorrect plugin protocol v5")
             appendLine(contractFields)
             appendLine(enums)
             bundles.forEach { (name, bundle) ->

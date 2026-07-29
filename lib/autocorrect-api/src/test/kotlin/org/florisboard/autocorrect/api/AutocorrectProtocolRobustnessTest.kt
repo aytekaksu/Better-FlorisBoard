@@ -19,6 +19,7 @@ package org.florisboard.autocorrect.api
 import android.os.Bundle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,6 +27,14 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class AutocorrectProtocolRobustnessTest {
+    @Test
+    fun cancellationRequiresAPositiveLongRequestId() {
+        assertEquals(17L, cancellationRequestIdFromBundle(cancellationBundle(17L)))
+        assertNull(cancellationRequestIdFromBundle(Bundle()))
+        assertNull(cancellationRequestIdFromBundle(Bundle().apply { putLong("requestId", 0L) }))
+        assertNull(cancellationRequestIdFromBundle(Bundle().apply { putInt("requestId", 17) }))
+    }
+
     @Test
     fun suggestionReaderRejectsMalformedEntriesWithoutLosingValidEntries() {
         val malformed = Bundle().apply {
