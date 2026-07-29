@@ -56,7 +56,18 @@ expect_ci_result() {
   passed=$((passed + 1))
 }
 
+expect_owner_stream_pass() {
+  if ! jq -nc '[range(0; 50000) | {}]' |
+    MAINTAINER_LOGIN="$maintainer" PR_AUTHOR="$maintainer" PR_HEAD_SHA="$head" \
+      bash "$approval_checker" >/dev/null; then
+    echo "Expected owner shortcut to drain its input stream" >&2
+    exit 1
+  fi
+  passed=$((passed + 1))
+}
+
 expect_pass "maintainer PR needs no review" "$maintainer" "not JSON"
+expect_owner_stream_pass
 expect_pass \
   "current maintainer approval" \
   "external-contributor" \
