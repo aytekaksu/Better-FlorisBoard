@@ -3,7 +3,8 @@
 set -euo pipefail
 
 readonly script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly checker="$script_dir/require-maintainer-approval.sh"
+readonly approval_checker="$script_dir/require-maintainer-approval.sh"
+readonly ci_checker="$script_dir/require-external-ci.sh"
 readonly maintainer="aytekaksu"
 readonly head="current-head"
 passed=0
@@ -14,7 +15,8 @@ expect_pass() {
   local reviews="$3"
 
   if ! printf '%s' "$reviews" |
-    MAINTAINER_LOGIN="$maintainer" PR_AUTHOR="$author" PR_HEAD_SHA="$head" bash "$checker"; then
+    MAINTAINER_LOGIN="$maintainer" PR_AUTHOR="$author" PR_HEAD_SHA="$head" \
+      bash "$approval_checker"; then
     echo "Expected pass: $name" >&2
     exit 1
   fi
@@ -27,9 +29,28 @@ expect_fail() {
   local reviews="$3"
 
   if printf '%s' "$reviews" |
-    MAINTAINER_LOGIN="$maintainer" PR_AUTHOR="$author" PR_HEAD_SHA="$head" bash "$checker" \
+    MAINTAINER_LOGIN="$maintainer" PR_AUTHOR="$author" PR_HEAD_SHA="$head" \
+      bash "$approval_checker" \
       >/dev/null 2>&1; then
     echo "Expected failure: $name" >&2
+    exit 1
+  fi
+  passed=$((passed + 1))
+}
+
+expect_ci_result() {
+  local name="$1"
+  local expected="$2"
+  local checks="$3"
+  local actual=0
+
+  set +e
+  printf '%s' "$checks" | bash "$ci_checker" >/dev/null 2>&1
+  actual=$?
+  set -e
+
+  if [[ "$actual" -ne "$expected" ]]; then
+    echo "Expected CI result $expected, got $actual: $name" >&2
     exit 1
   fi
   passed=$((passed + 1))
@@ -68,5 +89,47 @@ expect_fail \
   "dismissed approval" \
   "external-contributor" \
   '[[{"id":1,"user":{"login":"aytekaksu"},"state":"DISMISSED","commit_id":"current-head"}]]'
+
+expect_ci_result "checks not started" 2 '[{"check_runs":[]}]'
+expect_ci_result \
+  "checks still running" \
+  2 \
+  '[{"check_runs":[
+    {"id":1,"name":"validate","status":"completed","conclusion":"success","app":{"id":15368}},
+    {"id":2,"name":"build","status":"in_progress","conclusion":null,"app":{"id":15368}}
+  ]}]'
+expect_ci_result \
+  "required check failed" \
+  1 \
+  '[{"check_runs":[
+    {"id":1,"name":"validate","status":"completed","conclusion":"success","app":{"id":15368}},
+    {"id":2,"name":"build","status":"completed","conclusion":"failure","app":{"id":15368}}
+  ]}]'
+expect_ci_result \
+  "both required checks passed across pages" \
+  0 \
+  '[
+    {"check_runs":[
+      {"id":1,"name":"validate","status":"completed","conclusion":"success","app":{"id":15368}}
+    ]},
+    {"check_runs":[
+      {"id":2,"name":"build","status":"completed","conclusion":"success","app":{"id":15368}}
+    ]}
+  ]'
+expect_ci_result \
+  "latest successful rerun wins" \
+  0 \
+  '[{"check_runs":[
+    {"id":1,"name":"validate","status":"completed","conclusion":"success","app":{"id":15368}},
+    {"id":2,"name":"build","status":"completed","conclusion":"failure","app":{"id":15368}},
+    {"id":3,"name":"build","status":"completed","conclusion":"success","app":{"id":15368}}
+  ]}]'
+expect_ci_result \
+  "unexpected app is ignored" \
+  2 \
+  '[{"check_runs":[
+    {"id":1,"name":"validate","status":"completed","conclusion":"success","app":{"id":999}},
+    {"id":2,"name":"build","status":"completed","conclusion":"success","app":{"id":999}}
+  ]}]'
 
 echo "Governance policy tests passed: $passed"
