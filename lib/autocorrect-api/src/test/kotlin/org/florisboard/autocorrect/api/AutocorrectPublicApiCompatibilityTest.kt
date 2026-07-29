@@ -37,10 +37,10 @@ class AutocorrectPublicApiCompatibilityTest {
         val actual = discoverApiClasses()
             .joinToString("\n\n", transform = ::classSignature)
             .trimEnd()
-        writeReport("public-api-v4.txt", actual)
-        if (updateSnapshot("public-api-v4.txt", actual)) return
-        val expected = requireNotNull(javaClass.getResource("/api/public-api-v4.txt")) {
-            "Missing src/test/resources/api/public-api-v4.txt"
+        writeReport("public-api-v5.txt", actual)
+        if (updateSnapshot("public-api-v5.txt", actual)) return
+        val expected = requireNotNull(javaClass.getResource("/api/public-api-v5.txt")) {
+            "Missing src/test/resources/api/public-api-v5.txt"
         }.readText().trimEnd()
 
         assertEquals(
@@ -261,6 +261,7 @@ class AutocorrectPublicApiCompatibilityTest {
 
         private val INTERNAL_TOP_LEVEL_METHODS = mapOf(
             "$API_PACKAGE.AutocorrectPluginContractKt" to setOf(
+                "cancellationRequestIdFromBundle",
                 "finalRequestFromFinishSessionBundle",
                 "suggestionResultToBundle",
                 "takeWireChars",

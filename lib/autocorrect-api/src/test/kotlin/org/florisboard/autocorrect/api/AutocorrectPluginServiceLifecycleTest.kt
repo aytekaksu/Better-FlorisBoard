@@ -72,4 +72,25 @@ class AutocorrectPluginServiceLifecycleTest {
         assertTrue(lifetime.isCurrent(second))
         parent.cancel()
     }
+
+    @Test
+    fun staleCancellationCannotCancelTheCurrentSuggestionJob() {
+        val lifetime = SuggestionJobLifetime()
+        val first = Job()
+        val second = Job()
+
+        lifetime.begin(1L)
+        lifetime.attach(1L, first)
+        lifetime.begin(2L)
+        lifetime.attach(2L, second)
+
+        assertTrue(first.isCancelled)
+        assertFalse(lifetime.cancel(1L))
+        assertTrue(lifetime.isCurrent(2L))
+        assertTrue(second.isActive)
+
+        assertTrue(lifetime.cancel(2L))
+        assertTrue(second.isCancelled)
+        assertFalse(lifetime.isCurrent(2L))
+    }
 }

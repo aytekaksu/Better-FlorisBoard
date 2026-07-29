@@ -105,6 +105,7 @@ import org.florisboard.autocorrect.api.AutocorrectUserDictionaryPage
 import org.florisboard.autocorrect.api.AutocorrectUserDictionaryRequest
 import org.florisboard.autocorrect.api.AutocorrectUserDictionaryStatus
 import org.florisboard.autocorrect.api.candidateEventBundle
+import org.florisboard.autocorrect.api.cancellationBundle
 import org.florisboard.autocorrect.api.finishSessionBundle
 import org.florisboard.autocorrect.api.finishSessionResultFromBundle
 import org.florisboard.autocorrect.api.pluginUiDocumentBundle
@@ -668,7 +669,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         latestSuggestionRequestId = -1L
         val pending = pendingSuggestions.remove(requestId) ?: return
         pending.cancel()
-        send(AutocorrectPluginContract.MSG_CANCEL, Bundle())
+        send(AutocorrectPluginContract.MSG_CANCEL, cancellationBundle(requestId))
     }
 
     private fun sendPluginUiMessage(what: Int, itemId: String, value: String? = null) {
@@ -1357,9 +1358,11 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                         error = AutocorrectPluginDiagnosticError.SUPERSEDED,
                     )
                 }
-            }
-            if (admitted.cancelledLeases.isNotEmpty()) {
-                send(AutocorrectPluginContract.MSG_CANCEL, Bundle(), service)
+                send(
+                    AutocorrectPluginContract.MSG_CANCEL,
+                    cancellationBundle(cancelledRequestId),
+                    service,
+                )
             }
             val deferred = CompletableDeferred<AutocorrectSuggestionResult>()
             pendingSuggestions[requestId] = deferred
@@ -1410,7 +1413,11 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                     ) {
                         latestSuggestionRequestId = -1L
                         boostedCodePoints = emptySet()
-                        send(AutocorrectPluginContract.MSG_CANCEL, Bundle(), service)
+                        send(
+                            AutocorrectPluginContract.MSG_CANCEL,
+                            cancellationBundle(requestId),
+                            service,
+                        )
                         diagnostics.operationFinished(
                             operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
                             bindingEpoch = providerBindingEpoch,

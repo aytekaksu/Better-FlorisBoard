@@ -87,8 +87,10 @@ typing, UI/document leases, and pending finish acknowledgements have ended.
   session, admitted session, provider, and editor generation.
 - Provider work runs asynchronously. Never wait for it on the main thread and
   never hold a state lock across Binder, editor, disk, or content-resolver work.
-- Superseding input cancels obsolete suggestions. Cancellation must remain
-  distinguishable from provider failure.
+- Superseding input cancels obsolete suggestions. Every cancellation names the
+  exact request it retires; a late cancellation for an older request must be a
+  no-op after newer work starts. Cancellation must remain distinguishable from
+  provider failure.
 
 ## Privacy and trust boundary
 
@@ -113,6 +115,11 @@ typing, UI/document leases, and pending finish acknowledgements have ended.
 send failure, malformed data, or a rejected stale reply allows the built-in
 language provider to handle ordinary suggestions. A handled empty result is
 authoritative and must stay empty.
+
+A provider must answer a suggestion for a non-active session with `Unhandled`
+instead of dropping it silently. Together with request-scoped cancellation,
+this guarantees that every still-admitted host request either receives a reply
+or is explicitly retired by host lifecycle state.
 
 Glide uses the built-in classifier when the external provider does not handle a
 gesture or its current result cannot be committed. UI mutations keep the last

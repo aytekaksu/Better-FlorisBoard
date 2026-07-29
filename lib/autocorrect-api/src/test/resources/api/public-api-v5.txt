@@ -107,6 +107,7 @@ public final class org.florisboard.autocorrect.api.AutocorrectPluginContract
   public static final field PROTOCOL_VERSION:I
 
 public final class org.florisboard.autocorrect.api.AutocorrectPluginContractKt
+  public static final method cancellationBundle(J)Landroid/os/Bundle;
   public static final method candidateEventBundle(J, Ljava/lang/String;, Lorg/florisboard/autocorrect/api/AutocorrectAcceptanceKind;)Landroid/os/Bundle;
   public static final method candidatesFromBundle(Landroid/os/Bundle;)Lkotlin/Pair;
   public static final method finishSessionBundle(J)Landroid/os/Bundle;

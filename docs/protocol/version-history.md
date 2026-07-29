@@ -1,8 +1,8 @@
 # Autocorrect protocol version history
 
-## Version 4
+## Version 5
 
-Version 4 is the current external-provider contract. Its checked-in API
+Version 5 is the current external-provider contract. Its checked-in API
 signature and canonical Bundle shapes are compatibility fixtures under
 `lib/autocorrect-api/src/test/resources/api`.
 
@@ -11,7 +11,20 @@ Unknown enum values and optional fields use documented safe defaults where
 forward-compatible decoding is possible; malformed required data and
 out-of-bounds collections are rejected or clamped before allocation.
 
-Version 4 includes:
+Version 5 retains the version 4 surface and adds:
+
+- request-scoped `MSG_CANCEL` payloads containing the required suggestion
+  request ID, so delayed cross-thread Binder delivery cannot cancel newer work;
+- an explicit `Unhandled` reply when a suggestion targets a session which is
+  no longer active, rather than silently abandoning the host request.
+
+The host and provider must be upgraded together. Exact-version discovery means
+a version 5 host does not bind a version 4 provider, and a version 4 host does
+not bind a version 5 provider.
+
+## Version 4
+
+Version 4 included:
 
 - bounded session and suggestion messages;
 - tap and glide input traces;
@@ -19,6 +32,12 @@ Version 4 includes:
 - ordered session finish with an optional final snapshot;
 - declarative provider UI and short-lived document descriptors;
 - controlled host user-dictionary queries and mutations.
+
+Its `MSG_CANCEL` payload was empty. Because cancellation and suggestion
+messages can originate on different host threads, Android could deliver an old
+cancel after a newer suggestion. The base provider then cancelled its newest
+job without replying, leaving the host's newer request pending until a
+lifecycle reset. Version 5 replaces that ambiguous operation.
 
 ## Change rules
 
