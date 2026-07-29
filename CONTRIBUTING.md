@@ -8,10 +8,12 @@ All contributions must be in English and follow the
 [code of conduct](CODE_OF_CONDUCT.md) and
 [AI-assisted contribution policy](AI_POLICY.md). Anyone may propose a change.
 Only [@aytekaksu](https://github.com/aytekaksu) may accept and merge outside
-contributions. Maintainer-authored pull requests do not require self-approval,
-but every pull request must pass the protected CI checks before merging. A
-pull request authored by anyone else requires the maintainer to approve its
-current head commit; pushing another commit requires a new approval.
+contributions. Pull requests authored by the maintainer are automatically
+rebase-merged by the trusted governance workflow. Their CI still runs and
+reports problems, but its result is advisory and does not block or undo the
+merge. A pull request authored by anyone else requires the maintainer to
+approve its current head commit and requires the protected build and validation
+checks to pass; pushing another commit requires a new approval.
 
 ## Before writing code
 
