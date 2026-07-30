@@ -42,6 +42,8 @@ val qualityKotlinSources = files(
     fileTree("app/src") {
         include("**/ime/nlp/plugin/**/*.kt")
     },
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceMigrationTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceSchemaContractTest.kt"),
     fileTree("lib/autocorrect-api/src") {
         include("**/*.kt")
     },
@@ -80,6 +82,8 @@ val formattedKotlinSources = files(
     ),
     file("app/src/androidTest/kotlin/org/florisboard/lib/kotlin/CurlyFormatAndroidTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummaryTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceMigrationTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceSchemaContractTest.kt"),
     file(
         "app/src/test/kotlin/dev/patrickgold/florisboard/app/settings/localization/" +
             "SelectLocaleScreenTest.kt",
