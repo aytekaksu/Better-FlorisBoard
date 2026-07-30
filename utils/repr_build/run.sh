@@ -27,22 +27,14 @@ read_property projectCompileSdk     PROJECT_COMPILE_SDK
 read_property cmdlineTools          CMDLINE_TOOLS_VERSION
 read_property cmdlineToolsChecksum  CMDLINE_TOOLS_CHECKSUM
 read_property buildTools            BUILD_TOOLS_VERSION
-read_property cmake                 CMAKE_VERSION
 read_property jdk                   JDK_VERSION
-read_property ndk                   NDK_VERSION
-read_property rustup                RUSTUP_VERSION
-read_property rustToolchain         RUST_TOOLCHAIN_VERSION
 
 docker build -t "$IMAGE_NAME:$IMAGE_TAG" -f "utils/repr_build/Dockerfile" . \
   --build-arg "PROJECT_COMPILE_SDK=$PROJECT_COMPILE_SDK" \
   --build-arg "CMDLINE_TOOLS_VERSION=$CMDLINE_TOOLS_VERSION" \
   --build-arg "CMDLINE_TOOLS_CHECKSUM=$CMDLINE_TOOLS_CHECKSUM" \
   --build-arg "BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION" \
-  --build-arg "CMAKE_VERSION=$CMAKE_VERSION" \
   --build-arg "JDK_VERSION=$JDK_VERSION" \
-  --build-arg "NDK_VERSION=$NDK_VERSION" \
-  --build-arg "RUSTUP_VERSION=$RUSTUP_VERSION" \
-  --build-arg "RUST_TOOLCHAIN_VERSION=$RUST_TOOLCHAIN_VERSION" \
   --build-arg "USER_NAME=$USER_NAME" \
   || exit 1
 

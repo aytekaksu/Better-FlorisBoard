@@ -31,9 +31,8 @@ Install:
 
 - Android Studio, or IntelliJ IDEA with the Android and Compose plugins;
 - Java 17;
-- Android SDK and NDK versions declared by the project;
-- CMake 3.22 or newer and Clang 15 or newer;
-- Git and Rust;
+- the Android SDK version declared by the project;
+- Git;
 - optionally Python 3.10 or newer and standard Unix command-line tools.
 
 Linux, macOS, and WSL2 are the main development environments. If IntelliJ

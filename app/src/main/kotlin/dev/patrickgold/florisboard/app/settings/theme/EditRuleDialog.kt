@@ -85,7 +85,6 @@ import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.ime.window.ImeWindowMode
 import dev.patrickgold.florisboard.keyboardManager
-import dev.patrickgold.florisboard.lib.NATIVE_NULLPTR
 import dev.patrickgold.florisboard.lib.compose.FlorisHyperlinkText
 import dev.patrickgold.florisboard.lib.util.InputMethodUtils
 import dev.patrickgold.jetpref.material.ui.JetPrefAlertDialog
@@ -107,6 +106,7 @@ import org.florisboard.lib.snygg.SnyggSelector
 import org.florisboard.lib.snygg.ui.NonNullSaver
 import kotlin.reflect.KClass
 
+private const val NO_ERROR_RES_ID = 0
 private val TransparentTextSelectionColors = TextSelectionColors(
     handleColor = Color.Transparent,
     backgroundColor = Color.Transparent,
@@ -388,7 +388,7 @@ private fun EditCodeValueDialog(
     }
     var showKeyCodesHelp by rememberSaveable(codeValue) { mutableStateOf(false) }
     var showError by rememberSaveable(codeValue) { mutableStateOf(false) }
-    var errorId by rememberSaveable(codeValue) { mutableIntStateOf(NATIVE_NULLPTR.toInt()) }
+    var errorId by rememberSaveable(codeValue) { mutableIntStateOf(NO_ERROR_RES_ID) }
 
     val focusRequester = remember { FocusRequester() }
     val isFlorisBoardEnabled by InputMethodUtils.observeIsFlorisboardEnabled(foregroundOnly = true)

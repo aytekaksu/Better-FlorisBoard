@@ -27,7 +27,6 @@ import dev.patrickgold.florisboard.app.ext.EditorAction
 import dev.patrickgold.florisboard.app.settings.advanced.Backup
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.ime.theme.ThemeExtensionEditor
-import dev.patrickgold.florisboard.lib.NATIVE_NULLPTR
 import dev.patrickgold.florisboard.lib.ext.Extension
 import dev.patrickgold.florisboard.lib.ext.ExtensionDefaults
 import dev.patrickgold.florisboard.lib.ext.ExtensionEditor
@@ -237,6 +236,6 @@ class CacheManager(context: Context) {
         val mediaType: String?,
         val size: Long,
         val ext: Extension?,
-        var skipReason: Int = NATIVE_NULLPTR.toInt(),
+        var skipReason: Int? = null,
     )
 }

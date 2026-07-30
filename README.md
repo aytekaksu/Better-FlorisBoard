@@ -29,7 +29,7 @@ to find implementation entry points, invariants, and tests.
 
 ## Build and test
 
-Install the Android SDK/NDK, Java 17, CMake, Clang, Git, and Rust, then run:
+Install the Android SDK, Java 17, and Git, then run:
 
 ```shell
 ./gradlew assembleDebug

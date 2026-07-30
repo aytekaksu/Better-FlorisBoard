@@ -50,18 +50,9 @@ captures/
 *.jks
 crowdin.properties
 
-# C++
-.cxx/
-
 # Nix stuff
 .direnv/
 result
 
 # VSCode
 .vscode/
-
-# Rust
-debug/
-target/
-**/*.rs.bk
-*.pdb
