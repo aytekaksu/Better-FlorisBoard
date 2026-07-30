@@ -81,8 +81,10 @@ val formattedKotlinSources = files(
     file("app/src/androidTest/kotlin/org/florisboard/lib/kotlin/CurlyFormatAndroidTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummaryTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyDataPrivacyTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/LayoutTypeTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycleTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/SpellingDiagnosticsTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/composing/ComposerTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/theme/FlorisAssetResolverTest.kt"),
     file(
         "app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/" +

@@ -65,17 +65,23 @@ class WithRules(
     override val label: String,
     val rules: Map<String, String>,
 ) : Composer {
-    override val toRead = (rules.keys.maxOf { it.length } - 1).coerceAtLeast(0)
+    init {
+        require(rules.keys.none(String::isEmpty)) {
+            "Composer rules must not use empty keys"
+        }
+    }
 
-    @Transient val ruleOrder = rules.keys.toList().sortedBy { it.length }.reversed()
+    override val toRead = (rules.keys.maxOfOrNull(String::length) ?: 1) - 1
+
+    @Transient val ruleOrder = rules.keys.sortedByDescending(String::length)
 
     override fun getActions(precedingText: String, toInsert: String): Pair<Int, String> {
         val str = precedingText + toInsert
         for (key in ruleOrder) {
-            if (str.lowercase().endsWith(key)) {
+            if (str.endsWith(key, ignoreCase = true)) {
                 val value = rules.getValue(key)
-                val firstOfKey = str.takeLast(key.length).take(1)
-                return (key.length - 1) to (if (firstOfKey.uppercase() == firstOfKey) value.uppercase() else value)
+                val firstOfKey = str[str.length - key.length]
+                return (key.length - 1) to if (firstOfKey.isUpperCase()) value.uppercase() else value
             }
         }
         return 0 to toInsert
