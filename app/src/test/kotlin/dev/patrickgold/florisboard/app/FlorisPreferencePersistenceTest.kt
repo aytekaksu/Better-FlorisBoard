@@ -17,6 +17,12 @@
 package dev.patrickgold.florisboard.app
 
 import androidx.compose.ui.unit.dp
+import dev.patrickgold.florisboard.ime.smartbar.ExtendedActionsPlacement
+import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
+import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickAction
+import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionArrangement
+import dev.patrickgold.florisboard.ime.text.key.KeyCode
+import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import dev.patrickgold.florisboard.ime.window.ImeFormFactor
 import dev.patrickgold.florisboard.ime.window.ImeWindowConfig
 import dev.patrickgold.florisboard.ime.window.ImeWindowMode
@@ -26,9 +32,13 @@ import dev.patrickgold.jetpref.datastore.runtime.DataStoreReader
 import dev.patrickgold.jetpref.datastore.runtime.DataStoreWriter
 import dev.patrickgold.jetpref.datastore.runtime.ImportStrategy
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 class FlorisPreferencePersistenceTest :
     FunSpec({
@@ -133,6 +143,113 @@ class FlorisPreferencePersistenceTest :
             }
         }
 
+        test("legacy Smartbar state imports through the current model without payload data") {
+            runTest {
+                val fixture = PersistenceFixture()
+                val marker = "SENSITIVE_MARKER"
+                fixture.import(
+                    strategy = ImportStrategy.Erase,
+                    raw = persistencePayload(
+                        """b;smartbar__enabled;false""",
+                        """b;smartbar__secondary_actions_expanded;true""",
+                        persistenceStringPreference(
+                            "smartbar__quick_actions",
+                            persistenceLegacyActions(marker),
+                        ),
+                    ),
+                    sourceVersionCode = 88,
+                )
+
+                fixture.prefs.smartbar.enabled.get() shouldBe false
+                fixture.prefs.smartbar.layout.get() shouldBe
+                    SmartbarLayout.SUGGESTIONS_ACTIONS_EXTENDED
+                val arrangement = fixture.prefs.smartbar.actionArrangement.get()
+                arrangement.stickyAction shouldBe QuickAction.InsertKey(TextKeyData.VOICE_INPUT)
+                arrangement.dynamicActions.all { it is QuickAction.InsertKey } shouldBe true
+                QuickActionArrangement.Serializer.serialize(arrangement).contains(marker) shouldBe false
+
+                val keys = fixture.exportRaw()
+                    .lineSequence()
+                    .filterNot(String::isBlank)
+                    .map { it.substringAfter(';').substringBefore(';') }
+                    .toSet()
+                keys shouldBe setOf(
+                    "smartbar__enabled",
+                    "smartbar__layout",
+                    "smartbar__action_arrangement",
+                    "smartbar__extended_actions_expanded",
+                )
+            }
+        }
+
+        test("Smartbar Merge keeps current-only actions and layout") {
+            runTest {
+                val fixture = PersistenceFixture()
+                fixture.prefs.smartbar.layout.set(SmartbarLayout.ACTIONS_ONLY)
+                fixture.prefs.smartbar.actionArrangement.set(
+                    QuickActionArrangement(
+                        stickyAction = null,
+                        dynamicActions = listOf(
+                            QuickAction.InsertText("current-local-action"),
+                            QuickAction.InsertKey(TextKeyData.TOGGLE_INCOGNITO_MODE),
+                            QuickAction.InsertKey(TextKeyData.UNDO),
+                        ),
+                        hiddenActions = emptyList(),
+                    ),
+                )
+
+                fixture.import(
+                    strategy = ImportStrategy.Merge,
+                    raw = persistencePayload(
+                        persistenceStringPreference(
+                            "smartbar__quick_actions",
+                            persistenceLegacyActions("UNTRUSTED_INCOMING_ACTION"),
+                        ),
+                    ),
+                    sourceVersionCode = 70,
+                )
+
+                fixture.prefs.smartbar.layout.get() shouldBe SmartbarLayout.ACTIONS_ONLY
+                val actions = fixture.prefs.smartbar.actionArrangement.get().dynamicActions
+                actions shouldContain QuickAction.InsertText("current-local-action")
+                actions shouldContain QuickAction.InsertKey(TextKeyData.TOGGLE_INCOGNITO_MODE)
+                actions.filterIsInstance<QuickAction.InsertText>() shouldBe
+                    listOf(QuickAction.InsertText("current-local-action"))
+            }
+        }
+
+        test("canonical Smartbar scalars beat aliases regardless of payload order") {
+            runTest {
+                val fixture = PersistenceFixture()
+                fixture.import(
+                    strategy = ImportStrategy.Erase,
+                    raw = persistencePayload(
+                        """b;smartbar__flip_toggles;false""",
+                        """b;smartbar__primary_row_flip_toggles;true""",
+                        """b;smartbar__shared_actions_expanded;false""",
+                        """b;smartbar__action_row_expanded;true""",
+                        """b;smartbar__extended_actions_expanded;false""",
+                        """b;smartbar__secondary_actions_expanded;true""",
+                        persistenceStringPreference(
+                            "smartbar__extended_actions_placement",
+                            "ABOVE_CANDIDATES",
+                        ),
+                        persistenceStringPreference(
+                            "smartbar__secondary_actions_placement",
+                            "OVERLAY_APP_UI",
+                        ),
+                    ),
+                    sourceVersionCode = 89,
+                )
+
+                fixture.prefs.smartbar.flipToggles.get() shouldBe false
+                fixture.prefs.smartbar.sharedActionsExpanded.get() shouldBe false
+                fixture.prefs.smartbar.extendedActionsExpanded.get() shouldBe false
+                fixture.prefs.smartbar.extendedActionsPlacement.get() shouldBe
+                    ExtendedActionsPlacement.ABOVE_CANDIDATES
+            }
+        }
+
         test("reader failures remain typed Result failures") {
             runTest {
                 val fixture = PersistenceFixture()
@@ -167,3 +284,27 @@ private class PersistenceFixture {
 }
 
 private fun persistencePayload(vararg lines: String): String = lines.joinToString(separator = "\n", postfix = "\n")
+
+private fun persistenceStringPreference(key: String, value: String): String = "s;$key;${Json.encodeToString(value)}"
+
+private fun persistenceLegacyActions(marker: String): String = buildJsonArray {
+    add(
+        buildJsonObject {
+            put("$", "key")
+            put(
+                "data",
+                buildJsonObject {
+                    put("$", "text_key")
+                    put("code", KeyCode.UNDO)
+                    put("label", marker)
+                },
+            )
+        },
+    )
+    add(
+        buildJsonObject {
+            put("$", "insert_text")
+            put("data", marker)
+        },
+    )
+}.toString()

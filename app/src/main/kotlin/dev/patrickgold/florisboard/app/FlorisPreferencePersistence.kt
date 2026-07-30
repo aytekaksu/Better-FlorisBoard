@@ -29,12 +29,14 @@ import dev.patrickgold.jetpref.datastore.runtime.jetprefDatastoreDir
 
 internal fun DataStoreReader.withLegacyPreferencePreprocessing(
     baseWindowConfig: ImeWindowConfigByType? = null,
+    baseSmartbar: LegacySmartbarMigrationBase? = null,
     sourceVersionCode: Int? = null,
     sourceVersionName: String? = null,
 ): DataStoreReader = DataStoreReader {
     LegacyPreferencePayloadPreprocessor.process(
         payload = read(),
         baseWindowConfig = baseWindowConfig,
+        baseSmartbar = baseSmartbar,
         sourceVersionCode = sourceVersionCode,
         sourceVersionName = sourceVersionName,
     )
@@ -58,16 +60,24 @@ internal suspend fun DataStore<FlorisPreferenceModel>.importWithLegacyMigrations
     sourceVersionCode: Int? = null,
     sourceVersionName: String? = null,
 ): Result<Unit> {
-    val baseWindowConfig = if (strategy == ImportStrategy.Merge) {
+    val baseWindowConfig: ImeWindowConfigByType?
+    val baseSmartbar: LegacySmartbarMigrationBase?
+    if (strategy == ImportStrategy.Merge) {
         val prefs by this
-        prefs.keyboard.windowConfig.get()
+        baseWindowConfig = prefs.keyboard.windowConfig.get()
+        baseSmartbar = LegacySmartbarMigrationBase(
+            layout = prefs.smartbar.layout.get(),
+            actionArrangement = prefs.smartbar.actionArrangement.get(),
+        )
     } else {
-        null
+        baseWindowConfig = null
+        baseSmartbar = null
     }
     return import(
         strategy = strategy,
         reader = reader.withLegacyPreferencePreprocessing(
             baseWindowConfig = baseWindowConfig,
+            baseSmartbar = baseSmartbar,
             sourceVersionCode = sourceVersionCode,
             sourceVersionName = sourceVersionName,
         ),

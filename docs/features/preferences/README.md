@@ -17,14 +17,19 @@ it to the current schema.
   Startup and backup restore share this path. A current compound key always
   wins over legacy inputs, while Merge keeps unrelated current fields.
 
-Malformed legacy Smartbar arrangements are dropped without aborting valid
-sibling settings. Broader import validation and rollback belong to the
-backup/restore coordinator because JetPref live import is not transactional.
-
 Older window sizing and one-handed settings are reconstructed for the five
 phone/tablet form factors they described. Desktop and unrelated current window
-state are preserved. Structural Smartbar layouts remain a temporary exception;
-their historical names are reserved until that conversion lands.
+state are preserved.
+
+Smartbar stores from version codes 63–88 are rebuilt from their historical row
+settings. Legacy action JSON contributes only recognized key codes; labels,
+text actions, popups, and unknown data are discarded. Merge keeps current-only
+actions and unrelated layout state. Either current structural key blocks the
+whole conversion, and correctly typed current scalar entries win over aliases
+regardless of line order.
+
+Broader import validation and rollback belong to the backup/restore
+coordinator because JetPref live import is not transactional.
 
 ## Privacy and threat model
 
@@ -54,6 +59,10 @@ Run the focused contracts with:
   --tests 'dev.patrickgold.florisboard.app.FlorisPreferenceSchemaContractTest'
 ./gradlew :app:testDebugUnitTest \
   --tests 'dev.patrickgold.florisboard.app.LegacyPreferencePayloadPreprocessorTest'
+./gradlew :app:testDebugUnitTest \
+  --tests 'dev.patrickgold.florisboard.app.LegacySmartbarPreferencePayloadTest'
+./gradlew :app:testDebugUnitTest \
+  --tests 'dev.patrickgold.florisboard.app.FlorisPreferencePersistenceTest'
 ```
 
 Run `./gradlew qualityGate` before merging a persistence change.

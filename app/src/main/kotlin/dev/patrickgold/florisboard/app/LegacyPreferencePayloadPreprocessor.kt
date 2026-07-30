@@ -58,48 +58,60 @@ internal object LegacyPreferencePayloadPreprocessor {
     fun process(
         payload: String,
         baseWindowConfig: ImeWindowConfigByType? = null,
+        baseSmartbar: LegacySmartbarMigrationBase? = null,
         sourceVersionCode: Int? = null,
         sourceVersionName: String? = null,
     ): String {
-        val entries = payload.lineSequence().mapNotNull(::parseEntry).toList()
-        if (entries.any { it.key == WINDOW_CONFIG_KEY }) {
-            return payload
-        }
-
-        val versionOnInstall = entries.lastString(VERSION_ON_INSTALL_KEY)
-        val sourceSchema = resolveSourceSchema(
-            sourceVersionCode = sourceVersionCode,
-            sourceVersionName = sourceVersionName,
-            versionLastUse = entries.lastString(VERSION_LAST_USE_KEY),
-            versionOnInstall = versionOnInstall,
-            hasSplitSchemaMarker = entries.lastBoolean(ONE_HAND_ENABLED_KEY) != null,
+        val wire = LegacyPreferencePayload.parse(payload)
+        val source = LegacyPreferenceSource(
+            versionCode = sourceVersionCode,
+            versionName = sourceVersionName,
+            versionLastUse = wire.lastString(VERSION_LAST_USE_KEY),
+            versionOnInstall = wire.lastString(VERSION_ON_INSTALL_KEY),
         )
-        if (sourceSchema == SourceSchema.CURRENT) {
-            return payload
+        val additions = buildList {
+            migrateWindowEntry(wire, baseWindowConfig, source)?.let(::add)
+            addAll(LegacySmartbarPreferenceMigration.createEntries(wire, baseSmartbar, source))
         }
+        return wire.append(additions)
+    }
+
+    private fun migrateWindowEntry(
+        wire: LegacyPreferencePayload,
+        baseWindowConfig: ImeWindowConfigByType?,
+        source: LegacyPreferenceSource,
+    ): String? {
+        if (wire.hasKey(WINDOW_CONFIG_KEY)) return null
+
+        val sourceSchema = resolveSourceSchema(
+            sourceVersionCode = source.versionCode,
+            sourceVersionName = source.versionName,
+            versionLastUse = source.versionLastUse,
+            versionOnInstall = source.versionOnInstall,
+            hasSplitSchemaMarker = wire.lastBoolean(ONE_HAND_ENABLED_KEY) != null,
+        )
+        if (sourceSchema == SourceSchema.CURRENT) return null
 
         val legacy = LegacyWindowValues(
-            heightPortrait = entries.lastInt(HEIGHT_PORTRAIT_KEY)?.coerceIn(50, 150),
-            heightLandscape = entries.lastInt(HEIGHT_LANDSCAPE_KEY)?.coerceIn(50, 150),
-            offsetPortrait = entries.lastInt(OFFSET_PORTRAIT_KEY)?.coerceIn(0, 60),
-            offsetLandscape = entries.lastInt(OFFSET_LANDSCAPE_KEY)?.coerceIn(0, 60),
-            oneHandMode = entries.lastString(ONE_HAND_MODE_KEY)?.toLegacyOneHandMode(),
-            oneHandEnabled = entries.lastBoolean(ONE_HAND_ENABLED_KEY),
-            oneHandScale = entries.lastInt(ONE_HAND_SCALE_KEY)?.coerceIn(70, 90),
+            heightPortrait = wire.lastInt(HEIGHT_PORTRAIT_KEY)?.coerceIn(50, 150),
+            heightLandscape = wire.lastInt(HEIGHT_LANDSCAPE_KEY)?.coerceIn(50, 150),
+            offsetPortrait = wire.lastInt(OFFSET_PORTRAIT_KEY)?.coerceIn(0, 60),
+            offsetLandscape = wire.lastInt(OFFSET_LANDSCAPE_KEY)?.coerceIn(0, 60),
+            oneHandMode = wire.lastString(ONE_HAND_MODE_KEY)?.toLegacyOneHandMode(),
+            oneHandEnabled = wire.lastBoolean(ONE_HAND_ENABLED_KEY),
+            oneHandScale = wire.lastInt(ONE_HAND_SCALE_KEY)?.coerceIn(70, 90),
         )
-        if (!legacy.hasAnyValue) {
-            return payload
-        }
+        if (!legacy.hasAnyValue) return null
 
         val migrated = migrateWindowConfig(
             base = baseWindowConfig,
             sourceSchema = sourceSchema,
             recoverCombinedOneHandIntent = sourceSchema == SourceSchema.SPLIT &&
-                versionOnInstall?.toSourceSchema() == SourceSchema.COMBINED,
+                source.versionOnInstall?.toSourceSchema() == SourceSchema.COMBINED,
             legacy = legacy,
         )
         val serialized = ImeWindowConfig.ByTypeSerializer.serialize(migrated)
-        return payload.appendEntry("s;$WINDOW_CONFIG_KEY;${encodeString(serialized)}")
+        return LegacyPreferencePayload.stringEntry(WINDOW_CONFIG_KEY, serialized)
     }
 
     private fun migrateWindowConfig(
@@ -429,72 +441,8 @@ internal object LegacyPreferencePayloadPreprocessor {
         else -> null
     }
 
-    private fun List<WireEntry>.lastInt(key: String): Int? = lastOrNull {
-        it.type == "i" && it.key == key
-    }?.rawValue?.toIntOrNull()
-
-    private fun List<WireEntry>.lastBoolean(key: String): Boolean? = when (
-        lastOrNull {
-            it.type == "b" && it.key == key
-        }?.rawValue
-    ) {
-        "true" -> true
-        "false" -> false
-        else -> null
-    }
-
-    private fun List<WireEntry>.lastString(key: String): String? = lastOrNull {
-        it.type == "s" && it.key == key
-    }?.rawValue?.let(::decodeString)
-
-    private fun parseEntry(line: String): WireEntry? {
-        if (line.isBlank()) return null
-        val typeEnd = line.indexOf(';')
-        if (typeEnd < 0) return null
-        val keyEnd = line.indexOf(';', startIndex = typeEnd + 1)
-        if (keyEnd < 0) return null
-        return WireEntry(
-            type = line.substring(0, typeEnd),
-            key = line.substring(typeEnd + 1, keyEnd),
-            rawValue = line.substring(keyEnd + 1),
-        )
-    }
-
-    private fun decodeString(rawValue: String): String? {
-        val value = rawValue.trim()
-        if (value.length < 2 || value.first() != '"' || value.last() != '"') return null
-        return value.substring(1, value.lastIndex)
-            .replace("\\\"", "\"")
-            .replace("\\n", "\n")
-            .replace("\\r", "\r")
-            .replace("\\\\", "\\")
-    }
-
-    private fun encodeString(value: String): String = buildString(value.length + 2) {
-        append('"')
-        append(
-            value
-                .replace("\\", "\\\\")
-                .replace("\r", "\\r")
-                .replace("\n", "\\n")
-                .replace("\"", "\\\""),
-        )
-        append('"')
-    }
-
-    private fun String.appendEntry(entry: String): String = buildString(length + entry.length + 2) {
-        append(this@appendEntry)
-        if (isNotEmpty() && last() != '\n' && last() != '\r') {
-            append('\n')
-        }
-        append(entry)
-        append('\n')
-    }
-
     private fun ImeWindowProps.Fixed.side(): LegacyOneHandMode =
         if (paddingLeft >= paddingRight) LegacyOneHandMode.END else LegacyOneHandMode.START
-
-    private class WireEntry(val type: String, val key: String, val rawValue: String)
 
     private data class LegacyWindowValues(
         val heightPortrait: Int?,
