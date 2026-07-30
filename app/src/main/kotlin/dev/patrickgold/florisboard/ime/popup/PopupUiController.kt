@@ -16,7 +16,6 @@
 
 package dev.patrickgold.florisboard.ime.popup
 
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.requiredSize
@@ -29,7 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import dev.patrickgold.florisboard.ime.keyboard.ComputingEvaluator
 import dev.patrickgold.florisboard.ime.keyboard.DefaultComputingEvaluator
@@ -37,7 +35,6 @@ import dev.patrickgold.florisboard.ime.keyboard.Key
 import dev.patrickgold.florisboard.ime.keyboard.KeyData
 import dev.patrickgold.florisboard.ime.keyboard.computeImageVector
 import dev.patrickgold.florisboard.ime.keyboard.computeLabel
-import dev.patrickgold.florisboard.ime.media.emoji.EmojiSet
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyHintConfiguration
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKey
@@ -54,9 +51,8 @@ fun rememberPopupUiController(
     isSuitableForBasicPopup: (key: Key) -> Boolean,
     isSuitableForExtendedPopup: (key: Key) -> Boolean,
 ): PopupUiController {
-    val context = LocalContext.current
     return remember(key1, key2) {
-        PopupUiController(context, boundsProvider, isSuitableForBasicPopup, isSuitableForExtendedPopup)
+        PopupUiController(boundsProvider, isSuitableForBasicPopup, isSuitableForExtendedPopup)
     }
 }
 
@@ -70,9 +66,7 @@ val ExceptionsForKeyCodes = listOf(
     KeyCode.CHAR_WIDTH_SWITCHER,
 )
 
-@Suppress("unused")
 class PopupUiController(
-    val context: Context,
     val boundsProvider: (key: Key) -> FlorisRect,
     val isSuitableForBasicPopup: (key: Key) -> Boolean,
     val isSuitableForExtendedPopup: (key: Key) -> Boolean,
@@ -84,9 +78,6 @@ class PopupUiController(
     var evaluator: ComputingEvaluator = DefaultComputingEvaluator
     var keyHintConfiguration: KeyHintConfiguration = KeyHintConfiguration.HINTS_DISABLED
 
-    /** Is true if the preview popup is visible to the user, else false */
-    val isShowingPopup: Boolean
-        get() = baseRenderInfo != null
     /** Is true if the extended popup is visible to the user, else false */
     val isShowingExtendedPopup: Boolean
         get() = extRenderInfo != null
@@ -109,7 +100,6 @@ class PopupUiController(
             bounds = boundsProvider(key),
             shouldIndicateExtendedPopups = when (key) {
                 is TextKey -> key.computedPopups.getPopupKeys(keyHintConfiguration).isNotEmpty()
-                //is EmojiKey -> key.computedPopups.getPopupKeys(keyHintConfiguration).isNotEmpty()
                 else -> false
             },
         )
@@ -149,7 +139,6 @@ class PopupUiController(
         // Determine key counts for each row
         val n = when (key) {
             is TextKey -> key.computedPopups.getPopupKeys(keyHintConfiguration).size
-            //is EmojiKey -> key.computedPopups.getPopupKeys(keyHintConfiguration).size
             else -> 0
         }
         val row1count: Int
@@ -205,7 +194,7 @@ class PopupUiController(
         val popupIndices: IntArray
         val uiIndices = IntRange(0, (n - 1).coerceAtLeast(0))
         if (key is TextKey) {
-            popupIndices = IntArray(n) { 0 }
+            popupIndices = IntArray(n)
             val popupKeys = key.computedPopups.getPopupKeys(keyHintConfiguration)
             when (popupKeys.prioritized.size) {
                 // only one key: use initial position
@@ -262,7 +251,6 @@ class PopupUiController(
             val adjustedIndex = popupIndices[uiIndex]
             val keyData = when (key) {
                 is TextKey -> key.computedPopups.getPopupKeys(keyHintConfiguration)[adjustedIndex]
-                //is EmojiKey -> key.computedPopups.getPopupKeys(keyHintConfiguration)[adjustedIndex]
                 else -> TextKeyData.UNSPECIFIED
             }
             elements[rowIndex].add(Element(
@@ -270,7 +258,6 @@ class PopupUiController(
                 label = evaluator.computeLabel(keyData),
                 icon = evaluator.computeImageVector(keyData),
                 orderedIndex = uiIndex,
-                adjustedIndex = adjustedIndex,
             ))
         }
 
@@ -403,28 +390,6 @@ class PopupUiController(
         }
     }
 
-    /**
-     * Gets the [EmojiSet] of the currently active key. May be either the key of the popup
-     * preview or one of the keys in extended popup, if shown. Returns null if [key] is noz a subclass of [EmojiKey].
-     *
-     * @param key Reference to the key currently controlling the popup.
-     * @return The [EmojiSet] object of the currently active key or null.
-     */
-    fun getActiveEmojiKeyData(key: Key): KeyData? {
-        return null
-        //return if (key is EmojiKey) {
-        //    val extRenderInfo = extRenderInfo ?: return null
-        //    val element = getElementOrNull(extRenderInfo.elements, activeElementIndex)
-        //    if (element != null) {
-        //        key.computedPopups.getPopupKeys(KeyHintConfiguration.HINTS_DISABLED).getOrNull(element.adjustedIndex) ?: key.computedData
-        //    } else {
-        //        key.computedData
-        //    }
-        //} else {
-        //    null
-        //}
-    }
-
     fun hide() {
         baseRenderInfo = null
         extRenderInfo = null
@@ -506,6 +471,5 @@ class PopupUiController(
         val label: String?,
         val icon: ImageVector?,
         val orderedIndex: Int,
-        val adjustedIndex: Int,
     )
 }

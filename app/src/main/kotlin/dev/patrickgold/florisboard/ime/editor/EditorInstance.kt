@@ -201,9 +201,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
             KeyboardMode.PHONE2,
             -> false
             else -> activeState.keyVariation != KeyVariation.PASSWORD &&
-                prefs.suggestion.enabled.get()// &&
-            //!instance.inputAttributes.flagTextAutoComplete &&
-            //!instance.inputAttributes.flagTextNoSuggestions
+                prefs.suggestion.enabled.get()
         }
         activeState.isIncognitoMode = when (prefs.suggestion.incognitoMode.get()) {
             IncognitoMode.FORCE_OFF -> false
