@@ -88,6 +88,33 @@ class BackupArchiveTest :
             }
         }
 
+        test("metadata accepts bounded provenance and rejects unsafe display fields") {
+            listOf(
+                metadata(packageName = ""),
+                metadata(packageName = "dev.example/foreign"),
+                metadata(packageName = "a".repeat(256)),
+                metadata(versionCode = BackupArchive.MIN_SUPPORTED_VERSION_CODE - 1),
+                metadata(versionName = "a".repeat(129)),
+                metadata(versionName = "release\u202Eevil"),
+                metadata(versionName = "release\u2028evil"),
+                metadata(versionName = "release\u2029evil"),
+                metadata(versionName = "release${String(Character.toChars(0xE0001))}evil"),
+                metadata(versionName = "release\uD800evil"),
+                metadata(timestamp = -1),
+            ).forEach { invalidMetadata ->
+                inspect(
+                    entries = listOf(metadataEntry(), file(BackupArchive.PREFERENCES_PATH)),
+                    descriptor = legacyDescriptor(invalidMetadata),
+                ) shouldBe ArchiveValidation.Invalid(ArchiveFailure.INVALID_METADATA)
+            }
+
+            validArchive(
+                metadataEntry(),
+                file(BackupArchive.PREFERENCES_PATH),
+                metadata = metadata(versionName = ""),
+            ).metadata.versionName shouldBe ""
+        }
+
         test("an explicit empty extension root is present while an absent root is unavailable") {
             val archive = validArchive(
                 metadataEntry(),
@@ -281,8 +308,8 @@ class BackupArchiveTest :
             validArchive(
                 metadataEntry(),
                 file(BackupArchive.PREFERENCES_PATH),
-                metadata = metadata(versionName = "", timestamp = -1),
-            ).metadata shouldBe metadata(versionName = "", timestamp = -1)
+                metadata = metadata(versionName = ""),
+            ).metadata shouldBe metadata(versionName = "")
         }
 
         test("unsafe paths reject the whole archive") {
@@ -705,7 +732,7 @@ class BackupArchiveTest :
         }
 
         test("failures and entry descriptions never retain hostile paths or IDs") {
-            val marker = "private-marker"
+            val marker = "private_marker"
             val hostileMetadata = metadata(packageName = marker, versionName = marker)
             hostileMetadata.toString() shouldNotContain marker
             val hostileManifest = BackupArchive.Manifest(
