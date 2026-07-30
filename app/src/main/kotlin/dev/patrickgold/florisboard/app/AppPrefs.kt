@@ -34,6 +34,7 @@ import dev.patrickgold.florisboard.ime.keyboard.IncognitoMode
 import dev.patrickgold.florisboard.ime.keyboard.SpaceBarLanguageLabelMode
 import dev.patrickgold.florisboard.ime.keyboard.SpaceBarMode
 import dev.patrickgold.florisboard.ime.landscapeinput.LandscapeInputUiMode
+import dev.patrickgold.florisboard.ime.media.emoji.Emoji
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiHairStyle
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiHistory
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSkinTone
@@ -72,6 +73,7 @@ import dev.patrickgold.jetpref.datastore.model.PreferenceType
 import dev.patrickgold.jetpref.material.ui.ColorRepresentation
 import kotlinx.serialization.json.Json
 import org.florisboard.lib.android.isOrientationPortrait
+import org.florisboard.lib.color.DEFAULT_GREEN
 
 val FlorisPreferenceStore = jetprefDataStoreOf(FlorisPreferenceModel::class)
 
@@ -787,14 +789,77 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
     }
 
     override fun migrate(entry: PreferenceMigrationEntry): PreferenceMigrationEntry {
+        // Restore accepts historical stores. Keep a rule while its source version remains supported.
         return when (entry.key) {
+            // JetPref versions used by 0.3.x stored enums in lowercase.
+            "gestures__swipe_up", "gestures__swipe_down", "gestures__swipe_left",
+            "gestures__swipe_right", "gestures__space_bar_swipe_up", "gestures__space_bar_swipe_left",
+            "gestures__space_bar_swipe_right", "gestures__space_bar_long_press",
+            "gestures__delete_key_swipe_left", "gestures__delete_key_long_press",
+            "keyboard__hinted_number_row_mode", "keyboard__hinted_symbols_mode",
+            "keyboard__utility_key_action", "keyboard__landscape_input_ui_mode",
+            "localization__display_language_names_in", "spelling__language_mode",
+            "suggestion__display_mode", "theme__mode", "theme__editor_display_kbd_after_dialogs",
+            "theme__editor_level",
+            -> entry.transform(rawValue = entry.rawValue.uppercase())
+
+            // Preserve the privacy behavior of the old force-private switch.
+            "advanced__force_private_mode" -> {
+                when {
+                    !entry.type.isBoolean() -> entry.reset()
+                    entry.rawValue == "true" -> entry.transform(
+                        type = PreferenceType.string(),
+                        key = "suggestion__incognito_mode",
+                        rawValue = IncognitoMode.FORCE_ON.name,
+                    )
+                    else -> entry.reset()
+                }
+            }
+
+            // Preserve pre-0.4 input feedback behavior after boolean settings became enums.
+            "input_feedback__audio_ignore_system_settings" -> entry.transformBooleanToEnum(
+                key = "input_feedback__audio_activation_mode",
+                trueValue = InputFeedbackActivationMode.IGNORE_SYSTEM_SETTINGS,
+                falseValue = InputFeedbackActivationMode.RESPECT_SYSTEM_SETTINGS,
+            )
+            "input_feedback__haptic_ignore_system_settings" -> entry.transformBooleanToEnum(
+                key = "input_feedback__haptic_activation_mode",
+                trueValue = InputFeedbackActivationMode.IGNORE_SYSTEM_SETTINGS,
+                falseValue = InputFeedbackActivationMode.RESPECT_SYSTEM_SETTINGS,
+            )
+            "input_feedback__haptic_use_vibrator" -> entry.transformBooleanToEnum(
+                key = "input_feedback__haptic_vibration_mode",
+                trueValue = HapticVibrationMode.USE_VIBRATOR_DIRECTLY,
+                falseValue = HapticVibrationMode.USE_HAPTIC_FEEDBACK_INTERFACE,
+            )
+
+            // Preserve the old space-bar language visibility switch.
+            "keyboard__space_bar_language_display_enabled" -> entry.transformBooleanToEnum(
+                key = "keyboard__space_bar_display_mode",
+                trueValue = SpaceBarMode.CURRENT_LANGUAGE,
+                falseValue = SpaceBarMode.NOTHING,
+            )
+
+            // Preserve Smartbar options whose names changed in 0.3.x.
+            "smartbar__primary_row_flip_toggles" -> {
+                entry.transform(key = "smartbar__flip_toggles")
+            }
+            "smartbar__action_row_expanded", "smartbar__primary_actions_expanded" -> {
+                entry.transform(key = "smartbar__shared_actions_expanded")
+            }
+            "smartbar__secondary_row_expanded", "smartbar__secondary_actions_expanded" -> {
+                entry.transform(key = "smartbar__extended_actions_expanded")
+            }
+            "smartbar__secondary_row_placement", "smartbar__secondary_actions_placement" -> {
+                entry.transformLegacySmartbarPlacement()
+            }
 
             // Migrate media prefs to emoji prefs
-            // Keep migration rule until: 0.6 dev cycle
             "media__emoji_recently_used" -> {
-                val emojiValues = entry.rawValue.split(";")
-                val recent = emojiValues.map {
-                    dev.patrickgold.florisboard.ime.media.emoji.Emoji(it, "", emptyList())
+                val recent = entry.rawValue.split(";").mapNotNull { rawValue ->
+                    rawValue.trim()
+                        .takeIf(String::isNotEmpty)
+                        ?.let { Emoji(it, "", emptyList()) }
                 }
                 val data = EmojiHistory(emptyList(), recent)
                 entry.transform(key = "emoji__history_data", rawValue = Json.encodeToString(data))
@@ -802,11 +867,41 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             "media__emoji_recently_used_max_size" -> {
                 entry.transform(key = "emoji__history_recent_max_size")
             }
+            "media__emoji_preferred_skin_tone" -> {
+                entry.transform(
+                    key = "emoji__preferred_skin_tone",
+                    rawValue = entry.rawValue.uppercase(),
+                )
+            }
+            "media__emoji_preferred_hair_style" -> {
+                entry.transform(
+                    key = "emoji__preferred_hair_style",
+                    rawValue = entry.rawValue.uppercase(),
+                )
+            }
 
             // Migrate advanced prefs to other prefs
-            // Keep migration rules until: 0.7 dev cycle
+            "advanced__use_material_you" -> {
+                if (!entry.type.isBoolean()) {
+                    entry.reset()
+                } else {
+                    val color = when (entry.rawValue) {
+                        "true" -> Color.Unspecified
+                        "false" -> DEFAULT_GREEN
+                        else -> return entry.reset()
+                    }
+                    entry.transform(
+                        type = PreferenceType.string(),
+                        key = "other__accent_color",
+                        rawValue = ColorPreferenceSerializer.serialize(color),
+                    )
+                }
+            }
             "advanced__settings_theme" -> {
-                entry.transform(key = "other__settings_theme")
+                entry.transform(
+                    key = "other__settings_theme",
+                    rawValue = entry.rawValue.uppercase(),
+                )
             }
             "advanced__accent_color" -> {
                 entry.transform(key = "other__accent_color")
@@ -818,13 +913,15 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
                 entry.transform(key = "other__show_app_icon")
             }
             "advanced__incognito_mode" -> {
-                entry.transform(key = "suggestion__incognito_mode")
+                entry.transform(
+                    key = "suggestion__incognito_mode",
+                    rawValue = entry.rawValue.uppercase(),
+                )
             }
             "advanced__force_incognito_mode_from_dynamic" -> {
                 entry.transform(key = "suggestion__force_incognito_mode_from_dynamic")
             }
             // Migrate clipboard suggestion prefs to clipboard
-            // Keep migration rules until: 0.7 dev cycle
             "suggestion__clipboard_content_enabled" -> {
                 entry.transform(key = "clipboard__suggestion_enabled")
             }
@@ -832,14 +929,6 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
                 entry.transform(key = "clipboard__suggestion_timeout")
             }
 
-            //Migrate one hand mode prefs keep until: 0.7 dev cycle
-            "keyboard__one_handed_mode" -> {
-                if (entry.rawValue == "OFF") {
-                    entry.reset()
-                } else {
-                    entry.keepAsIs()
-                }
-            }
             "smartbar__action_arrangement" -> {
                 fun migrateAction(action: QuickAction): QuickAction {
                     return if (action is QuickAction.InsertKey && action.data.code == KeyCode.COMPACT_LAYOUT_TO_RIGHT) {
@@ -849,47 +938,37 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
                     }
                 }
 
-                val arrangement = QuickActionJsonConfig.decodeFromString<QuickActionArrangement>(entry.rawValue)
-                var newArrangement = arrangement.copy(
-                    stickyAction = arrangement.stickyAction?.let{ migrateAction(it) },
-                    dynamicActions = arrangement.dynamicActions.map { migrateAction(it) },
-                    hiddenActions = arrangement.hiddenActions.map { migrateAction(it) },
+                val arrangement = try {
+                    QuickActionJsonConfig.decodeFromString<QuickActionArrangement>(entry.rawValue)
+                } catch (_: IllegalArgumentException) {
+                    return entry.reset()
+                }
+                val migratedArrangement = arrangement.copy(
+                    stickyAction = arrangement.stickyAction?.let(::migrateAction),
+                    dynamicActions = arrangement.dynamicActions.map(::migrateAction),
+                    hiddenActions = arrangement.hiddenActions.map(::migrateAction),
                 )
-                if (QuickAction.InsertKey(TextKeyData.LANGUAGE_SWITCH) !in newArrangement) {
-                    newArrangement = newArrangement.copy(
-                        dynamicActions = newArrangement.dynamicActions.plus(QuickAction.InsertKey(TextKeyData.LANGUAGE_SWITCH))
-                    )
-                }
-                if (QuickAction.InsertKey(TextKeyData.FORWARD_DELETE) !in newArrangement) {
-                    newArrangement = newArrangement.copy(
-                        dynamicActions = newArrangement.dynamicActions.plus(QuickAction.InsertKey(TextKeyData.FORWARD_DELETE))
-                    )
-                }
-                if (QuickAction.InsertKey(TextKeyData.IME_HIDE_UI) !in newArrangement) {
-                    newArrangement = newArrangement.copy(
-                        dynamicActions = newArrangement.dynamicActions.plus(QuickAction.InsertKey(TextKeyData.IME_HIDE_UI))
-                    )
-                }
-                if (QuickAction.InsertKey(TextKeyData.TOGGLE_FLOATING_WINDOW) !in newArrangement) {
-                    newArrangement = newArrangement.copy(
-                        dynamicActions = newArrangement.dynamicActions.plus(QuickAction.InsertKey(TextKeyData.TOGGLE_FLOATING_WINDOW))
-                    )
-                }
-                if (QuickAction.InsertKey(TextKeyData.TOGGLE_RESIZE_MODE) !in newArrangement) {
-                    newArrangement = newArrangement.copy(
-                        dynamicActions = newArrangement.dynamicActions.plus(QuickAction.InsertKey(TextKeyData.TOGGLE_RESIZE_MODE))
-                    )
-                }
-                val json = QuickActionJsonConfig.encodeToString(newArrangement.distinct())
+                val requiredActions = listOf(
+                    TextKeyData.LANGUAGE_SWITCH,
+                    TextKeyData.FORWARD_DELETE,
+                    TextKeyData.IME_HIDE_UI,
+                    TextKeyData.TOGGLE_FLOATING_WINDOW,
+                    TextKeyData.TOGGLE_RESIZE_MODE,
+                ).map { QuickAction.InsertKey(it) }
+                val missingActions = requiredActions.filterNot { it in migratedArrangement }
+                val newArrangement = migratedArrangement.copy(
+                    dynamicActions = migratedArrangement.dynamicActions + missingActions,
+                ).distinct()
+                val json = QuickActionJsonConfig.encodeToString(newArrangement)
                 entry.transform(rawValue = json)
             }
 
             // Migrate theme editor fine-tuning
-            // Keep migration rule until: 0.6 dev cycle
             "theme__editor_display_colors_as" -> {
-                val colorRepresentation = when (entry.rawValue) {
+                val colorRepresentation = when (entry.rawValue.uppercase()) {
                     "RGBA" -> ColorRepresentation.RGB
-                    else -> ColorRepresentation.HEX
+                    "HEX", "HEX8" -> ColorRepresentation.HEX
+                    else -> return entry.reset()
                 }
                 entry.transform(
                     key = "theme__editor_color_representation",
@@ -898,16 +977,16 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             }
 
             // Migrate clipboard history pref names
-            // Keep migration rules until: 0.7 dev cycle
             "clipboard__sync_to_floris", "clipboard__sync_to_system" -> {
-                entry.transform(
-                    type = PreferenceType.string(),
-                    rawValue = when (entry.rawValue) {
-                        "true" -> ClipboardSyncBehavior.ALL_EVENTS.name
-                        "false" -> ClipboardSyncBehavior.NO_EVENTS.name
-                        else -> entry.rawValue
-                    },
-                )
+                if (entry.type.isString()) {
+                    entry.keepAsIs()
+                } else {
+                    entry.transformBooleanToEnum(
+                        key = entry.key,
+                        trueValue = ClipboardSyncBehavior.ALL_EVENTS,
+                        falseValue = ClipboardSyncBehavior.NO_EVENTS,
+                    )
+                }
             }
             "clipboard__num_history_grid_columns_portrait" -> {
                 entry.transform(key = "clipboard__history_num_grid_columns_portrait")
@@ -937,8 +1016,7 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
                 entry.transform(key = "clipboard__clear_primary_clip_affects_history_if_unpinned")
             }
 
-            // Migrate key spacing rules
-            // Keep migration rules until: 0.8 dev cycle
+            // Old dp spacing cannot be converted to the current constraint-dependent percentages.
             "keyboard__key_spacing_horizontal" -> {
                 if (entry.type.isFloat()) {
                     entry.reset()
@@ -958,4 +1036,31 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             else -> entry.keepAsIs()
         }
     }
+}
+
+private fun <T : Enum<T>> PreferenceMigrationEntry.transformBooleanToEnum(
+    key: String,
+    trueValue: T,
+    falseValue: T,
+): PreferenceMigrationEntry {
+    if (!type.isBoolean()) return reset()
+    val value = when (rawValue) {
+        "true" -> trueValue
+        "false" -> falseValue
+        else -> return reset()
+    }
+    return transform(type = PreferenceType.string(), key = key, rawValue = value.name)
+}
+
+private fun PreferenceMigrationEntry.transformLegacySmartbarPlacement(): PreferenceMigrationEntry {
+    val placement = when (rawValue.uppercase()) {
+        "ABOVE_PRIMARY" -> ExtendedActionsPlacement.ABOVE_CANDIDATES
+        "BELOW_PRIMARY" -> ExtendedActionsPlacement.BELOW_CANDIDATES
+        "OVERLAY_APP_UI" -> ExtendedActionsPlacement.OVERLAY_APP_UI
+        else -> return reset()
+    }
+    return transform(
+        key = "smartbar__extended_actions_placement",
+        rawValue = placement.name,
+    )
 }
