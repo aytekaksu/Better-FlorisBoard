@@ -49,7 +49,6 @@ import dev.patrickgold.florisboard.extensionManager
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardExtension
 import dev.patrickgold.florisboard.ime.nlp.LanguagePackExtension
 import dev.patrickgold.florisboard.ime.theme.ThemeExtension
-import dev.patrickgold.florisboard.lib.NATIVE_NULLPTR
 import dev.patrickgold.florisboard.lib.cache.CacheManager
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.lib.io.FileRegistry
@@ -99,7 +98,7 @@ fun ExtensionImportScreen(type: ExtensionImportScreenType, initUuid: String?) = 
     val cacheManager by context.cacheManager()
     val extensionManager by context.extensionManager()
 
-    fun getSkipReason(fileInfo: CacheManager.FileInfo): Int {
+    fun getSkipReason(fileInfo: CacheManager.FileInfo): Int? {
         return when {
             !FileRegistry.matchesFileFilter(fileInfo, type.supportedFiles) -> {
                 R.string.ext__import__file_skip_unsupported
@@ -109,7 +108,7 @@ fun ExtensionImportScreen(type: ExtensionImportScreenType, initUuid: String?) = 
                 if (extensionManager.getExtensionById(ext.meta.id)?.sourceRef?.isAssets == true) {
                     R.string.ext__import__file_skip_ext_core
                 } else {
-                    NATIVE_NULLPTR.toInt()
+                    null
                 }
             }
             else -> { // ext == null
@@ -157,7 +156,7 @@ fun ExtensionImportScreen(type: ExtensionImportScreenType, initUuid: String?) = 
             }
             val enabled = remember(importResult) {
                 importResult?.getOrNull()?.takeIf { workspace ->
-                    workspace.inputFileInfos.any { it.skipReason == NATIVE_NULLPTR.toInt() }
+                    workspace.inputFileInfos.any { it.skipReason == null }
                 } != null
             }
             ButtonBarButton(
@@ -167,7 +166,7 @@ fun ExtensionImportScreen(type: ExtensionImportScreenType, initUuid: String?) = 
                 val workspace = importResult!!.getOrThrow()
                 runCatching {
                     for (fileInfo in workspace.inputFileInfos) {
-                        if (fileInfo.skipReason != NATIVE_NULLPTR.toInt()) {
+                        if (fileInfo.skipReason != null) {
                             continue
                         }
                         val ext = fileInfo.ext
@@ -316,7 +315,7 @@ private fun FileInfoView(
                     )
                 }
             }
-            if (fileInfo.skipReason != NATIVE_NULLPTR.toInt()) {
+            fileInfo.skipReason?.let { skipReason ->
                 Box(modifier = Modifier
                     .fillMaxWidth()
                     .height(19.dp)
@@ -328,7 +327,7 @@ private fun FileInfoView(
                     color = MaterialTheme.colorScheme.error,
                 )
                 Text(
-                    text = stringRes(fileInfo.skipReason),
+                    text = stringRes(skipReason),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                     fontStyle = FontStyle.Italic,

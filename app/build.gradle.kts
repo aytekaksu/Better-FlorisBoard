@@ -59,7 +59,6 @@ configure<ApplicationExtension> {
     namespace = "dev.patrickgold.florisboard"
     compileSdk = projectCompileSdk.toInt()
     buildToolsVersion = tools.versions.buildTools.get()
-    ndkVersion = tools.versions.ndk.get()
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -106,7 +105,6 @@ configure<ApplicationExtension> {
             versionNameSuffix = "-debug+${getGitCommitHash(short = true).get()}"
 
             isDebuggable = true
-            isJniDebuggable = false
         }
 
         create("beta") {
@@ -226,7 +224,6 @@ dependencies {
     implementation(projects.lib.color)
     implementation(projects.lib.compose)
     implementation(projects.lib.kotlin)
-    implementation(projects.lib.native)
     implementation(projects.lib.snygg)
 
     testImplementation(libs.kotest.assertions.core)

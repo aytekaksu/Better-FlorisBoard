@@ -4,11 +4,7 @@ ARG PROJECT_COMPILE_SDK
 ARG CMDLINE_TOOLS_VERSION
 ARG CMDLINE_TOOLS_CHECKSUM
 ARG BUILD_TOOLS_VERSION
-ARG CMAKE_VERSION
 ARG JDK_VERSION
-ARG NDK_VERSION
-ARG RUSTUP_VERSION
-ARG RUST_TOOLCHAIN_VERSION
 
 ARG USER_NAME
 ARG USER_DIR="/home/${USER_NAME}"
@@ -17,12 +13,10 @@ ARG REPO_DIR="${USER_DIR}/${REPO_NAME}"
 
 # Install dependencies and OpenJDK
 RUN apt-get update && apt-get install -y \
-    curl \
     jq \
     unzip \
     wget \
     git \
-    build-essential \
     openjdk-${JDK_VERSION}-jdk \
     && rm -rf /var/lib/apt/lists/*
 ENV JAVA_HOME=/usr/lib/jvm/java-${JDK_VERSION}-openjdk-amd64
@@ -32,10 +26,6 @@ RUN useradd -m "${USER_NAME}"
 USER "${USER_NAME}"
 ENV HOME="${USER_DIR}"
 WORKDIR ${REPO_DIR}
-
-# Install Rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${RUST_TOOLCHAIN_VERSION} --profile minimal
-ENV PATH="$HOME/.cargo/bin:$PATH"
 
 # Install sdkmanager
 ARG CMDLINE_TOOLS_ZIP="commandlinetools-linux-${CMDLINE_TOOLS_VERSION}_latest.zip"
@@ -53,10 +43,7 @@ ENV PATH="${ANDROID_HOME}/cmdline-tools/latest/bin:$PATH"
 RUN yes | sdkmanager --install \
     "platform-tools" \
     "platforms;android-${PROJECT_COMPILE_SDK}" \
-    "build-tools;${BUILD_TOOLS_VERSION}" \
-    "cmake;${CMAKE_VERSION}" \
-    "ndk;${NDK_VERSION}"
-ENV ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/${NDK_VERSION}"
+    "build-tools;${BUILD_TOOLS_VERSION}"
 ENV PATH="${ANDROID_HOME}/platform-tools:$PATH"
 
 # Setup other stuff

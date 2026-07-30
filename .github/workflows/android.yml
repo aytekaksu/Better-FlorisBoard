@@ -41,13 +41,11 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
 
-      - name: Install Android native toolchain
+      - name: Install Android SDK packages
         run: >-
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           "platforms;android-36"
           "build-tools;36.0.0"
-          "cmake;4.1.2"
-          "ndk;29.0.14206865"
 
       - name: Test contribution governance policy
         run: bash .github/scripts/require-maintainer-approval-test.sh
@@ -89,13 +87,11 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
 
-      - name: Install Android native toolchain
+      - name: Install Android SDK packages
         run: >-
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           "platforms;android-36"
           "build-tools;36.0.0"
-          "cmake;4.1.2"
-          "ndk;29.0.14206865"
 
       - name: Run JVM and Robolectric tests
         run: ./gradlew ciUnitTest --stacktrace
@@ -133,13 +129,11 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
 
-      - name: Install Android native toolchain
+      - name: Install Android SDK packages
         run: >-
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           "platforms;android-36"
           "build-tools;36.0.0"
-          "cmake;4.1.2"
-          "ndk;29.0.14206865"
 
       - name: Build debug, minified beta, benchmark, and API artifacts
         run: ./gradlew ciPackage --stacktrace

@@ -4037,8 +4037,6 @@ HSPLcom/google/accompanist/systemuicontroller/SystemUiController;->setStatusBarC
 HSPLcom/google/accompanist/systemuicontroller/SystemUiControllerKt$BlackScrimmed$1;-><clinit>()V
 HSPLcom/google/accompanist/systemuicontroller/SystemUiControllerKt$BlackScrimmed$1;-><init>()V
 HSPLcom/google/accompanist/systemuicontroller/SystemUiControllerKt;-><clinit>()V
-HSPLdev/patrickgold/florisboard/FlorisApplication$Companion;-><init>()V
-HSPLdev/patrickgold/florisboard/FlorisApplication$Companion;->access$nativeInitICUData(Ldev/patrickgold/florisboard/FlorisApplication$Companion;Ljava/nio/ByteBuffer;)I
 HSPLdev/patrickgold/florisboard/FlorisApplication$assetManager$1;-><init>(Ldev/patrickgold/florisboard/FlorisApplication;)V
 HSPLdev/patrickgold/florisboard/FlorisApplication$cacheManager$1;-><init>(Ldev/patrickgold/florisboard/FlorisApplication;)V
 HSPLdev/patrickgold/florisboard/FlorisApplication$clipboardManager$1;-><init>(Ldev/patrickgold/florisboard/FlorisApplication;)V
@@ -4055,7 +4053,6 @@ HSPLdev/patrickgold/florisboard/FlorisApplication$themeManager$1;-><init>(Ldev/p
 HSPLdev/patrickgold/florisboard/FlorisApplication;-><clinit>()V
 HSPLdev/patrickgold/florisboard/FlorisApplication;-><init>()V
 HSPLdev/patrickgold/florisboard/FlorisApplication;->getPrefs()Ldev/patrickgold/florisboard/app/AppPrefs;
-HSPLdev/patrickgold/florisboard/FlorisApplication;->initICU(Landroid/content/Context;)Z
 HSPLdev/patrickgold/florisboard/FlorisApplication;->onCreate()V
 HSPLdev/patrickgold/florisboard/FlorisApplicationKt$appContext$1;-><init>(Landroid/content/Context;)V
 HSPLdev/patrickgold/florisboard/FlorisApplicationKt$appContext$1;->invoke()Ljava/lang/Object;
@@ -4446,7 +4443,6 @@ HSPLdev/patrickgold/florisboard/lib/FlorisLocale$Companion;->from(Ljava/lang/Str
 HSPLdev/patrickgold/florisboard/lib/FlorisLocale$Companion;->from(Ljava/util/Locale;)Ldev/patrickgold/florisboard/lib/FlorisLocale;
 HSPLdev/patrickgold/florisboard/lib/FlorisLocale;-><clinit>()V
 HSPLdev/patrickgold/florisboard/lib/FlorisLocale;-><init>(Ljava/util/Locale;)V
-HSPLdev/patrickgold/florisboard/lib/NativeKt;->toNativeStr(Ljava/lang/String;)Ljava/nio/ByteBuffer;
 HSPLdev/patrickgold/florisboard/lib/android/AndroidSettings$Global$1;-><init>(Lkotlin/reflect/KClass;)V
 HSPLdev/patrickgold/florisboard/lib/android/AndroidSettings$Secure$1;-><init>(Lkotlin/reflect/KClass;)V
 HSPLdev/patrickgold/florisboard/lib/android/AndroidSettings$Secure$1;->getString(Landroid/content/Context;Ljava/lang/String;)Ljava/lang/String;
@@ -7330,7 +7326,6 @@ Lcom/google/accompanist/insets/WindowInsetsTypeKt;
 Lcom/google/accompanist/systemuicontroller/SystemUiController;
 Lcom/google/accompanist/systemuicontroller/SystemUiControllerKt$BlackScrimmed$1;
 Lcom/google/accompanist/systemuicontroller/SystemUiControllerKt;
-Ldev/patrickgold/florisboard/FlorisApplication$Companion;
 Ldev/patrickgold/florisboard/FlorisApplication$assetManager$1;
 Ldev/patrickgold/florisboard/FlorisApplication$cacheManager$1;
 Ldev/patrickgold/florisboard/FlorisApplication$clipboardManager$1;
@@ -7539,7 +7534,6 @@ Ldev/patrickgold/florisboard/ime/text/smartbar/SmartbarRowType;
 Ldev/patrickgold/florisboard/ime/theme/ThemeMode;
 Ldev/patrickgold/florisboard/lib/FlorisLocale$Companion;
 Ldev/patrickgold/florisboard/lib/FlorisLocale;
-Ldev/patrickgold/florisboard/lib/NativeKt;
 Ldev/patrickgold/florisboard/lib/android/AndroidSettings$Global$1;
 Ldev/patrickgold/florisboard/lib/android/AndroidSettings$Secure$1;
 Ldev/patrickgold/florisboard/lib/android/AndroidSettings$System$1;
