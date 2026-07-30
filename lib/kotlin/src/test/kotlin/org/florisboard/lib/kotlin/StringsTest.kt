@@ -130,6 +130,14 @@ class StringsTest : FunSpec({
                 inputStr.curlyFormat(*args) shouldBe formattedStr
             }
         }
+
+        test("replacement values are not parsed as template input") {
+            "{self} {first} {second}".curlyFormat(
+                "self" to "{self}",
+                "first" to "{second}",
+                "second" to "done",
+            ) shouldBe "{self} {second} done"
+        }
     }
 
     context("Test String.curlyFormat (arg factory with dictionary)") {
@@ -145,6 +153,16 @@ class StringsTest : FunSpec({
             inputStr.curlyFormat { key ->
                 dict.find { it.first == key }?.second
             } shouldBe formattedStr
+        }
+
+        test("replacement values are not parsed as template input") {
+            "{self} {first} {second}".curlyFormat { key ->
+                mapOf(
+                    "self" to "{self}",
+                    "first" to "{second}",
+                    "second" to "done",
+                )[key]
+            } shouldBe "{self} {second} done"
         }
     }
 })

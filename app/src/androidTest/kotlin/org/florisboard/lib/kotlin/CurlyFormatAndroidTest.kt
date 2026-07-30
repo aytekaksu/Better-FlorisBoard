@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2025 The FlorisBoard Contributors
+ * Copyright (C) 2026 The FlorisBoard Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,16 @@
 
 package org.florisboard.lib.kotlin
 
-import java.util.concurrent.CancellationException
-import kotlin.contracts.InvocationKind
-import kotlin.contracts.contract
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertEquals
+import org.junit.Test
+import org.junit.runner.RunWith
 
-inline fun <R> tryOrNull(block: () -> R): R? {
-    contract {
-        callsInPlace(block, InvocationKind.AT_MOST_ONCE)
-    }
-    return try {
-        block()
-    } catch (e: CancellationException) {
-        throw e
-    } catch (_: Exception) {
-        null
+@RunWith(AndroidJUnit4::class)
+class CurlyFormatAndroidTest {
+    @Test
+    fun formatsWithAndroidRegexEngine() {
+        assertEquals("Hello Android", "Hello {name}".curlyFormat("name" to "Android"))
+        assertEquals("{self}", "{self}".curlyFormat("self" to "{self}"))
     }
 }

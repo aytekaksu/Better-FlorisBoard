@@ -28,6 +28,7 @@ import dev.patrickgold.florisboard.lib.titlecase
 import dev.patrickgold.florisboard.lib.util.TimeUtils
 import dev.patrickgold.florisboard.lib.util.UnitUtils
 import dev.patrickgold.florisboard.subtypeManager
+import java.util.Locale
 import org.florisboard.lib.android.systemService
 
 @Suppress("MemberVisibilityCanBePrivate")
@@ -213,7 +214,7 @@ object Devtools {
                 val usedMemInPercentage = usedMemInBytes * 100f / nativeHeapSize
                 append(UnitUtils.formatMemorySize(usedMemInBytes))
                 append(" (")
-                append(String.format("%.2f", usedMemInPercentage))
+                append(String.format(Locale.ROOT, "%.2f", usedMemInPercentage))
                 append("% used, ")
                 append(UnitUtils.formatMemorySize(nativeHeapSize))
                 append(" max)")
@@ -234,7 +235,7 @@ object Devtools {
                 val usedMemInPercentage = usedMemInBytes * 100f / javaHeapSize
                 append(UnitUtils.formatMemorySize(usedMemInBytes))
                 append(" (")
-                append(String.format("%.2f", usedMemInPercentage))
+                append(String.format(Locale.ROOT, "%.2f", usedMemInPercentage))
                 append("% used, ")
                 append(UnitUtils.formatMemorySize(javaHeapSize))
                 append(" max)")
@@ -255,7 +256,7 @@ object Devtools {
                 val usedMemInPercentage = usedMemInBytes * 100f / nativeHeapSize
                 append(UnitUtils.formatMemorySize(usedMemInBytes))
                 append(" (")
-                append(String.format("%.2f", usedMemInPercentage))
+                append(String.format(Locale.ROOT, "%.2f", usedMemInPercentage))
                 append("% used, ")
                 append(UnitUtils.formatMemorySize(nativeHeapSize))
                 append(" max)")
