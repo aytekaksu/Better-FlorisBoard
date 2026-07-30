@@ -501,8 +501,6 @@
     <string name="backup_and_restore__restore__metadata">Fitxer de còpia de seguretat seleccionat</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">Aquest fitxer de còpia de seguretat ha estat generat per una versió diferent a l\'actual que, en general, hauria de ser compatible. Tingues present que hi pot haver algunes petites incidències o que algunes preferències poden no ser transferides correctament a conseqüència de diferències en les característiques.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">Aquest fitxer de còpia de seguretat ha estat generat per una aplicació de tercers que, en general, no és compatible. Hi pot haver una pèrdua de dades, si ho restaures serà sota la teva responsabilitat!</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Aquest fitxer de còpia de seguretat conté metadades no vàlides. O està corromput o ha estat mal modificat. No es pot fer una restauració des d\'aquest fitxer, tria\'n un altre.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Aquest fitxer de còpia de seguretat no conté res per restaurar, tria\'n un altre.</string>
     <string name="backup_and_restore__restore__mode">Mode de restauració</string>
     <string name="backup_and_restore__restore__mode_merge">Combina-ho amb les dades actuals</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Suprimeix o sobreescriu les dades actuals</string>

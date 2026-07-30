@@ -556,8 +556,6 @@
     <string name="backup_and_restore__restore__metadata">Atlasīts rezerves kopiju arhīvs</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">Šis rezerves kopiju arhīvs tika izveidots ne pašreizējā lietotnes laidienā, kas kopumā ir atbalstīts. Jāņem vērā, ka var būt mazas nepilnības vai atsevišķi uzstādījumi var netikt pienācīgi pārsūtīti iespēju atšķirību dēļ.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">Šis rezerves kopiju arhīvs tika izveidots trešās puses lietotnē, kas kopumā netiek atbalstīts. Ir iespējami datu zudumi, un šāda veida atjaunošana ir katra paša ziņā.</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Šis rezerves kopiju arhīvs satur nederīgus metadatus. Vai nu tas ir bojāts, vai arī nepienācīgi pārveidots. Atjaunošana no šī arhīva nav iespējama, lūgums atlasīt citu.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Šis rezerves kopiju arhīvs nesatur atjaunojamas datnes, lūgums atlasīt citu.</string>
     <string name="backup_and_restore__restore__mode">Atjaunošanas veids</string>
     <string name="backup_and_restore__restore__mode_merge">Apvienot ar pašreizējiem datiem</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Dzēst un pārrakstīt pašreizējos datus</string>

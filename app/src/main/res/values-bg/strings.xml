@@ -601,8 +601,6 @@
     <string name="backup_and_restore__restore__metadata">Избор на резервно копие</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">Резервното копие е създадено от издание, различно от текущото, което, като цяло, се поддържа от приложението. Въпреки това, може да възникнат незначителни проблеми или някои настройки може да не се прехвърлят изцяло, поради разлики във възможностите.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">Резервното копие е създадено от друго приложение, което, като цяло, не се поддържа от приложението. Въможна е загуба на данни, възстановете на ваша отговорност!</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Резервното копие съдържа грешна описателна информация. Или е била повредена, или неправилно променена. Да възстановите това резервно копие е невъзможно. Изберете друго.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Резервното копие не съдържа файлове, които да бъдат възстановени. Изберете друго.</string>
     <string name="backup_and_restore__restore__mode">Режим на възстановяване</string>
     <string name="backup_and_restore__restore__mode_merge">Сливане със съществуващите данни</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Изтриване и презаписване на текущите данни</string>

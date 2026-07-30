@@ -504,8 +504,6 @@
     <string name="backup_and_restore__restore__metadata">Ausgewählte Sicherungsarchive</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">Dieses Sicherungsarchiv wurde in einer anderen als der aktuellen Version erstellt, was grundsätzlich unterstützt wird. Beachte jedoch, dass kleinere Probleme auftreten können oder einige Einstellungen aufgrund von Funktionsunterschieden möglicherweise nicht richtig übertragen werden.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">Dieses Sicherungsarchiv wurde in einer Drittanbieter-App erstellt, was grundsätzlich nicht unterstützt wird. Es kann zu Datenverlust kommen, Wiederherstellung auf eigene Gefahr!</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Dieses Sicherungsarchiv enthält ungültige Metadaten. Entweder ist die Datei beschädigt oder sie wurde falsch modifiziert. Das Wiederherstellen dieser Datei ist nicht möglich, bitte eine andere wählen.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Dieses Sicherungsarchiv enthält keine wiederherstellbaren Dateien, bitte ein anderes auswählen.</string>
     <string name="backup_and_restore__restore__mode">Wiederherstellungsmodus</string>
     <string name="backup_and_restore__restore__mode_merge">Mit aktuellen Daten zusammenführen</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Aktuelle Daten löschen und überschreiben</string>

@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.patrickgold.florisboard.app.ext.EditorAction
 import dev.patrickgold.florisboard.app.settings.advanced.BackupArchive
+import dev.patrickgold.florisboard.app.settings.advanced.BackupArchiveSession
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.ime.theme.ThemeExtensionEditor
 import dev.patrickgold.florisboard.lib.ext.Extension
@@ -34,14 +35,9 @@ import dev.patrickgold.florisboard.lib.ext.ExtensionJsonConfig
 import dev.patrickgold.florisboard.lib.io.FileRegistry
 import dev.patrickgold.florisboard.lib.io.ZipUtils
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.florisboard.lib.android.query
 import org.florisboard.lib.android.readToFile
 import org.florisboard.lib.kotlin.io.FsDir
@@ -52,6 +48,7 @@ import org.florisboard.lib.kotlin.io.subFile
 import java.io.Closeable
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class CacheManager(context: Context) {
     companion object {
@@ -67,8 +64,7 @@ class CacheManager(context: Context) {
     }
 
     private val appContext by context.appContext()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
+    private val workspaceCleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val importer = WorkspacesContainer(ImporterDirName) { ImporterWorkspace(it) }
     val exporter = WorkspacesContainer(ExporterDirName) { ExporterWorkspace(it) }
     val themeExtEditor = WorkspacesContainer(EditorDirName) { ExtEditorWorkspace<ThemeExtensionEditor>(it) }
@@ -111,8 +107,7 @@ class CacheManager(context: Context) {
         val dirName: String,
         val factory: (uuid: String) -> T,
     ) {
-        private val workspacesGuard = Mutex(locked = false)
-        private val workspaces = mutableListOf<T>()
+        private val workspaces = ConcurrentHashMap<String, T>()
 
         val dir: FsDir = appContext.cacheDir.subDir(dirName)
 
@@ -120,25 +115,15 @@ class CacheManager(context: Context) {
             return factory(uuid).also { it.mkdirs(); add(it) }
         }
 
-        internal fun add(workspace: T) = scope.launch {
-            workspacesGuard.withLock {
-                workspaces.add(workspace)
-            }
+        internal fun add(workspace: T) {
+            workspaces[workspace.uuid] = workspace
         }
 
-        internal fun remove(workspace: T) = scope.launch {
-            workspacesGuard.withLock {
-                workspaces.remove(workspace)
-            }
+        internal fun remove(workspace: T) {
+            workspaces.remove(workspace.uuid, workspace)
         }
 
-        fun getWorkspaceByUuid(uuid: String) = runBlocking { getWorkspaceByUuidAsync(uuid).await() }
-
-        fun getWorkspaceByUuidAsync(uuid: String): Deferred<T?> = scope.async {
-            workspacesGuard.withLock {
-                workspaces.find { it.uuid == uuid }
-            }
-        }
+        fun getWorkspaceByUuid(uuid: String): T? = workspaces[uuid]
     }
 
     abstract inner class Workspace(val uuid: String) : Closeable {
@@ -217,7 +202,35 @@ class CacheManager(context: Context) {
         lateinit var zipFile: FsFile
         internal lateinit var metadata: BackupArchive.Metadata
         var restoreWarningId: Int? = null
-        var restoreErrorId: Int? = null
+        private val restoreSessionGuard = Any()
+        private val restoreCloseGuard = Any()
+        private var restoreLifecycleClosed = false
+        private var currentRestoreSession: BackupArchiveSession? = null
+
+        internal val restoreSession: BackupArchiveSession?
+            get() = synchronized(restoreSessionGuard) { currentRestoreSession }
+
+        internal fun replaceRestoreSession(session: BackupArchiveSession?) {
+            synchronized(restoreSessionGuard) {
+                if (restoreLifecycleClosed) {
+                    session?.close()
+                    return
+                }
+                if (currentRestoreSession === session) return
+                val previousSession = currentRestoreSession
+                currentRestoreSession = session
+                previousSession?.close()
+            }
+        }
+
+        internal fun requestClose(child: Closeable? = null) {
+            workspaceCleanupScope.launch {
+                repeat(2) {
+                    child?.close()
+                    close()
+                }
+            }
+        }
 
         override fun mkdirs() {
             super.mkdirs()
@@ -226,8 +239,27 @@ class CacheManager(context: Context) {
         }
 
         override fun close() {
-            super.close()
-            backupAndRestore.remove(this)
+            synchronized(restoreCloseGuard) {
+                val sessionToClose = synchronized(restoreSessionGuard) {
+                    if (restoreLifecycleClosed) {
+                        null
+                    } else {
+                        restoreLifecycleClosed = true
+                        currentRestoreSession.also { currentRestoreSession = null }
+                    }
+                }
+                try {
+                    sessionToClose?.close()
+                } finally {
+                    try {
+                        super.close()
+                    } finally {
+                        if (isClosed()) {
+                            backupAndRestore.remove(this)
+                        }
+                    }
+                }
+            }
         }
     }
 

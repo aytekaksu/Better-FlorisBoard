@@ -602,8 +602,6 @@
     <string name="backup_and_restore__restore__metadata">选定的备份档案</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">这个备份档案是在其他版本中生成的，本应用一般支持这一操作。但请注意，这样可能会出现一些小问题，或者可能由于功能差异某些偏好设置无法正确导入。</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">这个备份档案是在第三方应用中生成的，本应用一般不支持这一操作。可能会发生数据丢失，进行还原需要您自担风险！</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">这个备份档案包含无效的元数据。可能它已损坏，或者修改不当。无法从这个档案还原，请选择其他档案。</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">这个备份档案不包含任何可以还原的文件，请选择其他档案。</string>
     <string name="backup_and_restore__restore__mode">还原模式</string>
     <string name="backup_and_restore__restore__mode_merge">与当前数据合并</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">擦除并覆盖当前数据</string>
