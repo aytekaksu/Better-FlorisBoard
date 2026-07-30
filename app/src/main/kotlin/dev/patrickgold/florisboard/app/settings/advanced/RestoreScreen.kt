@@ -46,6 +46,7 @@ import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceModel
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.LocalNavController
+import dev.patrickgold.florisboard.app.importWithLegacyMigrations
 import dev.patrickgold.florisboard.cacheManager
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardFileStorage
@@ -154,7 +155,12 @@ fun RestoreScreen() = FlorisScreen {
                 .subFile("${FlorisPreferenceModel.NAME}.${AndroidAppDataStorage.JETPREF_FILE_EXT}")
             if (file.exists()) {
                 val fileBasedStorage = FileBasedStorage(file.path)
-                FlorisPreferenceStore.import(importStrategy, fileBasedStorage).getOrThrow()
+                FlorisPreferenceStore.importWithLegacyMigrations(
+                    strategy = importStrategy,
+                    reader = fileBasedStorage,
+                    sourceVersionCode = workspace.metadata.versionCode,
+                    sourceVersionName = workspace.metadata.versionName,
+                ).getOrThrow()
             }
         }
         val workspaceFilesDir = workspace.outputDir.subDir("files")
