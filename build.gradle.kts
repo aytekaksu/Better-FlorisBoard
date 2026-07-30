@@ -44,6 +44,10 @@ val qualityKotlinSources = files(
     },
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceMigrationTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceSchemaContractTest.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/app/FlorisPreferencePersistence.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/app/LegacyPreferencePayloadPreprocessor.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferencePersistenceTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacyPreferencePayloadPreprocessorTest.kt"),
     fileTree("lib/autocorrect-api/src") {
         include("**/*.kt")
     },
@@ -84,6 +88,10 @@ val formattedKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummaryTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceMigrationTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceSchemaContractTest.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/app/FlorisPreferencePersistence.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/app/LegacyPreferencePayloadPreprocessor.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferencePersistenceTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacyPreferencePayloadPreprocessorTest.kt"),
     file(
         "app/src/test/kotlin/dev/patrickgold/florisboard/app/settings/localization/" +
             "SelectLocaleScreenTest.kt",

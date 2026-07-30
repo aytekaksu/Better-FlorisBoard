@@ -13,17 +13,18 @@ it to the current schema.
 - Unknown or retired keys are ignored. Stored keys and types are reviewed in
   `floris-preference-schema.txt`; legacy and retired names remain as permanent
   tombstones.
-- Multi-key conversions cannot be implemented in `migrate()`. They require a
-  validated payload or post-load migration with an explicit merge policy.
+- Multi-key conversions run on the full payload before JetPref loads it.
+  Startup and backup restore share this path. A current compound key always
+  wins over legacy inputs, while Merge keeps unrelated current fields.
 
 Malformed legacy Smartbar arrangements are dropped without aborting valid
 sibling settings. Broader import validation and rollback belong to the
 backup/restore coordinator because JetPref live import is not transactional.
 
-Temporary exception: older window sizing, one-handed mode, and structural
-Smartbar layouts combine several stored keys. Restore still falls back to
-current defaults for those settings until the payload-level migration phase
-lands. Their historical names are already reserved so they cannot be reused.
+Older window sizing and one-handed settings are reconstructed for the five
+phone/tablet form factors they described. Desktop and unrelated current window
+state are preserved. Structural Smartbar layouts remain a temporary exception;
+their historical names are reserved until that conversion lands.
 
 ## Privacy and threat model
 
@@ -51,6 +52,8 @@ Run the focused contracts with:
   --tests 'dev.patrickgold.florisboard.app.FlorisPreferenceMigrationTest'
 ./gradlew :app:testDebugUnitTest \
   --tests 'dev.patrickgold.florisboard.app.FlorisPreferenceSchemaContractTest'
+./gradlew :app:testDebugUnitTest \
+  --tests 'dev.patrickgold.florisboard.app.LegacyPreferencePayloadPreprocessorTest'
 ```
 
 Run `./gradlew qualityGate` before merging a persistence change.
