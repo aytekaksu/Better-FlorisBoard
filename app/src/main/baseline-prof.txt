@@ -4258,7 +4258,6 @@ HSPLdev/patrickgold/florisboard/app/Routes$AppNavHost$1;->invoke(Ljava/lang/Obje
 HSPLdev/patrickgold/florisboard/app/Routes;-><clinit>()V
 HSPLdev/patrickgold/florisboard/app/Routes;-><init>()V
 HSPLdev/patrickgold/florisboard/app/Routes;->AppNavHost(Landroidx/compose/ui/Modifier;Landroidx/navigation/NavHostController;Ljava/lang/String;Landroidx/compose/runtime/Composer;I)V
-HSPLdev/patrickgold/florisboard/app/apptheme/ColorKt;-><clinit>()V
 HSPLdev/patrickgold/florisboard/app/apptheme/ShapeKt;-><clinit>()V
 HSPLdev/patrickgold/florisboard/app/apptheme/ThemeKt$FlorisAppTheme$1;-><init>(Ldev/patrickgold/florisboard/app/AppTheme;Lkotlin/jvm/functions/Function2;I)V
 HSPLdev/patrickgold/florisboard/app/apptheme/ThemeKt$FlorisAppTheme$1;->invoke(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
@@ -7444,7 +7443,6 @@ Ldev/patrickgold/florisboard/app/FlorisAppActivityKt$LocalNavController$1;
 Ldev/patrickgold/florisboard/app/FlorisAppActivityKt;
 Ldev/patrickgold/florisboard/app/Routes$AppNavHost$1;
 Ldev/patrickgold/florisboard/app/Routes;
-Ldev/patrickgold/florisboard/app/apptheme/ColorKt;
 Ldev/patrickgold/florisboard/app/apptheme/ShapeKt;
 Ldev/patrickgold/florisboard/app/apptheme/ThemeKt$FlorisAppTheme$1;
 Ldev/patrickgold/florisboard/app/apptheme/ThemeKt;
