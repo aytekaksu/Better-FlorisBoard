@@ -1071,9 +1071,10 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 keyboardExtension.currencySets.forEach { currencySet ->
                     localCurrencySets[ExtensionComponentName(keyboardExtension.meta.id, currencySet.id)] = currencySet
                 }
-                keyboardExtension.layouts.forEach { (type, layoutComponents) ->
+                for ((type, layoutComponents) in keyboardExtension.layouts) {
+                    val layoutsForType = localLayouts[LayoutType.fromId(type)] ?: continue
                     for (layoutComponent in layoutComponents) {
-                        localLayouts[LayoutType.entries.first { it.id == type }]!![ExtensionComponentName(keyboardExtension.meta.id, layoutComponent.id)] = layoutComponent
+                        layoutsForType[ExtensionComponentName(keyboardExtension.meta.id, layoutComponent.id)] = layoutComponent
                     }
                 }
                 keyboardExtension.popupMappings.forEach { popupMapping ->

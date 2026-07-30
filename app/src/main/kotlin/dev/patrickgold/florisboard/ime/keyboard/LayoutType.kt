@@ -16,13 +16,6 @@
 
 package dev.patrickgold.florisboard.ime.keyboard
 
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
-
 object LayoutTypeId {
     const val CHARACTERS =                  "characters"
     const val CHARACTERS_MOD =              "charactersMod"
@@ -38,7 +31,6 @@ object LayoutTypeId {
     const val SYMBOLS2_MOD =                "symbols2Mod"
 }
 
-@Serializable(with = LayoutTypeSerializer::class)
 enum class LayoutType(val id: String) {
     CHARACTERS(LayoutTypeId.CHARACTERS),
     CHARACTERS_MOD(LayoutTypeId.CHARACTERS_MOD),
@@ -52,16 +44,10 @@ enum class LayoutType(val id: String) {
     SYMBOLS_MOD(LayoutTypeId.SYMBOLS_MOD),
     SYMBOLS2(LayoutTypeId.SYMBOLS2),
     SYMBOLS2_MOD(LayoutTypeId.SYMBOLS2_MOD);
-}
 
-private class LayoutTypeSerializer : KSerializer<LayoutType> {
-    override val descriptor = PrimitiveSerialDescriptor("LayoutType", PrimitiveKind.STRING)
+    companion object {
+        private val byId = entries.associateBy(LayoutType::id)
 
-    override fun serialize(encoder: Encoder, value: LayoutType) {
-        encoder.encodeString(value.id)
-    }
-
-    override fun deserialize(decoder: Decoder): LayoutType {
-        return LayoutType.entries.find { it.id == decoder.decodeString() }!!
+        fun fromId(id: String): LayoutType? = byId[id]
     }
 }
