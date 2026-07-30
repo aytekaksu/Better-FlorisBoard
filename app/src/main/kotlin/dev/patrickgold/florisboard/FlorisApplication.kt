@@ -25,8 +25,8 @@ import android.content.IntentFilter
 import android.os.Handler
 import android.os.StrictMode
 import androidx.core.os.UserManagerCompat
-import dev.patrickgold.florisboard.app.FlorisPreferenceModel
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
+import dev.patrickgold.florisboard.app.initAndroidWithLegacyMigrations
 import dev.patrickgold.florisboard.ime.clipboard.ClipboardManager
 import dev.patrickgold.florisboard.ime.core.SubtypeManager
 import dev.patrickgold.florisboard.ime.dictionary.DictionaryManager
@@ -44,7 +44,6 @@ import dev.patrickgold.florisboard.lib.devtools.LogTopic
 import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.devtools.flogInfo
 import dev.patrickgold.florisboard.lib.ext.ExtensionManager
-import dev.patrickgold.jetpref.datastore.runtime.initAndroid
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -126,10 +125,7 @@ class FlorisApplication : Application() {
     fun init() {
         cacheDir?.deleteContentsRecursively()
         scope.launch {
-            FlorisPreferenceStore.initAndroid(
-                context = this@FlorisApplication,
-                datastoreName = FlorisPreferenceModel.NAME,
-            )
+            FlorisPreferenceStore.initAndroidWithLegacyMigrations(this@FlorisApplication)
             flogInfo { "Preference store initialization completed" }
             preferenceStoreLoaded.value = true
         }
