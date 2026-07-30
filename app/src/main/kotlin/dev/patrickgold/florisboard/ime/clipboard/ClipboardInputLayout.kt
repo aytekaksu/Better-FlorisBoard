@@ -114,6 +114,7 @@ import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.android.showShortToastSync
 import org.florisboard.lib.android.systemService
 import org.florisboard.lib.compose.LocalLocalizedDateTimeFormatter
+import org.florisboard.lib.compose.LocalResourcesLocale
 import org.florisboard.lib.compose.autoMirrorForRtl
 import org.florisboard.lib.compose.florisHorizontalScroll
 import org.florisboard.lib.compose.florisVerticalScroll
@@ -695,7 +696,7 @@ private fun ClipCategoryTitle(
 ) {
     SnyggText(FlorisImeUi.ClipboardSubheader.elementName,
         modifier = modifier.fillMaxWidth(),
-        text = text.uppercase(),
+        text = text.uppercase(LocalResourcesLocale.current),
     )
 }
 

@@ -310,7 +310,7 @@ class FlorisLocale private constructor(val base: Locale) {
                 append(' ')
             }
             append('[')
-            append(variantName.uppercase())
+            append(variantName.uppercase(locale))
             append(']')
         }
     }

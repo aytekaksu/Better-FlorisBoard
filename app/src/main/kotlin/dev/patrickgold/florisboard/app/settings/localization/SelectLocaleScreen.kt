@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState as collectFlowAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.LocalNavController
+import dev.patrickgold.florisboard.extensionManager
 import dev.patrickgold.florisboard.ime.core.DisplayLanguageNamesIn
 import dev.patrickgold.florisboard.lib.FlorisLocale
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
@@ -67,26 +69,23 @@ fun SelectLocaleScreen() = FlorisScreen {
     val displayLanguageNamesIn by prefs.localization.displayLanguageNamesIn.collectAsState()
     var searchTermValue by remember { mutableStateOf(TextFieldValue()) }
     val context = LocalContext.current
-    val systemLocales =
+    val extensionManager by context.extensionManager()
+    val installedLanguagePacks by extensionManager.languagePacks.collectFlowAsState()
+    val systemLocale = FlorisLocale.default()
+    val availableLocales = remember(displayLanguageNamesIn, systemLocale, installedLanguagePacks) {
         FlorisLocale.extendedAvailableLocales(context).sortedBy { locale ->
             when (displayLanguageNamesIn) {
                 DisplayLanguageNamesIn.SYSTEM_LOCALE -> locale.displayName()
                 DisplayLanguageNamesIn.NATIVE_LOCALE -> locale.displayName(locale)
             }.lowercase()
         }
+    }
 
-    val filteredSystemLocales = remember(searchTermValue) {
+    val filteredLocales = remember(searchTermValue.text, availableLocales, systemLocale) {
         if (searchTermValue.text.isBlank()) {
-            systemLocales
+            availableLocales
         } else {
-            val term = searchTermValue.text.trim().lowercase()
-            systemLocales.filter { locale ->
-                locale.displayName().lowercase().contains(term) ||
-                    locale.displayName(locale).lowercase().contains(term) ||
-                    locale.displayName(FlorisLocale.ENGLISH).lowercase().contains(term) ||
-                    locale.languageTag().lowercase().startsWith(term) ||
-                    locale.localeTag().lowercase().startsWith(term)
-            }
+            availableLocales.filter { it.matchesSearchTerm(searchTermValue.text, systemLocale) }
         }
     }
 
@@ -112,7 +111,7 @@ fun SelectLocaleScreen() = FlorisScreen {
                     disabledIndicatorColor = Color.Transparent,
                 ),
             )
-            if (filteredSystemLocales.isEmpty()) {
+            if (filteredLocales.isEmpty()) {
                 Text(
                     modifier = Modifier
                         .padding(16.dp)
@@ -130,21 +129,34 @@ fun SelectLocaleScreen() = FlorisScreen {
                     .florisScrollbar(state, isVertical = true),
                 state = state,
             ) {
-                items(filteredSystemLocales) { systemLocale ->
+                items(filteredLocales) { locale ->
                     JetPrefListItem(
                         modifier = Modifier.clickable {
                             navController.previousBackStackEntry
                                 ?.savedStateHandle
-                                ?.set(SelectLocaleScreenResultLanguageTag, systemLocale.languageTag())
+                                ?.set(SelectLocaleScreenResultLanguageTag, locale.languageTag())
                             navController.popBackStack()
                         },
                         text = when (displayLanguageNamesIn) {
-                            DisplayLanguageNamesIn.SYSTEM_LOCALE -> systemLocale.displayName()
-                            DisplayLanguageNamesIn.NATIVE_LOCALE -> systemLocale.displayName(systemLocale)
+                            DisplayLanguageNamesIn.SYSTEM_LOCALE -> locale.displayName()
+                            DisplayLanguageNamesIn.NATIVE_LOCALE -> locale.displayName(locale)
                         },
                     )
                 }
             }
         }
     }
+}
+
+internal fun FlorisLocale.matchesSearchTerm(
+    rawTerm: String,
+    systemLocale: FlorisLocale = FlorisLocale.default(),
+): Boolean {
+    val term = rawTerm.trim()
+    if (term.isEmpty()) return true
+    return displayName(systemLocale).contains(term, ignoreCase = true) ||
+        displayName(this).contains(term, ignoreCase = true) ||
+        displayName(FlorisLocale.ENGLISH).contains(term, ignoreCase = true) ||
+        languageTag().startsWith(term, ignoreCase = true) ||
+        localeTag().startsWith(term, ignoreCase = true)
 }
