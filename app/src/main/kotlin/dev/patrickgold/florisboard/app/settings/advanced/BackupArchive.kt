@@ -175,6 +175,20 @@ internal data class ArchiveLimits(
     val maxPathBytes: Int,
     val maxPathSegmentBytes: Int,
 ) {
+    internal fun maxEntryBytesFor(path: String): Long = when (path) {
+        BackupArchive.METADATA_JSON_NAME -> maxMetadataBytes
+
+        BackupArchive.MANIFEST_JSON_NAME -> maxManifestBytes
+
+        BackupArchive.PREFERENCES_PATH,
+        BackupArchive.CLIPBOARD_TEXT_PATH,
+        BackupArchive.CLIPBOARD_IMAGES_PATH,
+        BackupArchive.CLIPBOARD_VIDEO_PATH,
+        -> maxPreferencesOrJsonBytes
+
+        else -> maxEntryBytes
+    }
+
     companion object {
         val Default = ArchiveLimits(
             maxArchiveBytes = 4L shl 30,
@@ -598,7 +612,7 @@ private class ArchivePreflightInspector(
                 fact.isUnsupported() -> failures += ArchiveFailure.UNSUPPORTED_ENTRY
                 entry.hasInvalidHeader() -> failures += ArchiveFailure.INVALID_ENTRY
             }
-            if (entry.uncompressedSize > maxEntrySize(entry.archivePath)) {
+            if (entry.uncompressedSize > limits.maxEntryBytesFor(entry.archivePath)) {
                 failures += ArchiveFailure.ENTRY_TOO_LARGE
             }
             if (entry.compressedSize >= 0L &&
@@ -641,20 +655,6 @@ private class ArchivePreflightInspector(
             ?: validateStructure(scan.entries)
             ?: ENTRY_FAILURE_ORDER.firstOrNull { it in scan.failures }
             ?: ArchiveFailure.INVALID_ARCHIVE_SIZE.takeIf { scan.compressedBytes > archiveSize }
-
-    private fun maxEntrySize(path: String): Long = when (path) {
-        BackupArchive.METADATA_JSON_NAME -> limits.maxMetadataBytes
-
-        BackupArchive.MANIFEST_JSON_NAME -> limits.maxManifestBytes
-
-        BackupArchive.PREFERENCES_PATH,
-        BackupArchive.CLIPBOARD_TEXT_PATH,
-        BackupArchive.CLIPBOARD_IMAGES_PATH,
-        BackupArchive.CLIPBOARD_VIDEO_PATH,
-        -> limits.maxPreferencesOrJsonBytes
-
-        else -> limits.maxEntryBytes
-    }
 
     private fun validateControlFiles(entries: List<ValidatedArchiveEntry>): ControlFiles {
         val metadataEntries = entries.filter { it.archivePath == BackupArchive.METADATA_JSON_NAME }
@@ -748,7 +748,12 @@ private class ArchiveDescriptorInspector(
     private fun validateMetadata(): BackupArchive.Metadata? {
         val metadata = (descriptor.metadata as? DecodedArchiveFile.Parsed)?.value ?: return null
         return metadata.takeIf {
-            it.packageName.isNotBlank() && it.versionCode >= BackupArchive.MIN_SUPPORTED_VERSION_CODE
+            it.packageName.length in 1..MAX_PACKAGE_NAME_LENGTH &&
+                PACKAGE_NAME.matches(it.packageName) &&
+                it.versionCode >= BackupArchive.MIN_SUPPORTED_VERSION_CODE &&
+                it.versionName.length <= MAX_VERSION_NAME_LENGTH &&
+                !it.versionName.containsUnsafeDisplayCharacter() &&
+                it.timestamp >= 0L
         }
     }
 
@@ -800,7 +805,33 @@ private class ArchiveDescriptorInspector(
     companion object {
         private const val MAX_COMPONENT_RECORDS = 64
         private const val MAX_COMPONENT_ID_LENGTH = 64
+        private const val MAX_PACKAGE_NAME_LENGTH = 255
+        private const val MAX_VERSION_NAME_LENGTH = 128
         private val COMPONENT_ID = Regex("""[a-z][a-z0-9_.-]*""")
+        private val PACKAGE_NAME = Regex("""[A-Za-z0-9_.]+""")
+
+        private fun String.containsUnsafeDisplayCharacter(): Boolean {
+            var index = 0
+            while (index < length) {
+                val codePoint = codePointAt(index)
+                val type = Character.getType(codePoint)
+                if (Character.isISOControl(codePoint) || isUnsafeDisplayType(type)) {
+                    return true
+                }
+                index += Character.charCount(codePoint)
+            }
+            return false
+        }
+
+        private fun isUnsafeDisplayType(type: Int): Boolean = when (type) {
+            Character.FORMAT.toInt(),
+            Character.LINE_SEPARATOR.toInt(),
+            Character.PARAGRAPH_SEPARATOR.toInt(),
+            Character.SURROGATE.toInt(),
+            -> true
+
+            else -> false
+        }
     }
 }
 

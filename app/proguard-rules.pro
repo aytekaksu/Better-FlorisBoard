@@ -27,3 +27,10 @@
 
 # @Serializable and @Polymorphic are used at runtime for polymorphic serialization.
 -keepattributes RuntimeVisibleAnnotations,AnnotationDefault
+
+# Commons Compress includes optional XZ and Zstandard adapters. Backup sessions
+# use only its ZIP reader, so these codec implementations are intentionally absent.
+-dontwarn com.github.luben.zstd.ZstdInputStream
+-dontwarn org.tukaani.xz.MemoryLimitException
+-dontwarn org.tukaani.xz.SingleXZInputStream
+-dontwarn org.tukaani.xz.XZInputStream
