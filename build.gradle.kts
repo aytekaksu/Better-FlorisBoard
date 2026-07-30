@@ -38,6 +38,10 @@ plugins {
  * FlorisBoard code can be added package-by-package once it has been formatted
  * and its current Detekt findings have been reviewed.
  */
+val backupArchiveKotlinSources = fileTree("app/src") {
+    include("**/settings/advanced/BackupArchive*.kt")
+}
+
 val qualityKotlinSources = files(
     fileTree("app/src") {
         include("**/ime/nlp/plugin/**/*.kt")
@@ -51,6 +55,7 @@ val qualityKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferencePersistenceTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacyPreferencePayloadPreprocessorTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacySmartbarPreferencePayloadTest.kt"),
+    backupArchiveKotlinSources,
     fileTree("lib/autocorrect-api/src") {
         include("**/*.kt")
     },
@@ -98,6 +103,7 @@ val formattedKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferencePersistenceTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacyPreferencePayloadPreprocessorTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacySmartbarPreferencePayloadTest.kt"),
+    backupArchiveKotlinSources,
     file(
         "app/src/test/kotlin/dev/patrickgold/florisboard/app/settings/localization/" +
             "SelectLocaleScreenTest.kt",
@@ -254,6 +260,12 @@ val privacySourceCheck by tasks.registering {
         val consoleOutput = Regex("""(?<![A-Za-z0-9_])(?:print|println)\s*\(""")
         val stackTraceOutput = Regex("""\.printStackTrace\s*\(""")
         val exportRendering = Regex("""\bstackTraceToString\s*\(|\.(?:message|localizedMessage)\b""")
+        val throwableRendering = Regex(
+            """\.(?:toString\s*\(\s*\)|getMessage\s*\(\s*\)|getLocalizedMessage\s*\(\s*\)|""" +
+                """getCause\s*\(\s*\)|getStackTrace\s*\(\s*\)|message\b|localizedMessage\b|""" +
+                """cause\b|stackTrace\b|stackTraceToString\s*\()""",
+        )
+        val errorMessageArgument = Regex("""["']error_message["']\s+to\s+([^,\n)]+)""")
         val appendStart = Regex("""\b(?:append|appendLine)\s*\(""")
         val rawDebugExport = Regex(
             """\b(?:Runtime\s*\.\s*getRuntime\s*\(\s*\)\s*\.\s*exec|ProcessBuilder\s*\()""",
@@ -261,6 +273,10 @@ val privacySourceCheck by tasks.registering {
         val rawLogcatCommand = Regex("""(?i)["']logcat["']""")
         val diagnosticExportDeclaration = Regex(
             """\bfun\s+(?:generateDebugLog|generateDebugLogForGithub|generateDiagnosticDump)\s*\(""",
+        )
+        val backupRestoreScreens = setOf(
+            "app/src/main/kotlin/dev/patrickgold/florisboard/app/settings/advanced/BackupScreen.kt",
+            "app/src/main/kotlin/dev/patrickgold/florisboard/app/settings/advanced/RestoreScreen.kt",
         )
         val nonCode = Regex(
             "(?s)/\\*.*?\\*/|//[^\\n]*|\"\"\".*?\"\"\"|'(?:\\\\.|[^'\\\\])*'|\"(?:\\\\.|[^\"\\\\])*\"",
@@ -446,6 +462,9 @@ val privacySourceCheck by tasks.registering {
             """Log.d(TAG, message)""",
             """flogDebug { "clip=${'$'}clipboardItem bundle=${'$'}rawBundle pointer=${'$'}pointerPosition x=${'$'}x" }""",
             """flogDebug { "length=${'$'}{word.take(3).length}" }""",
+            """flogError { error }""",
+            """flogError { "${'$'}error" }""",
+            """flogError { "${'$'}{error}" }""",
         )
         check(unsafeExamples.all { logCalls(it).single().let { call -> isUnsafeLog(call.first, call.third) } })
         listOf("v", "d", "i", "w", "e", "wtf").forEach {
@@ -461,10 +480,33 @@ val privacySourceCheck by tasks.registering {
         val validMarker = "// quality: allow-sensitive-log -- reviewed enum-only value\nflogDebug { text }"
         val invalidMarker = "// quality: allow-sensitive-log -- \nflogDebug { text }"
         val validConsoleMarker = "// quality: allow-console-output -- generator progress only\nprintln(\"done\")"
+        val rawErrorMessage = errorMessageArgument.find(""""error_message" to error,""")!!.groupValues[1]
+        val interpolatedErrorMessages = listOf(
+            """"error_message" to "${'$'}error",""",
+            """"error_message" to "${'$'}{error}",""",
+        ).map { errorMessageArgument.find(it)!!.groupValues[1] }
+        val safeErrorMessage =
+            errorMessageArgument.find(""""error_message" to error.javaClass.simpleName,""")!!.groupValues[1]
         check(
             consoleOutput.containsMatchIn("""println("raw")""") &&
                 stackTraceOutput.containsMatchIn("error.printStackTrace()") &&
                 exportRendering.containsMatchIn("error.localizedMessage") &&
+                listOf(
+                    "error.toString()",
+                    "error.getMessage()",
+                    "error.getLocalizedMessage()",
+                    "error.getCause()",
+                    "error.getStackTrace()",
+                    "error.message",
+                    "error.localizedMessage",
+                    "error.cause",
+                    "error.stackTrace",
+                    "error.stackTraceToString()",
+                ).all(throwableRendering::containsMatchIn) &&
+                !throwableRendering.containsMatchIn("error.javaClass.simpleName") &&
+                isUnsafePayload(rawErrorMessage) &&
+                interpolatedErrorMessages.all(::isUnsafePayload) &&
+                !isUnsafePayload(safeErrorMessage) &&
                 previousLineMatches(validMarker, validMarker.indexOf("flog"), logMarker) &&
                 !previousLineMatches(invalidMarker, invalidMarker.indexOf("flog"), logMarker) &&
                 previousLineMatches(
@@ -529,6 +571,16 @@ val privacySourceCheck by tasks.registering {
                     !safeProjection.matches(expression) &&
                         identifier.findAll(expression).any { isUnsafeName(it.value) }
                 }.forEach { violations += "$path:export" }
+            }
+            if (path in backupRestoreScreens) {
+                throwableRendering.findAll(code).forEach {
+                    violations += "$path:${contents.take(it.range.first).count { char -> char == '\n' } + 1}"
+                }
+                errorMessageArgument.findAll(contents).forEach {
+                    if (isUnsafePayload(it.groupValues[1])) {
+                        violations += "$path:${contents.take(it.range.first).count { char -> char == '\n' } + 1}"
+                    }
+                }
             }
             if (path.contains("/devtools/") &&
                 (rawDebugExport.containsMatchIn(code) || rawLogcatCommand.containsMatchIn(contents))
