@@ -1884,17 +1884,6 @@
     </issue>
 
     <issue
-        id="UnnecessaryArrayInit"
-        message="This initialization lambda (`{ 0 }`) is unnecessary and is less efficient"
-        errorLine1="            popupIndices = IntArray(n) { 0 }"
-        errorLine2="                                       ~~~~~">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/ime/popup/PopupUiController.kt"
-            line="208"
-            column="40"/>
-    </issue>
-
-    <issue
         id="HandlerLeak"
         message="This `Handler` class should be static or leaks might occur (dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager.ReplyHandler)"
         errorLine1="    private inner class ReplyHandler("

@@ -72,31 +72,8 @@ value class InputAttributes private constructor(val raw: Int) {
             else -> false
         }
 
-    val capsMode: CapsMode
-        get() = if (type == Type.TEXT) CapsMode.fromFlags(raw) else CapsMode.NONE
-
-    val flagNumberDecimal: Boolean
-        get() = type == Type.NUMBER && (raw and InputType.TYPE_NUMBER_FLAG_DECIMAL != 0)
-
-    val flagNumberSigned: Boolean
-        get() = type == Type.NUMBER && (raw and InputType.TYPE_NUMBER_FLAG_SIGNED != 0)
-
-    val flagTextAutoComplete: Boolean
-        get() = type == Type.TEXT && (raw and InputType.TYPE_TEXT_FLAG_AUTO_COMPLETE != 0)
-
-    val flagTextAutoCorrect: Boolean
-        get() = type == Type.TEXT && (raw and InputType.TYPE_TEXT_FLAG_AUTO_CORRECT != 0)
-
-    val flagTextImeMultiLine: Boolean
-        get() = type == Type.TEXT && (raw and InputType.TYPE_TEXT_FLAG_IME_MULTI_LINE != 0)
-
     val flagTextMultiLine: Boolean
         get() = type == Type.TEXT && (raw and InputType.TYPE_TEXT_FLAG_MULTI_LINE != 0)
-
-    val flagTextNoSuggestions: Boolean
-        get() = type == Type.TEXT && (raw and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS != 0)
-
-
 
     companion object {
         fun wrap(inputType: Int) = InputAttributes(inputType)
@@ -112,34 +89,26 @@ value class InputAttributes private constructor(val raw: Int) {
         companion object {
             fun fromInt(int: Int) = entries.firstOrNull { it.value == int } ?: NULL
         }
-
-        fun toInt() = value
     }
 
-    enum class Variation(private val value: Int) {
-        NORMAL(0),
-        DATE(1),
-        EMAIL_ADDRESS(2),
-        EMAIL_SUBJECT(3),
-        FILTER(4),
-        LONG_MESSAGE(5),
-        PASSWORD(6),
-        PERSON_NAME(7),
-        PHONETIC(8),
-        POSTAL_ADDRESS(9),
-        SHORT_MESSAGE(10),
-        TIME(11),
-        URI(12),
-        VISIBLE_PASSWORD(13),
-        WEB_EDIT_TEXT(14),
-        WEB_EMAIL_ADDRESS(15),
-        WEB_PASSWORD(16);
-
-        companion object {
-            fun fromInt(int: Int) = entries.firstOrNull { it.value == int } ?: NORMAL
-        }
-
-        fun toInt() = value
+    enum class Variation {
+        NORMAL,
+        DATE,
+        EMAIL_ADDRESS,
+        EMAIL_SUBJECT,
+        FILTER,
+        LONG_MESSAGE,
+        PASSWORD,
+        PERSON_NAME,
+        PHONETIC,
+        POSTAL_ADDRESS,
+        SHORT_MESSAGE,
+        TIME,
+        URI,
+        VISIBLE_PASSWORD,
+        WEB_EDIT_TEXT,
+        WEB_EMAIL_ADDRESS,
+        WEB_PASSWORD,
     }
 
     enum class CapsMode(private val value: Int) {
@@ -156,17 +125,6 @@ value class InputAttributes private constructor(val raw: Int) {
                     flags and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0 -> SENTENCES
                     else -> NONE
                 }
-            }
-
-            fun fromInt(int: Int) = entries.firstOrNull { it.value == int } ?: NONE
-        }
-
-        fun toFlags(): Int {
-            return when (this) {
-                ALL -> InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
-                WORDS -> InputType.TYPE_TEXT_FLAG_CAP_WORDS
-                SENTENCES -> InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-                else -> 0
             }
         }
 

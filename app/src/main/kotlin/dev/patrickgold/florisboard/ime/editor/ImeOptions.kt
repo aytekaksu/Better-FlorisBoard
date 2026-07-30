@@ -30,26 +30,8 @@ value class ImeOptions private constructor(val raw: Int) {
     val action: Action
         get() = Action.fromInt(raw and EditorInfo.IME_MASK_ACTION)
 
-    val flagForceAscii: Boolean
-        get() = raw and EditorInfo.IME_FLAG_FORCE_ASCII != 0
-
-    val flagNavigateNext: Boolean
-        get() = raw and EditorInfo.IME_FLAG_NAVIGATE_NEXT != 0
-
-    val flagNavigatePrevious: Boolean
-        get() = raw and EditorInfo.IME_FLAG_NAVIGATE_PREVIOUS != 0
-
-    val flagNoAccessoryAction: Boolean
-        get() = raw and EditorInfo.IME_FLAG_NO_ACCESSORY_ACTION != 0
-
     val flagNoEnterAction: Boolean
         get() = raw and EditorInfo.IME_FLAG_NO_ENTER_ACTION != 0
-
-    val flagNoExtractUi: Boolean
-        get() = raw and EditorInfo.IME_FLAG_NO_EXTRACT_UI != 0
-
-    val flagNoFullScreen: Boolean
-        get() = raw and EditorInfo.IME_FLAG_NO_FULLSCREEN != 0
 
     val flagNoPersonalizedLearning: Boolean
         get() = raw and EditorInfoCompat.IME_FLAG_NO_PERSONALIZED_LEARNING != 0

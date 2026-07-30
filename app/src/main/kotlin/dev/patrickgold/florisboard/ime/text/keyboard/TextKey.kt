@@ -38,7 +38,6 @@ class TextKey(override val data: AbstractKeyData) : Key(data) {
     val computedPopups: MutablePopupSet<KeyData> = MutablePopupSet()
     var computedSymbolHint: KeyData? = null
     var computedNumberHint: KeyData? = null
-    var computedHintData: KeyData = TextKeyData.UNSPECIFIED
 
     fun compute(evaluator: ComputingEvaluator) {
         val keyboard = evaluator.keyboard as? TextKeyboard ?: return
@@ -168,13 +167,6 @@ class TextKey(override val data: AbstractKeyData) : Key(data) {
         }
     }
 
-    inline fun setPressed(state: Boolean, blockIfChanged: () -> Unit) {
-        if (isPressed != state) {
-            isPressed = state
-            blockIfChanged()
-        }
-    }
-
     private fun addComputedHints(
         keyCode: Int,
         evaluator: ComputingEvaluator,
@@ -247,10 +239,8 @@ class TextKey(override val data: AbstractKeyData) : Key(data) {
             computedPopups.getPopupKeys(prefs.keyboard.keyHintConfiguration()).hint.let { hintData ->
                 if (hintData?.isSpaceKey() == false) {
                     hintedLabel = hintData.asString(isForDisplay = true)
-                    computedHintData = hintData
                 } else {
                     hintedLabel = null
-                    computedHintData = TextKeyData.UNSPECIFIED
                 }
             }
         }
