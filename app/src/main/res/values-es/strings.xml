@@ -594,8 +594,6 @@
     <string name="backup_and_restore__restore__metadata">Fichero de respaldo seleccionado</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">Este fichero de respaldo fue generado en una versión distinta de la actual, la cual usualmente es compatible. Tenga en cuenta que errores menores pueden suceder o que algunas preferencias no se hayan transferido apropiadamente debido a diferencias en las características.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">Este fichero de respaldo fue generado por una aplicación de terceros que, por lo general, no es compatible. Se podría incurrir en pérdidas de datos, ¡restaure bajo su propio riesgo!</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Este fichero de respaldo contiene metadatos no válidos. O bien ha sido corrompido o erróneamente modificado. Restaurar desde este fichero no es posible. Por favor, seleccione otro.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Este fichero de respaldo no contiene ningún archivo para restaurar. Por favor, seleccione otro.</string>
     <string name="backup_and_restore__restore__mode">Modo de restauración</string>
     <string name="backup_and_restore__restore__mode_merge">Combinar con los datos actuales</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Borrar y sobrescribir los datos actuales</string>

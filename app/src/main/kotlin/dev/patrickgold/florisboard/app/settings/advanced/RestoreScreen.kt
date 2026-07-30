@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard.app.settings.advanced
 
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -36,6 +37,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,20 +59,21 @@ import dev.patrickgold.florisboard.lib.cache.CacheManager
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.ext.ExtensionManager
-import dev.patrickgold.florisboard.lib.io.ZipUtils
 import dev.patrickgold.jetpref.datastore.runtime.AndroidAppDataStorage
 import dev.patrickgold.jetpref.datastore.runtime.FileBasedStorage
 import dev.patrickgold.jetpref.datastore.runtime.ImportStrategy
 import dev.patrickgold.jetpref.datastore.ui.Preference
-import java.io.FileNotFoundException
+import java.io.File
 import java.text.DateFormat
 import java.util.*
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
-import org.florisboard.lib.android.readToFile
+import kotlinx.coroutines.withContext
 import org.florisboard.lib.android.showLongToast
 import org.florisboard.lib.compose.FlorisButtonBar
 import org.florisboard.lib.compose.FlorisCardDefaults
@@ -97,6 +100,18 @@ object Restore {
     )
 }
 
+private enum class RestoreFlowFailure {
+    SNAPSHOT_REJECTED,
+    ARCHIVE_REJECTED,
+    PLAN_REJECTED,
+    STAGING_REJECTED,
+}
+
+private class RestoreFlowException(val failure: RestoreFlowFailure) : RuntimeException()
+
+private fun Exception.safeRestoreFailureName(): String =
+    (this as? RestoreFlowException)?.failure?.name ?: javaClass.simpleName
+
 @Composable
 fun RestoreScreen() = FlorisScreen {
     title = stringRes(R.string.backup_and_restore__restore__title)
@@ -108,23 +123,83 @@ fun RestoreScreen() = FlorisScreen {
 
     val restoreFilesSelector = remember { Backup.FilesSelector() }
     var importStrategy by remember { mutableStateOf(ImportStrategy.Merge) }
-    // TODO: rememberCoroutineScope() is unusable because it provides the scope in a cancelled state, which does
-    //  not make sense at all. I suspect that this is a bug and once it is resolved we can use it here again.
-    val restoreScope = remember { CoroutineScope(Dispatchers.Main) }
+    val restoreScope = rememberCoroutineScope()
     var restoreWorkspace by remember {
         mutableStateOf<CacheManager.BackupAndRestoreWorkspace?>(null)
     }
     var isRestoreBusy by remember { mutableStateOf(false) }
 
-    fun closeRestoreWorkspace() {
-        restoreWorkspace?.close()
-        restoreWorkspace = null
+    suspend fun closeRestoreWorkspace(
+        workspace: CacheManager.BackupAndRestoreWorkspace? = restoreWorkspace,
+        stagedRestore: StagedRestore? = null,
+    ) {
+        if (workspace == null) return
+        if (restoreWorkspace === workspace) {
+            restoreWorkspace = null
+        }
+        val cleanupComplete = withContext(NonCancellable + Dispatchers.IO) {
+            stagedRestore?.close()
+            workspace.close()
+            stagedRestore?.close()
+            workspace.isClosed() && (stagedRestore == null || stagedRestore.isClosed)
+        }
+        if (!cleanupComplete) {
+            workspace.requestClose(stagedRestore)
+        }
     }
 
     DisposableEffect(Unit) {
         onDispose {
             restoreScope.cancel()
-            closeRestoreWorkspace()
+            restoreWorkspace?.requestClose()
+            restoreWorkspace = null
+        }
+    }
+
+    suspend fun prepareRestoreWorkspace(uri: Uri): CacheManager.BackupAndRestoreWorkspace {
+        closeRestoreWorkspace()
+        val workspace = cacheManager.backupAndRestore.new()
+        var accepted = false
+        try {
+            val destination = workspace.inputDir.subFile(Restore.BACKUP_ARCHIVE_FILE_NAME)
+            val snapshot = when (
+                val result = BackupArchiveSnapshot.capture(
+                    contentResolver = context.contentResolver,
+                    uri = uri,
+                    workspaceDir = workspace.dir.toPath(),
+                    destination = destination.toPath(),
+                )
+            ) {
+                is ArchiveSnapshotResult.Valid -> result.snapshot
+                is ArchiveSnapshotResult.Invalid -> {
+                    throw RestoreFlowException(RestoreFlowFailure.SNAPSHOT_REJECTED)
+                }
+            }
+            workspace.zipFile = destination
+            val session = when (val result = BackupArchiveSession.open(snapshot)) {
+                is BackupArchiveSessionResult.Valid -> result.session
+                is BackupArchiveSessionResult.Invalid -> {
+                    throw RestoreFlowException(RestoreFlowFailure.ARCHIVE_REJECTED)
+                }
+            }
+            workspace.replaceRestoreSession(session)
+            workspace.metadata = session.archive.metadata
+            workspace.restoreWarningId = when {
+                !Restore.isSameVendorPackage(workspace.metadata.packageName) -> {
+                    R.string.backup_and_restore__restore__metadata_warn_different_vendor
+                }
+                workspace.metadata.versionCode != BuildConfig.VERSION_CODE -> {
+                    R.string.backup_and_restore__restore__metadata_warn_different_version
+                }
+                else -> null
+            }
+            restoreFilesSelector.resetForRestore(session.archive.availableComponents)
+            accepted = true
+            return workspace
+        } finally {
+            if (!accepted) {
+                closeRestoreWorkspace(workspace)
+            }
         }
     }
 
@@ -135,94 +210,59 @@ fun RestoreScreen() = FlorisScreen {
                 isRestoreBusy = false
                 return@rememberLauncherForActivityResult
             }
-            runCatching {
-                closeRestoreWorkspace()
-                val workspace = cacheManager.backupAndRestore.new()
+            restoreScope.launch {
                 try {
-                    workspace.zipFile = workspace.inputDir.subFile(Restore.BACKUP_ARCHIVE_FILE_NAME)
-                    context.contentResolver.readToFile(uri, workspace.zipFile)
-                    ZipUtils.unzip(workspace.zipFile, workspace.outputDir)
-                    workspace.metadata = try {
-                        workspace.outputDir.subFile(BackupArchive.METADATA_JSON_NAME).readJson()
-                    } catch (e: FileNotFoundException) {
-                        error("Invalid archive: either backup_metadata.json is missing or file is not a ZIP archive.")
-                    }
-                    workspace.restoreWarningId = when {
-                        !Restore.isSameVendorPackage(workspace.metadata.packageName) -> {
-                            R.string.backup_and_restore__restore__metadata_warn_different_vendor
-                        }
-                        workspace.metadata.versionCode != BuildConfig.VERSION_CODE -> {
-                            R.string.backup_and_restore__restore__metadata_warn_different_version
-                        }
-                        else -> null
-                    }
-                    workspace.restoreErrorId = when {
-                        workspace.metadata.packageName.isBlank() ||
-                            workspace.metadata.versionCode < BackupArchive.MIN_SUPPORTED_VERSION_CODE -> {
-                            R.string.backup_and_restore__restore__metadata_error_invalid_metadata
-                        }
-                        else -> null
-                    }
-                    workspace
-                } catch (error: Throwable) {
-                    workspace.close()
+                    restoreWorkspace = prepareRestoreWorkspace(uri)
+                } catch (error: CancellationException) {
                     throw error
-                }
-            }.onSuccess { workspace ->
-                restoreWorkspace = workspace
-            }.onFailure { error ->
-                val failureClass = error.javaClass.simpleName
-                restoreScope.launch {
+                } catch (error: Exception) {
+                    val failureClass = error.safeRestoreFailureName()
                     context.showLongToast(
                         R.string.backup_and_restore__restore__failure,
                         "error_message" to failureClass,
                     )
+                } finally {
+                    isRestoreBusy = false
                 }
             }
-            isRestoreBusy = false
         },
     )
 
     suspend fun performRestore(
+        stagedRoot: File,
+        metadata: BackupArchive.Metadata,
         selection: Backup.Selection,
         strategy: ImportStrategy,
     ) {
-        val workspace = restoreWorkspace!!
         val shouldReset = strategy == ImportStrategy.Erase
         if (selection.jetprefDatastore) {
-            val file = workspace.outputDir
+            val file = stagedRoot
                 .subDir(AndroidAppDataStorage.JETPREF_DIR_NAME)
                 .subFile("${FlorisPreferenceModel.NAME}.${AndroidAppDataStorage.JETPREF_FILE_EXT}")
-            if (file.exists()) {
-                val fileBasedStorage = FileBasedStorage(file.path)
-                FlorisPreferenceStore.importWithLegacyMigrations(
-                    strategy = strategy,
-                    reader = fileBasedStorage,
-                    sourceVersionCode = workspace.metadata.versionCode,
-                    sourceVersionName = workspace.metadata.versionName,
-                ).getOrThrow()
-            }
+            val fileBasedStorage = FileBasedStorage(file.path)
+            FlorisPreferenceStore.importWithLegacyMigrations(
+                strategy = strategy,
+                reader = fileBasedStorage,
+                sourceVersionCode = metadata.versionCode,
+                sourceVersionName = metadata.versionName,
+            ).getOrThrow()
         }
-        val workspaceFilesDir = workspace.outputDir.subDir("files")
+        val workspaceFilesDir = stagedRoot.subDir("files")
         if (selection.imeKeyboard) {
             val srcDir = workspaceFilesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH)
             val dstDir = context.filesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH)
-            if (srcDir.exists()) {
-                if (shouldReset) {
-                    dstDir.deleteContentsRecursively()
-                }
-                srcDir.copyRecursively(dstDir, overwrite = true)
+            if (shouldReset) {
+                dstDir.deleteContentsRecursively()
             }
+            srcDir.copyRecursively(dstDir, overwrite = true)
         }
         if (selection.imeTheme) {
             val srcDir = workspaceFilesDir.subDir(ExtensionManager.IME_THEME_PATH)
             val dstDir = context.filesDir.subDir(ExtensionManager.IME_THEME_PATH)
-            if (srcDir.exists()) {
-                if (shouldReset) {
-                    dstDir.deleteContentsRecursively()
-                }
-                srcDir.copyRecursively(dstDir, overwrite = true)
+            if (shouldReset) {
+                dstDir.deleteContentsRecursively()
             }
+            srcDir.copyRecursively(dstDir, overwrite = true)
         }
         val clipboardManager = context.clipboardManager().value
         if (shouldReset && selection.provideClipboardItems()) {
@@ -231,52 +271,35 @@ fun RestoreScreen() = FlorisScreen {
         }
 
         if (selection.provideClipboardItems()) {
-            val clipboardFilesDir = workspace.outputDir.subDir("clipboard")
+            val clipboardFilesDir = stagedRoot.subDir("clipboard")
+
+            fun restoreClipboardItems(type: ItemType, jsonName: String) {
+                val items = clipboardFilesDir.subFile(jsonName)
+                    .readJson<List<ClipboardItem>>()
+                    .filter { it.type == type }
+                if (type != ItemType.TEXT) {
+                    for (item in items) {
+                        val mediaFileName = item.uri!!.path!!.substringAfterLast('/')
+                        val mediaFile = clipboardFilesDir.subFile(
+                            "${ClipboardFileStorage.CLIPBOARD_FILES_PATH}/$mediaFileName",
+                        )
+                        ClipboardFileStorage.insertFileFromBackupIfNotExisting(
+                            context,
+                            mediaFile,
+                        )
+                    }
+                }
+                clipboardManager.restoreHistory(items)
+            }
 
             if (selection.clipboardTextItems) {
-                val clipboardItems = clipboardFilesDir.subFile(BackupArchive.CLIPBOARD_TEXT_ITEMS_JSON_NAME)
-                if (clipboardItems.exists()) {
-                    val clipboardItemsList = clipboardItems.readJson<List<ClipboardItem>>()
-                    clipboardManager.restoreHistory(items = clipboardItemsList.filter { it.type == ItemType.TEXT })
-                }
+                restoreClipboardItems(ItemType.TEXT, BackupArchive.CLIPBOARD_TEXT_ITEMS_JSON_NAME)
             }
             if (selection.clipboardImageItems) {
-                val clipboardItems = clipboardFilesDir.subFile(BackupArchive.CLIPBOARD_IMAGES_JSON_NAME)
-                if (clipboardItems.exists()) {
-                    val clipboardItemsList = clipboardItems.readJson<List<ClipboardItem>>()
-                    for (item in clipboardItemsList.filter { it.type == ItemType.IMAGE }) {
-                        ClipboardFileStorage.insertFileFromBackupIfNotExisting(
-                            context,
-                            clipboardFilesDir.subFile(
-                                relPath = "${ClipboardFileStorage.CLIPBOARD_FILES_PATH}/${
-                                    item.uri!!.path!!.split(
-                                        '/'
-                                    ).last()
-                                }"
-                            )
-                        )
-                    }
-                    clipboardManager.restoreHistory(items = clipboardItemsList.filter { it.type == ItemType.IMAGE })
-                }
+                restoreClipboardItems(ItemType.IMAGE, BackupArchive.CLIPBOARD_IMAGES_JSON_NAME)
             }
             if (selection.clipboardVideoItems) {
-                val clipboardItems = clipboardFilesDir.subFile(BackupArchive.CLIPBOARD_VIDEO_JSON_NAME)
-                if (clipboardItems.exists()) {
-                    val clipboardItemsList = clipboardItems.readJson<List<ClipboardItem>>()
-                    for (item in clipboardItemsList.filter { it.type == ItemType.VIDEO }) {
-                        ClipboardFileStorage.insertFileFromBackupIfNotExisting(
-                            context,
-                            clipboardFilesDir.subFile(
-                                relPath = "${ClipboardFileStorage.CLIPBOARD_FILES_PATH}/${
-                                    item.uri!!.path!!.split(
-                                        '/'
-                                    ).last()
-                                }"
-                            )
-                        )
-                    }
-                    clipboardManager.restoreHistory(items = clipboardItemsList.filter { it.type == ItemType.VIDEO })
-                }
+                restoreClipboardItems(ItemType.VIDEO, BackupArchive.CLIPBOARD_VIDEO_JSON_NAME)
             }
         }
     }
@@ -286,7 +309,8 @@ fun RestoreScreen() = FlorisScreen {
             ButtonBarSpacer()
             ButtonBarTextButton(
                 onClick = {
-                    closeRestoreWorkspace()
+                    restoreWorkspace?.requestClose()
+                    restoreWorkspace = null
                     navController.navigateUp()
                 },
                 text = stringRes(R.string.action__cancel),
@@ -298,33 +322,75 @@ fun RestoreScreen() = FlorisScreen {
                     isRestoreBusy = true
                     val selection = restoreFilesSelector.snapshot()
                     val strategy = importStrategy
-                    restoreScope.launch(Dispatchers.Main) {
+                    val workspace = restoreWorkspace
+                    restoreScope.launch {
+                        var stagedRestore: StagedRestore? = null
+                        var restoreSucceeded = false
                         try {
-                            performRestore(selection, strategy)
-                            closeRestoreWorkspace()
-                            context.showLongToast(R.string.backup_and_restore__restore__success)
-                            navController.navigateUp()
+                            val session = workspace?.restoreSession
+                                ?: throw RestoreFlowException(RestoreFlowFailure.ARCHIVE_REJECTED)
+                            val plan = when (
+                                val result = session.createPlan(
+                                    RestoreRequest(
+                                        mode = if (strategy == ImportStrategy.Erase) {
+                                            RestoreMode.REPLACE_SELECTED
+                                        } else {
+                                            RestoreMode.MERGE
+                                        },
+                                        selectedComponents = selection.components(),
+                                    ),
+                                )
+                            ) {
+                                is RestorePlanResult.Valid -> result.plan
+                                is RestorePlanResult.Invalid -> {
+                                    throw RestoreFlowException(RestoreFlowFailure.PLAN_REJECTED)
+                                }
+                            }
+                            stagedRestore = when (
+                                val result = BackupArchiveStager.stage(
+                                    session = session,
+                                    plan = plan,
+                                    stagingParent = workspace.outputDir.toPath(),
+                                )
+                            ) {
+                                is BackupArchiveStagingResult.Valid -> result.stagedRestore
+                                is BackupArchiveStagingResult.Invalid -> {
+                                    throw RestoreFlowException(RestoreFlowFailure.STAGING_REJECTED)
+                                }
+                            }
+                            performRestore(
+                                stagedRoot = stagedRestore.root.toFile(),
+                                metadata = workspace.metadata,
+                                selection = selection,
+                                strategy = strategy,
+                            )
+                            restoreSucceeded = true
                         } catch (e: CancellationException) {
-                            closeRestoreWorkspace()
                             throw e
-                        } catch (e: Throwable) {
-                            val failureClass = e.javaClass.simpleName
+                        } catch (e: Exception) {
+                            val failureClass = e.safeRestoreFailureName()
                             flogError { "Restore failed: failureClass=$failureClass" }
-                            closeRestoreWorkspace()
                             context.showLongToast(
                                 R.string.backup_and_restore__restore__failure,
                                 "error_message" to failureClass,
                             )
                         } finally {
+                            closeRestoreWorkspace(workspace, stagedRestore)
                             isRestoreBusy = false
+                        }
+                        if (restoreSucceeded) {
+                            currentCoroutineContext().ensureActive()
+                            context.showLongToast(R.string.backup_and_restore__restore__success)
+                            navController.navigateUp()
                         }
                     }
                 },
                 text = stringRes(R.string.action__restore),
                 enabled = !isRestoreBusy &&
                     restoreFilesSelector.atLeastOneSelected() &&
-                    restoreWorkspace != null &&
-                    restoreWorkspace?.restoreErrorId == null,
+                    restoreWorkspace?.restoreSession?.archive?.availableComponents?.containsAll(
+                        restoreFilesSelector.snapshot().components(),
+                    ) == true,
             )
         }
     }
@@ -403,23 +469,7 @@ fun RestoreScreen() = FlorisScreen {
                         formatter.format(calendar.time)
                     },
                 )
-                if (workspace.restoreErrorId != null) {
-                    Column(modifier = Modifier.padding(FlorisCardDefaults.ContentPadding)) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(9.dp)
-                                .padding(bottom = 8.dp)
-                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.56f))
-                        )
-                        Text(
-                            text = stringRes(workspace.restoreErrorId!!),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                            fontStyle = FontStyle.Italic,
-                        )
-                    }
-                } else if (workspace.restoreWarningId != null) {
+                if (workspace.restoreWarningId != null) {
                     Column(modifier = Modifier.padding(FlorisCardDefaults.ContentPadding)) {
                         Box(
                             modifier = Modifier
@@ -437,12 +487,11 @@ fun RestoreScreen() = FlorisScreen {
                     }
                 }
             }
-            if (workspace.restoreErrorId == null) {
-                BackupFilesSelector(
-                    filesSelector = restoreFilesSelector,
-                    title = stringRes(R.string.backup_and_restore__restore__files),
-                )
-            }
+            BackupFilesSelector(
+                filesSelector = restoreFilesSelector,
+                title = stringRes(R.string.backup_and_restore__restore__files),
+                availableComponents = workspace.restoreSession?.archive?.availableComponents.orEmpty(),
+            )
         }
     }
 }

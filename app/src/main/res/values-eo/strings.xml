@@ -406,8 +406,6 @@
     <string name="backup_and_restore__restore__summary">Restarigi agordojn kaj personecigojn el savkopio</string>
     <string name="backup_and_restore__restore__files">Elektu kion estos restaŭratan</string>
     <string name="backup_and_restore__restore__metadata">Savkopio elektita</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Tiu savkopio enhavas malvalidajn metadatumojn. Ĝi estas aŭ aĉigita aŭ fuŝe redaktita. Restaŭri el ĉi tiu arkivo maleblas, bonvolu elekti alion.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Tiu savkopio enhavas neniun restaŭrendan dosieron, bonvolu elekti alion.</string>
     <string name="backup_and_restore__restore__mode">Restaŭra reĝimo</string>
     <string name="backup_and_restore__restore__mode_merge">Kunfandi kun nunaj datumoj</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Forviŝi kaj surskribi nunajn datumojn</string>

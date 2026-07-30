@@ -592,8 +592,6 @@
     <string name="backup_and_restore__restore__metadata">Seçilen yedek arşivi</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">Bu yedek arşivi mevcut sürümden farklı bir sürümde oluşturulmuştur, bu genellikle desteklenir. Ancak küçük sorunların ortaya çıkabileceğini veya özellik farklılıkları nedeniyle bazı tercihlerin düzgün aktarılamayabileceğini unutmayın.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">Bu yedek arşivi üçüncü taraf bir uygulamada oluşturulmuştur, bu genellikle desteklenmez. Veri kayıpları meydana gelebilir, riski size ait olmak üzere geri yükleyin!</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Bu yedek arşivi geçersiz meta veriler içeriyor. Ya bozulmuş ya da kötü bir şekilde değiştirilmiş. Bu arşivden geri yükleme yapmak mümkün değil, lütfen başka bir tane seçin.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Bu yedek arşivi geri yüklenecek herhangi bir dosya içermiyor, lütfen başka bir tane seçin.</string>
     <string name="backup_and_restore__restore__mode">Geri yükleme modu</string>
     <string name="backup_and_restore__restore__mode_merge">Mevcut verilerle birleştir</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Mevcut verileri sil ve üzerine yaz</string>

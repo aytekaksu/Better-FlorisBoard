@@ -2336,17 +2336,6 @@
 
     <issue
         id="UnusedResources"
-        message="The resource `R.string.backup_and_restore__restore__metadata_error_nothing_to_restore` appears to be unused"
-        errorLine1="    &lt;string name=&quot;backup_and_restore__restore__metadata_error_nothing_to_restore&quot;>This backup archive does not contain any files to restore, please select another one.&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="690"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
         message="The resource `R.string.clip__clear_history` appears to be unused"
         errorLine1="    &lt;string name=&quot;clip__clear_history&quot;>Clear history&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">

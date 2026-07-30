@@ -604,8 +604,6 @@
     <string name="backup_and_restore__restore__metadata">Vybraný archiv zálohy</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">Tento archiv zálohy byl vygenerován v jiné verzi, než jakou aktuálně používáte, což je většinou podporováno. Mějte ale prosím na vědomí, že se mohou vyskytnout menší problémy nebo se některé předvolby nemusí správně převést kvůli rozdílům ve funkcích.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">Tento archiv zálohy byl vygenerován v aplikaci třetí strany, což většinou není podporováno. Mohou se vyskytnout ztráty dat, obnovte na vlastní nebezpečí!</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Tento archiv zálohy obsahuje neplatná metadata. Buď byl poškozen, nebo nesprávně upraven. Obnovení zálohy z tohoto archivu není možné, zvolte prosím jiný.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Tento archiv zálohy neobsahuje žádné soubory k obnovení, vyberte prosím jiný.</string>
     <string name="backup_and_restore__restore__mode">Obnovovací reřim</string>
     <string name="backup_and_restore__restore__mode_merge">Sloučit s aktuálními daty</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Vymazat a přepsat aktuální data</string>

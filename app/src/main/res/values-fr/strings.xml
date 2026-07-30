@@ -526,8 +526,6 @@
     <string name="backup_and_restore__restore__metadata">Archive de sauvegarde sélectionnée</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">Cette archive de sauvegarde a été générée dans une autre version, ce qui est en général supporté. Faites attention cependant : des problèmes mineurs peuvent apparaitre et quelques paramètres peuvent être perdus à cause des différence de fonctionnalité.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">Cette archive de sauvegarde a été générée par une application tierce, ce qui est en général non supporté. Des pertes de données peuvent avoir lieu, restaurez à vos risques et périls !</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Cette archive de sauvegarde contient des métadonnées invalides. Elle a été corrompue ou mal modifiée. Il est impossible de restaurer depuis cette archive, merci d\'en sélectionner une autre.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Cette archive de sauvegarde ne contient aucun fichier à restaurer, merci d\'en sélectionner une autre.</string>
     <string name="backup_and_restore__restore__mode">Mode de restauration</string>
     <string name="backup_and_restore__restore__mode_merge">Fusionner avec les données actuelles</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Écraser les données actuelles</string>

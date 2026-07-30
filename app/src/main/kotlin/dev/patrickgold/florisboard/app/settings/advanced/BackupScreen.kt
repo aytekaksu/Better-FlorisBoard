@@ -28,8 +28,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,7 +57,14 @@ import dev.patrickgold.florisboard.lib.io.ZipUtils
 import dev.patrickgold.jetpref.datastore.runtime.AndroidAppDataStorage
 import dev.patrickgold.jetpref.datastore.runtime.FileBasedStorage
 import dev.patrickgold.jetpref.material.ui.JetPrefListItem
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.florisboard.lib.android.showLongToast
 import org.florisboard.lib.android.writeFromFile
 import org.florisboard.lib.compose.FlorisButtonBar
@@ -84,6 +89,15 @@ object Backup {
     ) {
         fun provideClipboardItems(): Boolean =
             clipboardTextItems || clipboardImageItems || clipboardVideoItems
+
+        internal fun components(): Set<BackupComponent> = buildSet {
+            if (jetprefDatastore) add(BackupComponent.PREFERENCES)
+            if (imeKeyboard) add(BackupComponent.KEYBOARD_EXTENSIONS)
+            if (imeTheme) add(BackupComponent.THEME_EXTENSIONS)
+            if (clipboardTextItems) add(BackupComponent.CLIPBOARD_TEXT)
+            if (clipboardImageItems) add(BackupComponent.CLIPBOARD_IMAGES)
+            if (clipboardVideoItems) add(BackupComponent.CLIPBOARD_VIDEOS)
+        }
     }
 
     enum class Destination {
@@ -99,22 +113,38 @@ object Backup {
         var clipboardImageItems by mutableStateOf(false)
         var clipboardVideoItems by mutableStateOf(false)
 
-        private var _clipboardData: MutableState<ToggleableState> = mutableStateOf(ToggleableState.Off)
-        val clipboardData: State<ToggleableState> = _clipboardData
+        internal fun resetForRestore(availableComponents: Set<BackupComponent>) {
+            jetprefDatastore = BackupComponent.PREFERENCES in availableComponents
+            imeKeyboard = BackupComponent.KEYBOARD_EXTENSIONS in availableComponents
+            imeTheme = BackupComponent.THEME_EXTENSIONS in availableComponents
+            clipboardTextItems = false
+            clipboardImageItems = false
+            clipboardVideoItems = false
+        }
 
-        fun updateCheckboxState() {
-            val newValue = if (
-                !clipboardVideoItems && !clipboardImageItems && !clipboardTextItems
-            ) {
-                ToggleableState.Off
-            } else if (
-                clipboardVideoItems && clipboardImageItems && clipboardTextItems
-            ) {
-                ToggleableState.On
-            } else {
-                ToggleableState.Indeterminate
+        internal fun clipboardState(availableComponents: Set<BackupComponent>? = null): ToggleableState {
+            val available = clipboardComponents.filter { availableComponents == null || it in availableComponents }
+            val selected = snapshot().components()
+            return when {
+                available.none { it in selected } -> ToggleableState.Off
+                available.all { it in selected } -> ToggleableState.On
+                else -> ToggleableState.Indeterminate
             }
-            _clipboardData.value = newValue
+        }
+
+        internal fun setClipboardSelected(
+            selected: Boolean,
+            availableComponents: Set<BackupComponent>? = null,
+        ) {
+            if (availableComponents == null || BackupComponent.CLIPBOARD_TEXT in availableComponents) {
+                clipboardTextItems = selected
+            }
+            if (availableComponents == null || BackupComponent.CLIPBOARD_IMAGES in availableComponents) {
+                clipboardImageItems = selected
+            }
+            if (availableComponents == null || BackupComponent.CLIPBOARD_VIDEOS in availableComponents) {
+                clipboardVideoItems = selected
+            }
         }
 
         fun atLeastOneSelected(): Boolean {
@@ -128,6 +158,12 @@ object Backup {
             clipboardTextItems = clipboardTextItems,
             clipboardImageItems = clipboardImageItems,
             clipboardVideoItems = clipboardVideoItems,
+        )
+
+        private val clipboardComponents = listOf(
+            BackupComponent.CLIPBOARD_TEXT,
+            BackupComponent.CLIPBOARD_IMAGES,
+            BackupComponent.CLIPBOARD_VIDEOS,
         )
     }
 }
@@ -150,10 +186,13 @@ fun BackupScreen() = FlorisScreen {
     var preparedSelection by remember { mutableStateOf<Backup.Selection?>(null) }
     var isBackupBusy by remember { mutableStateOf(false) }
 
-    fun closeBackupWorkspace() {
-        backupWorkspace?.close()
+    fun takeBackupWorkspace() = backupWorkspace.also {
         backupWorkspace = null
         preparedSelection = null
+    }
+
+    fun closeBackupWorkspace() {
+        takeBackupWorkspace()?.requestClose()
     }
 
     DisposableEffect(Unit) {
@@ -170,21 +209,44 @@ fun BackupScreen() = FlorisScreen {
                 closeBackupWorkspace()
                 return@rememberLauncherForActivityResult
             }
-            runCatching {
-                context.contentResolver.writeFromFile(uri, backupWorkspace!!.zipFile)
-            }.onSuccess {
-                closeBackupWorkspace()
+            val workspace = takeBackupWorkspace()
+            if (workspace == null || workspace.isClosed()) {
                 isBackupBusy = false
                 scope.launch {
+                    context.showLongToast(
+                        R.string.backup_and_restore__back_up__failure,
+                        "error_message" to "SOURCE_UNAVAILABLE",
+                    )
+                }
+                return@rememberLauncherForActivityResult
+            }
+            scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                var failureClass: String? = null
+                try {
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.writeFromFile(uri, workspace.zipFile)
+                    }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    failureClass = error.javaClass.simpleName
+                    flogError { "Failed to save backup: failureClass=$failureClass" }
+                } finally {
+                    withContext(NonCancellable + Dispatchers.IO) {
+                        try {
+                            workspace.close()
+                        } finally {
+                            if (!workspace.isClosed()) {
+                                workspace.requestClose()
+                            }
+                        }
+                    }
+                    isBackupBusy = false
+                }
+                if (failureClass == null) {
                     context.showLongToast(R.string.backup_and_restore__back_up__success)
                     navController.popBackStack()
-                }
-            }.onFailure { error ->
-                val failureClass = error.javaClass.simpleName
-                flogError { "Failed to save backup: failureClass=$failureClass" }
-                closeBackupWorkspace()
-                isBackupBusy = false
-                scope.launch {
+                } else {
                     context.showLongToast(
                         R.string.backup_and_restore__back_up__failure,
                         "error_message" to failureClass,
@@ -194,80 +256,139 @@ fun BackupScreen() = FlorisScreen {
         },
     )
 
-    suspend fun prepareBackupWorkspace(selection: Backup.Selection) {
+    suspend fun prepareBackupWorkspace(
+        selection: Backup.Selection,
+    ): CacheManager.BackupAndRestoreWorkspace {
         val workspace = cacheManager.backupAndRestore.new()
-        backupWorkspace = workspace
-        preparedSelection = selection
-        if (selection.jetprefDatastore) {
-            val fileBasedStorage = workspace.inputDir
-                .subDir(AndroidAppDataStorage.JETPREF_DIR_NAME)
-                .subFile("${FlorisPreferenceModel.NAME}.${AndroidAppDataStorage.JETPREF_FILE_EXT}")
-                .let { FileBasedStorage(it.path) }
-            FlorisPreferenceStore.export(fileBasedStorage).getOrThrow()
-        }
-        val workspaceFilesDir = workspace.inputDir.subDir("files")
-        if (selection.imeKeyboard) {
-            context.filesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH).let { dir ->
-                dir.copyRecursively(workspaceFilesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH))
-            }
-        }
-        if (selection.imeTheme) {
-            context.filesDir.subDir(ExtensionManager.IME_THEME_PATH).let { dir ->
-                dir.copyRecursively(workspaceFilesDir.subDir(ExtensionManager.IME_THEME_PATH))
-            }
-        }
+        var accepted = false
+        try {
+            withContext(Dispatchers.IO) {
+                val operationContext = currentCoroutineContext()
+                val archiveLimits = ArchiveLimits.Default
+                val transferBudget = ZipUtils.TransferBudget(
+                    maxEntries = archiveLimits.maxEntries,
+                    maxBytes = archiveLimits.maxExpandedBytes,
+                    maxFileBytes = archiveLimits.maxEntryBytes,
+                    checkCancelled = { operationContext.ensureActive() },
+                )
+                if (selection.jetprefDatastore) {
+                    val fileBasedStorage = workspace.inputDir
+                        .subDir(AndroidAppDataStorage.JETPREF_DIR_NAME)
+                        .subFile("${FlorisPreferenceModel.NAME}.${AndroidAppDataStorage.JETPREF_FILE_EXT}")
+                        .let { FileBasedStorage(it.path) }
+                    FlorisPreferenceStore.export(fileBasedStorage).getOrThrow()
+                }
+                val workspaceFilesDir = workspace.inputDir.subDir("files")
+                if (selection.imeKeyboard) {
+                    ZipUtils.copyDirectoryNoFollow(
+                        srcDir = context.filesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH),
+                        dstDir = workspaceFilesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH),
+                        allowMissing = true,
+                        budget = transferBudget,
+                    )
+                }
+                if (selection.imeTheme) {
+                    ZipUtils.copyDirectoryNoFollow(
+                        srcDir = context.filesDir.subDir(ExtensionManager.IME_THEME_PATH),
+                        dstDir = workspaceFilesDir.subDir(ExtensionManager.IME_THEME_PATH),
+                        allowMissing = true,
+                        budget = transferBudget,
+                    )
+                }
 
-        if (selection.provideClipboardItems()) {
-            val clipboardManager by context.clipboardManager()
-            val clipboardHistory = clipboardManager.currentHistory.all
-            val clipboardFilesDir = workspace.inputDir.subDir("clipboard")
-            clipboardFilesDir.mkdir()
+                if (selection.provideClipboardItems()) {
+                    val clipboardManager by context.clipboardManager()
+                    val clipboardHistory = clipboardManager.currentHistory.all
+                    val clipboardFilesDir = workspace.inputDir.subDir("clipboard")
+                    clipboardFilesDir.mkdir()
 
-            fun backupClipboardItems(type: ItemType, jsonName: String) {
-                val items = clipboardHistory.filter { it.type == type }
-                clipboardFilesDir.subFile(jsonName).writeJson(items)
-                if (type == ItemType.TEXT) return
+                    fun backupClipboardItems(type: ItemType, jsonName: String) {
+                        val items = clipboardHistory.filter { it.type == type }
+                        clipboardFilesDir.subFile(jsonName).writeJson(items)
+                        if (type == ItemType.TEXT) return
 
-                val mediaDir = clipboardFilesDir
-                    .subDir(ClipboardFileStorage.CLIPBOARD_FILES_PATH)
-                    .also { it.mkdirs() }
-                for (item in items) {
-                    val id = ContentUris.parseId(item.uri!!)
-                    ClipboardFileStorage.getFileForId(context, id).copyTo(mediaDir.subFile("$id"))
+                        val mediaDir = clipboardFilesDir
+                            .subDir(ClipboardFileStorage.CLIPBOARD_FILES_PATH)
+                            .also { it.mkdirs() }
+                        for (item in items) {
+                            val id = ContentUris.parseId(item.uri!!)
+                            ZipUtils.copyFileNoFollow(
+                                ClipboardFileStorage.getFileForId(context, id),
+                                mediaDir.subFile("$id"),
+                                transferBudget,
+                            )
+                        }
+                    }
+
+                    if (selection.clipboardTextItems) {
+                        backupClipboardItems(ItemType.TEXT, BackupArchive.CLIPBOARD_TEXT_ITEMS_JSON_NAME)
+                    }
+                    if (selection.clipboardImageItems) {
+                        backupClipboardItems(ItemType.IMAGE, BackupArchive.CLIPBOARD_IMAGES_JSON_NAME)
+                    }
+                    if (selection.clipboardVideoItems) {
+                        backupClipboardItems(ItemType.VIDEO, BackupArchive.CLIPBOARD_VIDEO_JSON_NAME)
+                    }
+                }
+                workspace.metadata = BackupArchive.Metadata(
+                    packageName = BuildConfig.APPLICATION_ID,
+                    versionCode = BuildConfig.VERSION_CODE,
+                    versionName = BuildConfig.VERSION_NAME,
+                    timestamp = System.currentTimeMillis(),
+                )
+                workspace.inputDir.subFile(BackupArchive.METADATA_JSON_NAME).writeJson(workspace.metadata)
+                workspace.inputDir.subFile(BackupArchive.MANIFEST_JSON_NAME).writeJson(
+                    BackupArchive.Manifest(
+                        formatVersion = BackupArchive.CURRENT_MANIFEST_VERSION,
+                        components = BackupComponent.entries
+                            .filter { it in selection.components() }
+                            .map { it.wireId },
+                    ),
+                )
+                operationContext.ensureActive()
+                workspace.zipFile = workspace.outputDir.subFile(BackupArchive.defaultFileName(workspace.metadata))
+                ZipUtils.zip(
+                    workspace.inputDir,
+                    workspace.zipFile,
+                    ZipUtils.WriteLimits(
+                        maxEntries = archiveLimits.maxEntries,
+                        maxSourceBytes = archiveLimits.maxExpandedBytes,
+                        maxFileBytes = archiveLimits.maxEntryBytes,
+                        maxPathBytes = archiveLimits.maxPathBytes,
+                        maxPathSegmentBytes = archiveLimits.maxPathSegmentBytes,
+                        maxOutputBytes = archiveLimits.maxArchiveBytes,
+                        maxFileBytesForPath = archiveLimits::maxEntryBytesFor,
+                        checkCancelled = { operationContext.ensureActive() },
+                    ),
+                )
+                val snapshot = ArchiveSnapshot(workspace.zipFile.toPath(), workspace.zipFile.length())
+                when (val result = BackupArchiveSession.open(snapshot)) {
+                    is BackupArchiveSessionResult.Valid -> result.session.close()
+                    is BackupArchiveSessionResult.Invalid -> error("Generated backup failed validation.")
                 }
             }
-
-            if (selection.clipboardTextItems) {
-                backupClipboardItems(ItemType.TEXT, BackupArchive.CLIPBOARD_TEXT_ITEMS_JSON_NAME)
-            }
-            if (selection.clipboardImageItems) {
-                backupClipboardItems(ItemType.IMAGE, BackupArchive.CLIPBOARD_IMAGES_JSON_NAME)
-            }
-            if (selection.clipboardVideoItems) {
-                backupClipboardItems(ItemType.VIDEO, BackupArchive.CLIPBOARD_VIDEO_JSON_NAME)
+            accepted = true
+            return workspace
+        } finally {
+            if (!accepted) {
+                withContext(NonCancellable + Dispatchers.IO) {
+                    workspace.close()
+                }
             }
         }
-        workspace.metadata = BackupArchive.Metadata(
-            packageName = BuildConfig.APPLICATION_ID,
-            versionCode = BuildConfig.VERSION_CODE,
-            versionName = BuildConfig.VERSION_NAME,
-            timestamp = System.currentTimeMillis(),
-        )
-        workspace.inputDir.subFile(BackupArchive.METADATA_JSON_NAME).writeJson(workspace.metadata)
-        workspace.zipFile = workspace.outputDir.subFile(BackupArchive.defaultFileName(workspace.metadata))
-        ZipUtils.zip(workspace.inputDir, workspace.zipFile)
     }
 
     suspend fun prepareAndPerformBackup() {
         val selection = backupFilesSelector.snapshot()
         val destination = backupDestination
-        runCatching {
+        try {
             if (backupWorkspace == null ||
                 backupWorkspace!!.isClosed() ||
                 preparedSelection != selection
             ) {
                 closeBackupWorkspace()
-                prepareBackupWorkspace(selection)
+                backupWorkspace = prepareBackupWorkspace(selection)
+                preparedSelection = selection
             }
             when (destination) {
                 Backup.Destination.FILE_SYS -> {
@@ -289,7 +410,11 @@ fun BackupScreen() = FlorisScreen {
                     isBackupBusy = false
                 }
             }
-        }.onFailure { error ->
+        } catch (error: CancellationException) {
+            closeBackupWorkspace()
+            isBackupBusy = false
+            throw error
+        } catch (error: Exception) {
             val failureClass = error.javaClass.simpleName
             flogError { "Backup failed: destination=$destination, failureClass=$failureClass" }
             closeBackupWorkspace()
@@ -356,7 +481,11 @@ internal fun BackupFilesSelector(
     modifier: Modifier = Modifier,
     filesSelector: Backup.FilesSelector,
     title: String,
+    availableComponents: Set<BackupComponent>? = null,
 ) {
+    fun isAvailable(component: BackupComponent): Boolean =
+        availableComponents == null || component in availableComponents
+
     FlorisOutlinedBox(
         modifier = modifier.defaultFlorisOutlinedBox(),
         title = title,
@@ -365,65 +494,62 @@ internal fun BackupFilesSelector(
             onClick = { filesSelector.jetprefDatastore = !filesSelector.jetprefDatastore },
             checked = filesSelector.jetprefDatastore,
             text = stringRes(R.string.backup_and_restore__back_up__files_jetpref_datastore),
+            enabled = isAvailable(BackupComponent.PREFERENCES),
         )
         CheckboxListItem(
             onClick = { filesSelector.imeKeyboard = !filesSelector.imeKeyboard },
             checked = filesSelector.imeKeyboard,
             text = stringRes(R.string.backup_and_restore__back_up__files_ime_keyboard),
+            enabled = isAvailable(BackupComponent.KEYBOARD_EXTENSIONS),
         )
         CheckboxListItem(
             onClick = { filesSelector.imeTheme = !filesSelector.imeTheme },
             checked = filesSelector.imeTheme,
             text = stringRes(R.string.backup_and_restore__back_up__files_ime_theme),
+            enabled = isAvailable(BackupComponent.THEME_EXTENSIONS),
         )
 
+        val clipboardAvailable = availableComponents == null ||
+            BackupComponent.CLIPBOARD_TEXT in availableComponents ||
+            BackupComponent.CLIPBOARD_IMAGES in availableComponents ||
+            BackupComponent.CLIPBOARD_VIDEOS in availableComponents
         TriStateCheckboxListItem(
             onClick = {
-                if (
-                    filesSelector.clipboardData.value == ToggleableState.Off ||
-                    filesSelector.clipboardData.value == ToggleableState.Indeterminate
-                ) {
-                    filesSelector.clipboardImageItems = true
-                    filesSelector.clipboardVideoItems = true
-                    filesSelector.clipboardTextItems = true
-                } else {
-                    filesSelector.clipboardImageItems = false
-                    filesSelector.clipboardVideoItems = false
-                    filesSelector.clipboardTextItems = false
-                }
-                filesSelector.updateCheckboxState()
+                val select = filesSelector.clipboardState(availableComponents) != ToggleableState.On
+                filesSelector.setClipboardSelected(select, availableComponents)
             },
-            state = filesSelector.clipboardData.value,
+            state = filesSelector.clipboardState(availableComponents),
             text = stringRes(R.string.backup_and_restore__back_up__files_clipboard_history),
+            enabled = clipboardAvailable,
         )
 
 
         CheckboxListItem(
             onClick = {
                 filesSelector.clipboardTextItems = !filesSelector.clipboardTextItems
-                filesSelector.updateCheckboxState()
             },
             checked = filesSelector.clipboardTextItems,
             text = stringRes(R.string.backup_and_restore__back_up__files_clipboard_history__clipboard_text_items),
             isSecondaryListItem = true,
+            enabled = isAvailable(BackupComponent.CLIPBOARD_TEXT),
         )
         CheckboxListItem(
             onClick = {
                 filesSelector.clipboardImageItems = !filesSelector.clipboardImageItems
-                filesSelector.updateCheckboxState()
             },
             checked = filesSelector.clipboardImageItems,
             text = stringRes(R.string.backup_and_restore__back_up__files_clipboard_history__clipboard_image_items),
             isSecondaryListItem = true,
+            enabled = isAvailable(BackupComponent.CLIPBOARD_IMAGES),
         )
         CheckboxListItem(
             onClick = {
                 filesSelector.clipboardVideoItems = !filesSelector.clipboardVideoItems
-                filesSelector.updateCheckboxState()
             },
             checked = filesSelector.clipboardVideoItems,
             text = stringRes(R.string.backup_and_restore__back_up__files_clipboard_history__clipboard_video_items),
             isSecondaryListItem = true,
+            enabled = isAvailable(BackupComponent.CLIPBOARD_VIDEOS),
         )
 
     }
@@ -434,10 +560,11 @@ internal fun CheckboxListItem(
     onClick: () -> Unit,
     checked: Boolean,
     text: String,
-    isSecondaryListItem: Boolean = false
+    isSecondaryListItem: Boolean = false,
+    enabled: Boolean = true,
 ) {
     JetPrefListItem(
-        modifier = Modifier.rippleClickable(onClick = onClick),
+        modifier = Modifier.rippleClickable(enabled = enabled, onClick = onClick),
         icon = {
             Row {
                 if (isSecondaryListItem) {
@@ -446,6 +573,7 @@ internal fun CheckboxListItem(
                 Checkbox(
                     checked = checked,
                     onCheckedChange = null,
+                    enabled = enabled,
                 )
             }
         },
@@ -459,9 +587,10 @@ internal fun TriStateCheckboxListItem(
     state: ToggleableState,
     text: String,
     isSecondaryListItem: Boolean = false,
+    enabled: Boolean = true,
 ) {
     JetPrefListItem(
-        modifier = Modifier.rippleClickable(onClick = onClick),
+        modifier = Modifier.rippleClickable(enabled = enabled, onClick = onClick),
         icon = {
             Row {
                 if (isSecondaryListItem) {
@@ -470,6 +599,7 @@ internal fun TriStateCheckboxListItem(
                 TriStateCheckbox(
                     state = state,
                     onClick = null,
+                    enabled = enabled,
                 )
             }
         },

@@ -592,8 +592,6 @@
     <string name="backup_and_restore__restore__metadata">Arquivo selecionado</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">Este arquivo foi gerado com uma versão mais antiga da aplicação que, normalmente, é funcional. Contudo, tenha em atenção de que podem ocorrer alguns erros e algumas preferências podem não ser restauradas corretamente.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">Este arquivo foi criado com uma aplicação de terceiros que, normalmente, não é funcional. Pode perder alguns dados e deve utilizar esta opção por sua conta e risco!</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Este arquivo possui dados inválidos. É provavél que esteja corrompido e modificado incorretamente. Não é possível restaurar os dados.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Este arquivo não possui quaisquer dados para restaurar. Por favor escolha outro.</string>
     <string name="backup_and_restore__restore__mode">Modo de restauro</string>
     <string name="backup_and_restore__restore__mode_merge">Juntar com os dados atuais</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Apagar e substituir os dados atuais</string>

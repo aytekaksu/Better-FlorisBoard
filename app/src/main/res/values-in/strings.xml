@@ -586,8 +586,6 @@ Klik di sini untuk menyelesaikan masalah ini.</string>
     <string name="backup_and_restore__restore__metadata">Arsip cadangan dipilih</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">Arsip cadangan ini dibuat di versi lain daripada saat ini, yang biasanya didukung. Dicatat bahwa masalah-masalah minor dapat terjadi atau beberapa preferensi tidak dapat dipindahkan dengan benar karena perbedaan fitur-fitur.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">Arsip cadangan ini dibuat oleh sebuah aplikasi pihak ketiga, yang biasanya tidak didukung. Kehilangan data mungkin terjadi, hanya pulihkan dengan risiko Anda sendiri!</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Arsip cadangan ini terdapat metadata yang tidak valid. Arsip cadangannya mungkin telah terkorupsi atau dimodifikasi dengan tidak benar. Memulihkan dari arsip ini tidak memungkinkan, mohon pilih yang lain.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Arsip cadangan ini tidak mempunyai file apa pun untuk dipulihkan, mohon pilih yang lain.</string>
     <string name="backup_and_restore__restore__mode">Mode pemulihan</string>
     <string name="backup_and_restore__restore__mode_merge">Gabung dengan data saat ini</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Hapus dan timpa data saat ini</string>

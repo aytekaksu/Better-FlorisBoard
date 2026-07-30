@@ -439,8 +439,6 @@
     <string name="backup_and_restore__restore__metadata">فایلی پاشەکەوتی هەڵبژێردراو</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">ئەم فایلە پاشەکەوتکراوە بە وەشانێکی تری جیاواز لەمەی ئێستا دروست کراوە، کە بە گشتی پشتگیری دەکرێت ئاگاداربە هەرچەندە کە کێشە لاوەکیەکان دەتوانن ڕوو بدەن یان هەندێک لە پەسەندەکان لەوانەیە بە شێوەیەکی گونجاو نەگوێزرێنەوە بەهۆی جیاوازی تایبەتمەندیەکان.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">ئەم فایلە پاشەکەوتە بە بەرنامەی لایەنی سێیەم دروست کراوە، کە بە گشتی پشتگیری نەکراوە، کە لەوانەیە هەندێ فایل لەدەست بدەیت، بیانگێڕەوە لەسەر بەرپرسیاری خۆت!</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">ئەم فایلە پاشەکەوتە داتای نادروستی تێدایە، یان تێکچووە یان بە خراپی گۆڕانکاری تێدا کراوە، لەبەر ئەوە ناتوانی ئەم فایلە بگەڕێنیتەوە، تکایە یەکێکی تر دیاریبکە.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">ئەم فایلە پاشەکەوتە هیچ فایلێکی تێدا نییە بۆ گێڕانەوە، تکایە یەکێکی تر دیاریبکە.</string>
     <string name="backup_and_restore__restore__mode">شێوازی گێڕانەوە</string>
     <string name="backup_and_restore__restore__mode_merge">تێکەڵکردن لەگەڵ داتاکانی ئێستا</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">سڕینەوە و گۆڕینی داتاکانی ئێستا</string>

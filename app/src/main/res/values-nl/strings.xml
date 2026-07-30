@@ -523,8 +523,6 @@ Deze toestemming kan op elk moment worden gewijzigd in de systeeminstellingen.  
     <string name="backup_and_restore__restore__metadata">Geselecteerd back-uparchief</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">Dit back-uparchief is gegenereerd in een andere versie dan de huidige, die over het algemeen wordt ondersteund. Houd er echter rekening mee dat er kleine problemen kunnen optreden of dat sommige voorkeuren mogelijk niet correct worden overgedragen vanwege functieverschillen.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">Dit back-uparchief is gegenereerd in een app van derden, die over het algemeen niet wordt ondersteund. Gegevensverlies kan optreden, herstel op eigen risico!</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Dit back-uparchief bevat ongeldige metadata. Of het is beschadigd of slecht gewijzigd. Herstellen vanuit dit archief is niet mogelijk, selecteer een andere.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Dit back-uparchief bevat geen bestanden om te herstellen, selecteer een andere.</string>
     <string name="backup_and_restore__restore__mode">Herstelmodus</string>
     <string name="backup_and_restore__restore__mode_merge">Samenvoegen met huidige gegevens</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Huidige gegevens wissen en overschrijven</string>

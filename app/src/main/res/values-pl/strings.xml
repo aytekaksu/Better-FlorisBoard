@@ -605,8 +605,6 @@
     <string name="backup_and_restore__restore__metadata">Wybrane archiwum kopii zapasowej</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">To archiwum kopii zapasowej zostało wygenerowane w wersji innej niż bieżąca, jest to ogólnie wspierane przez aplikacje. Należy jednak pamiętać, że mogą wystąpić drobne problemy lub niektóre preferencje mogą nie zostać poprawnie przeniesione z powodu różnic w funkcjach.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">To archiwum kopii zapasowej zostało wygenerowane w innej aplikacji, co nie jest wspierane. Może dojść do utraty danych, przywracasz na własne ryzyko!</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">To archiwum kopii zapasowej zawiera nieprawidłowe metadane. Albo zostało ono uszkodzone, albo źle zmodyfikowane. Przywrócenie z tego archiwum nie jest możliwe, wybierz inne.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">To archiwum kopii zapasowej nie zawiera żadnych plików do przywrócenia, wybierz inne.</string>
     <string name="backup_and_restore__restore__mode">Tryb przywracania</string>
     <string name="backup_and_restore__restore__mode_merge">Scal z aktualnymi danymi</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Usuń i nadpisz bieżące dane</string>

@@ -298,8 +298,6 @@
     <string name="backup_and_restore__restore__metadata">Vybratý záložný archív</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">Tento záložný archív bol vygenerovaný v inej verzii aplikácie, než je tá aktuálna. Aj keď je spomínaná verzia vo všeobecnosti podporovaná, upozorňujeme, že z dôvodu rozdielov vo funkciách sa môžu vyskytnúť drobné problémy alebo sa niektoré predvoľby nemusia preniesť správne.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">Tento záložný archív bol vygenerovaný v aplikácii tretej strany, ktorá vo všeobecnosti nie je podporovaná. Hrozí, že dôjde k strate dát, preto jeho obnovenie dobre zváž!</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Tento záložný archív obsahuje neplatné metadáta. Buď bol porušený, alebo nesprávne upravený. Obnovenie z tohto archívu nie je možné, preto vyber iný.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Tento záložný archív neobsahuje žiadne súbory, ktoré by sa dali obnoviť. Vyber iný.</string>
     <string name="backup_and_restore__restore__mode">Režim obnovenia</string>
     <string name="backup_and_restore__restore__mode_merge">Zlúčiť s aktuálnymi dátami</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Vymazať a prepísať aktuálne dáta</string>

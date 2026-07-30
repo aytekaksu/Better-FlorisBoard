@@ -598,8 +598,6 @@
     <string name="backup_and_restore__restore__metadata">Выберите файл резервной копии</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">Этот файл резервной копии был создан в версии приложения, отличной от текущей поддерживаемой. Имейте в виду, что могут возникнуть незначительные проблемы или некоторые настройки могут быть восстановлены неправильно из-за различий в функционале.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">Файл резервной копии был создан в стороннем приложении, которое поддерживается не полностью. Возможна потеря данных, восстанавливайте на свой страх и риск!</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Этот файл резервной копии содержит недопустимые метаданные. Либо он повреждён, либо неправильно изменён. Восстановление из этого файла невозможно, выберите другой.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Этот файл резервной копии не содержит данных для восстановления, выберите другой.</string>
     <string name="backup_and_restore__restore__mode">Режим восстановления</string>
     <string name="backup_and_restore__restore__mode_merge">Слияние с текущими данными</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Стереть и перезаписать текущие данные</string>

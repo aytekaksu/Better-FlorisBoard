@@ -489,8 +489,6 @@
     <string name="backup_and_restore__restore__metadata">Arquivo de backup selecionado</string>
     <string name="backup_and_restore__restore__metadata_warn_different_version">Este arquivo de backup foi gerado em outra versão que não a atual, que geralmente é suportada. Esteja ciente de que pequenos problemas podem ocorrer ou algumas preferências podem não ser transferidas corretamente devido a diferenças de recursos.</string>
     <string name="backup_and_restore__restore__metadata_warn_different_vendor">Esse arquivo de backup foi gerado em um aplicativo de terceiros, que geralmente não é compatível. Podem ocorrer perdas de dados, restaure por sua conta e risco!</string>
-    <string name="backup_and_restore__restore__metadata_error_invalid_metadata">Este arquivo de backup contém metadados inválidos. Ou ele foi corrompido ou mal modificado. Não é possível restaurar a partir deste arquivo, selecione outro.</string>
-    <string name="backup_and_restore__restore__metadata_error_nothing_to_restore">Este arquivo de backup não contém nenhum arquivo para restaurar, selecione outro.</string>
     <string name="backup_and_restore__restore__mode">Modo de restauração</string>
     <string name="backup_and_restore__restore__mode_merge">Mesclar com os dados atuais</string>
     <string name="backup_and_restore__restore__mode_erase_and_overwrite">Apagar e substituir os dados atuais</string>
