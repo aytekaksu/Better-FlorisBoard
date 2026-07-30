@@ -165,7 +165,7 @@ fun BackupScreen() = FlorisScreen {
                 context.showLongToastSync(R.string.backup_and_restore__back_up__success)
                 navController.popBackStack()
             }.onFailure { error ->
-                flogError { error.stackTraceToString() }
+                flogError { "Failed to save backup: error=${error.javaClass.simpleName}" }
                 context.showLongToastSync(R.string.backup_and_restore__back_up__failure, "error_message" to error.message)
                 backupWorkspace = null
             }
@@ -257,7 +257,7 @@ fun BackupScreen() = FlorisScreen {
                 }
             }
         }.onFailure { error ->
-            flogError { error.stackTraceToString() }
+            flogError { "Backup failed: destination=$backupDestination, error=${error.javaClass.simpleName}" }
             context.showLongToast(R.string.backup_and_restore__back_up__failure, "error_message" to error.message)
             backupWorkspace = null
         }

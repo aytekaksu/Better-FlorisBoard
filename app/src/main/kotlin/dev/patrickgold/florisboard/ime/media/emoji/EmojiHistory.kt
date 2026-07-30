@@ -58,7 +58,7 @@ data class EmojiHistory(
             try {
                 return Json.decodeFromString(value)
             } catch (e: Exception) {
-                flogError { "Failed to deserialize EmojiHistory: $e" }
+                flogError { "Failed to deserialize emoji history: error=${e.javaClass.simpleName}" }
                 return Empty
             }
         }

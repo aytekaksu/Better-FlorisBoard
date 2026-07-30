@@ -41,7 +41,7 @@ fun Context.launchUrl(url: String) {
     try {
         this.startActivity(intent)
     } catch (e: ActivityNotFoundException) {
-        flogError { e.toString() }
+        flogError { "URL launch failed: error=${e.javaClass.simpleName}" }
         Toast.makeText(
             this,
             this.stringRes(R.string.general__no_browser_app_found_for_url, "url" to url),
@@ -80,14 +80,14 @@ fun Context.launchPluginHttpsUrl(url: String) {
     try {
         startActivity(intent)
     } catch (error: ActivityNotFoundException) {
-        flogError { error.toString() }
+        flogError { "Plugin URL launch failed: error=${error.javaClass.simpleName}" }
         Toast.makeText(
             this,
             stringRes(R.string.general__no_browser_app_found_for_url, "url" to target),
             Toast.LENGTH_LONG,
         ).show()
     } catch (error: SecurityException) {
-        flogError { error.toString() }
+        flogError { "Plugin URL launch failed: error=${error.javaClass.simpleName}" }
     }
 }
 
@@ -100,7 +100,7 @@ inline fun <T : Any> Context.launchActivity(kClass: KClass<T>, intentModifier: (
         intentModifier(intent)
         this.startActivity(intent)
     } catch (e: ActivityNotFoundException) {
-        flogError { e.toString() }
+        flogError { "Activity launch failed: error=${e.javaClass.simpleName}" }
         Toast.makeText(this, e.localizedMessage, Toast.LENGTH_LONG).show()
     }
 }
@@ -114,7 +114,7 @@ inline fun Context.launchActivity(intentModifier: (Intent) -> Unit) {
         intentModifier(intent)
         this.startActivity(intent)
     } catch (e: ActivityNotFoundException) {
-        flogError { e.toString() }
+        flogError { "Activity launch failed: error=${e.javaClass.simpleName}" }
         Toast.makeText(this, e.localizedMessage, Toast.LENGTH_LONG).show()
     }
 }

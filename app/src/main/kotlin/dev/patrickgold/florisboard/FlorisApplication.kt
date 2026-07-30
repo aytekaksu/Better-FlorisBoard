@@ -97,11 +97,14 @@ class FlorisApplication : Application() {
         FlorisApplicationReference = WeakReference(this)
         try {
             Flog.install(
-                context = this,
-                isFloggingEnabled = BuildConfig.DEBUG,
+                isLogcatEnabled = BuildConfig.DEBUG,
+                isDiagnosticCaptureEnabled = true,
                 flogTopics = LogTopic.ALL,
-                flogLevels = Flog.LEVEL_ALL,
-                flogOutputs = Flog.OUTPUT_CONSOLE,
+                flogLevels = if (BuildConfig.DEBUG) {
+                    Flog.LEVEL_ALL
+                } else {
+                    Flog.LEVEL_ERROR or Flog.LEVEL_WARNING
+                },
             )
             CrashUtility.install(this)
             FlorisEmojiCompat.init(this)

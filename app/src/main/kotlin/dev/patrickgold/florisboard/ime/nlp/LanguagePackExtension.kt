@@ -81,9 +81,9 @@ class LanguagePackExtension( // FIXME: how to make this support multiple types o
             // TODO: use lock on database?
             hanShapeBasedSQLiteDatabase.takeIf { it.isOpen }?.close()
             hanShapeBasedSQLiteDatabase =
-                SQLiteDatabase.openDatabase(databasePath, null, SQLiteDatabase.OPEN_READONLY);
+                SQLiteDatabase.openDatabase(databasePath, null, SQLiteDatabase.OPEN_READONLY)
         } catch (e: SQLiteException) {
-            flogError { "SQLiteException in openDatabase: path=$databasePath, error='${e}'" }
+            flogError { "Failed to open Han shape database: error=${e.javaClass.simpleName}" }
         }
     }
 

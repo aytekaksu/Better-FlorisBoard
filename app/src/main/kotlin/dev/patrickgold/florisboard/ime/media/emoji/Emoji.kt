@@ -19,6 +19,7 @@ package dev.patrickgold.florisboard.ime.media.emoji
 import dev.patrickgold.florisboard.ime.keyboard.AbstractKeyData
 import dev.patrickgold.florisboard.ime.keyboard.ComputingEvaluator
 import dev.patrickgold.florisboard.ime.keyboard.KeyData
+import dev.patrickgold.florisboard.ime.keyboard.contentFreeString
 import dev.patrickgold.florisboard.ime.popup.PopupSet
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyType
@@ -76,7 +77,7 @@ class Emoji(val value: String, val name: String, val keywords: List<String>) : K
     }
 
     override fun toString(): String {
-        return "Emoji { value=$value, name=$name, keywords=$keywords }"
+        return contentFreeString()
     }
 
     override fun hashCode(): Int {

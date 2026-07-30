@@ -22,6 +22,9 @@ state, duration buckets, and error categories. It is bounded and process-local.
 It must never accept arbitrary strings, protocol objects, text, candidates,
 dictionaries, touch data, editor packages, or exception messages.
 
+The clipboard, input-state, and spelling overlays follow the same rule: they
+show only content-free types, states, flags, and counts.
+
 ## Safe fault injection
 
 Use synthetic fixtures to delay, duplicate, reorder, reject, or corrupt
@@ -34,12 +37,13 @@ Expected failures should be represented by typed results, not broad
 in ordinary diagnostics; a local crash report remains the detailed developer
 artifact.
 
-## Log export
+## Diagnostic report export
 
-The developer logcat export is limited to the current app process, a bounded
-line count, and a bounded byte size. Review it before sharing. It can still
-contain data written by Android or third-party libraries, so remove editor
-content, target-app identity, paths, accounts, and device details.
+The developer report uses a bounded, process-local snapshot of app-owned
+diagnostics in every build. Release builds retain this snapshot without writing
+it to Logcat and capture only warnings and errors to keep input paths cheap. The
+report never reads raw logcat, so Android and third-party messages cannot enter
+it. Review device and configuration details before sharing.
 
 Never add temporary logs containing:
 
@@ -50,6 +54,8 @@ Never add temporary logs containing:
 
 The `privacySourceCheck` merge gate catches common unsafe interpolation
 patterns, but review remains required.
+
+Run it directly with `./gradlew privacySourceCheck`.
 
 ## Performance investigation
 

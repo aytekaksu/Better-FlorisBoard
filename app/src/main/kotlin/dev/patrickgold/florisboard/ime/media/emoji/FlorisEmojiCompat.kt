@@ -83,7 +83,7 @@ object FlorisEmojiCompat {
         }
         val instance = instanceFlow.value
         if (setAsDefaultInstance && instance != null) {
-            flogInfo { "Set default EmojiCompat instance to $instance(replaceAll=$replaceAll)" }
+            flogInfo { "Set default EmojiCompat instance (replaceAll=$replaceAll)" }
             // This API is not really supposed to be used by third-party apps, but it is really handy and does
             // exactly what we need, so we suppress the restriction here
             EmojiCompat.reset(instance)
@@ -101,7 +101,8 @@ object FlorisEmojiCompat {
 
             override fun onFailed(throwable: Throwable?) {
                 super.onFailed(throwable)
-                flogError { "EmojiCompat(replaceAll=$replaceAll) failed to load: $throwable" }
+                val errorType = throwable?.javaClass?.simpleName ?: "unknown"
+                flogError { "EmojiCompat failed to load: replaceAll=$replaceAll, error=$errorType" }
             }
         }
 

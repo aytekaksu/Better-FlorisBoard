@@ -26,8 +26,6 @@ import dev.patrickgold.florisboard.ime.keyboard.KeyData
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
-import org.florisboard.lib.android.removeAndReturn
-import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -38,6 +36,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.florisboard.lib.android.removeAndReturn
 import org.florisboard.lib.kotlin.guardedByLock
 
 /**
@@ -261,7 +260,6 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
         onLongPress: () -> Boolean = { false },
         onRepeat: () -> Boolean = { true },
     ) = runBlocking {
-        flogDebug { data.toString() }
         val eventTime = SystemClock.uptimeMillis()
         val result = pressedKeys.withLock { pressedKeys ->
             if (pressedKeys.containsKey(data.code)) return@withLock null
@@ -319,7 +317,6 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
         data: KeyData,
         expected: PressedKeyInfo? = null,
     ): Boolean = runBlocking {
-        flogDebug { data.toString() }
         val (result, isBlocked) = pressedKeys.withLock { pressedKeys ->
             val pressedKeyInfo = pressedKeys[data.code]
             if (pressedKeyInfo != null && (expected == null || pressedKeyInfo === expected)) {
@@ -342,7 +339,6 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
     }
 
     fun sendDownUp(data: KeyData) = runBlocking {
-        flogDebug { data.toString() }
         pressedKeys.withLock { pressedKeys ->
             pressedKeys.removeAndReturn(data.code)?.also { it.cancelJobs() }
         }
@@ -357,7 +353,6 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
         data: KeyData,
         expected: PressedKeyInfo? = null,
     ): Boolean = runBlocking {
-        flogDebug { data.toString() }
         val result = pressedKeys.withLock { pressedKeys ->
             val pressedKeyInfo = pressedKeys[data.code]
             if (pressedKeyInfo != null && (expected == null || pressedKeyInfo === expected)) {

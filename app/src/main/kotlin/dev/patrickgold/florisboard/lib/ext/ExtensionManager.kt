@@ -28,8 +28,6 @@ import dev.patrickgold.florisboard.ime.text.composing.HangulUnicode
 import dev.patrickgold.florisboard.ime.text.composing.KanaUnicode
 import dev.patrickgold.florisboard.ime.text.composing.WithRules
 import dev.patrickgold.florisboard.ime.theme.ThemeExtension
-import dev.patrickgold.florisboard.lib.devtools.LogTopic
-import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.io.FlorisRef
 import dev.patrickgold.florisboard.lib.io.ZipUtils
@@ -189,8 +187,7 @@ class ExtensionManager(context: Context) {
 
                 // Stop watching on old file observer if one exists and start new observer on new path
                 fileObserver?.stopWatching()
-                fileObserver = FileObserver(internalModuleDir, FILE_OBSERVER_MASK) { event, path ->
-                    flogDebug(LogTopic.EXT_INDEXING) { "FileObserver.onEvent { event=$event path=$path }" }
+                fileObserver = FileObserver(internalModuleDir, FILE_OBSERVER_MASK) { _, path ->
                     if (path == null) return@FileObserver
                     ioScope.launch {
                         refreshGuard.withLock {
@@ -218,13 +215,15 @@ class ExtensionManager(context: Context) {
                                 list.add(ext)
                             },
                             onFailure = { error ->
-                                flogError { error.toString() }
+                                flogError {
+                                    "Failed to parse bundled extension manifest: error=${error.javaClass.simpleName}"
+                                }
                             },
                         )
                     }
                 },
                 onFailure = { error ->
-                    flogError { error.toString() }
+                    flogError { "Failed to list bundled extensions: error=${error.javaClass.simpleName}" }
                 },
             )
             return list.toList()
@@ -247,18 +246,22 @@ class ExtensionManager(context: Context) {
                                         list.add(ext)
                                     },
                                     onFailure = { error ->
-                                        flogError { error.toString() }
+                                        flogError {
+                                            "Installed manifest parse failed: error=${error.javaClass.simpleName}"
+                                        }
                                     },
                                 )
                             },
                             onFailure = { error ->
-                                flogError { error.toString() }
+                                flogError {
+                                    "Failed to read installed extension manifest: error=${error.javaClass.simpleName}"
+                                }
                             },
                         )
                     }
                 },
                 onFailure = { error ->
-                    flogError { error.toString() }
+                    flogError { "Failed to list installed extensions: error=${error.javaClass.simpleName}" }
                 },
             )
             return list.toList()

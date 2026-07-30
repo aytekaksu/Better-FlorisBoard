@@ -178,7 +178,7 @@ class ExtractedInputRootView(val ims: FlorisImeService, eet: ExtractEditText?) :
                 extractEditLayout.setPadding(0, 0, 0, 0)
             }
         } catch (e: Throwable) {
-            flogError { e.message.toString() }
+            flogError { "Failed to attach extracted input view: error=${e.javaClass.simpleName}" }
         }
     }
 }

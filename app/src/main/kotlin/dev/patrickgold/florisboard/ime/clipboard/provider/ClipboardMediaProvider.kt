@@ -166,11 +166,11 @@ class ClipboardMediaProvider : ContentProvider() {
                         ContentUris.withAppendedId(VIDEO_CLIPS_URI, id)
                     }
                 } catch (e: Exception) {
-                    flogError { e.message.toString() }
+                    flogError { "Unable to cache clipboard media (${e.javaClass.simpleName})" }
                     uri.buildUpon().appendPath("0").build()
                 }
             }
-            else -> error("Unable to identify type of $uri")
+            else -> error("Unsupported clipboard media URI.")
         }
     }
 
@@ -186,7 +186,7 @@ class ClipboardMediaProvider : ContentProvider() {
                 }
                 return 1
             }
-            else -> error("Unable to identify type of $uri")
+            else -> error("Unsupported clipboard media URI.")
         }
     }
 

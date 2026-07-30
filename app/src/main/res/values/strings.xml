@@ -771,12 +771,12 @@
     <string name="devtools__title" comment="Title of Devtools screen. Translators: treat this string as 'Developer tools' for translation, except a similar short term is available for your language.">Devtools</string>
     <string name="devtools__enabled__label" comment="Label of Enable developer tools in Devtools">Enable developer tools</string>
     <string name="devtools__enabled__summary" comment="Summary of Enable developer tools in Devtools">Tools specifically designed for debugging and troubleshooting</string>
-    <string name="devtools__show_primary_clip__label" comment="Label of Show primary clip in Devtools">Show primary clip</string>
-    <string name="devtools__show_primary_clip__summary" comment="Summary of Show primary clip in Devtools">Overlays the current primary clip of the clipboard</string>
+    <string name="devtools__show_primary_clip__label" comment="Label of Show clipboard metadata in Devtools">Show clipboard metadata</string>
+    <string name="devtools__show_primary_clip__summary" comment="Summary of Show clipboard metadata in Devtools">Shows the primary clipboard item’s type and flags</string>
     <string name="devtools__show_input_state_overlay__label" comment="Label of Show input cache overlay in Devtools">Show input state overlay</string>
-    <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">Overlays the current input state for debugging</string>
+    <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">Shows content lengths and state without text</string>
     <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools">Show spelling overlay</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">Overlays the current spelling results for debugging</string>
+    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">Shows spelling outcomes and suggestion counts</string>
     <string name="devtools__show_inline_autofill_overlay__label">Show inline autofill overlay</string>
     <string name="devtools__show_inline_autofill_overlay__summary">Overlays the current inline autofill results for debugging</string>
     <string name="devtools__show_key_touch_boundaries__label" comment="Label of Show key touch boundaries in Devtools">Show key touch boundaries</string>
@@ -804,10 +804,11 @@
     <string name="devtools__android_settings_secure__title" comment="Title of Android settings (secure) screen">Secure Android settings</string>
     <string name="devtools__android_settings_system__title" comment="Title of Android settings (system) screen">System Android settings</string>
     <string name="devtools__android_locales__title" comment="Title of Android locales screen">System locales</string>
-    <string name="devtools__debuglog__title">Debug log</string>
-    <string name="devtools__debuglog__copied_to_clipboard">Copied debug log to clipboard</string>
-    <string name="devtools__debuglog__copy_log">Copy log</string>
-    <string name="devtools__debuglog__copy_for_github">Copy log (GitHub formatting)</string>
+    <string name="devtools__debuglog__title">Diagnostic report</string>
+    <string name="devtools__debuglog__summary">View app diagnostics without typed or clipboard content</string>
+    <string name="devtools__debuglog__copied_to_clipboard">Copied diagnostic report to clipboard</string>
+    <string name="devtools__debuglog__copy_log">Copy report</string>
+    <string name="devtools__debuglog__copy_for_github">Copy report (GitHub formatting)</string>
     <string name="devtools__debuglog__loading">Loading…</string>
 
 

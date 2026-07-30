@@ -64,8 +64,8 @@ fun ExportDebugLogScreen() = FlorisScreen {
     var formattedDebugLog by remember { mutableStateOf<List<String>?>(null) }
 
     LaunchedEffect(Unit) {
-        debugLog = Devtools.generateDebugLog(context, prefs, includeLogcat = true).lines()
-        formattedDebugLog = Devtools.generateDebugLogForGithub(context, prefs, includeLogcat = true).lines()
+        debugLog = Devtools.generateDebugLog(context, prefs, includeDiagnostics = true).lines()
+        formattedDebugLog = Devtools.generateDebugLogForGithub(context, prefs, includeDiagnostics = true).lines()
     }
 
     bottomBar {

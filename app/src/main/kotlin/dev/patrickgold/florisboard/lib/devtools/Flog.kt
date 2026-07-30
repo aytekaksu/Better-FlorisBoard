@@ -16,152 +16,75 @@
 
 package dev.patrickgold.florisboard.lib.devtools
 
-import android.content.Context
 import android.util.Log
-import dev.patrickgold.florisboard.appContext
-import dev.patrickgold.florisboard.lib.devtools.Flog.OUTPUT_CONSOLE
 import dev.patrickgold.florisboard.lib.devtools.Flog.createTag
 import dev.patrickgold.florisboard.lib.devtools.Flog.getStacktraceElement
-import dev.patrickgold.florisboard.lib.devtools.Flog.log
-import java.lang.ref.WeakReference
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
-/** Type alias for a flog topic Integer. */
+/** Bit mask selecting log topics. */
 typealias FlogTopic = UInt
 
-/** Type alias for a flog level Integer. */
+/** Bit mask selecting log levels. */
 typealias FlogLevel = UInt
 
-/** Type alias for a flog output Integer. */
-typealias FlogOutput = UInt
-
 /**
- * Logs an error message returned by [block] together with the automatically retrieved
- * calling class and method name either to the console or to a log file. The class name
- * is used for the tag, the method name prepended to the message.
- *
- * This method automatically evaluates if logging is enabled and calls [block] only
- * if a log message should be generated.
- *
- * Optionally a [topic] can also be specified to allow to only partially enable
- * debug messages across the codebase. The passed [topic] is compared with the
- * currently active [Flog.flogTopics] variable and only if at least 1 topic match
- * is found, [block] will be called and a log message written.
- *
- * @param topic The topic of this message. To specify multiple topics, use the binary
- *  OR operator. Defaults to [Flog.TOPIC_OTHER].
- * @param block The lambda expression to evaluate the message which is appended to the
- *  method name. Is called only if logging is enabled and the topics match. Must return
- *  a [String]. If this argument is omitted, only the calling method name will be used
- *  as the log message.
+ * Logs [block] at error level when its [topic] is enabled. The block runs at most once
+ * and only when the message will be written.
  */
 inline fun flogError(topic: FlogTopic = Flog.TOPIC_OTHER, block: () -> String = { "" }) {
     contract {
         callsInPlace(block, InvocationKind.AT_MOST_ONCE)
     }
     if (Flog.checkShouldFlog(topic, Flog.LEVEL_ERROR)) {
-        log(Flog.LEVEL_ERROR, block())
+        // quality: allow-sensitive-log -- central wrapper; public flog call sites are source-checked
+        Flog.log(Flog.LEVEL_ERROR, block())
     }
 }
 
 /**
- * Logs a warning message returned by [block] together with the automatically retrieved
- * calling class and method name either to the console or to a log file. The class name
- * is used for the tag, the method name prepended to the message.
- *
- * This method automatically evaluates if logging is enabled and calls [block] only
- * if a log message should be generated.
- *
- * Optionally a [topic] can also be specified to allow to only partially enable
- * debug messages across the codebase. The passed [topic] is compared with the
- * currently active [Flog.flogTopics] variable and only if at least 1 topic match
- * is found, [block] will be called and a log message written.
- *
- * @param topic The topic of this message. To specify multiple topics, use the binary
- *  OR operator. Defaults to [Flog.TOPIC_OTHER].
- * @param block The lambda expression to evaluate the message which is appended to the
- *  method name. Is called only if logging is enabled and the topics match. Must return
- *  a [String]. If this argument is omitted, only the calling method name will be used
- *  as the log message.
+ * Logs [block] at warning level when its [topic] is enabled. The block runs at most
+ * once and only when the message will be written.
  */
 inline fun flogWarning(topic: FlogTopic = Flog.TOPIC_OTHER, block: () -> String = { "" }) {
     contract {
         callsInPlace(block, InvocationKind.AT_MOST_ONCE)
     }
     if (Flog.checkShouldFlog(topic, Flog.LEVEL_WARNING)) {
-        log(Flog.LEVEL_WARNING, block())
+        // quality: allow-sensitive-log -- central wrapper; public flog call sites are source-checked
+        Flog.log(Flog.LEVEL_WARNING, block())
     }
 }
 
 /**
- * Logs a info message returned by [block] together with the automatically retrieved
- * calling class and method name either to the console or to a log file. The class name
- * is used for the tag, the method name prepended to the message.
- *
- * This method automatically evaluates if logging is enabled and calls [block] only
- * if a log message should be generated.
- *
- * Optionally a [topic] can also be specified to allow to only partially enable
- * debug messages across the codebase. The passed [topic] is compared with the
- * currently active [Flog.flogTopics] variable and only if at least 1 topic match
- * is found, [block] will be called and a log message written.
- *
- * @param topic The topic of this message. To specify multiple topics, use the binary
- *  OR operator. Defaults to [Flog.TOPIC_OTHER].
- * @param block The lambda expression to evaluate the message which is appended to the
- *  method name. Is called only if logging is enabled and the topics match. Must return
- *  a [String]. If this argument is omitted, only the calling method name will be used
- *  as the log message.
+ * Logs [block] at info level when its [topic] is enabled. The block runs at most once
+ * and only when the message will be written.
  */
 inline fun flogInfo(topic: FlogTopic = Flog.TOPIC_OTHER, block: () -> String = { "" }) {
     contract {
         callsInPlace(block, InvocationKind.AT_MOST_ONCE)
     }
     if (Flog.checkShouldFlog(topic, Flog.LEVEL_INFO)) {
-        log(Flog.LEVEL_INFO, block())
+        // quality: allow-sensitive-log -- central wrapper; public flog call sites are source-checked
+        Flog.log(Flog.LEVEL_INFO, block())
     }
 }
 
 /**
- * Logs a debug message returned by [block] together with the automatically retrieved
- * calling class and method name either to the console or to a log file. The class name
- * is used for the tag, the method name prepended to the message.
- *
- * This method automatically evaluates if logging is enabled and calls [block] only
- * if a log message should be generated.
- *
- * Optionally a [topic] can also be specified to allow to only partially enable
- * debug messages across the codebase. The passed [topic] is compared with the
- * currently active [Flog.flogTopics] variable and only if at least 1 topic match
- * is found, [block] will be called and a log message written.
- *
- * @param topic The topic of this message. To specify multiple topics, use the binary
- *  OR operator. Defaults to [Flog.TOPIC_OTHER].
- * @param block The lambda expression to evaluate the message which is appended to the
- *  method name. Is called only if logging is enabled and the topics match. Must return
- *  a [String]. If this argument is omitted, only the calling method name will be used
- *  as the log message.
+ * Logs [block] at debug level when its [topic] is enabled. The block runs at most once
+ * and only when the message will be written.
  */
 inline fun flogDebug(topic: FlogTopic = Flog.TOPIC_OTHER, block: () -> String = { "" }) {
     contract {
         callsInPlace(block, InvocationKind.AT_MOST_ONCE)
     }
     if (Flog.checkShouldFlog(topic, Flog.LEVEL_DEBUG)) {
-        log(Flog.LEVEL_DEBUG, block())
+        // quality: allow-sensitive-log -- central wrapper; public flog call sites are source-checked
+        Flog.log(Flog.LEVEL_DEBUG, block())
     }
 }
 
-/**
- * Helper function to evaluate if a bit flag is set in an integer value.
- *
- * @param flag The flag to check if it is set.
- *
- * @return True if the flag is set, false otherwise.
- */
-private infix fun UInt.isSet(flag: UInt): Boolean {
-    return (this and flag) == flag
-}
+private infix fun UInt.isSet(flag: UInt) = (this and flag) == flag
 
 /**
  * Main helper object for FlorisBoard logging (=Flog). Manages the enabled
@@ -174,7 +97,7 @@ private infix fun UInt.isSet(flag: UInt): Boolean {
  *     removed manual tagging).
  *  - [getStacktraceElement] (converted to Kotlin, renamed from "getTag",
  *     method now returns stack trace element).
- *  - [log] (only the [OUTPUT_CONSOLE] part, converted to Kotlin).
+ *  - [log] (converted to Kotlin).
  * Timber is licensed under the Apache 2.0 license, see the repo here:
  *  https://github.com/JakeWharton/timber
  */
@@ -191,54 +114,47 @@ object Flog {
     const val LEVEL_DEBUG: FlogLevel =              0x08u
     const val LEVEL_ALL: FlogLevel =                UInt.MAX_VALUE
 
-    const val OUTPUT_CONSOLE: FlogOutput =          0x01u
-    const val OUTPUT_FILE: FlogOutput =             0x02u
-
-    /** The relevant call stack element is always on the 4th position, thus 4-1=3. */
-    private const val CALL_STACK_INDEX: Int =       3
-
     /** The maximum log length limit. */
     private const val MAX_LOG_LENGTH: Int =         4000
+    private const val MAX_DIAGNOSTIC_LINES: Int =   200
+    private const val MAX_DIAGNOSTIC_LINE_LENGTH =  512
 
-    private var applicationContext: WeakReference<Context> = WeakReference(null)
-    private var isFloggingEnabled: Boolean = false
+    private var isLogcatEnabled: Boolean = false
+    private var isDiagnosticCaptureEnabled: Boolean = false
     private var flogTopics: FlogTopic = TOPIC_NONE
     private var flogLevels: FlogLevel = LEVEL_NONE
-    private var flogOutputs: FlogOutput = OUTPUT_CONSOLE
+    private val diagnosticsLock = Any()
+    private val diagnosticLines = ArrayDeque<String>(MAX_DIAGNOSTIC_LINES)
 
     /**
-     * Installs the flog utility for given [applicationContext] and sets the relevant
-     * configuration variables based on the given config values.
+     * Installs the flog utility and sets the relevant configuration variables.
      *
-     * @param context The application context, used for file logging. The context
-     *  will be wrapped in a [WeakReference] to prevent memory leaks.
-     * @param isFloggingEnabled If logging is enabled. If this value is false, all calls to
-     *  the flog methods will be ignored and no logs will be written, regardless of the topics
-     *  and levels set.
+     * @param isLogcatEnabled Whether messages are written to Android's Logcat.
+     * @param isDiagnosticCaptureEnabled Whether messages are retained in the bounded,
+     *  process-local diagnostic snapshot.
      * @param flogTopics The enabled topics for this installation. Use [TOPIC_ALL] to enable
      *  all topics. If this value is [TOPIC_NONE], this essentially disables all logging.
      * @param flogLevels The enabled levels for this installation. Use [LEVEL_ALL] to enable
      *  all levels. If this value is [LEVEL_NONE], this essentially disables all logging.
-     * @param flogOutputs The enabled outputs for this installation. Use either [OUTPUT_CONSOLE]
-     *  for logging to Logcat or [OUTPUT_FILE] to a logging file.
      */
     fun install(
-        context: Context,
-        isFloggingEnabled: Boolean,
+        isLogcatEnabled: Boolean,
+        isDiagnosticCaptureEnabled: Boolean,
         flogTopics: FlogTopic,
         flogLevels: FlogLevel,
-        flogOutputs: FlogOutput
     ) {
-        this.applicationContext = WeakReference(context.appContext().value)
-        this.isFloggingEnabled = isFloggingEnabled
+        this.isLogcatEnabled = isLogcatEnabled
+        this.isDiagnosticCaptureEnabled = isDiagnosticCaptureEnabled
         this.flogTopics = flogTopics
         this.flogLevels = flogLevels
-        this.flogOutputs = flogOutputs
+        synchronized(diagnosticsLock) {
+            diagnosticLines.clear()
+        }
     }
 
     /**
-     * Checks if a log message should be evaluated by checking [isFloggingEnabled] and
-     * by matching the given [topic] and [level] values with the configured settings.
+     * Checks if a message should be evaluated for either configured output, then matches
+     * the given [topic] and [level] with the configured settings.
      *
      * @param topic The topic(s) to check for.
      * @param level The level(s) to check for.
@@ -246,7 +162,9 @@ object Flog {
      * @return True if a log message should be evaluated, false otherwise.
      */
     fun checkShouldFlog(topic: FlogTopic, level: FlogLevel): Boolean {
-        return isFloggingEnabled && (flogTopics isSet topic) && (flogLevels isSet level)
+        return (isLogcatEnabled || isDiagnosticCaptureEnabled) &&
+            (flogTopics isSet topic) &&
+            (flogLevels isSet level)
     }
 
     /**
@@ -275,54 +193,76 @@ object Flog {
 
     private fun getStacktraceElement(): StackTraceElement {
         val stackTrace = Throwable().stackTrace
-        check(stackTrace.size > CALL_STACK_INDEX) {
-            "Synthetic stacktrace didn't have enough elements: are you using proguard?"
-        }
-        return stackTrace[CALL_STACK_INDEX]
+        val loggerClassName = Flog::class.java.name
+        return stackTrace.firstOrNull { element ->
+            element.className != loggerClassName && element.className != "${loggerClassName}Kt"
+        } ?: StackTraceElement(loggerClassName, "unknown", "Flog.kt", -1)
     }
 
-    fun log(level: FlogLevel, msg: String) {
-        when {
-            flogOutputs isSet OUTPUT_CONSOLE -> {
-                if (msg.length < MAX_LOG_LENGTH) {
-                    androidLog(level, msg)
-                } else {
-                    // Split by line, then ensure each line can fit into Log's maximum length.
-                    var i = 0
-                    val length: Int = msg.length
-                    while (i < length) {
-                        var newline: Int = msg.indexOf('\n', i)
-                        newline = if (newline != -1) newline else length
-                        do {
-                            val end = newline.coerceAtMost(i + MAX_LOG_LENGTH)
-                            val part: String = msg.substring(i, end)
-                            androidLog(level, part)
-                            i = end
-                        } while (i < newline)
-                        i++
-                    }
-                }
-            }
-            flogOutputs isSet OUTPUT_FILE -> {
-                fileLog(level, msg)
+    @PublishedApi
+    internal fun log(level: FlogLevel, msg: String) {
+        if (msg.length < MAX_LOG_LENGTH) {
+            writeLine(level, msg)
+        } else {
+            // Split by line, then ensure each line can fit into Log's maximum length.
+            var i = 0
+            val length: Int = msg.length
+            while (i < length) {
+                var newline: Int = msg.indexOf('\n', i)
+                newline = if (newline != -1) newline else length
+                do {
+                    val end = newline.coerceAtMost(i + MAX_LOG_LENGTH)
+                    val part: String = msg.substring(i, end)
+                    writeLine(level, part)
+                    i = end
+                } while (i < newline)
+                i++
             }
         }
     }
 
-    private fun androidLog(level: FlogLevel, msg: String) {
+    internal fun diagnosticSnapshot(): List<String> = synchronized(diagnosticsLock) {
+        diagnosticLines.toList()
+    }
+
+    private fun sanitizeDiagnosticLine(line: String): String {
+        return buildString(line.length.coerceAtMost(MAX_DIAGNOSTIC_LINE_LENGTH)) {
+            for (char in line) {
+                if (length == MAX_DIAGNOSTIC_LINE_LENGTH) break
+                append(if (char.isISOControl()) ' ' else char)
+            }
+        }
+    }
+
+    private fun writeLine(level: FlogLevel, msg: String) {
         val ste = getStacktraceElement()
         val tag = createTag(ste)
         val message = createMessage(ste, msg)
+        val levelName = when {
+            level isSet LEVEL_ERROR -> "E"
+            level isSet LEVEL_WARNING -> "W"
+            level isSet LEVEL_INFO -> "I"
+            level isSet LEVEL_DEBUG -> "D"
+            else -> "?"
+        }
+        if (isDiagnosticCaptureEnabled) {
+            synchronized(diagnosticsLock) {
+                if (diagnosticLines.size == MAX_DIAGNOSTIC_LINES) {
+                    diagnosticLines.removeFirst()
+                }
+                diagnosticLines.addLast(sanitizeDiagnosticLine("$levelName/$tag: $message"))
+            }
+        }
+        if (!isLogcatEnabled) return
         when {
+            // quality: allow-sensitive-log -- central sink; callers are checked before this forwarding step
             level isSet LEVEL_ERROR ->      Log.e(tag, message)
+            // quality: allow-sensitive-log -- central sink; callers are checked before this forwarding step
             level isSet LEVEL_WARNING ->    Log.w(tag, message)
+            // quality: allow-sensitive-log -- central sink; callers are checked before this forwarding step
             level isSet LEVEL_INFO ->       Log.i(tag, message)
+            // quality: allow-sensitive-log -- central sink; callers are checked before this forwarding step
             level isSet LEVEL_DEBUG ->      Log.d(tag, message)
         }
-    }
-
-    private fun fileLog(level: FlogLevel, msg: String) {
-        val context = applicationContext.get() ?: return
-        // TODO: introduce file logging here for runtime debug logging
     }
 }

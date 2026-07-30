@@ -45,6 +45,10 @@ import java.util.concurrent.atomic.AtomicLong
 
 private const val AUTOCORRECT_PLUGIN_TAG = "AutocorrectPlugin"
 
+private fun logProviderFailure(operation: String, error: Throwable) {
+    Log.e(AUTOCORRECT_PLUGIN_TAG, "$operation failed: error=${error.javaClass.simpleName}")
+}
+
 /**
  * Base service for an external autocorrect provider.
  *
@@ -55,7 +59,7 @@ private const val AUTOCORRECT_PLUGIN_TAG = "AutocorrectPlugin"
  */
 abstract class AutocorrectPluginService : Service() {
     private val operationErrorHandler = CoroutineExceptionHandler { _, error ->
-        Log.e(AUTOCORRECT_PLUGIN_TAG, "Provider operation failed", error)
+        logProviderFailure("Provider operation", error)
     }
     private val lifecycleScope = CoroutineScope(
         SupervisorJob() + Dispatchers.Default + operationErrorHandler,
@@ -126,7 +130,7 @@ abstract class AutocorrectPluginService : Service() {
             uiMutationGuard.withLock {
                 predictionGuard.withLock {
                     runCatching { onServiceDestroyed() }.onFailure { error ->
-                        Log.e(AUTOCORRECT_PLUGIN_TAG, "Provider destruction cleanup failed", error)
+                        logProviderFailure("Provider destruction cleanup", error)
                     }
                 }
             }
@@ -267,7 +271,7 @@ abstract class AutocorrectPluginService : Service() {
             uiMutationGuard.withLock {
                 predictionGuard.withLock {
                     runCatching { onHostUnboundCleanup() }.onFailure { error ->
-                        Log.e(AUTOCORRECT_PLUGIN_TAG, "Provider unbind cleanup failed", error)
+                        logProviderFailure("Provider unbind cleanup", error)
                     }
                 }
             }
@@ -335,7 +339,7 @@ abstract class AutocorrectPluginService : Service() {
                         } catch (error: CancellationException) {
                             throw error
                         } catch (error: Exception) {
-                            Log.e(AUTOCORRECT_PLUGIN_TAG, "Suggestion request failed", error)
+                            logProviderFailure("Suggestion request", error)
                             AutocorrectSuggestionResult.Unhandled
                         }
                         if (!suggestionJobs.isCurrent(request.requestId)) return@launch
@@ -380,7 +384,7 @@ abstract class AutocorrectPluginService : Service() {
                         } catch (error: CancellationException) {
                             throw error
                         } catch (error: Exception) {
-                            Log.e(AUTOCORRECT_PLUGIN_TAG, "Suggestion removal failed", error)
+                            logProviderFailure("Suggestion removal", error)
                             false
                         }
                         replyTo.sendSafely(
@@ -629,7 +633,7 @@ abstract class AutocorrectPluginService : Service() {
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Exception) {
-                        Log.e(AUTOCORRECT_PLUGIN_TAG, "Provider UI operation failed", error)
+                        logProviderFailure("Provider UI operation", error)
                         false to null
                     }
                     runForCurrentPluginUiLifetime(lifetime) {

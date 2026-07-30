@@ -50,7 +50,6 @@ class MimeTypeFilter {
             val filter1 = filterTypeParts[1].replace("*", "[^\\s]+").toRegex()
             filter0 to filter1
         }
-        println(filters)
     }
 
     private fun matchMimeTypeAgainstFilters(mimeType: String): Boolean {

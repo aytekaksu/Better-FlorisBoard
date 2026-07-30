@@ -20,6 +20,7 @@ import android.icu.lang.UCharacter
 import dev.patrickgold.florisboard.ime.keyboard.AbstractKeyData
 import dev.patrickgold.florisboard.ime.keyboard.ComputingEvaluator
 import dev.patrickgold.florisboard.ime.keyboard.KeyData
+import dev.patrickgold.florisboard.ime.keyboard.contentFreeString
 import dev.patrickgold.florisboard.ime.popup.PopupSet
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyType
@@ -66,7 +67,7 @@ data class TextKeyData(
     }
 
     override fun toString(): String {
-        return "${TextKeyData::class.simpleName} { type=$type code=$code label=\"$label\" groupId=$groupId }"
+        return contentFreeString()
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
@@ -568,7 +569,7 @@ class AutoTextKeyData(
     }
 
     override fun toString(): String {
-        return "${AutoTextKeyData::class.simpleName} { type=$type code=$code label=\"$label\" groupId=$groupId }"
+        return contentFreeString()
     }
 
     private inner class AutoLetterState {
@@ -627,7 +628,7 @@ class MultiTextKeyData(
     }
 
     override fun toString(): String {
-        return "${MultiTextKeyData::class.simpleName} { type=$type code=$code label=\"$label\" groupId=$groupId }"
+        return contentFreeString()
     }
 }
 

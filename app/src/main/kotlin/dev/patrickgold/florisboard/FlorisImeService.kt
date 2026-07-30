@@ -60,7 +60,6 @@ import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.devtools.flogInfo
 import dev.patrickgold.florisboard.lib.devtools.flogWarning
 import dev.patrickgold.florisboard.lib.util.InputMethodUtils
-import dev.patrickgold.florisboard.lib.util.debugSummarize
 import dev.patrickgold.florisboard.lib.util.launchActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -363,7 +362,7 @@ class FlorisImeService : LifecycleInputMethodService() {
     }
 
     override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
-        flogInfo { "restarting=$restarting info=${info?.debugSummarize()}" }
+        flogInfo { "restarting=$restarting hasEditorInfo=${info != null}" }
         glideTypingManager.cancelPendingInput()
         nlpManager.finishAutocorrectSession()
         super.onStartInput(info, restarting)
@@ -373,7 +372,7 @@ class FlorisImeService : LifecycleInputMethodService() {
     }
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
-        flogInfo { "restarting=$restarting info=${info?.debugSummarize()}" }
+        flogInfo { "restarting=$restarting hasEditorInfo=${info != null}" }
         glideTypingManager.cancelPendingInput()
         super.onStartInputView(info, restarting)
         if (info == null) return
@@ -403,7 +402,6 @@ class FlorisImeService : LifecycleInputMethodService() {
         candidatesStart: Int,
         candidatesEnd: Int,
     ) {
-        flogInfo { "old={start=$oldSelStart,end=$oldSelEnd} new={start=$newSelStart,end=$newSelEnd} composing={start=$candidatesStart,end=$candidatesEnd}" }
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         activeState.batchEdit {
             activeState.isSelectionMode = (newSelEnd - newSelStart) != 0
@@ -425,7 +423,6 @@ class FlorisImeService : LifecycleInputMethodService() {
     }
 
     override fun onFinishInput() {
-        flogInfo { "(no args)" }
         glideTypingManager.cancelPendingInput()
         autocorrectPluginManager.hideKeyboardPluginUi()
         nlpManager.finishAutocorrectSession()

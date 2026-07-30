@@ -20,7 +20,6 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
 import android.os.Debug
-import android.os.Process
 import dev.patrickgold.florisboard.BuildConfig
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceModel
@@ -29,20 +28,20 @@ import dev.patrickgold.florisboard.lib.titlecase
 import dev.patrickgold.florisboard.lib.util.TimeUtils
 import dev.patrickgold.florisboard.lib.util.UnitUtils
 import dev.patrickgold.florisboard.subtypeManager
-import java.io.IOException
 import org.florisboard.lib.android.systemService
 
 @Suppress("MemberVisibilityCanBePrivate")
 object Devtools {
-    private const val MaxExportedLogcatLines = 500
-    private const val MaxExportedLogcatChars = 128 * 1024
-
-    fun generateDebugLog(context: Context, prefs: FlorisPreferenceModel? = null, includeLogcat: Boolean = false): String {
+    fun generateDebugLog(
+        context: Context,
+        prefs: FlorisPreferenceModel? = null,
+        includeDiagnostics: Boolean = false,
+    ): String {
         return buildString {
             append(generateDebugLogHeader(context, prefs))
-            if (includeLogcat) {
+            if (includeDiagnostics) {
                 appendLine()
-                append(generateLogcatDump())
+                append(generateDiagnosticDump())
             }
         }
     }
@@ -63,23 +62,27 @@ object Devtools {
         }
     }
 
-    fun generateDebugLogForGithub(context: Context, prefs: FlorisPreferenceModel? = null, includeLogcat: Boolean = false): String {
+    fun generateDebugLogForGithub(
+        context: Context,
+        prefs: FlorisPreferenceModel? = null,
+        includeDiagnostics: Boolean = false,
+    ): String {
         return buildString {
             appendLine("<details>")
-            appendLine("<summary>Detailed info (Debug log header)</summary>")
+            appendLine("<summary>Diagnostic report header</summary>")
             appendLine()
             appendLine("```")
             append(generateDebugLogHeader(context, prefs))
             appendLine()
             appendLine("```")
             appendLine("</details>")
-            if (includeLogcat) {
+            if (includeDiagnostics) {
                 appendLine()
                 appendLine("<details>")
-                appendLine("<summary>Debug log content</summary>")
+                appendLine("<summary>App diagnostics</summary>")
                 appendLine()
                 appendLine("```")
-                append(generateLogcatDump())
+                append(generateDiagnosticDump())
                 appendLine()
                 appendLine("```")
                 appendLine("</details>")
@@ -152,31 +155,10 @@ object Devtools {
         }
     }
 
-    fun generateLogcatDump(withTitle: Boolean = true): String {
+    fun generateDiagnosticDump(withTitle: Boolean = true): String {
         return buildString {
-            if (withTitle) appendLine("======= APP LOGCAT (REVIEW BEFORE SHARING) =======")
-            try {
-                val process = Runtime.getRuntime().exec(
-                    arrayOf(
-                        "logcat",
-                        "-d",
-                        "--pid=${Process.myPid()}",
-                        "-t",
-                        MaxExportedLogcatLines.toString(),
-                    ),
-                )
-                process.inputStream.bufferedReader().useLines { lines ->
-                    for (line in lines) {
-                        if (length + line.length + 1 > MaxExportedLogcatChars) {
-                            appendLine("[logcat truncated]")
-                            break
-                        }
-                        appendLine(line)
-                    }
-                }
-            } catch (_: IOException) {
-                appendLine("Failed to retrieve.")
-            }
+            if (withTitle) appendLine("======= APP DIAGNOSTICS =======")
+            Flog.diagnosticSnapshot().forEach { diagnosticLine -> appendLine(diagnosticLine) }
         }
     }
 
@@ -237,7 +219,7 @@ object Devtools {
                 append(" max)")
             } catch (e: Exception) {
                 append("Failed to retrieve memory usage: ")
-                append(e.message)
+                append(e.javaClass.simpleName)
             }
         }
     }
@@ -258,7 +240,7 @@ object Devtools {
                 append(" max)")
             } catch (e: Exception) {
                 append("Failed to retrieve memory usage: ")
-                append(e.message)
+                append(e.javaClass.simpleName)
             }
         }
     }
@@ -279,7 +261,7 @@ object Devtools {
                 append(" max)")
             } catch (e: Exception) {
                 append("Failed to retrieve memory usage: ")
-                append(e.message)
+                append(e.javaClass.simpleName)
             }
         }
     }

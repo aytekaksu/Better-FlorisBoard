@@ -57,10 +57,13 @@ value class SpellingResult(val suggestionsInfo: SuggestionsInfo) {
         get() = AndroidVersion.ATLEAST_API31_S &&
             suggestionsInfo.suggestionsAttributes and SuggestionsInfo.RESULT_ATTR_LOOKS_LIKE_GRAMMAR_ERROR != 0
 
-    /**
-     * Returns the suggestions info corrections as a newly constructed array.
-     */
-    fun suggestions() = Array(suggestionsInfo.suggestionsCount) { n -> suggestionsInfo.getSuggestionAt(n) }
+    internal val diagnosticState: SpellingDiagnosticState
+        get() = when {
+            isGrammarError -> SpellingDiagnosticState.GRAMMAR_ERROR
+            isTypo -> SpellingDiagnosticState.TYPO
+            isValidWord -> SpellingDiagnosticState.VALID_WORD
+            else -> SpellingDiagnosticState.UNSPECIFIED
+        }
 
     companion object {
         private const val UNSPECIFIED: Int = 0
@@ -121,5 +124,75 @@ value class SpellingResult(val suggestionsInfo: SuggestionsInfo) {
             } or (if (isHighConfidenceResult) SuggestionsInfo.RESULT_ATTR_HAS_RECOMMENDED_SUGGESTIONS else 0)
             return SpellingResult(SuggestionsInfo(attributes, suggestions))
         }
+    }
+}
+
+/**
+ * Content-free spelling outcomes retained for the developer overlay.
+ */
+internal enum class SpellingDiagnosticState {
+    UNSPECIFIED,
+    VALID_WORD,
+    TYPO,
+    GRAMMAR_ERROR,
+}
+
+internal data class SpellingDiagnosticRecord(
+    /**
+     * An opaque, process-local ordering value. It is not derived from time or input.
+     */
+    val sequence: Long,
+    val state: SpellingDiagnosticState,
+    val suggestionCount: Int,
+)
+
+internal data class SpellingDiagnosticSnapshot(
+    val records: List<SpellingDiagnosticRecord>,
+    val droppedRecordCount: Long,
+)
+
+/**
+ * A bounded, thread-safe history that cannot retain words or suggested replacements.
+ */
+internal class SpellingDiagnostics(
+    private val capacity: Int = DEFAULT_CAPACITY,
+) {
+    private val records = ArrayDeque<SpellingDiagnosticRecord>(capacity)
+    private var nextSequence = 1L
+    private var droppedRecordCount = 0L
+
+    init {
+        require(capacity > 0) { "Diagnostic capacity must be positive" }
+    }
+
+    @Synchronized
+    fun record(state: SpellingDiagnosticState, suggestionCount: Int) {
+        if (records.size == capacity) {
+            records.removeFirst()
+            droppedRecordCount++
+        }
+        records.addLast(
+            SpellingDiagnosticRecord(
+                sequence = nextSequence++,
+                state = state,
+                suggestionCount = suggestionCount.coerceAtLeast(0),
+            ),
+        )
+    }
+
+    @Synchronized
+    fun clear() {
+        records.clear()
+        droppedRecordCount = 0L
+    }
+
+    @Synchronized
+    fun snapshot() = SpellingDiagnosticSnapshot(
+        records = records.toList(),
+        droppedRecordCount = droppedRecordCount,
+    )
+
+    companion object {
+        const val DEFAULT_CAPACITY = 10
     }
 }

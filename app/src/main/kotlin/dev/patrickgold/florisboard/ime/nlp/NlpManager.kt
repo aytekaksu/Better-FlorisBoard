@@ -17,7 +17,6 @@
 package dev.patrickgold.florisboard.ime.nlp
 
 import android.content.Context
-import android.util.LruCache
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.clipboardManager
@@ -275,8 +274,9 @@ class NlpManager(context: Context) {
             _activeCandidatesFlow.value = v
         }
 
-    val debugOverlaySuggestionsInfos = LruCache<Long, Pair<String, SpellingResult>>(10)
-    var debugOverlayVersion = MutableStateFlow(0)
+    private val spellingDiagnostics = SpellingDiagnostics()
+    private val _spellingDiagnosticsVersion = MutableStateFlow(0L)
+    internal val spellingDiagnosticsVersion = _spellingDiagnosticsVersion.asStateFlow()
 
     init {
         clipboardManager.primaryClipFlow.collectLatestIn(scope) {
@@ -614,14 +614,19 @@ class NlpManager(context: Context) {
         }
     }
 
-    fun addToDebugOverlay(word: String, info: SpellingResult) {
-        debugOverlaySuggestionsInfos.put(System.currentTimeMillis(), word to info)
-        debugOverlayVersion.update { it + 1 }
+    internal fun recordSpellingDiagnostic(result: SpellingResult) {
+        spellingDiagnostics.record(
+            state = result.diagnosticState,
+            suggestionCount = result.suggestionsInfo.suggestionsCount,
+        )
+        _spellingDiagnosticsVersion.update { it + 1L }
     }
 
-    fun clearDebugOverlay() {
-        debugOverlaySuggestionsInfos.evictAll()
-        debugOverlayVersion.update { it + 1 }
+    internal fun spellingDiagnosticsSnapshot() = spellingDiagnostics.snapshot()
+
+    internal fun clearSpellingDiagnostics() {
+        spellingDiagnostics.clear()
+        _spellingDiagnosticsVersion.update { it + 1L }
     }
 
     private class ProviderInstanceWrapper(val provider: NlpProvider) {
