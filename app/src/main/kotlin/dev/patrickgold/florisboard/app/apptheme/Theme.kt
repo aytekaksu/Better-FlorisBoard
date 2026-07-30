@@ -23,7 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import dev.patrickgold.florisboard.app.AppTheme
@@ -59,10 +58,6 @@ fun getColorScheme(
             neutralDynamicColorScheme(primary = seedColor, isDark = true, isAmoled = true)
         }
     }
-}
-
-fun ColorScheme.amoled(): ColorScheme {
-    return this.copy(background = Color.Black, surface = Color.Black)
 }
 
 @Composable
