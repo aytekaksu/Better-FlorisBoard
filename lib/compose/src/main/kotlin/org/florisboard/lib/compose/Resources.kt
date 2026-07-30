@@ -41,6 +41,10 @@ private val LocalResourcesContext = staticCompositionLocalOf<Context> {
     error("resources context not initialized!!")
 }
 
+val LocalResourcesLocale = staticCompositionLocalOf {
+    Locale.ROOT
+}
+
 private val LocalAppNameString = staticCompositionLocalOf {
     "FlorisBoard"
 }
@@ -70,14 +74,16 @@ fun ProvideLocalizedResources(
     }
     val layoutDirection = forceLayoutDirection ?: actualLayoutDirection
     val localeList = resourcesContext.resources.configuration.locales
-    val dateTimeFormatter = remember(resourcesContext) {
+    val locale = if (localeList.isEmpty) Locale.getDefault() else localeList.get(0)
+    val dateTimeFormatter = remember(resourcesContext, locale) {
         DateTimeFormatter
             .ofLocalizedDateTime(FormatStyle.MEDIUM)
-            .withLocale(if (localeList.isEmpty) Locale.getDefault() else localeList.get(0))
+            .withLocale(locale)
             .withZone(ZoneId.systemDefault())
     }
     CompositionLocalProvider(
         LocalResourcesContext provides resourcesContext,
+        LocalResourcesLocale provides locale,
         LocalLocalizedDateTimeFormatter provides dateTimeFormatter,
         LocalActualLayoutDirection provides actualLayoutDirection,
         LocalLayoutDirection provides layoutDirection,

@@ -116,7 +116,7 @@ fun AddonManagementReferenceBox(
     FlorisOutlinedBox(
         modifier = Modifier.defaultFlorisOutlinedBox(),
         title = stringRes(id = R.string.ext__addon_management_box__managing_placeholder).curlyFormat(
-            "extensions" to type.let { stringRes(id = it.titleResId).lowercase() }
+            "extensions" to stringRes(id = type.titleResId)
         )
     ) {
         Text(

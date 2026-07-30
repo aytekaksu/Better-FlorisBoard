@@ -365,17 +365,6 @@
     </issue>
 
     <issue
-        id="LocalContextConfigurationRead"
-        message="Reading Configuration using LocalContext.current.resources.configuration"
-        errorLine1="        mutableStateOf(context.resources.configuration.keyboard != Configuration.KEYBOARD_NOKEYS)"
-        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/app/settings/advanced/PhysicalKeyboardScreen.kt"
-            line="41"
-            column="24"/>
-    </issue>
-
-    <issue
         id="LocalContextResourcesRead"
         message="Reading Resources using LocalContext.current.resources"
         errorLine1="        LocalContext.current.resources,"
