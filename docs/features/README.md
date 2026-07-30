@@ -11,6 +11,7 @@ changes.
 | External autocorrect | Discover, bind, validate, and coordinate separately installed suggestion engines | [Autocorrect plugins](autocorrect-plugins/README.md) |
 | Text-keyboard touch | Turn Android pointer streams into keys, popups, swipes, editor actions, and bounded input traces | [Touch input](touch-input/README.md) |
 | Glide typing | Detect a word gesture, classify it externally or locally, and commit only a current result | [Glide typing](glide-typing/README.md) |
+| Preferences | Define stored settings and preserve supported upgrade and restore behavior | [Preferences](preferences/README.md) |
 
 The [provider API guide](../../AUTOCORRECT_PLUGIN_API.md) is the authoritative
 provider-facing protocol guide. Feature documents explain the host and do not
