@@ -41,27 +41,11 @@ inline fun SnyggValue.isInherit(): Boolean {
 }
 
 /**
- * Convenience function which returns the opposite of SnyggValue.isInherit(). See [isInherit] for more info.
- */
-@Suppress("NOTHING_TO_INLINE")
-inline fun SnyggValue.isNotInherit(): Boolean {
-    return !isInherit()
-}
-
-/**
  * Checks if any given Snygg value indicates that it is undefined.
  */
 @Suppress("NOTHING_TO_INLINE")
 inline fun SnyggValue.isUndefined(): Boolean {
     return this is SnyggUndefinedValue
-}
-
-/**
- * Convenience function which returns the opposite of SnyggValue.isUndefined(). See [isUndefined] for more info.
- */
-@Suppress("NOTHING_TO_INLINE")
-inline fun SnyggValue.isNotUndefined(): Boolean {
-    return !isUndefined()
 }
 
 /**

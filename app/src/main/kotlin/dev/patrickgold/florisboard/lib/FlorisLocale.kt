@@ -199,20 +199,6 @@ class FlorisLocale private constructor(val base: Locale) {
     val variant: String get() = base.variant
 
     /**
-     * Returns a three-letter abbreviation of this locale's language.
-     *
-     * @see java.util.Locale.getISO3Language
-     */
-    val iso3Language: String get() = base.isO3Language
-
-    /**
-     * Returns a three-letter abbreviation of this locale's country.
-     *
-     * @see java.util.Locale.getISO3Country
-     */
-    val iso3Country: String get() = base.isO3Country
-
-    /**
      * Returns true if this language has a capitalization concept, false otherwise.
      * TODO: this is absolutely not exhaustive and hard-coded, find solution based on ICU or system
      */
