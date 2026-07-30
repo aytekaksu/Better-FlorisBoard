@@ -24,7 +24,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.patrickgold.florisboard.app.ext.EditorAction
-import dev.patrickgold.florisboard.app.settings.advanced.Backup
+import dev.patrickgold.florisboard.app.settings.advanced.BackupArchive
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.ime.theme.ThemeExtensionEditor
 import dev.patrickgold.florisboard.lib.ext.Extension
@@ -215,7 +215,7 @@ class CacheManager(context: Context) {
         val outputDir: FsDir = dir.subDir(OutputDirName)
 
         lateinit var zipFile: FsFile
-        lateinit var metadata: Backup.Metadata
+        internal lateinit var metadata: BackupArchive.Metadata
         var restoreWarningId: Int? = null
         var restoreErrorId: Int? = null
 

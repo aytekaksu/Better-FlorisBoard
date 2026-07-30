@@ -27,6 +27,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -59,10 +60,7 @@ import dev.patrickgold.jetpref.datastore.runtime.AndroidAppDataStorage
 import dev.patrickgold.jetpref.datastore.runtime.FileBasedStorage
 import dev.patrickgold.jetpref.material.ui.JetPrefListItem
 import kotlinx.coroutines.launch
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import org.florisboard.lib.android.showLongToast
-import org.florisboard.lib.android.showLongToastSync
 import org.florisboard.lib.android.writeFromFile
 import org.florisboard.lib.compose.FlorisButtonBar
 import org.florisboard.lib.compose.FlorisOutlinedBox
@@ -75,13 +73,17 @@ import org.florisboard.lib.kotlin.io.writeJson
 
 object Backup {
     const val FILE_PROVIDER_AUTHORITY = "${BuildConfig.APPLICATION_ID}.provider.file"
-    const val METADATA_JSON_NAME = "backup_metadata.json"
-    const val CLIPBOARD_TEXT_ITEMS_JSON_NAME = "clipboard_text_items.json"
-    const val CLIPBOARD_IMAGES_JSON_NAME = "clipboard_images.json"
-    const val CLIPBOARD_VIDEO_JSON_NAME = "clipboard_video.json"
 
-    fun defaultFileName(metadata: Metadata): String {
-        return "backup_${metadata.packageName}_${metadata.versionCode}_${metadata.timestamp}.zip"
+    internal data class Selection(
+        val jetprefDatastore: Boolean,
+        val imeKeyboard: Boolean,
+        val imeTheme: Boolean,
+        val clipboardTextItems: Boolean,
+        val clipboardImageItems: Boolean,
+        val clipboardVideoItems: Boolean,
+    ) {
+        fun provideClipboardItems(): Boolean =
+            clipboardTextItems || clipboardImageItems || clipboardVideoItems
     }
 
     enum class Destination {
@@ -115,23 +117,19 @@ object Backup {
             _clipboardData.value = newValue
         }
 
-        fun provideClipboardItems(): Boolean {
-            return clipboardTextItems || clipboardImageItems || clipboardVideoItems
-        }
-
         fun atLeastOneSelected(): Boolean {
             return jetprefDatastore || imeKeyboard || imeTheme || clipboardTextItems || clipboardImageItems || clipboardVideoItems
         }
-    }
 
-    @Serializable
-    data class Metadata(
-        @SerialName("package")
-        val packageName: String,
-        val versionCode: Int,
-        val versionName: String,
-        val timestamp: Long,
-    )
+        internal fun snapshot() = Selection(
+            jetprefDatastore = jetprefDatastore,
+            imeKeyboard = imeKeyboard,
+            imeTheme = imeTheme,
+            clipboardTextItems = clipboardTextItems,
+            clipboardImageItems = clipboardImageItems,
+            clipboardVideoItems = clipboardVideoItems,
+        )
+    }
 }
 
 @Composable
@@ -146,35 +144,61 @@ fun BackupScreen() = FlorisScreen {
 
     var backupDestination by remember { mutableStateOf(Backup.Destination.FILE_SYS) }
     val backupFilesSelector = remember { Backup.FilesSelector() }
-    var backupWorkspace: CacheManager.BackupAndRestoreWorkspace? = null
+    var backupWorkspace by remember {
+        mutableStateOf<CacheManager.BackupAndRestoreWorkspace?>(null)
+    }
+    var preparedSelection by remember { mutableStateOf<Backup.Selection?>(null) }
+    var isBackupBusy by remember { mutableStateOf(false) }
+
+    fun closeBackupWorkspace() {
+        backupWorkspace?.close()
+        backupWorkspace = null
+        preparedSelection = null
+    }
+
+    DisposableEffect(Unit) {
+        onDispose(::closeBackupWorkspace)
+    }
 
     val backUpToFileSystemLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/zip"),
         onResult = { uri ->
             if (uri == null) {
+                isBackupBusy = false
                 // User can modify checkboxes between cancellation and second
                 // trigger, so we make sure to clear out the previous workspace
-                backupWorkspace?.close()
-                backupWorkspace = null
+                closeBackupWorkspace()
                 return@rememberLauncherForActivityResult
             }
             runCatching {
                 context.contentResolver.writeFromFile(uri, backupWorkspace!!.zipFile)
-                backupWorkspace!!.close()
             }.onSuccess {
-                context.showLongToastSync(R.string.backup_and_restore__back_up__success)
-                navController.popBackStack()
+                closeBackupWorkspace()
+                isBackupBusy = false
+                scope.launch {
+                    context.showLongToast(R.string.backup_and_restore__back_up__success)
+                    navController.popBackStack()
+                }
             }.onFailure { error ->
-                flogError { "Failed to save backup: error=${error.javaClass.simpleName}" }
-                context.showLongToastSync(R.string.backup_and_restore__back_up__failure, "error_message" to error.message)
-                backupWorkspace = null
+                val failureClass = error.javaClass.simpleName
+                flogError { "Failed to save backup: failureClass=$failureClass" }
+                closeBackupWorkspace()
+                isBackupBusy = false
+                scope.launch {
+                    context.showLongToast(
+                        R.string.backup_and_restore__back_up__failure,
+                        "error_message" to failureClass,
+                    )
+                }
             }
         },
     )
 
-    suspend fun prepareBackupWorkspace() {
+    suspend fun prepareBackupWorkspace(selection: Backup.Selection) {
         val workspace = cacheManager.backupAndRestore.new()
-        if (backupFilesSelector.jetprefDatastore) {
+        backupWorkspace = workspace
+        preparedSelection = selection
+        if (selection.jetprefDatastore) {
             val fileBasedStorage = workspace.inputDir
                 .subDir(AndroidAppDataStorage.JETPREF_DIR_NAME)
                 .subFile("${FlorisPreferenceModel.NAME}.${AndroidAppDataStorage.JETPREF_FILE_EXT}")
@@ -182,65 +206,70 @@ fun BackupScreen() = FlorisScreen {
             FlorisPreferenceStore.export(fileBasedStorage).getOrThrow()
         }
         val workspaceFilesDir = workspace.inputDir.subDir("files")
-        if (backupFilesSelector.imeKeyboard) {
+        if (selection.imeKeyboard) {
             context.filesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH).let { dir ->
                 dir.copyRecursively(workspaceFilesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH))
             }
         }
-        if (backupFilesSelector.imeTheme) {
+        if (selection.imeTheme) {
             context.filesDir.subDir(ExtensionManager.IME_THEME_PATH).let { dir ->
                 dir.copyRecursively(workspaceFilesDir.subDir(ExtensionManager.IME_THEME_PATH))
             }
         }
 
-        if (backupFilesSelector.provideClipboardItems()) {
+        if (selection.provideClipboardItems()) {
             val clipboardManager by context.clipboardManager()
             val clipboardHistory = clipboardManager.currentHistory.all
             val clipboardFilesDir = workspace.inputDir.subDir("clipboard")
             clipboardFilesDir.mkdir()
-            if (backupFilesSelector.clipboardTextItems) {
-                clipboardFilesDir.subFile(Backup.CLIPBOARD_TEXT_ITEMS_JSON_NAME)
-                    .writeJson(clipboardHistory.filter { it.type == ItemType.TEXT })
-            }
-            if (backupFilesSelector.clipboardImageItems) {
-                clipboardFilesDir.subFile(Backup.CLIPBOARD_IMAGES_JSON_NAME)
-                    .writeJson(clipboardHistory.filter { it.type == ItemType.IMAGE })
-                for (item in clipboardHistory.filter { it.type == ItemType.IMAGE }) {
+
+            fun backupClipboardItems(type: ItemType, jsonName: String) {
+                val items = clipboardHistory.filter { it.type == type }
+                clipboardFilesDir.subFile(jsonName).writeJson(items)
+                if (type == ItemType.TEXT) return
+
+                val mediaDir = clipboardFilesDir
+                    .subDir(ClipboardFileStorage.CLIPBOARD_FILES_PATH)
+                    .also { it.mkdirs() }
+                for (item in items) {
                     val id = ContentUris.parseId(item.uri!!)
-                    ClipboardFileStorage.getFileForId(context, id).copyTo(
-                        clipboardFilesDir.subFile("${ClipboardFileStorage.CLIPBOARD_FILES_PATH}/$id")
-                    )
+                    ClipboardFileStorage.getFileForId(context, id).copyTo(mediaDir.subFile("$id"))
                 }
             }
-            if (backupFilesSelector.clipboardVideoItems) {
-                clipboardFilesDir.subFile(Backup.CLIPBOARD_VIDEO_JSON_NAME)
-                    .writeJson(clipboardHistory.filter { it.type == ItemType.VIDEO })
-                for (item in clipboardHistory.filter { it.type == ItemType.VIDEO }) {
-                    val id = ContentUris.parseId(item.uri!!)
-                    ClipboardFileStorage.getFileForId(context, id).copyTo(
-                        clipboardFilesDir.subFile("${ClipboardFileStorage.CLIPBOARD_FILES_PATH}/$id")
-                    )
-                }
+
+            if (selection.clipboardTextItems) {
+                backupClipboardItems(ItemType.TEXT, BackupArchive.CLIPBOARD_TEXT_ITEMS_JSON_NAME)
+            }
+            if (selection.clipboardImageItems) {
+                backupClipboardItems(ItemType.IMAGE, BackupArchive.CLIPBOARD_IMAGES_JSON_NAME)
+            }
+            if (selection.clipboardVideoItems) {
+                backupClipboardItems(ItemType.VIDEO, BackupArchive.CLIPBOARD_VIDEO_JSON_NAME)
             }
         }
-        workspace.metadata = Backup.Metadata(
+        workspace.metadata = BackupArchive.Metadata(
             packageName = BuildConfig.APPLICATION_ID,
             versionCode = BuildConfig.VERSION_CODE,
             versionName = BuildConfig.VERSION_NAME,
             timestamp = System.currentTimeMillis(),
         )
-        workspace.inputDir.subFile(Backup.METADATA_JSON_NAME).writeJson(workspace.metadata)
-        workspace.zipFile = workspace.outputDir.subFile(Backup.defaultFileName(workspace.metadata))
+        workspace.inputDir.subFile(BackupArchive.METADATA_JSON_NAME).writeJson(workspace.metadata)
+        workspace.zipFile = workspace.outputDir.subFile(BackupArchive.defaultFileName(workspace.metadata))
         ZipUtils.zip(workspace.inputDir, workspace.zipFile)
-        backupWorkspace = workspace
     }
 
     suspend fun prepareAndPerformBackup() {
+        val selection = backupFilesSelector.snapshot()
+        val destination = backupDestination
         runCatching {
-            if (backupWorkspace == null || backupWorkspace!!.isClosed()) {
-                prepareBackupWorkspace()
+            if (backupWorkspace == null ||
+                backupWorkspace!!.isClosed() ||
+                preparedSelection != selection
+            ) {
+                closeBackupWorkspace()
+                prepareBackupWorkspace(selection)
             }
-            when (backupDestination) {
+            when (destination) {
                 Backup.Destination.FILE_SYS -> {
                     backUpToFileSystemLauncher.launch(backupWorkspace!!.zipFile.name)
                 }
@@ -254,12 +283,21 @@ fun BackupScreen() = FlorisScreen {
                         .createChooserIntent()
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     context.startActivity(shareIntent)
+                    // Keep the shared file alive for FileProvider, but never
+                    // reuse a snapshot after app data may have changed.
+                    preparedSelection = null
+                    isBackupBusy = false
                 }
             }
         }.onFailure { error ->
-            flogError { "Backup failed: destination=$backupDestination, error=${error.javaClass.simpleName}" }
-            context.showLongToast(R.string.backup_and_restore__back_up__failure, "error_message" to error.message)
-            backupWorkspace = null
+            val failureClass = error.javaClass.simpleName
+            flogError { "Backup failed: destination=$destination, failureClass=$failureClass" }
+            closeBackupWorkspace()
+            isBackupBusy = false
+            context.showLongToast(
+                R.string.backup_and_restore__back_up__failure,
+                "error_message" to failureClass,
+            )
         }
     }
 
@@ -268,17 +306,20 @@ fun BackupScreen() = FlorisScreen {
             ButtonBarSpacer()
             ButtonBarTextButton(
                 onClick = {
-                    backupWorkspace?.close()
+                    closeBackupWorkspace()
                     navController.popBackStack()
                 },
                 text = stringRes(R.string.action__cancel),
+                enabled = !isBackupBusy,
             )
             ButtonBarButton(
                 onClick = {
+                    if (isBackupBusy) return@ButtonBarButton
+                    isBackupBusy = true
                     scope.launch { prepareAndPerformBackup() }
                 },
                 text = stringRes(R.string.action__back_up),
-                enabled = backupFilesSelector.atLeastOneSelected(),
+                enabled = !isBackupBusy && backupFilesSelector.atLeastOneSelected(),
             )
         }
     }
