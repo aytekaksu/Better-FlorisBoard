@@ -47,8 +47,8 @@ fun FlorisImeTheme(content: @Composable () -> Unit) {
 
     val activeThemeInfo by themeManager.activeThemeInfo.collectAsState()
 
-    val assetResolver = remember(activeThemeInfo) {
-        FlorisAssetResolver(context, activeThemeInfo)
+    val assetResolver = remember(activeThemeInfo.loadedDir) {
+        FlorisAssetResolver(activeThemeInfo.loadedDir)
     }
     val snyggTheme = rememberSnyggTheme(activeThemeInfo.stylesheet, assetResolver)
     val windowSpec by windowController.activeWindowSpec.collectAsState()

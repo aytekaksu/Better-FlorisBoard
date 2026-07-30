@@ -16,32 +16,35 @@
 
 package dev.patrickgold.florisboard.ime.theme
 
-import android.content.Context
 import dev.patrickgold.florisboard.lib.devtools.flogError
+import org.florisboard.lib.kotlin.io.FsDir
 import org.florisboard.lib.kotlin.io.subFile
 import org.florisboard.lib.snygg.value.SnyggAssetResolver
 import java.net.URI
 
-class FlorisAssetResolver(val context: Context, val themeInfo: ThemeManager.ThemeInfo) : SnyggAssetResolver {
+class FlorisAssetResolver(private val loadedDir: FsDir?) : SnyggAssetResolver {
     override fun resolveAbsolutePath(uri: String) = runCatching {
-        val uri = URI.create(uri)
-        require(uri.scheme == "flex")
-        require(uri.authority.isNullOrEmpty())
-        val baseDir = checkNotNull(themeInfo.loadedDir) { "Loaded directory was null" }
-        val basePath = baseDir.canonicalPath
-        val canonicalFile = baseDir.subFile(uri.path).canonicalFile
-        val canonicalPath = canonicalFile.path
-        check(canonicalPath.startsWith(basePath)) {
-            "Calculated path '$canonicalPath' does not start with base path '$basePath'"
+        val parsedUri = try {
+            URI.create(uri)
+        } catch (_: IllegalArgumentException) {
+            throw IllegalArgumentException("Malformed asset URI")
+        }
+        require(parsedUri.scheme == "flex") { "Unsupported asset URI scheme" }
+        require(parsedUri.authority.isNullOrEmpty()) { "Asset URI authority is not allowed" }
+        val assetPath = requireNotNull(parsedUri.path) { "Asset URI path was missing" }
+        val baseDir = checkNotNull(loadedDir) { "Loaded directory was null" }.canonicalFile
+        val canonicalFile = baseDir.subFile(assetPath).canonicalFile
+        check(canonicalFile.toPath().startsWith(baseDir.toPath())) {
+            "Asset path escapes the theme directory"
         }
         check(canonicalFile.exists()) {
-            "Calculated path '$canonicalPath' does not exist"
+            "Asset file does not exist"
         }
         check(canonicalFile.isFile()) {
-            "Calculated path '$canonicalPath' is not a file"
+            "Asset path is not a file"
         }
-        canonicalPath
+        canonicalFile.path
     }.onFailure { exception ->
-        flogError { "FlorisAssetResolver failed to resolve URI '$uri'\n  error: ${exception.message}\n  with:  $themeInfo" }
+        flogError { "Theme asset resolution failed: error=${exception.javaClass.simpleName}" }
     }
 }
