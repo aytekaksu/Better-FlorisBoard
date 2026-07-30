@@ -78,6 +78,7 @@ val formattedKotlinSources = files(
         "app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/" +
             "TextKeyboardInteractionPolicy.kt",
     ),
+    file("app/src/androidTest/kotlin/org/florisboard/lib/kotlin/CurlyFormatAndroidTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummaryTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyDataPrivacyTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycleTest.kt"),
@@ -100,9 +101,11 @@ val formattedKotlinSources = files(
             "AutocorrectSuggestionRequestCoordinatorTest.kt",
     ),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/devtools/FlogDiagnosticsTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/util/UnitUtilsTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectTracePolicyTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/test/editor/DeterministicInputConnection.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/test/editor/DeterministicInputConnectionTest.kt"),
+    file("lib/kotlin/src/test/kotlin/org/florisboard/lib/kotlin/LibraryTest.kt"),
 )
 
 configure<SpotlessExtension> {

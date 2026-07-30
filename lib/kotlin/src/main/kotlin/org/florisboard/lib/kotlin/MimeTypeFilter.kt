@@ -46,8 +46,8 @@ class MimeTypeFilter {
             require(filterTypeParts[0].isNotEmpty() && filterTypeParts[1].isNotEmpty()) {
                 "Ill-formatted MIME type filter '$filterType'. Type or subtype empty."
             }
-            val filter0 = filterTypeParts[0].replace("*", "[^\\s]+").toRegex()
-            val filter1 = filterTypeParts[1].replace("*", "[^\\s]+").toRegex()
+            val filter0 = filterTypeParts[0].toMimeTypePartRegex()
+            val filter1 = filterTypeParts[1].toMimeTypePartRegex()
             filter0 to filter1
         }
     }
@@ -76,47 +76,21 @@ class MimeTypeFilter {
         return matchMimeTypeAgainstFilters(mimeType)
     }
 
-    // TODO: document and test
-    fun matchesAll(mimeTypes: List<String?>?): Boolean {
-        if (mimeTypes.isNullOrEmpty()) {
-            return false
-        }
-        for (mimeType in mimeTypes) {
-            if (!matches(mimeType)) {
-                return false
-            }
-        }
-        return true
-    }
+}
 
-    // TODO: document and test
-    fun matchesAny(mimeTypes: List<String?>?): Boolean {
-        if (mimeTypes.isNullOrEmpty()) {
-            return false
-        }
-        for (mimeType in mimeTypes) {
-            if (matches(mimeType)) {
-                return true
+private fun String.toMimeTypePartRegex(): Regex {
+    val part = this
+    return buildString {
+        var literalStart = 0
+        part.forEachIndexed { index, char ->
+            if (char == '*') {
+                append(Regex.escape(part.substring(literalStart, index)))
+                append("""[^\s]+""")
+                literalStart = index + 1
             }
         }
-        return false
-    }
-
-    // TODO: document and test
-    fun matchesOne(mimeTypes: List<String?>?): Boolean {
-        if (mimeTypes.isNullOrEmpty()) {
-            return false
-        }
-        var numMatches = 0
-        for (mimeType in mimeTypes) {
-            if (matches(mimeType)) {
-                if (++numMatches > 1) {
-                    return false
-                }
-            }
-        }
-        return numMatches == 1
-    }
+        append(Regex.escape(part.substring(literalStart)))
+    }.toRegex()
 }
 
 /**

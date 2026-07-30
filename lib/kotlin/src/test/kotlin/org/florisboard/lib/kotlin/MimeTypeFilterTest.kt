@@ -47,6 +47,16 @@ class MimeTypeFilterTest : FunSpec({
             val filter = mimeTypeFilterOf("image/png")
             filter.matches("   ") shouldBe false
         }
+
+        test("concrete MIME types are treated as literals") {
+            val svg = mimeTypeFilterOf("image/svg+xml")
+            svg.matches("image/svg+xml") shouldBe true
+            svg.matches("image/svggxml") shouldBe false
+
+            val font = mimeTypeFilterOf("application/vnd.ms-fontobject")
+            font.matches("application/vnd.ms-fontobject") shouldBe true
+            font.matches("application/vndXms-fontobject") shouldBe false
+        }
     }
 
     context("wildcard matching") {
@@ -123,5 +133,12 @@ class MimeTypeFilterTest : FunSpec({
             )
             filter.matches("x-application-custom/x-font-otf") shouldBe true
         }
+
+        test("wildcards preserve literal suffix punctuation") {
+            val filter = mimeTypeFilterOf("application/*+json")
+            filter.matches("application/ld+json") shouldBe true
+            filter.matches("application/ldXjson") shouldBe false
+        }
     }
+
 })
