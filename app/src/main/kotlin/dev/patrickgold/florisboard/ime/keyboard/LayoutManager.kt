@@ -106,10 +106,10 @@ class LayoutManager(context: Context) {
         layoutCacheGuard.withLock {
             val cached = layoutCache[ltn]
             if (cached != null) {
-                flogDebug(LogTopic.LAYOUT_MANAGER) { "Using cache for '${ltn.name}'" }
+                flogDebug(LogTopic.LAYOUT_MANAGER) { "Using cached layout: type=${ltn.type}" }
                 return@withLock cached
             } else {
-                flogDebug(LogTopic.LAYOUT_MANAGER) { "Loading '${ltn.name}'" }
+                flogDebug(LogTopic.LAYOUT_MANAGER) { "Loading layout: type=${ltn.type}" }
                 val meta = keyboardManager.resources.layouts.value[ltn.type]?.get(ltn.name)
                     ?: error("No indexed entry found for ${ltn.type} - ${ltn.name}")
                 val ext = extensionManager.getExtensionById(ltn.name.extensionId)
@@ -133,10 +133,10 @@ class LayoutManager(context: Context) {
         popupMappingCacheGuard.withLock {
             val cached = popupMappingCache[name]
             if (cached != null) {
-                flogDebug(LogTopic.LAYOUT_MANAGER) { "Using cache for '$name'" }
+                flogDebug(LogTopic.LAYOUT_MANAGER) { "Using cached popup mapping" }
                 return@withLock cached
             } else {
-                flogDebug(LogTopic.LAYOUT_MANAGER) { "Loading '$name'" }
+                flogDebug(LogTopic.LAYOUT_MANAGER) { "Loading popup mapping" }
                 val meta = keyboardManager.resources.popupMappings.value[name]
                     ?: error("No indexed entry found for $name")
                 val ext = extensionManager.getExtensionById(name.extensionId)
@@ -183,7 +183,7 @@ class LayoutManager(context: Context) {
 
         val mainLayoutResult = loadLayoutAsync(main, allowNullLTN = false).await()
         val mainLayout = mainLayoutResult.onFailure {
-            flogWarning { "$keyboardMode - main - $it" }
+            flogWarning { "Layout load failed: mode=$keyboardMode, role=main, error=${it.javaClass.simpleName}" }
         }.getOrNull()
         val modifierToLoad = if (mainLayout?.meta?.modifier != null) {
             val layoutType = when (mainLayout.type) {
@@ -203,11 +203,11 @@ class LayoutManager(context: Context) {
         }
         val modifierLayoutResult = loadLayoutAsync(modifierToLoad, allowNullLTN = true).await()
         val modifierLayout = modifierLayoutResult.onFailure {
-            flogWarning { "$keyboardMode - mod - $it" }
+            flogWarning { "Layout load failed: mode=$keyboardMode, role=modifier, error=${it.javaClass.simpleName}" }
         }.getOrNull()
         val extensionLayoutResult = loadLayoutAsync(extension, allowNullLTN = true).await()
         val extensionLayout = extensionLayoutResult.onFailure {
-            flogWarning { "$keyboardMode - ext - $it" }
+            flogWarning { "Layout load failed: mode=$keyboardMode, role=extension, error=${it.javaClass.simpleName}" }
         }.getOrNull()
 
         debugLayoutComputationResultFlow.value = DebugLayoutComputationResult(
@@ -290,10 +290,10 @@ class LayoutManager(context: Context) {
             arrangement = array,
             mode = keyboardMode,
             extendedPopupMapping = extendedPopups.await().onFailure {
-                flogWarning(LogTopic.LAYOUT_MANAGER) { it.toString() }
+                flogWarning(LogTopic.LAYOUT_MANAGER) { "Popup mapping failed: subtype (${it.javaClass.simpleName})" }
             }.getOrNull()?.mapping,
             extendedPopupMappingDefault = extendedPopupsDefault.await().onFailure {
-                flogWarning(LogTopic.LAYOUT_MANAGER) { it.toString() }
+                flogWarning(LogTopic.LAYOUT_MANAGER) { "Popup mapping failed: default (${it.javaClass.simpleName})" }
             }.getOrNull()?.mapping
         )
     }

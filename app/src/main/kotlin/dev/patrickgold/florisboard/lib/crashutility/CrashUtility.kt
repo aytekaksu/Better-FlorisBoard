@@ -100,12 +100,12 @@ abstract class CrashUtility private constructor() {
                         }
                     } catch (e: SecurityException) {
                         flogError(LogTopic.CRASH_UTILITY) {
-                            "Failed to install crash handler, probably due to missing runtime permission 'setDefaultUncaughtExceptionHandler':\n$e"
+                            "Failed to install crash handler: reason=security, error=${e.javaClass.simpleName}"
                         }
                         return false
                     } catch (e: Exception) {
                         flogError(LogTopic.CRASH_UTILITY) {
-                            "Failed to install crash handler due to an unspecified error:\n$e"
+                            "Failed to install crash handler: reason=unexpected, error=${e.javaClass.simpleName}"
                         }
                         return false
                     }
@@ -143,7 +143,7 @@ abstract class CrashUtility private constructor() {
                         }
                     } catch (e: Exception) {
                         flogError(LogTopic.CRASH_UTILITY) {
-                            "Failed to create crash handler notification channel due to an unspecified error:\n$e"
+                            "Failed to create crash notification channel: error=${e.javaClass.simpleName}"
                         }
                     }
                 } else {
@@ -188,7 +188,7 @@ abstract class CrashUtility private constructor() {
                     pathname.name.endsWith(".$UNHANDLED_STACKTRACE_FILE_EXT")
                 })?.forEach { file ->
                     flogInfo(LogTopic.CRASH_UTILITY) {
-                        "Reading unhandled stacktrace: ${file.name}"
+                        "Reading stored unhandled crash report"
                     }
                     retList.add(Stacktrace(file.name, readFile(file)))
                     file.delete()
@@ -349,7 +349,9 @@ abstract class CrashUtility private constructor() {
             try {
                 file.writeText(text)
             } catch (e: Exception) {
-                e.printStackTrace()
+                flogError(LogTopic.CRASH_UTILITY) {
+                    "Failed to store crash report: error=${e.javaClass.simpleName}"
+                }
             }
         }
     }

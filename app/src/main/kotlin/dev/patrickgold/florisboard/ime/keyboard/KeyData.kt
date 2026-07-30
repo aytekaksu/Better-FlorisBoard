@@ -108,6 +108,12 @@ interface KeyData : AbstractKeyData {
     }
 }
 
+/** Returns a content-free key description suitable for diagnostics. */
+internal fun KeyData.contentFreeString(): String {
+    val className = this::class.simpleName ?: "KeyData"
+    return "$className { type=$type groupId=$groupId }"
+}
+
 /**
  * Returns whether this key can participate in predictive word input on the given keyboard.
  */

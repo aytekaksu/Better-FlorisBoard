@@ -53,6 +53,7 @@ import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.lib.cache.CacheManager
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
+import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.ext.ExtensionManager
 import dev.patrickgold.florisboard.lib.io.ZipUtils
 import dev.patrickgold.jetpref.datastore.runtime.AndroidAppDataStorage
@@ -252,7 +253,7 @@ fun RestoreScreen() = FlorisScreen {
                             context.showLongToast(R.string.backup_and_restore__restore__success)
                             navController.navigateUp()
                         } catch (e: Throwable) {
-                            e.printStackTrace()
+                            flogError { "Restore failed: error=${e.javaClass.simpleName}" }
                             context.showLongToast(
                                 R.string.backup_and_restore__restore__failure,
                                 "error_message" to e.localizedMessage,

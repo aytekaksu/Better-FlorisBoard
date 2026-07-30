@@ -29,7 +29,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import dev.patrickgold.florisboard.BuildConfig
-import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import kotlinx.coroutines.delay
 import org.florisboard.lib.android.AndroidSettings
 import org.florisboard.lib.android.AndroidVersion
@@ -100,14 +99,12 @@ object InputMethodUtils {
     }
 
     fun parseIsFlorisboardEnabled(context: Context, activeImeIds: String): Boolean {
-        flogDebug { activeImeIds }
         return activeImeIds.split(DELIMITER).map { componentStr ->
             ComponentName.unflattenFromString(componentStr)
         }.any { it?.packageName == context.packageName && it.className == IME_SERVICE_CLASS_NAME }
     }
 
     fun parseIsFlorisboardSelected(context: Context, selectedImeId: String): Boolean {
-        flogDebug { selectedImeId }
         val component = ComponentName.unflattenFromString(selectedImeId)
         return component?.packageName == context.packageName && component.className == IME_SERVICE_CLASS_NAME
     }

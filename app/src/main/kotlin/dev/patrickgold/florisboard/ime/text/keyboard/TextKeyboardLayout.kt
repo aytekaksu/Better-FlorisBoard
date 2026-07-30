@@ -1307,10 +1307,6 @@ private class TextKeyboardLayoutController(
             activeKeyX = 0f
             activeKeyY = 0f
         }
-
-        override fun toString(): String {
-            return "${TouchPointer::class.simpleName} { id=$id, index=$index, initialKeyData=$initialKeyData, activeKey=$activeKey }"
-        }
     }
 
     private class SelectionDragSession(

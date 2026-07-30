@@ -61,8 +61,6 @@ class FlorisSpellCheckerService : SpellCheckerService() {
         private var cachedSpellingSubtype: Subtype? = null
 
         override fun onCreate() {
-            flogInfo(LogTopic.SPELL_EVENTS) { "Session requested locale: $locale" }
-
             setupSpellingIfNecessary()
         }
 
@@ -102,8 +100,9 @@ class FlorisSpellCheckerService : SpellCheckerService() {
         }
 
         override fun onGetSuggestions(textInfo: TextInfo?, suggestionsLimit: Int): SuggestionsInfo {
+            val hasInput = textInfo?.text != null
             flogInfo(LogTopic.SPELL_EVENTS) {
-                "suggestions requested, hasText=${textInfo?.text != null}, limit=$suggestionsLimit"
+                "suggestions requested, hasInput=$hasInput, limit=$suggestionsLimit"
             }
 
             textInfo?.text ?: return SpellingResult.unspecified().suggestionsInfo
@@ -113,7 +112,7 @@ class FlorisSpellCheckerService : SpellCheckerService() {
             return runBlocking {
                 nlpManager
                     .spell(spellingSubtype, textInfo.text, emptyList(), emptyList(), suggestionsLimit)
-                    .sendToDebugOverlayIfEnabled(textInfo)
+                    .recordForDebugOverlayIfEnabled()
                     .suggestionsInfo
             }
         }
@@ -130,7 +129,7 @@ class FlorisSpellCheckerService : SpellCheckerService() {
             val spellingSubtype = cachedSpellingSubtype ?: return emptyArray()
 
             return spellMultiple(spellingSubtype, textInfos, suggestionsLimit)
-                .sendToDebugOverlayIfEnabled(textInfos)
+                .recordForDebugOverlayIfEnabled()
                 .map { it.suggestionsInfo }
         }
 
@@ -149,7 +148,7 @@ class FlorisSpellCheckerService : SpellCheckerService() {
 
             super.onCancel()
             if (prefs.devtools.showSpellingOverlay.get()) {
-                nlpManager.clearDebugOverlay()
+                nlpManager.clearSpellingDiagnostics()
             }
         }
 
@@ -158,26 +157,20 @@ class FlorisSpellCheckerService : SpellCheckerService() {
 
             super.onClose()
             if (prefs.devtools.showSpellingOverlay.get()) {
-                nlpManager.clearDebugOverlay()
+                nlpManager.clearSpellingDiagnostics()
             }
         }
 
-        fun SpellingResult.sendToDebugOverlayIfEnabled(
-            textInfo: TextInfo,
-        ): SpellingResult {
+        private fun SpellingResult.recordForDebugOverlayIfEnabled(): SpellingResult {
             if (prefs.devtools.showSpellingOverlay.get()) {
-                nlpManager.addToDebugOverlay(textInfo.text, this)
+                nlpManager.recordSpellingDiagnostic(this)
             }
             return this
         }
 
-        fun Array<SpellingResult>.sendToDebugOverlayIfEnabled(
-            textInfos: Array<out TextInfo>,
-        ): Array<SpellingResult> {
+        private fun Array<SpellingResult>.recordForDebugOverlayIfEnabled(): Array<SpellingResult> {
             if (prefs.devtools.showSpellingOverlay.get()) {
-                for ((n, info) in this.withIndex()) {
-                    nlpManager.addToDebugOverlay(textInfos[n].text, info)
-                }
+                forEach(nlpManager::recordSpellingDiagnostic)
             }
             return this
         }

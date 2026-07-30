@@ -21,7 +21,6 @@ import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.ime.keyboard.CurrencySet
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.lib.FlorisLocale
-import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,7 +58,6 @@ class SubtypeManager(context: Context) {
 
     init {
         prefs.localization.subtypes.asFlow().collectLatestIn(scope) { listRaw ->
-            flogDebug { listRaw }
             val list = if (listRaw.isNotBlank()) {
                 SubtypeJsonConfig.decodeFromString<List<Subtype>>(listRaw)
             } else {

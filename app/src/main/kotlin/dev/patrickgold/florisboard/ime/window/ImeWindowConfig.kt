@@ -59,7 +59,7 @@ data class ImeWindowConfig(
             return try {
                 Json.decodeFromString(value)
             } catch (e: Throwable) {
-                flogError { "Failed to deserialize ImeWindowConfig.ByType: ${e.message}" }
+                flogError { "Failed to deserialize IME window config: error=${e.javaClass.simpleName}" }
                 emptyMap()
             }
         }

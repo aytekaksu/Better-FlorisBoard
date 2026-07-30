@@ -22,8 +22,6 @@ import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.lib.Pointer
 import dev.patrickgold.florisboard.lib.PointerMap
-import dev.patrickgold.florisboard.lib.devtools.LogTopic
-import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import dev.patrickgold.florisboard.lib.util.ViewUtils
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -111,7 +109,6 @@ abstract class SwipeGesture {
                 velocityTracker.computeCurrentVelocity(1000)
                 val velocityX = ViewUtils.px2dp(velocityTracker.getXVelocity(pointer.id))
                 val velocityY = ViewUtils.px2dp(velocityTracker.getYVelocity(pointer.id))
-                flogDebug(LogTopic.GESTURES) { "Velocity: $velocityX $velocityY dp/s" }
                 val thresholdSpeed = prefs.gestures.swipeVelocityThreshold.get().toDouble()
                 val thresholdWidth = prefs.gestures.swipeDistanceThreshold.get().dp.value.toDouble()
                 val unitWidth = thresholdWidth / 4.0

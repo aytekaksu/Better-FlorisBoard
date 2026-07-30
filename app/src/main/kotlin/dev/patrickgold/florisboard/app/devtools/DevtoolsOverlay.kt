@@ -42,22 +42,19 @@ import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.editorInstance
+import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.keyboard.CachedLayout
 import dev.patrickgold.florisboard.ime.keyboard.DebugLayoutComputationResult
 import dev.patrickgold.florisboard.ime.nlp.NlpInlineAutofill
 import dev.patrickgold.florisboard.ime.theme.ThemeManager
 import dev.patrickgold.florisboard.keyboardManager
-import dev.patrickgold.florisboard.lib.FlorisLocale
 import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.themeManager
 import dev.patrickgold.jetpref.datastore.model.collectAsState
-import java.text.SimpleDateFormat
-import java.util.*
 import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.snygg.SnyggMissingSchemaException
 
 private val CardBackground = Color.Black.copy(0.6f)
-private val DateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss", FlorisLocale.default().base)
 
 @Composable
 fun DevtoolsOverlay(modifier: Modifier = Modifier) {
@@ -111,11 +108,22 @@ private fun DevtoolsClipboardOverlay() {
 
     DevtoolsOverlayBox(title = "Clipboard overlay") {
         val primaryClip by clipboardManager.primaryClipFlow.collectAsState()
-        Text(
-            modifier = Modifier.padding(bottom = 8.dp, start = 8.dp, end = 8.dp),
-            text = primaryClip.toString(),
-            color = Color.White,
-        )
+        val lines = primaryClip?.let { clip ->
+            clipboardDebugLines(
+                type = when (clip.type) {
+                    ItemType.TEXT -> ClipboardDebugType.TEXT
+                    ItemType.IMAGE -> ClipboardDebugType.IMAGE
+                    ItemType.VIDEO -> ClipboardDebugType.VIDEO
+                },
+                isPinned = clip.isPinned,
+                isSensitive = clip.isSensitive,
+                isRemoteDevice = clip.isRemoteDevice,
+                mimeTypes = clip.mimeTypes,
+            )
+        } ?: clipboardDebugLines()
+        lines.forEach { line ->
+            DevtoolsText(text = line)
+        }
     }
 }
 
@@ -124,23 +132,25 @@ private fun DevtoolsInputStateOverlay() {
     val context = LocalContext.current
     val editorInstance by context.editorInstance()
 
-    val info by editorInstance.activeInfoFlow.collectAsState()
     val content by editorInstance.activeContentFlow.collectAsState()
-    val selection = content.selection
+    val lines = editorDebugLines(
+        cachedText = content.text,
+        textBeforeSelection = content.textBeforeSelection,
+        selectedText = content.selectedText,
+        textAfterSelection = content.textAfterSelection,
+        composingText = content.composingText,
+        currentWordText = content.currentWordText,
+        selectionIsValid = content.localSelection.isValid,
+        composingIsValid = content.localComposing.isValid,
+        currentWordIsValid = content.localCurrentWord.isValid,
+        lastCommitKnown = editorInstance.lastCommitPosition.pos >= 0,
+    )
 
     DevtoolsOverlayBox(title = "Input state overlay") {
-        DevtoolsSubGroup(title = "EditorInfo") {
-            DevtoolsText(text = "Type=${info.inputAttributes.type} Variation=${info.inputAttributes.variation} IsRich=${info.isRichInputEditor}")
-            DevtoolsText(text = "InitialSelection: ${info.initialSelection}")
-        }
-        DevtoolsSubGroup(title = "EditorContent") {
-            DevtoolsText(text = "Selection: { start=${selection.start}, end=${selection.end} }")
-            DevtoolsText(text = "Before: \"${content.textBeforeSelection}\"")
-            DevtoolsText(text = "Selected: \"${content.selectedText}\"")
-            DevtoolsText(text = "After: \"${content.textAfterSelection}\"")
-            DevtoolsText(text = "Composing: ${content.composing}")
-            DevtoolsText(text = "CurrentWord: ${content.currentWord}")
-            DevtoolsText(text = "LastCommit: ${editorInstance.lastCommitPosition}")
+        DevtoolsSubGroup(title = "Editor content") {
+            lines.forEach { line ->
+                DevtoolsText(text = line)
+            }
         }
     }
 }
@@ -152,7 +162,7 @@ private fun DevtoolsLastLayoutComputationOverlay(debugLayoutResult: DebugLayoutC
         if (result.isSuccess) {
             DevtoolsText(text = "loaded: ${result.getOrNull()?.name}")
         } else {
-            DevtoolsText(text = "error: ${result.exceptionOrNull()}")
+            DevtoolsText(text = "error: ${failureClassName(result.exceptionOrNull())}")
         }
     }
 
@@ -178,35 +188,22 @@ private fun DevtoolsSpellingOverlay() {
     val context = LocalContext.current
     val nlpManager by context.nlpManager()
 
-    val debugOverlayVersion by nlpManager.debugOverlayVersion.collectAsState()
-    val suggestionsInfos = remember(debugOverlayVersion) { nlpManager.debugOverlaySuggestionsInfos.snapshot() }
+    val diagnosticsVersion by nlpManager.spellingDiagnosticsVersion.collectAsState()
+    val snapshot = remember(diagnosticsVersion) { nlpManager.spellingDiagnosticsSnapshot() }
+    val records = snapshot.records.asReversed()
 
-    val sortedEntries = suggestionsInfos.entries.sortedByDescending { it.key }
-    DevtoolsOverlayBox(title = "Spelling overlay (${sortedEntries.size})") {
-        for ((timestamp, wordInfoPair) in sortedEntries) {
-            val (word, info) = wordInfoPair
-            val suggestions = info.suggestions()
+    DevtoolsOverlayBox(title = "Spelling overlay (${records.size})") {
+        DevtoolsText(text = "Dropped records: ${snapshot.droppedRecordCount}")
+        for (record in records) {
             Column(modifier = Modifier.padding(horizontal = 8.dp)) {
-                val date = DateFormat.format(Date(timestamp))
                 Text(
-                    text = "$date - \"$word\"",
+                    text = "Request #${record.sequence}",
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
                 )
-                val details = buildString {
-                    appendLine("isTypo: ${info.isTypo} | isGrammarError: ${info.isGrammarError}")
-                    if (info.isTypo || info.isGrammarError) {
-                        appendLine("providing corrections list of size n=${suggestions.size}")
-                        for ((n, suggestion) in suggestions.withIndex()) {
-                            append("  [$n] = string[${suggestion.length}] { \"")
-                            append(suggestion)
-                            appendLine("\" }")
-                        }
-                    }
-                }.prependIndent("  ")
                 Text(
-                    text = details,
+                    text = "  State: ${record.state.name.lowercase()} | Suggestions: ${record.suggestionCount}",
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp,
                 )
@@ -249,7 +246,7 @@ private fun DevtoolsStylesheetFailedToLoadOverlay(loadFailure: ThemeManager.Load
         }
         val cause = loadFailure.cause
         DevtoolsSubGroup(title = "Cause") {
-            DevtoolsText(text = "${cause.message}")
+            DevtoolsText(text = failureClassName(cause))
         }
         if (cause is SnyggMissingSchemaException) {
             DevtoolsSubGroup(title = "Explanation") {

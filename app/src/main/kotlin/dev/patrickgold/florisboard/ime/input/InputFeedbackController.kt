@@ -29,7 +29,6 @@ import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.android.systemServiceOrNull
 import org.florisboard.lib.android.systemVibratorOrNull
 import org.florisboard.lib.android.vibrate
-import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -106,7 +105,6 @@ class InputFeedbackController private constructor(private val ims: InputMethodSe
                 else -> AudioManager.FX_KEYPRESS_STANDARD
             }
             if (volume in 0.01..1.00) {
-                flogDebug { "Perform audio with volume=$volume and effect=$effect" }
                 audioManager.playSoundEffect(effect, volume.toFloat())
             }
         }

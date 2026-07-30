@@ -142,7 +142,7 @@ class ThemeManager(context: Context) {
             loadedDir.mkdirs()
             loadedDir.deleteContentsRecursively()
             ZipUtils.unzip(appContext, themeExtRef, loadedDir).getOrThrow()
-            flogInfo { "Loaded extension ${themeExt.meta.id} into $loadedDir" }
+            flogInfo { "Theme extension loaded" }
             val stylesheetFile = loadedDir.subFile(themeConfig.stylesheetPath())
             val stylesheetJson = stylesheetFile.readText()
             SnyggStylesheet.fromJson(stylesheetJson).getOrThrow()

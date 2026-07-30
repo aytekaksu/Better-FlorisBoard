@@ -89,10 +89,10 @@ class CrashDialogActivity : ComponentActivity() {
             appendLine("- Device: ${Devtools.getDeviceName()}")
             appendLine("- Android: ${Devtools.getAndroidVersion()}")
             appendLine()
-            appendLine("#### Attached logs and stacktrace files")
+            appendLine("#### Attached diagnostics and stacktrace files")
             appendCollapsibleSection(
-                summary = "Detailed info (Debug log header)",
-                details = Devtools.generateDebugLog(this@CrashDialogActivity, prefs, includeLogcat = false),
+                summary = "Diagnostic report header",
+                details = Devtools.generateDebugLog(this@CrashDialogActivity, prefs, includeDiagnostics = false),
             )
             appendLine()
             if (stacktraces.isNotEmpty()) {

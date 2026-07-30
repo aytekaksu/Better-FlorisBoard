@@ -24,7 +24,6 @@ import dev.patrickgold.florisboard.ime.keyboard.KeyData
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.isWordInput
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKey
-import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import dev.patrickgold.florisboard.lib.util.ViewUtils
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -112,7 +111,6 @@ class GlideTypingGesture {
                             // evaluate whether is actually a gesture
                             val dist = ViewUtils.px2dp(pointerData.positions[0].dist(pos))
                             val time = pos.elapsedTimeMillis.toLong() + 1L
-                            flogDebug { "Distance glided: $dist dp with velocity: ${dist / time} dp/ms" }
                             if (
                                 dist > keySize * thresholdScale &&
                                 (dist / time) > VELOCITY_THRESHOLD * thresholdScale &&
