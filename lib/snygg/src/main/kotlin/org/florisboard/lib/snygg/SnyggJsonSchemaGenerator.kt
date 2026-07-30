@@ -71,6 +71,7 @@ object SnyggJsonSchemaGenerator {
         )
 
         val jsonSchemaObj = convertToJsonObject(jsonSchema)
+        // quality: allow-console-output -- command-line generator progress, never app or user data
         println("Writing $jsonSchemaFilePath")
         File(jsonSchemaFilePath).writeJson(jsonSchemaObj, Json {
             prettyPrint = true

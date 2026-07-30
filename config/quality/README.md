@@ -31,14 +31,33 @@ remain valid in forks and local checkouts.
 
 ## Sensitive logging guard
 
-`privacySourceCheck` rejects logging calls in production keyboard and NLP code
-when they contain raw motion/pointer objects or interpolate likely typed text,
-candidates, dictionary entries, words, or composing text. Log redacted counts,
-opaque identifiers, state names, and duration buckets instead.
+`privacySourceCheck` is a name-based defense-in-depth check for common direct
+diagnostic calls. It balances multiline Flog and Android
+`Log.v/d/i/w/e/wtf` calls, inspects ordinary string templates, and rejects
+likely-sensitive input, editor, clipboard, pointer, candidate, dictionary,
+URI/path, message, and Throwable names. It also rejects logger import aliases,
+static Android Log imports, direct `Flog.log`, and Android Log's three-argument
+Throwable overloads.
 
-The check is deliberately conservative rather than a Kotlin parser. If it
-mistakes a safe value for user data, place this comment immediately above the
-logging call and explain why the value is safe:
+This is not a Kotlin type checker and cannot prove that diagnostics are safe or
+find every value passed through an indirect helper. Review every logging and
+diagnostic-export change manually. The source check is a backstop, not a
+replacement for that review.
+
+The check also rejects generic `toString()`, exception messages, stack traces,
+and `printStackTrace()`. Files declaring the devtools report entry points also
+inspect balanced `append`/`appendLine` arguments. Devtools sources cannot invoke
+raw process/logcat export paths.
+
+Log content-free metadata instead: counts, booleans, opaque IDs, closed
+state/type names, and duration buckets. Projections of a sensitive value are
+accepted only when the whole template expression is a size, length, count,
+simple class name, or null check. For example, `${suggestions.size}` and
+`${error::class.simpleName}` are allowed; `${word.take(3).length}` is not.
+
+If the name-based check mistakes a safe value for user data, place a full-line
+comment immediately above the logging call. The `--` separator and a nonblank
+reason are required:
 
 ```kotlin
 // quality: allow-sensitive-log -- reports an enum name; it cannot contain input
@@ -47,6 +66,12 @@ flogDebug { "state=$stateName" }
 
 Reviewers should reject unexplained markers and exceptions covering raw user
 content.
+
+All production `print`/`println` calls are rejected regardless of payload so
+they cannot bypass structured logging review. The one full-line
+`quality: allow-console-output -- reason` marker belongs to the command-line
+Snygg schema generator, where it reports generator progress rather than app or
+user data. `printStackTrace()` cannot be suppressed.
 
 ## Temporary Android lint workaround
 
