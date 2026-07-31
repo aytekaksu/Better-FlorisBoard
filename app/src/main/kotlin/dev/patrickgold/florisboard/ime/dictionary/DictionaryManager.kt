@@ -17,109 +17,27 @@
 package dev.patrickgold.florisboard.ime.dictionary
 
 import android.content.Context
+import androidx.core.os.UserManagerCompat
 import androidx.room.Room
-import dev.patrickgold.florisboard.app.FlorisPreferenceStore
-import dev.patrickgold.florisboard.lib.FlorisLocale
-import java.lang.ref.WeakReference
 
 /**
- * TODO: document
+ * Owns the user-dictionary stores for this app process and creates each on first use.
  */
-class DictionaryManager private constructor(context: Context) {
-    private val applicationContext: WeakReference<Context> = WeakReference(context.applicationContext ?: context)
-    private val prefs by FlorisPreferenceStore
+class DictionaryManager(context: Context) {
+    private val applicationContext = context.applicationContext ?: context
 
-    private var florisUserDictionaryDatabase: FlorisUserDictionaryDatabase? = null
-    private var systemUserDictionaryDatabase: SystemUserDictionaryDatabase? = null
-
-    companion object {
-        private var defaultInstance: DictionaryManager? = null
-
-        fun init(applicationContext: Context): DictionaryManager {
-            val instance = DictionaryManager(applicationContext)
-            defaultInstance = instance
-            return instance
+    val florisUserDictionary: UserDictionaryDatabase by lazy {
+        check(UserManagerCompat.isUserUnlocked(applicationContext)) {
+            "The Floris user dictionary is unavailable before user unlock."
         }
-
-        fun default(): DictionaryManager {
-            val instance = defaultInstance
-            if (instance != null) {
-                return instance
-            } else {
-                throw UninitializedPropertyAccessException(
-                    "${DictionaryManager::class.simpleName} has not been initialized previously. Make sure to call init(applicationContext) before using default()."
-                )
-            }
-        }
+        Room.databaseBuilder(
+            applicationContext,
+            FlorisUserDictionaryDatabase::class.java,
+            FlorisUserDictionaryDatabase.DB_FILE_NAME,
+        ).allowMainThreadQueries().build()
     }
 
-    fun spell(word: String, locale: FlorisLocale): Boolean {
-        val florisDao = florisUserDictionaryDao()
-        val systemDao = systemUserDictionaryDao()
-        if (florisDao == null && systemDao == null) {
-            return false
-        }
-        var ret = false
-        if (prefs.dictionary.enableFlorisUserDictionary.get()) {
-            ret = ret || florisDao?.queryExactFuzzyLocale(word, locale)?.isNotEmpty() ?: false
-            ret = ret || florisDao?.queryShortcut(word, locale)?.isNotEmpty() ?: false
-        }
-        if (prefs.dictionary.enableSystemUserDictionary.get()) {
-            ret = ret || systemDao?.queryExactFuzzyLocale(word, locale)?.isNotEmpty() ?: false
-            ret = ret || systemDao?.queryShortcut(word, locale)?.isNotEmpty() ?: false
-        }
-        return ret
-    }
-
-    @Synchronized
-    fun florisUserDictionaryDao(): UserDictionaryDao? {
-        return if (prefs.dictionary.enableFlorisUserDictionary.get()) {
-            florisUserDictionaryDatabase?.userDictionaryDao()
-        } else {
-            null
-        }
-    }
-
-    @Synchronized
-    fun florisUserDictionaryDatabase(): FlorisUserDictionaryDatabase? {
-        return if (prefs.dictionary.enableFlorisUserDictionary.get()) {
-            florisUserDictionaryDatabase
-        } else {
-            null
-        }
-    }
-
-    @Synchronized
-    fun systemUserDictionaryDao(): UserDictionaryDao? {
-        return if (prefs.dictionary.enableSystemUserDictionary.get()) {
-            systemUserDictionaryDatabase?.userDictionaryDao()
-        } else {
-            null
-        }
-    }
-
-    @Synchronized
-    fun systemUserDictionaryDatabase(): SystemUserDictionaryDatabase? {
-        return if (prefs.dictionary.enableSystemUserDictionary.get()) {
-            systemUserDictionaryDatabase
-        } else {
-            null
-        }
-    }
-
-    @Synchronized
-    fun loadUserDictionariesIfNecessary() {
-        val context = applicationContext.get() ?: return
-
-        if (florisUserDictionaryDatabase == null && prefs.dictionary.enableFlorisUserDictionary.get()) {
-            florisUserDictionaryDatabase = Room.databaseBuilder(
-                context,
-                FlorisUserDictionaryDatabase::class.java,
-                FlorisUserDictionaryDatabase.DB_FILE_NAME
-            ).allowMainThreadQueries().build()
-        }
-        if (systemUserDictionaryDatabase == null && prefs.dictionary.enableSystemUserDictionary.get()) {
-            systemUserDictionaryDatabase = SystemUserDictionaryDatabase(context)
-        }
+    val systemUserDictionary: SystemUserDictionaryDatabase by lazy {
+        SystemUserDictionaryDatabase(applicationContext)
     }
 }

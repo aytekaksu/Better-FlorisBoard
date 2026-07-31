@@ -22,7 +22,6 @@ import android.view.textservice.SuggestionsInfo
 import android.view.textservice.TextInfo
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.ime.core.Subtype
-import dev.patrickgold.florisboard.ime.dictionary.DictionaryManager
 import dev.patrickgold.florisboard.ime.nlp.SpellingLanguageMode
 import dev.patrickgold.florisboard.ime.nlp.SpellingResult
 import dev.patrickgold.florisboard.lib.FlorisLocale
@@ -34,7 +33,6 @@ import org.florisboard.lib.kotlin.map
 
 class FlorisSpellCheckerService : SpellCheckerService() {
     private val prefs by FlorisPreferenceStore
-    private val dictionaryManager get() = DictionaryManager.default()
     private val nlpManager by nlpManager()
     private val subtypeManager by subtypeManager()
 
@@ -42,7 +40,6 @@ class FlorisSpellCheckerService : SpellCheckerService() {
         flogInfo(LogTopic.SPELL_EVENTS)
 
         super.onCreate()
-        dictionaryManager.loadUserDictionariesIfNecessary()
     }
 
     override fun createSession(): Session {

@@ -25,8 +25,8 @@ import androidx.compose.ui.platform.LocalContext
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.LocalNavController
 import dev.patrickgold.florisboard.app.Routes
+import dev.patrickgold.florisboard.dictionaryManager
 import dev.patrickgold.florisboard.extensionManager
-import dev.patrickgold.florisboard.ime.dictionary.DictionaryManager
 import dev.patrickgold.florisboard.ime.dictionary.FlorisUserDictionaryDatabase
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionArrangement
 import dev.patrickgold.florisboard.lib.compose.FlorisConfirmDeleteDialog
@@ -52,6 +52,7 @@ fun DevtoolsScreen() = FlorisScreen {
 
     val context = LocalContext.current
     val navController = LocalNavController.current
+    val dictionaryManager by context.dictionaryManager()
     val extensionManager by context.extensionManager()
     val scope = rememberCoroutineScope()
 
@@ -252,10 +253,7 @@ fun DevtoolsScreen() = FlorisScreen {
         if (showDialog) {
             FlorisConfirmDeleteDialog(
                 onConfirm = {
-                    DictionaryManager.default().let {
-                        it.loadUserDictionariesIfNecessary()
-                        it.florisUserDictionaryDao()?.deleteAll()
-                    }
+                    dictionaryManager.florisUserDictionary.userDictionaryDao().deleteAll()
                     setShowDialog(false)
                 },
                 onDismiss = { setShowDialog(false) },

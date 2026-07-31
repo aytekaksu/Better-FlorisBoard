@@ -166,6 +166,7 @@ class FlorisApplication : Application() {
     val clipboardManager = lazy {
         clipboardInitializationFailure.register(ClipboardManager(this))
     }
+    val dictionaryManager = lazy { DictionaryManager(this) }
     val editorInstance = lazy { EditorInstance(this) }
     val extensionManager = lazy { ExtensionManager(this) }
     val glideTypingManager = lazy { GlideTypingManager(this) }
@@ -246,7 +247,6 @@ class FlorisApplication : Application() {
                 initializePreferencesAndClipboard(initializedClipboardManager)
             }
             extensionManager.value.init()
-            DictionaryManager.init(this)
             completeBootstrapStage(RUNTIME_BOOTSTRAP_STAGE)
         } catch (error: Exception) {
             failApplicationBootstrap(error, stage = "runtime")
@@ -368,6 +368,8 @@ fun Context.appContext() = lazyOf(this.florisApplication())
 fun Context.cacheManager() = this.florisApplication().cacheManager
 
 fun Context.clipboardManager() = this.florisApplication().clipboardManager
+
+fun Context.dictionaryManager() = this.florisApplication().dictionaryManager
 
 fun Context.editorInstance() = this.florisApplication().editorInstance
 

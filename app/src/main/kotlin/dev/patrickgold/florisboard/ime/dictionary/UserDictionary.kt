@@ -48,7 +48,6 @@ private const val WORDS_TABLE = "words"
 
 const val FREQUENCY_MIN = 0
 const val FREQUENCY_MAX = 255
-const val FREQUENCY_DEFAULT = 128
 
 private const val SORT_BY_FREQ_DESC = "${UserDictionary.Words.FREQUENCY} DESC"
 
@@ -149,21 +148,7 @@ interface UserDictionaryDao {
     companion object {
         private const val SELECT_ALL_FROM_WORDS =
             "SELECT * FROM $WORDS_TABLE"
-        private const val LOCALE_MATCHES =
-            "(${UserDictionary.Words.LOCALE} = :locale OR ${UserDictionary.Words.LOCALE} IS NULL)"
     }
-
-    @Query("$SELECT_ALL_FROM_WORDS WHERE ${UserDictionary.Words.WORD} LIKE '%' || :word || '%'")
-    fun query(word: String): List<UserDictionaryEntry>
-
-    @Query("$SELECT_ALL_FROM_WORDS WHERE ${UserDictionary.Words.WORD} LIKE '%' || :word || '%' AND $LOCALE_MATCHES")
-    fun query(word: String, locale: FlorisLocale?): List<UserDictionaryEntry>
-
-    @Query("$SELECT_ALL_FROM_WORDS WHERE ${UserDictionary.Words.SHORTCUT} = :shortcut")
-    fun queryShortcut(shortcut: String): List<UserDictionaryEntry>
-
-    @Query("$SELECT_ALL_FROM_WORDS WHERE ${UserDictionary.Words.SHORTCUT} = :shortcut AND $LOCALE_MATCHES")
-    fun queryShortcut(shortcut: String, locale: FlorisLocale?): List<UserDictionaryEntry>
 
     @Query(SELECT_ALL_FROM_WORDS)
     fun queryAll(): List<UserDictionaryEntry>
@@ -171,14 +156,8 @@ interface UserDictionaryDao {
     @Query("$SELECT_ALL_FROM_WORDS WHERE (${UserDictionary.Words.LOCALE} = :locale AND :locale IS NOT NULL) OR (${UserDictionary.Words.LOCALE} IS NULL AND :locale IS NULL)")
     fun queryAll(locale: FlorisLocale?): List<UserDictionaryEntry>
 
-    @Query("$SELECT_ALL_FROM_WORDS WHERE ${UserDictionary.Words.WORD} = :word")
-    fun queryExact(word: String): List<UserDictionaryEntry>
-
     @Query("$SELECT_ALL_FROM_WORDS WHERE ${UserDictionary.Words.WORD} = :word AND (${UserDictionary.Words.LOCALE} = :locale OR (${UserDictionary.Words.LOCALE} IS NULL AND :locale IS NULL))")
     fun queryExact(word: String, locale: FlorisLocale?): List<UserDictionaryEntry>
-
-    @Query("$SELECT_ALL_FROM_WORDS WHERE ${UserDictionary.Words.WORD} = :word AND $LOCALE_MATCHES")
-    fun queryExactFuzzyLocale(word: String, locale: FlorisLocale?): List<UserDictionaryEntry>
 
     @Query("SELECT DISTINCT ${UserDictionary.Words.LOCALE} FROM $WORDS_TABLE")
     fun queryLanguageList(): List<FlorisLocale?>
@@ -198,8 +177,6 @@ interface UserDictionaryDao {
 
 interface UserDictionaryDatabase {
     fun userDictionaryDao(): UserDictionaryDao
-
-    fun reset()
 
     fun importCombinedList(context: Context, uri: Uri) {
         context.contentResolver.readText(uri) { src ->
@@ -292,10 +269,6 @@ abstract class FlorisUserDictionaryDatabase : RoomDatabase(), UserDictionaryData
 
     abstract override fun userDictionaryDao(): UserDictionaryDao
 
-    override fun reset() {
-        TODO("Not yet implemented")
-    }
-
     class Converters {
         @TypeConverter
         fun localeToString(locale: FlorisLocale?): String? {
@@ -318,7 +291,7 @@ abstract class FlorisUserDictionaryDatabase : RoomDatabase(), UserDictionaryData
 class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
     private val applicationContext = context.applicationContext ?: context
 
-    internal fun isAccessible(): Boolean = runCatching {
+    private fun isAccessible(): Boolean = runCatching {
         val enabled = applicationContext.getSystemService(InputMethodManager::class.java)
             ?.enabledInputMethodList
             ?.any {
@@ -444,54 +417,6 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
         )
 
     private val dao = object : UserDictionaryDao {
-        override fun query(word: String): List<UserDictionaryEntry> {
-            return queryResolver(
-                selection = "${UserDictionary.Words.WORD} LIKE ?",
-                selectionArgs = arrayOf("%$word%"),
-                sortOrder = SORT_BY_FREQ_DESC,
-            )
-        }
-
-        override fun query(word: String, locale: FlorisLocale?): List<UserDictionaryEntry> {
-            return if (locale == null) {
-                queryResolver(
-                    selection = "${UserDictionary.Words.WORD} LIKE ? AND ${UserDictionary.Words.LOCALE} IS NULL",
-                    selectionArgs = arrayOf("%$word%"),
-                    sortOrder = SORT_BY_FREQ_DESC,
-                )
-            } else {
-                queryResolver(
-                    selection = "${UserDictionary.Words.WORD} LIKE ? AND (${UserDictionary.Words.LOCALE} = ? OR ${UserDictionary.Words.LOCALE} = ? OR ${UserDictionary.Words.LOCALE} IS NULL)",
-                    selectionArgs = arrayOf("%$word%", locale.localeTag(), locale.language),
-                    sortOrder = SORT_BY_FREQ_DESC,
-                )
-            }
-        }
-
-        override fun queryShortcut(shortcut: String): List<UserDictionaryEntry> {
-            return queryResolver(
-                selection = "${UserDictionary.Words.SHORTCUT} = ?",
-                selectionArgs = arrayOf(shortcut),
-                sortOrder = SORT_BY_FREQ_DESC,
-            )
-        }
-
-        override fun queryShortcut(shortcut: String, locale: FlorisLocale?): List<UserDictionaryEntry> {
-            return if (locale == null) {
-                queryResolver(
-                    selection = "${UserDictionary.Words.SHORTCUT} = ? AND ${UserDictionary.Words.LOCALE} IS NULL",
-                    selectionArgs = arrayOf(shortcut),
-                    sortOrder = SORT_BY_FREQ_DESC,
-                )
-            } else {
-                queryResolver(
-                    selection = "${UserDictionary.Words.SHORTCUT} = ? AND (${UserDictionary.Words.LOCALE} = ? OR ${UserDictionary.Words.LOCALE} = ? OR ${UserDictionary.Words.LOCALE} IS NULL)",
-                    selectionArgs = arrayOf(shortcut, locale.localeTag(), locale.language),
-                    sortOrder = SORT_BY_FREQ_DESC,
-                )
-            }
-        }
-
         override fun queryAll(): List<UserDictionaryEntry> {
             return queryResolver(
                 selection = null,
@@ -516,14 +441,6 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
             }
         }
 
-        override fun queryExact(word: String): List<UserDictionaryEntry> {
-            return queryResolver(
-                selection = "${UserDictionary.Words.WORD} = ?",
-                selectionArgs = arrayOf(word),
-                sortOrder = null,
-            )
-        }
-
         override fun queryExact(word: String, locale: FlorisLocale?): List<UserDictionaryEntry> {
             return if (locale == null) {
                 queryResolver(
@@ -534,22 +451,6 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
             } else {
                 queryResolver(
                     selection = "${UserDictionary.Words.WORD} = ? AND ${UserDictionary.Words.LOCALE} = ?",
-                    selectionArgs = arrayOf(word, locale.localeTag()),
-                    sortOrder = SORT_BY_FREQ_DESC,
-                )
-            }
-        }
-
-        override fun queryExactFuzzyLocale(word: String, locale: FlorisLocale?): List<UserDictionaryEntry> {
-            return if (locale == null) {
-                queryResolver(
-                    selection = "${UserDictionary.Words.WORD} = ? AND ${UserDictionary.Words.LOCALE} IS NULL",
-                    selectionArgs = arrayOf(word),
-                    sortOrder = SORT_BY_FREQ_DESC,
-                )
-            } else {
-                queryResolver(
-                    selection = "${UserDictionary.Words.WORD} = ? AND (${UserDictionary.Words.LOCALE} = ? OR ${UserDictionary.Words.LOCALE} IS NULL)",
                     selectionArgs = arrayOf(word, locale.localeTag()),
                     sortOrder = SORT_BY_FREQ_DESC,
                 )
@@ -632,10 +533,6 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
 
     override fun userDictionaryDao(): UserDictionaryDao {
         return dao
-    }
-
-    override fun reset() {
-        TODO("Not yet implemented")
     }
 }
 
