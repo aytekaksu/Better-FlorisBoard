@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
-import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.SpaceBar
@@ -172,22 +171,6 @@ fun TypingScreen() = FlorisScreen {
                 title = stringRes(R.string.pref__spelling__language_mode__label),
                 entries = enumDisplayEntriesOf(SpellingLanguageMode::class),
                 enabledIf = { florisSpellCheckerEnabled.value },
-            )
-            SwitchPreference(
-                prefs.spelling.useContacts,
-                icon = Icons.Default.Contacts,
-                title = stringRes(R.string.pref__spelling__use_contacts__label),
-                summary = stringRes(R.string.pref__spelling__use_contacts__summary),
-                enabledIf = { florisSpellCheckerEnabled.value },
-                visibleIf = { false }, // For now
-            )
-            SwitchPreference(
-                prefs.spelling.useUdmEntries,
-                icon = Icons.AutoMirrored.Filled.LibraryBooks,
-                title = stringRes(R.string.pref__spelling__use_udm_entries__label),
-                summary = stringRes(R.string.pref__spelling__use_udm_entries__summary),
-                enabledIf = { florisSpellCheckerEnabled.value },
-                visibleIf = { false }, // For now
             )
         }
 

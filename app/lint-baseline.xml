@@ -1973,17 +1973,6 @@
 
     <issue
         id="UnusedResources"
-        message="The resource `R.string.prefs__media__emoji_preferred_hair_style` appears to be unused"
-        errorLine1="    &lt;string name=&quot;prefs__media__emoji_preferred_hair_style&quot;>Preferred emoji hair style&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="19"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
         message="The resource `R.string.emoji__category__smileys_emotion` appears to be unused"
         errorLine1="    &lt;string name=&quot;emoji__category__smileys_emotion&quot; comment=&quot;Emoji category name&quot;>Smileys &amp;amp; Emotions&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
@@ -2210,17 +2199,6 @@
         <location
             file="src/main/res/values/strings.xml"
             line="222"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.pref__input_feedback__any_feat_gesture_moving_swipe__summary` appears to be unused"
-        errorLine1="    &lt;string name=&quot;pref__input_feedback__any_feat_gesture_moving_swipe__summary&quot; comment=&quot;Preference summary&quot;>e.g. cursor control swipe&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="447"
             column="13"/>
     </issue>
 
