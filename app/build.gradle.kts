@@ -25,7 +25,6 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.mikepenz.aboutlibraries)
     alias(libs.plugins.kotest)
-    alias(libs.plugins.kotlinx.kover)
 }
 
 val projectMinSdk: String by project
@@ -79,9 +78,6 @@ configure<ApplicationExtension> {
         buildConfigField("String", "FLADDONS_STORE_URL", "\"beta.addons.florisboard.org\"")
 
         sourceSets {
-            maybeCreate("main").apply {
-                assets.directories += "src/main/assets"
-            }
             maybeCreate("androidTest").apply {
                 assets.directories += "$projectDir/schemas"
             }
@@ -177,19 +173,12 @@ tasks.withType<Test> {
     testLogging {
         events = setOf(TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED)
     }
-    useJUnitPlatform()
-}
-
-kover {
-    useJacoco()
 }
 
 dependencies {
     implementation(projects.lib.autocorrectHostCore)
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
-    // testImplementation(composeBom)
-    // androidTestImplementation(composeBom)
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.activity.ktx)
@@ -197,7 +186,6 @@ dependencies {
     implementation(libs.androidx.collection.ktx)
     implementation(libs.androidx.compose.material.icons)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.runtime.livedata)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
@@ -212,7 +200,6 @@ dependencies {
     implementation(libs.androidx.window.core)
     implementation(libs.cache4k)
     implementation(libs.commons.compress)
-    implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.mikepenz.aboutlibraries.core)
@@ -233,11 +220,11 @@ dependencies {
     testImplementation(libs.kotest.assertions.core)
     testImplementation(libs.kotest.property)
     testImplementation(libs.kotest.runner.junit5)
-    testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
     androidTestImplementation(libs.androidx.test.ext)
-    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.room.testing)
 }
 

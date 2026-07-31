@@ -19,13 +19,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlinx.kover)
     alias(libs.plugins.kotest)
 }
-
-val projectGroupId: String by project
-val artifactId = "florisboard-lib-kotlin"
-val projectVersion: String by project
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -52,10 +47,6 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-kover {
-    useJacoco()
-}
-
 dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines)
@@ -64,4 +55,3 @@ dependencies {
     testImplementation(libs.kotest.property)
     testImplementation(libs.kotest.runner.junit5)
 }
-

@@ -42,14 +42,6 @@ android {
         targetSdk = projectTargetSdk.toInt()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        sourceSets {
-            maybeCreate("main").apply {
-                java {
-                    srcDirs("src/main/kotlin")
-                }
-            }
-        }
     }
 
     buildTypes {
@@ -69,7 +61,7 @@ android {
 
 dependencies {
     implementation(libs.androidx.test.ext)
-    implementation(libs.androidx.test.espresso.core)
+    implementation(libs.androidx.test.runner)
     implementation(libs.androidx.test.uiautomator)
     implementation(libs.androidx.benchmark.macro)
 }
