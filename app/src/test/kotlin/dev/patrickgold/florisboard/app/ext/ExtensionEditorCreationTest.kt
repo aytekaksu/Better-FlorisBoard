@@ -17,8 +17,16 @@
 package dev.patrickgold.florisboard.app.ext
 
 import dev.patrickgold.florisboard.app.settings.theme.PrettyPrintConfig
+import dev.patrickgold.florisboard.ime.theme.ThemeExtension
+import dev.patrickgold.florisboard.ime.theme.ThemeExtensionComponentImpl
+import dev.patrickgold.florisboard.lib.ext.Extension
+import dev.patrickgold.florisboard.lib.ext.ExtensionJsonConfig
+import dev.patrickgold.florisboard.lib.ext.ExtensionMaintainer
+import dev.patrickgold.florisboard.lib.ext.ExtensionMeta
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import org.florisboard.lib.snygg.SnyggStylesheet
 
 class ExtensionEditorCreationTest :
@@ -36,5 +44,54 @@ class ExtensionEditorCreationTest :
                 .toJson(PrettyPrintConfig)
                 .getOrThrow()
             SnyggStylesheet.fromJson(stylesheet, PrettyPrintConfig).getOrThrow()
+        }
+
+        test("only theme extension lists expose editor support") {
+            ExtensionListScreenType.EXT_THEME.editorSerialType shouldBe ThemeExtension.SERIAL_TYPE
+            ExtensionListScreenType.EXT_KEYBOARD.editorSerialType shouldBe null
+            ExtensionListScreenType.EXT_LANGUAGEPACK.editorSerialType shouldBe null
+        }
+
+        test("theme editing and building are detached and preserve polymorphic serialization") {
+            val original = ThemeExtension(
+                meta = ExtensionMeta(
+                    id = "org.example.themes",
+                    version = "1.0.0",
+                    title = "Original",
+                    maintainers = listOf(ExtensionMaintainer("Author")),
+                    license = "apache-2.0",
+                ),
+                dependencies = listOf("org.example.base"),
+                themes = listOf(
+                    ThemeExtensionComponentImpl(
+                        id = "day",
+                        label = "Day",
+                        authors = listOf("Author"),
+                        isNightTheme = false,
+                    ),
+                ),
+            )
+            val editor = original.edit()
+            editor.meta = editor.meta.copy(title = "Edited")
+            editor.dependencies.add("org.example.extra")
+            editor.themes.single().label = "Edited day"
+
+            val edited = editor.build()
+            val savePlan = createExtensionEditorSavePlan(editor, edited)
+            editor.meta = editor.meta.copy(title = "After build")
+            editor.dependencies.clear()
+            editor.themes.single().label = "After build"
+
+            original.meta.title shouldBe "Original"
+            original.dependencies shouldBe listOf("org.example.base")
+            original.themes.single().label shouldBe "Day"
+            edited.meta.title shouldBe "Edited"
+            edited.dependencies shouldBe listOf("org.example.base", "org.example.extra")
+            edited.themes.single().label shouldBe "Edited day"
+
+            val decoded = ExtensionJsonConfig.decodeFromString<Extension>(
+                savePlan.serializedManifest,
+            ) as ThemeExtension
+            ExtensionJsonConfig.encodeToString<Extension>(decoded) shouldBe savePlan.serializedManifest
         }
     })

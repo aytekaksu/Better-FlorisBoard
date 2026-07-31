@@ -63,7 +63,6 @@ import dev.patrickgold.florisboard.app.settings.theme.ThemeEditorScreen
 import dev.patrickgold.florisboard.app.settings.theme.newEmptyThemeStylesheetEditor
 import dev.patrickgold.florisboard.cacheManager
 import dev.patrickgold.florisboard.extensionManager
-import dev.patrickgold.florisboard.ime.keyboard.KeyboardExtension
 import dev.patrickgold.florisboard.ime.theme.ThemeExtension
 import dev.patrickgold.florisboard.ime.theme.ThemeExtensionComponent
 import dev.patrickgold.florisboard.ime.theme.ThemeExtensionComponentEditor
@@ -77,10 +76,8 @@ import dev.patrickgold.florisboard.lib.compose.FlorisUnsavedChangesDialog
 import dev.patrickgold.florisboard.lib.compose.Validation
 import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.ext.Extension
-import dev.patrickgold.florisboard.lib.ext.ExtensionComponent
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
 import dev.patrickgold.florisboard.lib.ext.ExtensionDefaults
-import dev.patrickgold.florisboard.lib.ext.ExtensionEditor
 import dev.patrickgold.florisboard.lib.ext.ExtensionJsonConfig
 import dev.patrickgold.florisboard.lib.ext.ExtensionMaintainer
 import dev.patrickgold.florisboard.lib.ext.ExtensionManager
@@ -126,7 +123,6 @@ import org.florisboard.lib.compose.defaultFlorisOutlinedBox
 import org.florisboard.lib.compose.stringRes
 import org.florisboard.lib.kotlin.io.subDir
 import org.florisboard.lib.kotlin.io.subFile
-import kotlin.reflect.KClass
 
 private val TextFieldVerticalPadding = 8.dp
 private val MetaDataContentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp)
@@ -144,7 +140,7 @@ private sealed interface ExtensionEditorOpenState {
     object Opening : ExtensionEditorOpenState
 
     data class Ready(
-        val workspace: CacheManager.ExtEditorWorkspace<ThemeExtensionEditor>,
+        val workspace: CacheManager.ThemeEditorWorkspace,
     ) : ExtensionEditorOpenState
 
     object Failed : ExtensionEditorOpenState
@@ -165,7 +161,7 @@ internal fun newEmptyThemeComponentEditor(
 }
 
 internal fun addThemeComponent(
-    workspace: CacheManager.ExtEditorWorkspace<ThemeExtensionEditor>,
+    workspace: CacheManager.ThemeEditorWorkspace,
     component: ThemeExtensionComponentEditor,
 ) {
     workspace.update {
@@ -174,26 +170,26 @@ internal fun addThemeComponent(
     workspace.currentAction = null
 }
 
-private data class ThemeStylesheetSave(
+internal data class ThemeStylesheetSave(
     val relativePath: String,
     val serializedStylesheet: String?,
 )
 
-private data class ExtensionEditorSavePlan(
+internal data class ExtensionEditorSavePlan(
     val serializedManifest: String,
     val stylesheets: List<ThemeStylesheetSave>,
 )
 
-sealed class EditorAction {
-    object ManageMetaData : EditorAction()
+sealed interface ThemeEditorAction {
+    object ManageMetaData : ThemeEditorAction
 
-    object ManageDependencies : EditorAction()
+    object ManageDependencies : ThemeEditorAction
 
-    object ManageFiles : EditorAction()
+    object ManageFiles : ThemeEditorAction
 
-    data class CreateComponent<T : ExtensionComponent>(val type: KClass<T>) : EditorAction()
+    object CreateTheme : ThemeEditorAction
 
-    data class ManageComponent(val editor: ExtensionComponent) : EditorAction()
+    data class EditTheme(val editor: ThemeExtensionComponentEditor) : ThemeEditorAction
 }
 
 @Composable
@@ -224,7 +220,7 @@ fun ExtensionEditScreen(
             extensionManager.getExtensionById(id)
         }
     }
-    if (ext !is ThemeExtension) {
+    if (ext !is ThemeExtension || (!isCreateExt && !extensionManager.canDelete(ext))) {
         ExtensionNotFoundScreen(id)
         return
     }
@@ -240,7 +236,7 @@ fun ExtensionEditScreen(
             val workspace = openThemeEditorWorkspace(
                 themeManager = themeManager,
                 extensionManager = extensionManager,
-                container = cacheManager.themeExtEditor,
+                container = cacheManager.themeEditor,
                 uuid = uuid,
                 extension = ext,
                 extractArchive = !isCreateExt,
@@ -284,16 +280,16 @@ fun ExtensionEditScreen(
 private suspend fun openThemeEditorWorkspace(
     themeManager: ThemeManager,
     extensionManager: ExtensionManager,
-    container: CacheManager.WorkspacesContainer<CacheManager.ExtEditorWorkspace<ThemeExtensionEditor>>,
+    container: CacheManager.WorkspacesContainer<CacheManager.ThemeEditorWorkspace>,
     uuid: String,
     extension: ThemeExtension,
     extractArchive: Boolean,
-): CacheManager.ExtEditorWorkspace<ThemeExtensionEditor> = ThemeEditorWorkspaceLifecycleGuard.withLock {
+): CacheManager.ThemeEditorWorkspace = ThemeEditorWorkspaceLifecycleGuard.withLock {
     val existingWorkspace = container.getWorkspaceByUuid(uuid)
     if (existingWorkspace != null) {
         val canReuse = runInterruptible(Dispatchers.IO) {
             existingWorkspace.isOpen()
-        } && existingWorkspace.editor != null
+        } && existingWorkspace.hasEditor
         if (canReuse) {
             return@withLock existingWorkspace
         }
@@ -324,8 +320,7 @@ private suspend fun openThemeEditorWorkspace(
             currentCoroutineContext().ensureActive()
             val editor = extension.edit()
             currentCoroutineContext().ensureActive()
-            ownedWorkspace.ext = extension
-            ownedWorkspace.editor = editor
+            ownedWorkspace.setEditor(editor)
             currentCoroutineContext().ensureActive()
             ownedWorkspace
         },
@@ -339,7 +334,7 @@ private suspend fun openThemeEditorWorkspace(
 
 private suspend fun closeThemeEditorWorkspace(
     themeManager: ThemeManager,
-    workspace: CacheManager.ExtEditorWorkspace<*>,
+    workspace: CacheManager.ThemeEditorWorkspace,
 ) {
     ThemeEditorWorkspaceLifecycleGuard.withLock {
         closeThemeEditorWorkspaceLocked(themeManager, workspace)
@@ -348,7 +343,7 @@ private suspend fun closeThemeEditorWorkspace(
 
 private suspend fun closeThemeEditorWorkspaceLocked(
     themeManager: ThemeManager,
-    workspace: CacheManager.ExtEditorWorkspace<*>,
+    workspace: CacheManager.ThemeEditorWorkspace,
 ) {
     themeManager.updateActiveTheme {
         val preview = themeManager.previewThemeInfo.value
@@ -416,7 +411,7 @@ private fun ExtensionEditorFailureScreen(title: String) = FlorisScreen {
 
 @Composable
 private fun ExtensionEditScreenSheetSwitcher(
-    workspace: CacheManager.ExtEditorWorkspace<ThemeExtensionEditor>,
+    workspace: CacheManager.ThemeEditorWorkspace,
     isCreateExt: Boolean,
     themeManager: ThemeManager,
     routeEntry: NavBackStackEntry,
@@ -429,30 +424,22 @@ private fun ExtensionEditScreenSheetSwitcher(
             exit = ActionScreenExitTransition,
         ) {
             when (val action = workspace.currentAction) {
-                is EditorAction.ManageMetaData -> {
+                ThemeEditorAction.ManageMetaData -> {
                     ManageMetaDataScreen(workspace, isCreateExt)
                 }
-                is EditorAction.ManageDependencies -> {
+                ThemeEditorAction.ManageDependencies -> {
                     ManageDependenciesScreen(workspace)
                 }
-                is EditorAction.ManageFiles -> {
+                ThemeEditorAction.ManageFiles -> {
                     ExtensionEditFilesScreen(workspace)
                 }
-                is EditorAction.CreateComponent<*> -> {
-                    CreateComponentScreen(workspace, action.type)
+                ThemeEditorAction.CreateTheme -> {
+                    CreateThemeScreen(workspace)
                 }
-                is EditorAction.ManageComponent -> when (action.editor) {
-                    is ThemeExtensionComponentEditor -> {
-                        ThemeEditorScreen(workspace, action.editor)
-                    }
-                    else -> {
-                        // Render nothing
-                    }
+                is ThemeEditorAction.EditTheme -> {
+                    ThemeEditorScreen(workspace, action.editor)
                 }
-                else -> {
-                    // Render nothing
-                    Box(modifier = Modifier.fillMaxSize())
-                }
+                null -> Unit
             }
         }
     }
@@ -460,31 +447,25 @@ private fun ExtensionEditScreenSheetSwitcher(
 
 @Composable
 private fun EditScreen(
-    workspace: CacheManager.ExtEditorWorkspace<*>,
+    workspace: CacheManager.ThemeEditorWorkspace,
     isCreateExt: Boolean,
     themeManager: ThemeManager,
     routeEntry: NavBackStackEntry,
 ) = FlorisScreen {
-    title = stringRes(if (isCreateExt) {
-        when (workspace.ext) {
-            is KeyboardExtension -> R.string.ext__editor__title_create_keyboard
-            is ThemeExtension -> R.string.ext__editor__title_create_theme
-            else -> R.string.ext__editor__title_create_any
-        }
-    } else {
-        when (workspace.ext) {
-            is KeyboardExtension -> R.string.ext__editor__title_edit_keyboard
-            is ThemeExtension -> R.string.ext__editor__title_edit_theme
-            else -> R.string.ext__editor__title_edit_any
-        }
-    })
+    title = stringRes(
+        if (isCreateExt) {
+            R.string.ext__editor__title_create_theme
+        } else {
+            R.string.ext__editor__title_edit_theme
+        },
+    )
 
     val context = LocalContext.current
     val navController = LocalNavController.current
     val extensionManager by context.extensionManager()
     val operationScope = rememberCoroutineScope()
 
-    val extEditor = workspace.editor ?: return@FlorisScreen
+    val extEditor = workspace.editor
     var showUnsavedChangesDialog by remember { mutableStateOf(false) }
     var invalidDetailsMessageResId by remember { mutableStateOf<Int?>(null) }
     var operation by remember { mutableStateOf(ExtensionEditorOperation.IDLE) }
@@ -665,7 +646,7 @@ private fun EditScreen(
             Preference(
                 onClick = {
                     if (operation == ExtensionEditorOperation.IDLE) {
-                        workspace.currentAction = EditorAction.ManageMetaData
+                        workspace.currentAction = ThemeEditorAction.ManageMetaData
                     }
                 },
                 enabledIf = { !isBusy },
@@ -675,7 +656,7 @@ private fun EditScreen(
             Preference(
                 onClick = {
                     if (operation == ExtensionEditorOperation.IDLE) {
-                        workspace.currentAction = EditorAction.ManageDependencies
+                        workspace.currentAction = ThemeEditorAction.ManageDependencies
                     }
                 },
                 enabledIf = { !isBusy },
@@ -685,7 +666,7 @@ private fun EditScreen(
             Preference(
                 onClick = {
                     if (operation == ExtensionEditorOperation.IDLE) {
-                        workspace.currentAction = EditorAction.ManageFiles
+                        workspace.currentAction = ThemeEditorAction.ManageFiles
                     }
                 },
                 enabledIf = { !isBusy },
@@ -694,44 +675,36 @@ private fun EditScreen(
             )
         }
 
-        when (extEditor) {
-            is ThemeExtensionEditor -> {
-                ExtensionComponentListView(
-                    title = stringRes(R.string.ext__meta__components_theme),
-                    components = extEditor.themes,
-                    onCreateBtnClick = if (isBusy) null else {
-                        {
-                            if (operation == ExtensionEditorOperation.IDLE) {
-                                workspace.currentAction =
-                                    EditorAction.CreateComponent(ThemeExtensionComponent::class)
-                            }
-                        }
-                    },
-                ) { component ->
-                    ExtensionComponentView(
-                        modifier = Modifier.defaultFlorisOutlinedBox(),
-                        meta = extEditor.meta,
-                        component = component,
-                        onDeleteBtnClick = if (isBusy) null else {
-                            {
-                                if (operation == ExtensionEditorOperation.IDLE) {
-                                    workspace.update { extEditor.themes.remove(component) }
-                                }
-                            }
-                        },
-                        onEditBtnClick = if (isBusy) null else {
-                            {
-                                if (operation == ExtensionEditorOperation.IDLE) {
-                                    workspace.currentAction = EditorAction.ManageComponent(component)
-                                }
-                            }
-                        },
-                    )
+        ExtensionComponentListView(
+            title = stringRes(R.string.ext__meta__components_theme),
+            components = extEditor.themes,
+            onCreateBtnClick = if (isBusy) null else {
+                {
+                    if (operation == ExtensionEditorOperation.IDLE) {
+                        workspace.currentAction = ThemeEditorAction.CreateTheme
+                    }
                 }
-            }
-            else -> {
-                // Render nothing
-            }
+            },
+        ) { component ->
+            ExtensionComponentView(
+                modifier = Modifier.defaultFlorisOutlinedBox(),
+                meta = extEditor.meta,
+                component = component,
+                onDeleteBtnClick = if (isBusy) null else {
+                    {
+                        if (operation == ExtensionEditorOperation.IDLE) {
+                            workspace.update { themes.remove(component) }
+                        }
+                    }
+                },
+                onEditBtnClick = if (isBusy) null else {
+                    {
+                        if (operation == ExtensionEditorOperation.IDLE) {
+                            workspace.currentAction = ThemeEditorAction.EditTheme(component)
+                        }
+                    }
+                },
+            )
         }
 
         if (showUnsavedChangesDialog) {
@@ -773,20 +746,17 @@ private fun EditScreen(
     }
 }
 
-private fun createExtensionEditorSavePlan(
-    extEditor: ExtensionEditor,
-    manifest: Extension,
+internal fun createExtensionEditorSavePlan(
+    extEditor: ThemeExtensionEditor,
+    manifest: ThemeExtension,
 ): ExtensionEditorSavePlan {
-    val stylesheets = when (extEditor) {
-        is ThemeExtensionEditor -> extEditor.themes.map { theme ->
-            ThemeStylesheetSave(
-                relativePath = theme.stylesheetPath(),
-                serializedStylesheet = theme.stylesheetEditor?.build()
-                    ?.toJson(PrettyPrintConfig)
-                    ?.getOrThrow(),
-            )
-        }
-        else -> emptyList()
+    val stylesheets = extEditor.themes.map { theme ->
+        ThemeStylesheetSave(
+            relativePath = theme.stylesheetPath(),
+            serializedStylesheet = theme.stylesheetEditor?.build()
+                ?.toJson(PrettyPrintConfig)
+                ?.getOrThrow(),
+        )
     }
     return ExtensionEditorSavePlan(
         serializedManifest = ExtensionJsonConfig.encodeToString<Extension>(manifest),
@@ -795,7 +765,7 @@ private fun createExtensionEditorSavePlan(
 }
 
 private fun stageExtensionEditorSave(
-    workspace: CacheManager.ExtEditorWorkspace<*>,
+    workspace: CacheManager.ThemeEditorWorkspace,
     savePlan: ExtensionEditorSavePlan,
 ) {
     clearDirectoryInterruptibly(workspace.saverDir)
@@ -905,12 +875,12 @@ private fun ensureSaveThreadActive() {
 
 @Composable
 private fun ManageMetaDataScreen(
-    workspace: CacheManager.ExtEditorWorkspace<*>,
+    workspace: CacheManager.ThemeEditorWorkspace,
     isCreateExt: Boolean,
 ) = FlorisScreen {
     title = stringRes(R.string.ext__editor__metadata__title)
 
-    val meta = workspace.editor?.meta ?: return@FlorisScreen
+    val meta = workspace.editor.meta
     var showValidationErrors by rememberSaveable { mutableStateOf(false) }
 
     var id by rememberSaveable { mutableStateOf(meta.id) }
@@ -942,7 +912,7 @@ private fun ManageMetaDataScreen(
             showValidationErrors = true
         } else {
             workspace.update {
-                workspace.editor?.meta = ExtensionMeta(
+                this.meta = ExtensionMeta(
                     id = id.trim(),
                     version = version.trim(),
                     title = title.trim(),
@@ -1052,10 +1022,10 @@ private fun ManageMetaDataScreen(
 }
 
 @Composable
-private fun ManageDependenciesScreen(workspace: CacheManager.ExtEditorWorkspace<*>) = FlorisScreen {
+private fun ManageDependenciesScreen(workspace: CacheManager.ThemeEditorWorkspace) = FlorisScreen {
     title = stringRes(R.string.ext__editor__dependencies__title)
 
-    val dependencyList = workspace.editor?.dependencies ?: return@FlorisScreen
+    val dependencyList = workspace.editor.dependencies
 
     fun handleBackPress() {
         workspace.currentAction = null
@@ -1096,36 +1066,28 @@ private enum class CreateFrom {
 }
 
 @Composable
-private fun <T : ExtensionComponent> CreateComponentScreen(
-    workspace: CacheManager.ExtEditorWorkspace<ThemeExtensionEditor>,
-    type: KClass<T>,
+private fun CreateThemeScreen(
+    workspace: CacheManager.ThemeEditorWorkspace,
 ) = FlorisScreen {
-    title = stringRes(when (type) {
-        ThemeExtensionComponent::class -> R.string.ext__editor__create_component__title_theme
-        else -> R.string.ext__editor__create_component__title
-    })
+    title = stringRes(R.string.ext__editor__create_component__title_theme)
 
     val context = LocalContext.current
     val extensionManager by context.extensionManager()
     val themeManager by context.themeManager()
     val createScope = rememberCoroutineScope()
+    val editor = workspace.editor
 
     var createFrom by rememberSaveable { mutableStateOf(CreateFrom.EXISTING) }
-    val extId = workspace.editor?.meta?.id ?: "null"
-    val components = remember<Map<ExtensionComponentName, ExtensionComponent>> {
-        when (val editor = workspace.editor) {
-            is ThemeExtensionEditor -> buildMap {
-                for (theme in editor.themes) {
-                    put(ExtensionComponentName(extId, theme.id), theme)
-                }
-                for ((componentName, theme) in themeManager.indexedThemeConfigs.value.first) {
-                    if (componentName.extensionId != extId) {
-                        put(componentName, theme)
-                    }
-                }
+    val extId = editor.meta.id
+    val components = remember<Map<ExtensionComponentName, ThemeExtensionComponent>> {
+        buildMap {
+            for (theme in editor.themes) {
+                put(ExtensionComponentName(extId, theme.id), theme)
             }
-            else -> {
-                emptyMap()
+            for ((componentName, theme) in themeManager.indexedThemeConfigs.value.first) {
+                if (componentName.extensionId != extId) {
+                    put(componentName, theme)
+                }
             }
         }
     }
@@ -1156,88 +1118,85 @@ private fun <T : ExtensionComponent> CreateComponentScreen(
             isCreating = true
             createScope.launch {
                 try {
-                    when (val editor = workspace.editor) {
-                        is ThemeExtensionEditor -> when (createFrom) {
-                            CreateFrom.EMPTY -> {
-                                if (editor.themes.any { it.id == newId.trim() }) {
-                                    context.showLongToast("A theme with this ID already exists!")
-                                } else {
-                                    val componentEditor = newEmptyThemeComponentEditor(
-                                        id = newId.trim(),
-                                        label = newLabel.trim(),
-                                        authors = newAuthors.lines().map { it.trim() }.filter { it.isNotBlank() },
-                                    )
-                                    addThemeComponent(workspace, componentEditor)
-                                }
+                    when (createFrom) {
+                        CreateFrom.EMPTY -> {
+                            if (editor.themes.any { it.id == newId.trim() }) {
+                                context.showLongToast("A theme with this ID already exists!")
+                            } else {
+                                val componentEditor = newEmptyThemeComponentEditor(
+                                    id = newId.trim(),
+                                    label = newLabel.trim(),
+                                    authors = newAuthors.lines().map { it.trim() }.filter { it.isNotBlank() },
+                                )
+                                addThemeComponent(workspace, componentEditor)
                             }
-                            CreateFrom.EXISTING -> {
-                                val componentName = selectedComponentName ?: return@launch
-                                val componentId = if (editor.themes.any { it.id == componentName.componentId }) {
-                                    var suffix = 1
-                                    var tempId: String
-                                    do {
-                                        tempId = "${componentName.componentId}_${suffix++}"
-                                    } while (editor.themes.any { it.id == tempId })
-                                    tempId
-                                } else {
-                                    componentName.componentId
+                        }
+                        CreateFrom.EXISTING -> {
+                            val componentName = selectedComponentName ?: return@launch
+                            val componentId = if (editor.themes.any { it.id == componentName.componentId }) {
+                                var suffix = 1
+                                var tempId: String
+                                do {
+                                    tempId = "${componentName.componentId}_${suffix++}"
+                                } while (editor.themes.any { it.id == tempId })
+                                tempId
+                            } else {
+                                componentName.componentId
+                            }
+                            if (componentName.extensionId == extId) {
+                                val component = editor.themes.find {
+                                    it.id == componentName.componentId
+                                } ?: return@launch
+                                val componentEditor = component.let { c ->
+                                    ThemeExtensionComponentEditor(
+                                        componentId, c.label, c.authors, c.isNightTheme, stylesheetPath = "",
+                                    ).also { it.stylesheetEditor = c.stylesheetEditor }
                                 }
-                                if (componentName.extensionId == extId) {
-                                    val component = editor.themes.find {
-                                        it.id == componentName.componentId
-                                    } ?: return@launch
-                                    val componentEditor = component.let { c ->
-                                        ThemeExtensionComponentEditor(
-                                            componentId, c.label, c.authors, c.isNightTheme, stylesheetPath = "",
-                                        ).also { it.stylesheetEditor = c.stylesheetEditor }
+                                if (componentEditor.stylesheetEditor != null) {
+                                    val stylesheetFile = workspace.extDir.subFile(componentEditor.stylesheetPath())
+                                    val stylesheet = componentEditor.stylesheetEditor!!.build()
+                                        .toJson(PrettyPrintConfig).getOrThrow()
+                                    runInterruptible(Dispatchers.IO) {
+                                        writeTextInterruptibly(stylesheetFile, stylesheet)
                                     }
-                                    if (componentEditor.stylesheetEditor != null) {
-                                        val stylesheetFile = workspace.extDir.subFile(componentEditor.stylesheetPath())
-                                        val stylesheet = componentEditor.stylesheetEditor!!.build()
-                                            .toJson(PrettyPrintConfig).getOrThrow()
-                                        runInterruptible(Dispatchers.IO) {
-                                            writeTextInterruptibly(stylesheetFile, stylesheet)
-                                        }
-                                        componentEditor.stylesheetEditor = null
-                                    } else {
-                                        val srcStylesheetFile = workspace.extDir.subFile(component.stylesheetPath())
-                                        val dstStylesheetFile =
-                                            workspace.extDir.subFile(componentEditor.stylesheetPath())
-                                        runInterruptible(Dispatchers.IO) {
-                                            ZipUtils.copyFileNoFollow(
-                                                srcFile = srcStylesheetFile,
-                                                dstFile = dstStylesheetFile,
-                                            )
-                                        }
-                                    }
-                                    addThemeComponent(workspace, componentEditor)
+                                    componentEditor.stylesheetEditor = null
                                 } else {
-                                    val component = themeManager.indexedThemeConfigs.value.first
-                                        .get(componentName) ?: return@launch
-                                    val componentEditor =
-                                        (component as? ThemeExtensionComponentImpl)?.edit() ?: return@launch
-                                    componentEditor.id = componentId
-                                    componentEditor.stylesheetPath = ""
-                                    val externalExt = extensionManager.getExtensionById(
-                                        componentName.extensionId,
-                                    ) ?: return@launch
-                                    val stylesheetJson = runInterruptible(Dispatchers.IO) {
-                                        ZipUtils.readFileFromArchive(
-                                            context,
-                                            checkNotNull(externalExt.sourceRef),
-                                            component.stylesheetPath(),
-                                        ).getOrThrow()
-                                    }
+                                    val srcStylesheetFile = workspace.extDir.subFile(component.stylesheetPath())
                                     val dstStylesheetFile =
                                         workspace.extDir.subFile(componentEditor.stylesheetPath())
                                     runInterruptible(Dispatchers.IO) {
-                                        writeTextInterruptibly(dstStylesheetFile, stylesheetJson)
+                                        ZipUtils.copyFileNoFollow(
+                                            srcFile = srcStylesheetFile,
+                                            dstFile = dstStylesheetFile,
+                                        )
                                     }
-                                    addThemeComponent(workspace, componentEditor)
                                 }
+                                addThemeComponent(workspace, componentEditor)
+                            } else {
+                                val component = themeManager.indexedThemeConfigs.value.first
+                                    .get(componentName) ?: return@launch
+                                val componentEditor =
+                                    (component as? ThemeExtensionComponentImpl)?.edit() ?: return@launch
+                                componentEditor.id = componentId
+                                componentEditor.stylesheetPath = ""
+                                val externalExt = extensionManager.getExtensionById(
+                                    componentName.extensionId,
+                                ) ?: return@launch
+                                val stylesheetJson = runInterruptible(Dispatchers.IO) {
+                                    ZipUtils.readFileFromArchive(
+                                        context,
+                                        checkNotNull(externalExt.sourceRef),
+                                        component.stylesheetPath(),
+                                    ).getOrThrow()
+                                }
+                                val dstStylesheetFile =
+                                    workspace.extDir.subFile(componentEditor.stylesheetPath())
+                                runInterruptible(Dispatchers.IO) {
+                                    writeTextInterruptibly(dstStylesheetFile, stylesheetJson)
+                                }
+                                addThemeComponent(workspace, componentEditor)
                             }
                         }
-                        else -> Unit
                     }
                 } catch (error: CancellationException) {
                     throw error

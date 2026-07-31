@@ -19,7 +19,6 @@ package dev.patrickgold.florisboard.ime.theme
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import dev.patrickgold.florisboard.lib.ext.Extension
-import dev.patrickgold.florisboard.lib.ext.ExtensionEditor
 import dev.patrickgold.florisboard.lib.ext.ExtensionMeta
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -40,7 +39,7 @@ class ThemeExtension(
 
     override fun components() = themes
 
-    override fun edit() = ThemeExtensionEditor(
+    fun edit() = ThemeExtensionEditor(
         meta = meta,
         dependencies = dependencies?.toMutableList() ?: mutableListOf(),
         themes = mutableStateListOf(*themes.map { it.edit() }.toTypedArray()),
@@ -48,12 +47,12 @@ class ThemeExtension(
 }
 
 class ThemeExtensionEditor(
-    override var meta: ExtensionMeta,
-    override val dependencies: MutableList<String>,
+    var meta: ExtensionMeta,
+    val dependencies: MutableList<String>,
     val themes: SnapshotStateList<ThemeExtensionComponentEditor>,
-) : ExtensionEditor {
+) {
 
-    override fun build() = ThemeExtension(
+    fun build() = ThemeExtension(
         meta = meta,
         dependencies = dependencies.takeUnless { it.isEmpty() }?.toList(),
         themes = themes.map { it.build() },

@@ -22,12 +22,11 @@ import android.os.Process
 import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import dev.patrickgold.florisboard.app.ext.EditorAction
+import dev.patrickgold.florisboard.app.ext.ThemeEditorAction
 import dev.patrickgold.florisboard.app.ext.addThemeComponent
 import dev.patrickgold.florisboard.app.ext.newEmptyThemeComponentEditor
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaTestSource
 import dev.patrickgold.florisboard.ime.theme.ThemeExtension
-import dev.patrickgold.florisboard.ime.theme.ThemeExtensionComponent
 import dev.patrickgold.florisboard.lib.ext.ExtensionMaintainer
 import dev.patrickgold.florisboard.lib.ext.ExtensionMeta
 import dev.patrickgold.florisboard.lib.io.FileRegistry
@@ -42,6 +41,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -202,10 +202,10 @@ class CacheManagerAndroidTest {
     fun exporterAndEditorCloseAreIdempotentAndUnregisterTheirWorkspaces() {
         val cacheManager = CacheManager(context)
         val exporter = cacheManager.exporter.new()
-        val editor = cacheManager.themeExtEditor.new()
+        val editor = cacheManager.themeEditor.new()
 
         assertSame(exporter, cacheManager.exporter.getWorkspaceByUuid(exporter.uuid))
-        assertSame(editor, cacheManager.themeExtEditor.getWorkspaceByUuid(editor.uuid))
+        assertSame(editor, cacheManager.themeEditor.getWorkspaceByUuid(editor.uuid))
 
         exporter.close()
         exporter.close()
@@ -215,13 +215,13 @@ class CacheManagerAndroidTest {
         assertTrue(exporter.isClosed())
         assertTrue(editor.isClosed())
         assertNull(cacheManager.exporter.getWorkspaceByUuid(exporter.uuid))
-        assertNull(cacheManager.themeExtEditor.getWorkspaceByUuid(editor.uuid))
+        assertNull(cacheManager.themeEditor.getWorkspaceByUuid(editor.uuid))
     }
 
     @Test
     fun addingAThemeComponentMarksTheEditorWorkspaceModified() {
         val cacheManager = CacheManager(context)
-        val workspace = cacheManager.themeExtEditor.new()
+        val workspace = cacheManager.themeEditor.new()
         val extension = ThemeExtension(
             meta = ExtensionMeta(
                 id = "local.themes.editor_test",
@@ -232,12 +232,16 @@ class CacheManagerAndroidTest {
             ),
             themes = emptyList(),
         )
-        workspace.editor = extension.edit()
-        workspace.currentAction = EditorAction.CreateComponent(
-            ThemeExtensionComponent::class,
-        )
 
         try {
+            assertFalse(workspace.hasEditor)
+            workspace.setEditor(extension.edit())
+            assertTrue(workspace.hasEditor)
+            assertThrows(IllegalStateException::class.java) {
+                workspace.setEditor(extension.edit())
+            }
+            workspace.currentAction = ThemeEditorAction.CreateTheme
+
             assertFalse(workspace.isModified)
             addThemeComponent(
                 workspace,
@@ -246,7 +250,7 @@ class CacheManagerAndroidTest {
 
             assertTrue(workspace.isModified)
             assertEquals(1, workspace.version)
-            assertEquals(1, workspace.editor?.themes?.size)
+            assertEquals(1, workspace.editor.themes.size)
             assertNull(workspace.currentAction)
         } finally {
             workspace.close()

@@ -1866,17 +1866,6 @@
     </issue>
 
     <issue
-        id="AutoboxingStateCreation"
-        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
-        errorLine1="        mutableStateOf(0)"
-        errorLine2="        ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/app/ext/ExtensionListScreen.kt"
-            line="102"
-            column="9"/>
-    </issue>
-
-    <issue
         id="UnusedResources"
         message="The resource `R.string.key_popup__threedots_alt` appears to be unused"
         errorLine1="    &lt;string name=&quot;key_popup__threedots_alt&quot; comment=&quot;Content description for the three-dots icon in a key popup&quot;>Three-dot icon. If visible, indicates that more letters can be used if longer pressed.&lt;/string>"

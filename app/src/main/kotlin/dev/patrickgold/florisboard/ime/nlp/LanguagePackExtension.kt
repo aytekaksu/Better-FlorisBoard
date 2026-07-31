@@ -23,7 +23,6 @@ import dev.patrickgold.florisboard.lib.FlorisLocale
 import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.ext.Extension
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponent
-import dev.patrickgold.florisboard.lib.ext.ExtensionEditor
 import dev.patrickgold.florisboard.lib.ext.ExtensionMeta
 import dev.patrickgold.florisboard.lib.ext.SafeRelativePath
 import kotlinx.serialization.SerialName
@@ -58,9 +57,6 @@ class LanguagePackExtension(
 ) : Extension() {
 
     override fun components(): List<ExtensionComponent> = items
-
-    override fun edit(): ExtensionEditor =
-        error("Language-pack editing is not supported.")
 
     companion object {
         const val SERIAL_TYPE = "ime.extension.languagepack"
