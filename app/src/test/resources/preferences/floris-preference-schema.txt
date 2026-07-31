@@ -187,7 +187,7 @@ legacy;s;smartbar__secondary_actions_row_type
 legacy;b;smartbar__secondary_row_enabled
 legacy;b;smartbar__secondary_row_expanded
 legacy;s;smartbar__secondary_row_placement
-active;b;smartbar__shared_actions_auto_expand_collapse
+retired;b;smartbar__shared_actions_auto_expand_collapse
 retired;b;smartbar__shared_actions_expand_with_animation
 active;b;smartbar__shared_actions_expanded
 active;s;smartbar__shared_actions_transition_mode
