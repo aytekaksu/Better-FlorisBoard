@@ -72,9 +72,11 @@ data class TextKeyData(
 
     @Suppress("MemberVisibilityCanBePrivate")
     companion object {
+        private val internalKeys = mutableMapOf<Int, TextKeyData>()
+
         fun getCodeInfoAsTextKeyData(code: Int): TextKeyData? {
             return if (code <= 0) {
-                InternalKeys.find { it.code == code }
+                internalKeys[code]
             } else {
                 TextKeyData(
                     type = KeyType.CHARACTER,
@@ -89,456 +91,174 @@ data class TextKeyData(
             }
         }
 
-        // TODO: find better solution than to hand define array of below keys...
-        private val InternalKeys by lazy {
-            listOf(
-                UNSPECIFIED,
-                SPACE,
-                CTRL,
-                CTRL_LOCK,
-                ALT,
-                ALT_LOCK,
-                FN,
-                FN_LOCK,
-                DELETE,
-                DELETE_WORD,
-                FORWARD_DELETE,
-                FORWARD_DELETE_WORD,
-                SHIFT,
-                CAPS_LOCK,
-                ARROW_LEFT,
-                ARROW_RIGHT,
-                ARROW_UP,
-                ARROW_DOWN,
-                MOVE_START_OF_PAGE,
-                MOVE_END_OF_PAGE,
-                MOVE_START_OF_LINE,
-                MOVE_END_OF_LINE,
-                CLIPBOARD_COPY,
-                CLIPBOARD_CUT,
-                CLIPBOARD_PASTE,
-                CLIPBOARD_SELECT,
-                CLIPBOARD_SELECT_ALL,
-                CLIPBOARD_CLEAR_HISTORY,
-                CLIPBOARD_CLEAR_FULL_HISTORY,
-                CLIPBOARD_CLEAR_PRIMARY_CLIP,
-                TOGGLE_COMPACT_LAYOUT,
-                COMPACT_LAYOUT_TO_LEFT,
-                COMPACT_LAYOUT_TO_RIGHT,
-                UNDO,
-                REDO,
-                VIEW_CHARACTERS,
-                VIEW_SYMBOLS,
-                VIEW_SYMBOLS2,
-                VIEW_NUMERIC_ADVANCED,
-                IME_UI_MODE_TEXT,
-                IME_UI_MODE_MEDIA,
-                IME_UI_MODE_CLIPBOARD,
-                SYSTEM_INPUT_METHOD_PICKER,
-                SYSTEM_PREV_INPUT_METHOD,
-                SYSTEM_NEXT_INPUT_METHOD,
-                IME_SUBTYPE_PICKER,
-                IME_PREV_SUBTYPE,
-                IME_NEXT_SUBTYPE,
-                LANGUAGE_SWITCH,
-                IME_SHOW_UI,
-                IME_HIDE_UI,
-                SETTINGS,
-                VOICE_INPUT,
-                TOGGLE_SMARTBAR_VISIBILITY,
-                TOGGLE_ACTIONS_OVERFLOW,
-                TOGGLE_ACTIONS_EDITOR,
-                TOGGLE_INCOGNITO_MODE,
-                TOGGLE_AUTOCORRECT,
-                AUTOCORRECT_PLUGIN_UI,
-            )
+        private fun predefinedKey(
+            type: KeyType,
+            code: Int,
+            label: String,
+            groupId: Int = KeyData.GROUP_DEFAULT,
+            popup: PopupSet<AbstractKeyData>? = null,
+            includeInLookup: Boolean = true,
+        ): TextKeyData {
+            val key = TextKeyData(type, code, label, groupId, popup)
+            if (includeInLookup) {
+                check(internalKeys.put(code, key) == null) { "Duplicate predefined key code" }
+            }
+            return key
         }
 
-        /** Predefined key data for [KeyCode.UNSPECIFIED] */
-        val UNSPECIFIED = TextKeyData(
-            type = KeyType.UNSPECIFIED,
-            code = KeyCode.UNSPECIFIED,
-            label = "unspecified",
-        )
+        val UNSPECIFIED = predefinedKey(KeyType.UNSPECIFIED, KeyCode.UNSPECIFIED, "unspecified")
+        val SPACE = predefinedKey(KeyType.CHARACTER, KeyCode.SPACE, "space")
+        val CTRL = predefinedKey(KeyType.MODIFIER, KeyCode.CTRL, "ctrl")
+        val CTRL_LOCK = predefinedKey(KeyType.MODIFIER, KeyCode.CTRL_LOCK, "ctrl_lock")
+        val ALT = predefinedKey(KeyType.MODIFIER, KeyCode.ALT, "alt")
+        val ALT_LOCK = predefinedKey(KeyType.MODIFIER, KeyCode.ALT_LOCK, "alt_lock")
+        val FN = predefinedKey(KeyType.MODIFIER, KeyCode.FN, "fn")
+        val FN_LOCK = predefinedKey(KeyType.MODIFIER, KeyCode.FN_LOCK, "fn_lock")
+        val DELETE = predefinedKey(KeyType.ENTER_EDITING, KeyCode.DELETE, "delete")
+        val DELETE_WORD = predefinedKey(KeyType.ENTER_EDITING, KeyCode.DELETE_WORD, "delete_word")
+        val FORWARD_DELETE = predefinedKey(KeyType.ENTER_EDITING, KeyCode.FORWARD_DELETE, "forward_delete")
+        val FORWARD_DELETE_WORD =
+            predefinedKey(KeyType.ENTER_EDITING, KeyCode.FORWARD_DELETE_WORD, "forward_delete_word")
+        val SHIFT = predefinedKey(KeyType.MODIFIER, KeyCode.SHIFT, "shift")
+        val CAPS_LOCK = predefinedKey(KeyType.MODIFIER, KeyCode.CAPS_LOCK, "caps_lock")
 
-        /** Predefined key data for [KeyCode.SPACE] */
-        val SPACE = TextKeyData(
-            type = KeyType.CHARACTER,
-            code = KeyCode.SPACE,
-            label = "space",
-        )
+        val ARROW_LEFT = predefinedKey(KeyType.NAVIGATION, KeyCode.ARROW_LEFT, "arrow_left")
+        val ARROW_RIGHT = predefinedKey(KeyType.NAVIGATION, KeyCode.ARROW_RIGHT, "arrow_right")
+        val ARROW_UP = predefinedKey(KeyType.NAVIGATION, KeyCode.ARROW_UP, "arrow_up")
+        val ARROW_DOWN = predefinedKey(KeyType.NAVIGATION, KeyCode.ARROW_DOWN, "arrow_down")
+        val MOVE_START_OF_PAGE =
+            predefinedKey(KeyType.NAVIGATION, KeyCode.MOVE_START_OF_PAGE, "move_start_of_page")
+        val MOVE_END_OF_PAGE =
+            predefinedKey(KeyType.NAVIGATION, KeyCode.MOVE_END_OF_PAGE, "move_end_of_page")
+        val MOVE_START_OF_LINE =
+            predefinedKey(KeyType.NAVIGATION, KeyCode.MOVE_START_OF_LINE, "move_start_of_line")
+        val MOVE_END_OF_LINE =
+            predefinedKey(KeyType.NAVIGATION, KeyCode.MOVE_END_OF_LINE, "move_end_of_line")
 
-        /** Predefined key data for [KeyCode.CTRL] */
-        val CTRL = TextKeyData(
-            type = KeyType.MODIFIER,
-            code = KeyCode.CTRL,
-            label = "ctrl",
-        )
-        /** Predefined key data for [KeyCode.CTRL_LOCK] */
-        val CTRL_LOCK = TextKeyData(
-            type = KeyType.MODIFIER,
-            code = KeyCode.CTRL_LOCK,
-            label = "ctrl_lock",
-        )
-        /** Predefined key data for [KeyCode.ALT] */
-        val ALT = TextKeyData(
-            type = KeyType.MODIFIER,
-            code = KeyCode.ALT,
-            label = "alt",
-        )
-        /** Predefined key data for [KeyCode.ALT_LOCK] */
-        val ALT_LOCK = TextKeyData(
-            type = KeyType.MODIFIER,
-            code = KeyCode.ALT_LOCK,
-            label = "alt_lock",
-        )
-        /** Predefined key data for [KeyCode.FN] */
-        val FN = TextKeyData(
-            type = KeyType.MODIFIER,
-            code = KeyCode.FN,
-            label = "fn",
-        )
-        /** Predefined key data for [KeyCode.FN_LOCK] */
-        val FN_LOCK = TextKeyData(
-            type = KeyType.MODIFIER,
-            code = KeyCode.FN_LOCK,
-            label = "fn_lock",
-        )
-        /** Predefined key data for [KeyCode.DELETE] */
-        val DELETE = TextKeyData(
-            type = KeyType.ENTER_EDITING,
-            code = KeyCode.DELETE,
-            label = "delete",
-        )
-        /** Predefined key data for [KeyCode.DELETE_WORD] */
-        val DELETE_WORD = TextKeyData(
-            type = KeyType.ENTER_EDITING,
-            code = KeyCode.DELETE_WORD,
-            label = "delete_word",
-        )
-        /** Predefined key data for [KeyCode.FORWARD_DELETE] */
-        val FORWARD_DELETE = TextKeyData(
-            type = KeyType.ENTER_EDITING,
-            code = KeyCode.FORWARD_DELETE,
-            label = "forward_delete",
-        )
-        /** Predefined key data for [KeyCode.FORWARD_DELETE_WORD] */
-        val FORWARD_DELETE_WORD = TextKeyData(
-            type = KeyType.ENTER_EDITING,
-            code = KeyCode.FORWARD_DELETE_WORD,
-            label = "forward_delete_word",
-        )
-        /** Predefined key data for [KeyCode.SHIFT] */
-        val SHIFT = TextKeyData(
-            type = KeyType.MODIFIER,
-            code = KeyCode.SHIFT,
-            label = "shift",
-        )
-        /** Predefined key data for [KeyCode.CAPS_LOCK] */
-        val CAPS_LOCK = TextKeyData(
-            type = KeyType.MODIFIER,
-            code = KeyCode.CAPS_LOCK,
-            label = "caps_lock",
-        )
+        val CLIPBOARD_COPY = predefinedKey(KeyType.SYSTEM_GUI, KeyCode.CLIPBOARD_COPY, "clipboard_copy")
+        val CLIPBOARD_CUT = predefinedKey(KeyType.SYSTEM_GUI, KeyCode.CLIPBOARD_CUT, "clipboard_cut")
+        val CLIPBOARD_PASTE = predefinedKey(KeyType.SYSTEM_GUI, KeyCode.CLIPBOARD_PASTE, "clipboard_paste")
+        val CLIPBOARD_SELECT =
+            predefinedKey(KeyType.SYSTEM_GUI, KeyCode.CLIPBOARD_SELECT, "clipboard_select")
+        val CLIPBOARD_SELECT_ALL =
+            predefinedKey(KeyType.SYSTEM_GUI, KeyCode.CLIPBOARD_SELECT_ALL, "clipboard_select_all")
+        val CLIPBOARD_CLEAR_HISTORY =
+            predefinedKey(KeyType.SYSTEM_GUI, KeyCode.CLIPBOARD_CLEAR_HISTORY, "clipboard_clear_history")
+        val CLIPBOARD_CLEAR_FULL_HISTORY =
+            predefinedKey(
+                KeyType.SYSTEM_GUI,
+                KeyCode.CLIPBOARD_CLEAR_FULL_HISTORY,
+                "clipboard_clear_full_history",
+            )
+        val CLIPBOARD_CLEAR_PRIMARY_CLIP =
+            predefinedKey(
+                KeyType.SYSTEM_GUI,
+                KeyCode.CLIPBOARD_CLEAR_PRIMARY_CLIP,
+                "clipboard_clear_primary_clip",
+            )
 
-        /** Predefined key data for [KeyCode.ARROW_LEFT] */
-        val ARROW_LEFT = TextKeyData(
-            type = KeyType.NAVIGATION,
-            code = KeyCode.ARROW_LEFT,
-            label = "arrow_left",
-        )
-        /** Predefined key data for [KeyCode.ARROW_RIGHT] */
-        val ARROW_RIGHT = TextKeyData(
-            type = KeyType.NAVIGATION,
-            code = KeyCode.ARROW_RIGHT,
-            label = "arrow_right",
-        )
-        /** Predefined key data for [KeyCode.ARROW_UP] */
-        val ARROW_UP = TextKeyData(
-            type = KeyType.NAVIGATION,
-            code = KeyCode.ARROW_UP,
-            label = "arrow_up",
-        )
-        /** Predefined key data for [KeyCode.ARROW_DOWN] */
-        val ARROW_DOWN = TextKeyData(
-            type = KeyType.NAVIGATION,
-            code = KeyCode.ARROW_DOWN,
-            label = "arrow_down",
-        )
-        /** Predefined key data for [KeyCode.MOVE_START_OF_PAGE] */
-        val MOVE_START_OF_PAGE = TextKeyData(
-            type = KeyType.NAVIGATION,
-            code = KeyCode.MOVE_START_OF_PAGE,
-            label = "move_start_of_page",
-        )
-        /** Predefined key data for [KeyCode.MOVE_END_OF_PAGE] */
-        val MOVE_END_OF_PAGE = TextKeyData(
-            type = KeyType.NAVIGATION,
-            code = KeyCode.MOVE_END_OF_PAGE,
-            label = "move_end_of_page",
-        )
-        /** Predefined key data for [KeyCode.MOVE_START_OF_LINE] */
-        val MOVE_START_OF_LINE = TextKeyData(
-            type = KeyType.NAVIGATION,
-            code = KeyCode.MOVE_START_OF_LINE,
-            label = "move_start_of_line",
-        )
-        /** Predefined key data for [KeyCode.MOVE_END_OF_LINE] */
-        val MOVE_END_OF_LINE = TextKeyData(
-            type = KeyType.NAVIGATION,
-            code = KeyCode.MOVE_END_OF_LINE,
-            label = "move_end_of_line",
-        )
+        val TOGGLE_FLOATING_WINDOW =
+            predefinedKey(
+                KeyType.SYSTEM_GUI,
+                KeyCode.TOGGLE_FLOATING_WINDOW,
+                "toggle_floating_window",
+                includeInLookup = false,
+            )
+        val TOGGLE_COMPACT_LAYOUT =
+            predefinedKey(KeyType.SYSTEM_GUI, KeyCode.TOGGLE_COMPACT_LAYOUT, "toggle_compact_layout")
+        val COMPACT_LAYOUT_TO_LEFT =
+            predefinedKey(KeyType.SYSTEM_GUI, KeyCode.COMPACT_LAYOUT_TO_LEFT, "compact_layout_to_left")
+        val COMPACT_LAYOUT_TO_RIGHT =
+            predefinedKey(KeyType.SYSTEM_GUI, KeyCode.COMPACT_LAYOUT_TO_RIGHT, "compact_layout_to_right")
+        val TOGGLE_RESIZE_MODE =
+            predefinedKey(
+                KeyType.SYSTEM_GUI,
+                KeyCode.TOGGLE_RESIZE_MODE,
+                "toggle_resize_mode",
+                includeInLookup = false,
+            )
 
-        /** Predefined key data for [KeyCode.CLIPBOARD_COPY] */
-        val CLIPBOARD_COPY = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.CLIPBOARD_COPY,
-            label = "clipboard_copy",
-        )
-        /** Predefined key data for [KeyCode.CLIPBOARD_CUT] */
-        val CLIPBOARD_CUT = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.CLIPBOARD_CUT,
-            label = "clipboard_cut",
-        )
-        /** Predefined key data for [KeyCode.CLIPBOARD_PASTE] */
-        val CLIPBOARD_PASTE = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.CLIPBOARD_PASTE,
-            label = "clipboard_paste",
-        )
-        /** Predefined key data for [KeyCode.CLIPBOARD_SELECT] */
-        val CLIPBOARD_SELECT = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.CLIPBOARD_SELECT,
-            label = "clipboard_select",
-        )
-        /** Predefined key data for [KeyCode.CLIPBOARD_SELECT_ALL] */
-        val CLIPBOARD_SELECT_ALL = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.CLIPBOARD_SELECT_ALL,
-            label = "clipboard_select_all",
-        )
-        /** Predefined key data for [KeyCode.CLIPBOARD_CLEAR_HISTORY] */
-        val CLIPBOARD_CLEAR_HISTORY = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.CLIPBOARD_CLEAR_HISTORY,
-            label = "clipboard_clear_history",
-        )
-        /** Predefined key data for [KeyCode.CLIPBOARD_CLEAR_FULL_HISTORY] */
-        val CLIPBOARD_CLEAR_FULL_HISTORY = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.CLIPBOARD_CLEAR_FULL_HISTORY,
-            label = "clipboard_clear_full_history",
-        )
-        /** Predefined key data for [KeyCode.CLIPBOARD_CLEAR_PRIMARY_CLIP] */
-        val CLIPBOARD_CLEAR_PRIMARY_CLIP = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.CLIPBOARD_CLEAR_PRIMARY_CLIP,
-            label = "clipboard_clear_primary_clip",
-        )
+        val UNDO = predefinedKey(KeyType.SYSTEM_GUI, KeyCode.UNDO, "undo")
+        val REDO = predefinedKey(KeyType.SYSTEM_GUI, KeyCode.REDO, "redo")
 
-        /** Predefined key data for [KeyCode.TOGGLE_FLOATING_WINDOW] */
-        val TOGGLE_FLOATING_WINDOW = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.TOGGLE_FLOATING_WINDOW,
-            label = "toggle_floating_window",
-        )
-        /** Predefined key data for [KeyCode.TOGGLE_COMPACT_LAYOUT] */
-        val TOGGLE_COMPACT_LAYOUT = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.TOGGLE_COMPACT_LAYOUT,
-            label = "toggle_compact_layout",
-        )
-        /** Predefined key data for [KeyCode.COMPACT_LAYOUT_TO_LEFT] */
-        val COMPACT_LAYOUT_TO_LEFT = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.COMPACT_LAYOUT_TO_LEFT,
-            label = "compact_layout_to_left",
-        )
-        /** Predefined key data for [KeyCode.COMPACT_LAYOUT_TO_RIGHT] */
-        val COMPACT_LAYOUT_TO_RIGHT = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.COMPACT_LAYOUT_TO_RIGHT,
-            label = "compact_layout_to_right",
-        )
-        /** Predefined key data for [KeyCode.TOGGLE_RESIZE_MODE] */
-        val TOGGLE_RESIZE_MODE = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.TOGGLE_RESIZE_MODE,
-            label = "toggle_resize_mode",
-        )
+        val VIEW_CHARACTERS =
+            predefinedKey(KeyType.SYSTEM_GUI, KeyCode.VIEW_CHARACTERS, "view_characters")
+        val VIEW_SYMBOLS = predefinedKey(KeyType.SYSTEM_GUI, KeyCode.VIEW_SYMBOLS, "view_symbols")
+        val VIEW_SYMBOLS2 = predefinedKey(KeyType.SYSTEM_GUI, KeyCode.VIEW_SYMBOLS2, "view_symbols2")
+        val VIEW_NUMERIC_ADVANCED =
+            predefinedKey(KeyType.SYSTEM_GUI, KeyCode.VIEW_NUMERIC_ADVANCED, "view_numeric_advanced")
 
-        /** Predefined key data for [KeyCode.UNDO] */
-        val UNDO = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.UNDO,
-            label = "undo",
-        )
-        /** Predefined key data for [KeyCode.REDO] */
-        val REDO = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.REDO,
-            label = "redo",
-        )
+        val IME_UI_MODE_TEXT =
+            predefinedKey(KeyType.SYSTEM_GUI, KeyCode.IME_UI_MODE_TEXT, "ime_ui_mode_text")
+        val IME_UI_MODE_MEDIA =
+            predefinedKey(KeyType.SYSTEM_GUI, KeyCode.IME_UI_MODE_MEDIA, "ime_ui_mode_media")
+        val IME_UI_MODE_CLIPBOARD =
+            predefinedKey(KeyType.SYSTEM_GUI, KeyCode.IME_UI_MODE_CLIPBOARD, "ime_ui_mode_clipboard")
 
-        /** Predefined key data for [KeyCode.VIEW_CHARACTERS] */
-        val VIEW_CHARACTERS = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.VIEW_CHARACTERS,
-            label = "view_characters",
-        )
-        /** Predefined key data for [KeyCode.VIEW_SYMBOLS] */
-        val VIEW_SYMBOLS = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.VIEW_SYMBOLS,
-            label = "view_symbols",
-        )
-        /** Predefined key data for [KeyCode.VIEW_SYMBOLS2] */
-        val VIEW_SYMBOLS2 = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.VIEW_SYMBOLS2,
-            label = "view_symbols2",
-        )
-        /** Predefined key data for [KeyCode.VIEW_NUMERIC_ADVANCED] */
-        val VIEW_NUMERIC_ADVANCED = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.VIEW_NUMERIC_ADVANCED,
-            label = "view_numeric_advanced",
-        )
+        val SYSTEM_INPUT_METHOD_PICKER =
+            predefinedKey(
+                KeyType.FUNCTION,
+                KeyCode.SYSTEM_INPUT_METHOD_PICKER,
+                "system_input_method_picker",
+            )
+        val SHOW_SUBTYPE_PICKER =
+            predefinedKey(
+                KeyType.FUNCTION,
+                KeyCode.SHOW_SUBTYPE_PICKER,
+                "subtype_picker",
+                includeInLookup = false,
+            )
+        val SYSTEM_PREV_INPUT_METHOD =
+            predefinedKey(
+                KeyType.FUNCTION,
+                KeyCode.SYSTEM_PREV_INPUT_METHOD,
+                "system_prev_input_method",
+            )
+        val SYSTEM_NEXT_INPUT_METHOD =
+            predefinedKey(
+                KeyType.FUNCTION,
+                KeyCode.SYSTEM_NEXT_INPUT_METHOD,
+                "system_next_input_method",
+            )
+        val IME_SUBTYPE_PICKER =
+            predefinedKey(KeyType.FUNCTION, KeyCode.IME_SUBTYPE_PICKER, "ime_subtype_picker")
+        val IME_PREV_SUBTYPE =
+            predefinedKey(KeyType.FUNCTION, KeyCode.IME_PREV_SUBTYPE, "ime_prev_subtype")
+        val IME_NEXT_SUBTYPE =
+            predefinedKey(KeyType.FUNCTION, KeyCode.IME_NEXT_SUBTYPE, "ime_next_subtype")
+        val LANGUAGE_SWITCH =
+            predefinedKey(KeyType.SYSTEM_GUI, KeyCode.LANGUAGE_SWITCH, "language_switch")
 
-        /** Predefined key data for [KeyCode.IME_UI_MODE_TEXT] */
-        val IME_UI_MODE_TEXT = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.IME_UI_MODE_TEXT,
-            label = "ime_ui_mode_text",
-        )
-        /** Predefined key data for [KeyCode.IME_UI_MODE_MEDIA] */
-        val IME_UI_MODE_MEDIA = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.IME_UI_MODE_MEDIA,
-            label = "ime_ui_mode_media",
-        )
-        /** Predefined key data for [KeyCode.IME_UI_MODE_CLIPBOARD] */
-        val IME_UI_MODE_CLIPBOARD = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.IME_UI_MODE_CLIPBOARD,
-            label = "ime_ui_mode_clipboard",
-        )
+        val IME_SHOW_UI = predefinedKey(KeyType.FUNCTION, KeyCode.IME_SHOW_UI, "ime_show_ui")
+        val IME_HIDE_UI = predefinedKey(KeyType.FUNCTION, KeyCode.IME_HIDE_UI, "ime_hide_ui")
 
-        /** Predefined key data for [KeyCode.SYSTEM_INPUT_METHOD_PICKER] */
-        val SYSTEM_INPUT_METHOD_PICKER = TextKeyData(
-            type = KeyType.FUNCTION,
-            code = KeyCode.SYSTEM_INPUT_METHOD_PICKER,
-            label = "system_input_method_picker",
-        )
-        /** Predefined key data for [KeyCode.SHOW_SUBTYPE_PICKER] */
-        val SHOW_SUBTYPE_PICKER = TextKeyData(
-            type = KeyType.FUNCTION,
-            code = KeyCode.SHOW_SUBTYPE_PICKER,
-            label = "subtype_picker",
-        )
-        /** Predefined key data for [KeyCode.SYSTEM_PREV_INPUT_METHOD] */
-        val SYSTEM_PREV_INPUT_METHOD = TextKeyData(
-            type = KeyType.FUNCTION,
-            code = KeyCode.SYSTEM_PREV_INPUT_METHOD,
-            label = "system_prev_input_method",
-        )
-        /** Predefined key data for [KeyCode.SYSTEM_NEXT_INPUT_METHOD] */
-        val SYSTEM_NEXT_INPUT_METHOD = TextKeyData(
-            type = KeyType.FUNCTION,
-            code = KeyCode.SYSTEM_NEXT_INPUT_METHOD,
-            label = "system_next_input_method",
-        )
-        /** Predefined key data for [KeyCode.IME_SUBTYPE_PICKER] */
-        val IME_SUBTYPE_PICKER = TextKeyData(
-            type = KeyType.FUNCTION,
-            code = KeyCode.IME_SUBTYPE_PICKER,
-            label = "ime_subtype_picker",
-        )
-        /** Predefined key data for [KeyCode.IME_PREV_SUBTYPE] */
-        val IME_PREV_SUBTYPE = TextKeyData(
-            type = KeyType.FUNCTION,
-            code = KeyCode.IME_PREV_SUBTYPE,
-            label = "ime_prev_subtype",
-        )
-        /** Predefined key data for [KeyCode.IME_NEXT_SUBTYPE] */
-        val IME_NEXT_SUBTYPE = TextKeyData(
-            type = KeyType.FUNCTION,
-            code = KeyCode.IME_NEXT_SUBTYPE,
-            label = "ime_next_subtype",
-        )
-        /** Predefined key data for [KeyCode.LANGUAGE_SWITCH] */
-        val LANGUAGE_SWITCH = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.LANGUAGE_SWITCH,
-            label = "language_switch",
-        )
+        val SETTINGS = predefinedKey(KeyType.CHARACTER, KeyCode.SETTINGS, "settings")
+        val VOICE_INPUT = predefinedKey(KeyType.UNSPECIFIED, KeyCode.VOICE_INPUT, "voice_input")
 
-        /** Predefined key data for [KeyCode.IME_SHOW_UI] */
-        val IME_SHOW_UI = TextKeyData(
-            type = KeyType.FUNCTION,
-            code = KeyCode.IME_SHOW_UI,
-            label = "ime_show_ui",
-        )
-        /** Predefined key data for [KeyCode.IME_HIDE_UI] */
-        val IME_HIDE_UI = TextKeyData(
-            type = KeyType.FUNCTION,
-            code = KeyCode.IME_HIDE_UI,
-            label = "ime_hide_ui",
-        )
-
-        /** Predefined key data for [KeyCode.SETTINGS] */
-        val SETTINGS = TextKeyData(
-            type = KeyType.CHARACTER,
-            code = KeyCode.SETTINGS,
-            label = "settings",
-        )
-
-        /** Predefined key data for [KeyCode.VOICE_INPUT] */
-        val VOICE_INPUT = TextKeyData(
-            type = KeyType.UNSPECIFIED,
-            code = KeyCode.VOICE_INPUT,
-            label = "voice_input",
-        )
-
-        /** Predefined key data for [KeyCode.TOGGLE_SMARTBAR_VISIBILITY] */
-        val TOGGLE_SMARTBAR_VISIBILITY = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.TOGGLE_SMARTBAR_VISIBILITY,
-            label = "toggle_smartbar_visibility",
-        )
-        /** Predefined key data for [KeyCode.TOGGLE_ACTIONS_OVERFLOW] */
-        val TOGGLE_ACTIONS_OVERFLOW = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.TOGGLE_ACTIONS_OVERFLOW,
-            label = "toggle_actions_overflow",
-        )
-        /** Predefined key data for [KeyCode.TOGGLE_ACTIONS_EDITOR] */
-        val TOGGLE_ACTIONS_EDITOR = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.TOGGLE_ACTIONS_EDITOR,
-            label = "toggle_actions_editor",
-        )
-        /** Predefined key data for [KeyCode.TOGGLE_INCOGNITO_MODE] */
-        val TOGGLE_INCOGNITO_MODE = TextKeyData(
-            type = KeyType.FUNCTION,
-            code = KeyCode.TOGGLE_INCOGNITO_MODE,
-            label = "toggle_incognito_mode",
-        )
-        /** Predefined key data for [KeyCode.TOGGLE_AUTOCORRECT] */
-        val TOGGLE_AUTOCORRECT = TextKeyData(
-            type = KeyType.FUNCTION,
-            code = KeyCode.TOGGLE_AUTOCORRECT,
-            label = "toggle_autocorrect",
-        )
-        /** Opens the selected autocorrect provider's keyboard UI. */
-        val AUTOCORRECT_PLUGIN_UI = TextKeyData(
-            type = KeyType.SYSTEM_GUI,
-            code = KeyCode.AUTOCORRECT_PLUGIN_UI,
-            label = "autocorrect_plugin_ui",
-        )
+        val TOGGLE_SMARTBAR_VISIBILITY =
+            predefinedKey(
+                KeyType.SYSTEM_GUI,
+                KeyCode.TOGGLE_SMARTBAR_VISIBILITY,
+                "toggle_smartbar_visibility",
+            )
+        val TOGGLE_ACTIONS_OVERFLOW =
+            predefinedKey(
+                KeyType.SYSTEM_GUI,
+                KeyCode.TOGGLE_ACTIONS_OVERFLOW,
+                "toggle_actions_overflow",
+            )
+        val TOGGLE_ACTIONS_EDITOR =
+            predefinedKey(KeyType.SYSTEM_GUI, KeyCode.TOGGLE_ACTIONS_EDITOR, "toggle_actions_editor")
+        val TOGGLE_INCOGNITO_MODE =
+            predefinedKey(KeyType.FUNCTION, KeyCode.TOGGLE_INCOGNITO_MODE, "toggle_incognito_mode")
+        val TOGGLE_AUTOCORRECT =
+            predefinedKey(KeyType.FUNCTION, KeyCode.TOGGLE_AUTOCORRECT, "toggle_autocorrect")
+        val AUTOCORRECT_PLUGIN_UI =
+            predefinedKey(
+                KeyType.SYSTEM_GUI,
+                KeyCode.AUTOCORRECT_PLUGIN_UI,
+                "autocorrect_plugin_ui",
+            )
     }
 }
 
