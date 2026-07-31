@@ -19,18 +19,12 @@ package dev.patrickgold.florisboard.ime.keyboard
 enum class KeyboardMode(val value: Int) {
     UNSPECIFIED(-1),
     CHARACTERS(0),
-    @Deprecated(message = "TODO: remove")
-    EDITING(1),
     SYMBOLS(2),
     SYMBOLS2(3),
     NUMERIC(4),
     NUMERIC_ADVANCED(5),
     PHONE(6),
     PHONE2(7),
-    @Deprecated(message = "TODO: remove")
-    SMARTBAR_CLIPBOARD_CURSOR_ROW(8),
-    @Deprecated(message = "TODO: remove")
-    SMARTBAR_NUMBER_ROW(9),
     SMARTBAR_QUICK_ACTIONS(10);
 
     companion object {

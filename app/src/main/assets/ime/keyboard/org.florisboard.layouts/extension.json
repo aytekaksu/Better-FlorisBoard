@@ -245,12 +245,6 @@
         "direction": "ltr"
       },
       {
-        "id": "indonesian",
-        "label": "Indonesian (QWERTY)",
-        "authors": [ "Linerly" ],
-        "direction": "ltr"
-      },
-      {
         "id": "ipa",
         "label": "International Phonetic Alphabet",
         "authors": [ "Huy-Ngo" ],
@@ -583,14 +577,6 @@
         "label": "Persian3",
         "authors": [ "SaeID-Rz" ],
         "direction": "rtl"
-      }
-    ],
-    "extension": [
-      {
-        "id": "clipboard_cursor_row",
-        "label": "Clipboard Cursor Row",
-        "authors": [ "patrickgold" ],
-        "direction": "ltr"
       }
     ],
     "numeric": [

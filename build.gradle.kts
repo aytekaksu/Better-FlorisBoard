@@ -139,7 +139,7 @@ val formattedKotlinSources = files(
             "SelectLocaleScreenTest.kt",
     ),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyDataPrivacyTest.kt"),
-    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/LayoutTypeTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyboardMetadataContractTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycleTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/SpellingDiagnosticsTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/composing/ComposerTest.kt"),
