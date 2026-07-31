@@ -31,4 +31,7 @@ data class ClipboardHistory(val all: List<ClipboardItem>) {
     val unpinned = all.filter { !it.isPinned }
     val recent = unpinned.filter { (now - it.creationTimestampMs) < RECENT_TIMESPAN_MS }
     val other = unpinned.filter { (now - it.creationTimestampMs) >= RECENT_TIMESPAN_MS }
+
+    override fun toString(): String =
+        "ClipboardHistory(itemCount=${all.size}, pinnedCount=${pinned.size})"
 }

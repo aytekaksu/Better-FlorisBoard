@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
+import dev.patrickgold.florisboard.ime.clipboard.rememberClipboardAccessLocked
 import dev.patrickgold.florisboard.ime.nlp.ClipboardSuggestionCandidate
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
@@ -52,6 +53,8 @@ import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.subtypeManager
 import dev.patrickgold.jetpref.datastore.model.collectAsState
 import kotlinx.coroutines.launch
+import org.florisboard.lib.android.AndroidKeyguardManager
+import org.florisboard.lib.android.systemService
 import org.florisboard.lib.compose.conditional
 import org.florisboard.lib.compose.florisHorizontalScroll
 import org.florisboard.lib.snygg.SnyggSelector
@@ -100,11 +103,21 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
     val keyboardManager by context.keyboardManager()
     val nlpManager by context.nlpManager()
     val subtypeManager by context.subtypeManager()
+    val keyguardManager = remember(context) {
+        context.systemService(AndroidKeyguardManager::class)
+    }
     val scope = rememberCoroutineScope()
 
     val displayMode by prefs.suggestion.displayMode.collectAsState()
     val matchKeyAppearance by prefs.suggestion.matchKeyAppearance.collectAsState()
-    val candidates by nlpManager.activeCandidatesFlow.collectAsState()
+    val keyboardState by keyboardManager.activeState.collectAsState()
+    val candidateSource by nlpManager.activeCandidatesFlow.collectAsState()
+    val clipboardAccessLocked = rememberClipboardAccessLocked(context, keyguardManager)
+    val candidates = if (clipboardAccessLocked || keyboardState.isIncognitoMode) {
+        candidateSource.filterNot { it is ClipboardSuggestionCandidate }
+    } else {
+        candidateSource
+    }
     val appearance = resolveCandidateAppearance(matchKeyAppearance, displayMode)
 
     SnyggRow(
@@ -162,17 +175,14 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
                     displayMode = displayMode,
                     appearance = appearance,
                     onClick = {
-                        // Can't use candidate directly
-                        keyboardManager.commitCandidate(candidates[n])
+                        keyboardManager.commitCandidate(candidate)
                     },
                     onLongPress = {
-                        // Can't use candidate directly
-                        val candidateItem = candidates[n]
-                        if (candidateItem.isEligibleForUserRemoval) {
+                        if (candidate.isEligibleForUserRemoval) {
                             scope.launch {
                                 nlpManager.removeSuggestion(
                                     subtypeManager.activeSubtype,
-                                    candidateItem,
+                                    candidate,
                                 )
                             }
                             true

@@ -17,7 +17,6 @@
 package dev.patrickgold.florisboard.ime.editor
 
 import android.content.ClipDescription
-import android.content.ContentUris
 import android.content.Context
 import android.view.KeyEvent
 import androidx.core.view.inputmethod.InputConnectionCompat
@@ -27,9 +26,10 @@ import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.ImeUiMode
-import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardFileStorage
+import dev.patrickgold.florisboard.ime.clipboard.ClipboardMediaPasteAccess
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
+import dev.patrickgold.florisboard.ime.clipboard.provider.OwnedClipboardMediaUri
 import dev.patrickgold.florisboard.ime.input.InputShiftState
 import dev.patrickgold.florisboard.ime.keyboard.IncognitoMode
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
@@ -45,6 +45,21 @@ import dev.patrickgold.florisboard.subtypeManager
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.runBlocking
 import org.florisboard.lib.android.showShortToastSync
+
+internal inline fun dispatchMediaPasteContent(
+    pasteAccess: ClipboardMediaPasteAccess,
+    dispatch: () -> Boolean,
+): Boolean {
+    return try {
+        dispatch()
+    } catch (_: Exception) {
+        false
+    } finally {
+        // Once dispatch begins, the editor can request and retain URI access
+        // even when it rejects the paste or the Binder call throws.
+        pasteAccess.commitSucceededOrMayHaveSucceeded()
+    }
+}
 
 internal data class AutoCorrectionRevertPlan(
     val range: EditorRange,
@@ -503,25 +518,58 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      *
      * @return True on success, false if something went wrong.
      */
-    fun commitClipboardItem(item: ClipboardItem?): Boolean {
+    internal fun commitClipboardItem(
+        item: ClipboardItem?,
+        pasteAccess: ClipboardMediaPasteAccess? = null,
+    ): Boolean {
         if (item == null) return false
-        val mimeTypes = item.mimeTypes
         return when (item.type) {
-            ItemType.TEXT -> commitText(item.text.toString()).finishCommitAttempt()
+            ItemType.TEXT -> commitText(item.text ?: return false).finishCommitAttempt()
             ItemType.IMAGE, ItemType.VIDEO -> {
-                item.uri ?: return false
-                val id = ContentUris.parseId(item.uri)
-                val file = ClipboardFileStorage.getFileForId(appContext, id)
-                if (!file.exists()) return false
-                val inputContentInfo = InputContentInfoCompat(
-                    item.uri,
-                    ClipDescription("clipboard media file", mimeTypes.toTypedArray()),
-                    null,
-                )
-                val ic = currentInputConnection() ?: return false
-                ic.finishComposingText()
-                val flags = InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION
-                InputConnectionCompat.commitContent(ic, activeInfo.base, inputContentInfo, flags, null)
+                val preparedAccess = pasteAccess ?: return false
+                val ownedUri = item.uri
+                    ?.let { OwnedClipboardMediaUri.parse(it, item.type) }
+                    ?: run {
+                        preparedAccess.commitRejected()
+                        return false
+                    }
+                val ic = currentInputConnection() ?: run {
+                    preparedAccess.commitRejected()
+                    return false
+                }
+                val composingFinished = try {
+                    ic.finishComposingText()
+                } catch (_: Exception) {
+                    preparedAccess.commitRejected()
+                    return false
+                }
+                if (!composingFinished) {
+                    preparedAccess.commitRejected()
+                    return false
+                }
+                val inputContentInfo = try {
+                    InputContentInfoCompat(
+                        ownedUri.uri,
+                        ClipDescription(
+                            "clipboard media file",
+                            preparedAccess.mimeTypes.toTypedArray(),
+                        ),
+                        null,
+                    )
+                } catch (_: Exception) {
+                    preparedAccess.commitRejected()
+                    return false
+                }
+                dispatchMediaPasteContent(preparedAccess) {
+                    val flags = InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION
+                    InputConnectionCompat.commitContent(
+                        ic,
+                        activeInfo.base,
+                        inputContentInfo,
+                        flags,
+                        null,
+                    )
+                }
             }
         }.also {
             if (prefs.clipboard.historyHideOnPaste.get()) {
@@ -654,7 +702,12 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     fun performClipboardPaste(): Boolean {
         autoSpace.setInactive()
         phantomSpace.setInactive()
-        return commitClipboardItem(clipboardManager.primaryClip).also { result ->
+        val item = clipboardManager.primaryClip ?: return false
+        if (item.type != ItemType.TEXT) {
+            clipboardManager.pasteItem(item)
+            return true
+        }
+        return commitClipboardItem(item).also { result ->
             if (!result) {
                 appContext.showShortToastSync("Failed to paste item.")
             }

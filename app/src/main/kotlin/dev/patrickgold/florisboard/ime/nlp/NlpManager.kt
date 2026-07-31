@@ -52,12 +52,68 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.florisboard.autocorrect.api.AutocorrectPluginContract
+import org.florisboard.lib.android.AndroidKeyguardManager
+import org.florisboard.lib.android.systemService
 import org.florisboard.lib.kotlin.guardedByLock
 import org.florisboard.lib.kotlin.collectLatestIn
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.properties.Delegates
 
-private const val BLANK_STR_PATTERN = "^\\s*$"
+internal data class ClipboardSuggestionMatch(
+    val value: String,
+    val range: IntRange,
+) {
+    override fun toString() = "ClipboardSuggestionMatch(value=<redacted>)"
+}
+
+internal fun findClipboardSuggestionMatches(
+    text: CharSequence,
+    maxMatches: Int,
+): List<ClipboardSuggestionMatch> {
+    val limit = maxMatches.coerceIn(0, MAX_CLIPBOARD_SUGGESTION_CANDIDATES)
+    if (limit == 0) return emptyList()
+
+    val boundedText = text.take(MAX_CLIPBOARD_SUGGESTION_SCAN_CHARS).toString()
+    val matches = sequence {
+        yieldAll(NetworkUtils.getEmailAddresses(boundedText, MAX_CLIPBOARD_SUGGESTION_RAW_MATCHES))
+        yieldAll(NetworkUtils.getUrls(boundedText, MAX_CLIPBOARD_SUGGESTION_RAW_MATCHES))
+        yieldAll(NetworkUtils.getPhoneNumbers(boundedText, MAX_CLIPBOARD_SUGGESTION_RAW_MATCHES))
+    }
+    val previousMatches = mutableListOf<MatchGroup>()
+    return buildList(limit) {
+        for (match in matches) {
+            val isUnique = previousMatches.none { previous ->
+                previous.value == match.value ||
+                    previous.range.first <= match.range.last &&
+                    match.range.first <= previous.range.last
+            }
+            previousMatches += match
+            if (match.value == boundedText || !isUnique) continue
+            add(ClipboardSuggestionMatch(match.value, match.range))
+            if (size == limit) break
+        }
+    }
+}
+
+internal fun buildClipboardSuggestionItems(
+    source: ClipboardItem,
+    maxCandidateCount: Int,
+): List<ClipboardItem> {
+    val limit = maxCandidateCount.coerceIn(0, MAX_CLIPBOARD_SUGGESTION_CANDIDATES)
+    if (limit == 0) return emptyList()
+    return buildList(limit) {
+        add(source)
+        if (source.isSensitive || source.type != ItemType.TEXT || size == limit) {
+            return@buildList
+        }
+        findClipboardSuggestionMatches(
+            text = source.stringRepresentation(),
+            maxMatches = limit - size,
+        ).forEach { match ->
+            add(source.copy(text = match.value.removeSurrounding("(", ")")))
+        }
+    }
+}
 
 internal class CandidateRevision {
     private var current = 0L
@@ -226,14 +282,13 @@ internal class SharedActionsAnimationSuppressionTracker {
 }
 
 class NlpManager(context: Context) {
-    private val blankStrRegex = Regex(BLANK_STR_PATTERN)
-
     private val prefs by FlorisPreferenceStore
     private val clipboardManager by context.clipboardManager()
     private val editorInstance by context.editorInstance()
     private val keyboardManager by context.keyboardManager()
     private val autocorrectPluginManager by context.autocorrectPluginManager()
     private val subtypeManager by context.subtypeManager()
+    private val keyguardManager = context.systemService(AndroidKeyguardManager::class)
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val clipboardSuggestionProvider = ClipboardSuggestionProvider(context)
@@ -563,15 +618,33 @@ class NlpManager(context: Context) {
             }
             else -> emptyList()
         }
-        val visibleCandidates = candidates.filter(SuggestionCandidate::isVisible)
         candidateAssemblyRevision.publishIfCurrent(revision) {
-            autoCommitCandidate = candidates.firstOrNull { it.isEligibleForAutoCommit }
+            val publishableCandidates = if (canUseClipboardSuggestions(
+                    keyboardManager.activeState.isIncognitoMode,
+                )
+            ) {
+                candidates
+            } else {
+                candidates.filterNot { it is ClipboardSuggestionCandidate }
+            }
+            val visibleCandidates =
+                publishableCandidates.filter(SuggestionCandidate::isVisible)
+            autoCommitCandidate =
+                publishableCandidates.firstOrNull { it.isEligibleForAutoCommit }
             activeCandidates = visibleCandidates
             autoExpandCollapseSmartbarActions(
                 visibleCandidates,
                 NlpInlineAutofill.suggestions.value,
             )
         }
+    }
+
+    private fun canUseClipboardSuggestions(isPrivateSession: Boolean): Boolean {
+        return prefs.clipboard.suggestionEnabled.get() &&
+            !isPrivateSession &&
+            runCatching {
+                !keyguardManager.isDeviceLocked && !keyguardManager.isKeyguardLocked
+            }.getOrDefault(false)
     }
 
     fun autoExpandCollapseSmartbarActions(
@@ -646,7 +719,8 @@ class NlpManager(context: Context) {
     }
 
     inner class ClipboardSuggestionProvider internal constructor(private val context: Context) : SuggestionProvider {
-        private var lastClipboardItemId: Long = -1
+        @Volatile
+        private var suppressedClipboardCopy: ClipboardItem? = null
 
         override val providerId = "org.florisboard.nlp.providers.clipboard"
 
@@ -665,54 +739,25 @@ class NlpManager(context: Context) {
             allowPossiblyOffensive: Boolean,
             isPrivateSession: Boolean,
         ): List<SuggestionCandidate> {
-            // Check if enabled
-            if (!prefs.clipboard.suggestionEnabled.get()) return emptyList()
+            if (maxCandidateCount <= 0 || !canUseClipboardSuggestions(isPrivateSession)) {
+                return emptyList()
+            }
 
-            val currentItem = validateClipboardItem(clipboardManager.primaryClip, lastClipboardItemId, content.text)
+            val currentItem = validateClipboardItem(clipboardManager.primaryClip, suppressedClipboardCopy, content.text)
                 ?: return emptyList()
+            val now = System.currentTimeMillis()
+            if ((now - currentItem.creationTimestampMs) >= prefs.clipboard.suggestionTimeout.get() * 1_000L) {
+                return emptyList()
+            }
 
-            return buildList {
-                val now = System.currentTimeMillis()
-                if ((now - currentItem.creationTimestampMs) < prefs.clipboard.suggestionTimeout.get() * 1000) {
-                    add(ClipboardSuggestionCandidate(currentItem, sourceProvider = this@ClipboardSuggestionProvider, context = context))
-                    if (currentItem.isSensitive) {
-                        return@buildList
-                    }
-                    if (currentItem.type == ItemType.TEXT) {
-                        val text = currentItem.stringRepresentation()
-                        val matches = buildList {
-                            addAll(NetworkUtils.getEmailAddresses(text))
-                            addAll(NetworkUtils.getUrls(text))
-                            addAll(NetworkUtils.getPhoneNumbers(text))
-                        }
-                        matches.forEachIndexed { i, match ->
-                            val isUniqueMatch = matches.subList(0, i).all { prevMatch ->
-                                prevMatch.value != match.value && prevMatch.range.intersect(match.range).isEmpty()
-                            }
-                            if (match.value != text && isUniqueMatch) {
-                                add(ClipboardSuggestionCandidate(
-                                    clipboardItem = currentItem.copy(
-                                        // TODO: adjust regex of phone number so we don't need to manually strip the
-                                        //  parentheses from the match results
-                                        text = if (match.value.startsWith("(") && match.value.endsWith(")")) {
-                                            match.value.substring(1, match.value.length - 1)
-                                        } else {
-                                            match.value
-                                        }
-                                    ),
-                                    sourceProvider = this@ClipboardSuggestionProvider,
-                                    context = context,
-                                ))
-                            }
-                        }
-                    }
-                }
+            return buildClipboardSuggestionItems(currentItem, maxCandidateCount).map { item ->
+                clipboardSuggestionCandidate(item, currentItem)
             }
         }
 
         override suspend fun notifySuggestionAccepted(subtype: Subtype, candidate: SuggestionCandidate) {
             if (candidate is ClipboardSuggestionCandidate) {
-                lastClipboardItemId = candidate.clipboardItem.id
+                suppressedClipboardCopy = candidate.sourceClipboardItem
             }
         }
 
@@ -722,7 +767,7 @@ class NlpManager(context: Context) {
 
         override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
             if (candidate is ClipboardSuggestionCandidate) {
-                lastClipboardItemId = candidate.clipboardItem.id
+                suppressedClipboardCopy = candidate.sourceClipboardItem
                 return true
             }
             return false
@@ -740,15 +785,28 @@ class NlpManager(context: Context) {
             // Do nothing
         }
 
-        private fun validateClipboardItem(currentItem: ClipboardItem?, lastItemId: Long, contentText: String) =
+        private fun clipboardSuggestionCandidate(
+            item: ClipboardItem,
+            source: ClipboardItem,
+        ) = ClipboardSuggestionCandidate(
+            clipboardItem = item,
+            sourceProvider = this,
+            context = context,
+            sourceClipboardItem = source,
+        )
+
+        private fun validateClipboardItem(
+            currentItem: ClipboardItem?,
+            suppressedCopy: ClipboardItem?,
+            contentText: String,
+        ) =
             currentItem?.takeIf {
                 // Check if already used
-                it.id != lastItemId
+                isNewClipboardSuggestionCopy(it, suppressedCopy)
                     // Check if content is empty
                     && contentText.isBlank()
                     // Check if clipboard content has any valid characters
                     && !currentItem.text.isNullOrBlank()
-                    && !blankStrRegex.matches(currentItem.text)
             }
     }
 }

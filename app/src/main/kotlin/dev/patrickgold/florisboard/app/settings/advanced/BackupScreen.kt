@@ -16,7 +16,6 @@
 
 package dev.patrickgold.florisboard.app.settings.advanced
 
-import android.content.ContentUris
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -46,7 +45,6 @@ import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.LocalNavController
 import dev.patrickgold.florisboard.cacheManager
 import dev.patrickgold.florisboard.clipboardManager
-import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardFileStorage
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.lib.cache.CacheManager
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
@@ -298,36 +296,29 @@ fun BackupScreen() = FlorisScreen {
 
                 if (selection.provideClipboardItems()) {
                     val clipboardManager by context.clipboardManager()
-                    val clipboardHistory = clipboardManager.currentHistory.all
-                    val clipboardFilesDir = workspace.inputDir.subDir("clipboard")
-                    clipboardFilesDir.mkdir()
-
-                    fun backupClipboardItems(type: ItemType, jsonName: String) {
-                        val items = clipboardHistory.filter { it.type == type }
-                        clipboardFilesDir.subFile(jsonName).writeJson(items)
-                        if (type == ItemType.TEXT) return
-
-                        val mediaDir = clipboardFilesDir
-                            .subDir(ClipboardFileStorage.CLIPBOARD_FILES_PATH)
-                            .also { it.mkdirs() }
-                        for (item in items) {
-                            val id = ContentUris.parseId(item.uri!!)
-                            ZipUtils.copyFileNoFollow(
-                                ClipboardFileStorage.getFileForId(context, id),
-                                mediaDir.subFile("$id"),
-                                transferBudget,
-                            )
+                    val selectedTypes = buildSet {
+                        if (selection.clipboardTextItems) add(ItemType.TEXT)
+                        if (selection.clipboardImageItems) add(ItemType.IMAGE)
+                        if (selection.clipboardVideoItems) add(ItemType.VIDEO)
+                    }
+                    val snapshot = withContext(NonCancellable) {
+                        clipboardManager.acquireBackupSnapshot(selectedTypes)
+                    }
+                    try {
+                        operationContext.ensureActive()
+                        ClipboardBackupPayload.write(
+                            context = context,
+                            stagedRoot = workspace.inputDir,
+                            sourcePackageName = BuildConfig.APPLICATION_ID,
+                            selectedTypes = selectedTypes,
+                            items = snapshot.items,
+                            transferBudget = transferBudget,
+                            checkActive = operationContext::ensureActive,
+                        )
+                    } finally {
+                        withContext(NonCancellable) {
+                            runCatching { snapshot.release() }
                         }
-                    }
-
-                    if (selection.clipboardTextItems) {
-                        backupClipboardItems(ItemType.TEXT, BackupArchive.CLIPBOARD_TEXT_ITEMS_JSON_NAME)
-                    }
-                    if (selection.clipboardImageItems) {
-                        backupClipboardItems(ItemType.IMAGE, BackupArchive.CLIPBOARD_IMAGES_JSON_NAME)
-                    }
-                    if (selection.clipboardVideoItems) {
-                        backupClipboardItems(ItemType.VIDEO, BackupArchive.CLIPBOARD_VIDEO_JSON_NAME)
                     }
                 }
                 workspace.metadata = BackupArchive.Metadata(

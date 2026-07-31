@@ -16,12 +16,14 @@
 
 package dev.patrickgold.florisboard
 
+import android.app.ActivityManager
 import android.app.Application
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import android.os.Handler
 import android.os.StrictMode
 import androidx.core.os.UserManagerCompat
@@ -45,12 +47,17 @@ import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.devtools.flogInfo
 import dev.patrickgold.florisboard.lib.ext.ExtensionManager
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.florisboard.lib.kotlin.io.deleteContentsRecursively
 import org.florisboard.lib.kotlin.tryOrNull
+import java.io.FileInputStream
+import java.io.InputStream
 import java.lang.ref.WeakReference
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Global weak reference for the [FlorisApplication] class. This is needed as in certain scenarios an application
@@ -58,14 +65,107 @@ import java.lang.ref.WeakReference
  */
 private var FlorisApplicationReference = WeakReference<FlorisApplication?>(null)
 
+private const val ASYNC_BOOTSTRAP_STAGE = 1
+private const val RUNTIME_BOOTSTRAP_STAGE = 1 shl 1
+private const val ALL_BOOTSTRAP_STAGES =
+    ASYNC_BOOTSTRAP_STAGE or RUNTIME_BOOTSTRAP_STAGE
+private const val CLIPBOARD_IMPORT_PROCESS_SUFFIX = ":clipboard_import"
+private const val PROCESS_NAME_BYTE_LIMIT = 512
+private const val PROC_SELF_CMDLINE = "/proc/self/cmdline"
+
+/**
+ * Only the exact private clipboard-import process skips the full app runtime.
+ * Missing or unexpected process information deliberately falls through to the
+ * normal bootstrap so a lookup failure cannot disable the main app.
+ */
+internal fun shouldInitializeFlorisApplication(
+    packageName: String,
+    processName: String?,
+): Boolean {
+    if (packageName.isEmpty()) return true
+    return processName != packageName + CLIPBOARD_IMPORT_PROCESS_SUFFIX
+}
+
+internal fun currentFlorisApplicationProcessName(context: Context): String? {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        return try {
+            Application.getProcessName().takeIf(String::isNotEmpty)
+        } catch (_: Exception) {
+            null
+        }
+    }
+    return currentProcessNameFromActivityManager(context) ?: currentProcessNameFromProc()
+}
+
+private fun currentProcessNameFromActivityManager(context: Context): String? {
+    return try {
+        val current = ActivityManager.RunningAppProcessInfo()
+        ActivityManager.getMyMemoryState(current)
+        if (current.pid <= 0 || current.uid <= 0) {
+            null
+        } else {
+            context.getSystemService(ActivityManager::class.java)
+                ?.runningAppProcesses
+                ?.firstOrNull { process ->
+                    process.pid == current.pid && process.uid == current.uid
+                }
+                ?.processName
+                ?.takeIf(String::isNotEmpty)
+        }
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun currentProcessNameFromProc(): String? {
+    return try {
+        FileInputStream(PROC_SELF_CMDLINE).use { input ->
+            readBoundedProcessName(input)
+        }
+    } catch (_: Exception) {
+        null
+    }
+}
+
+internal fun readBoundedProcessName(input: InputStream): String? {
+    val bytes = ByteArray(PROCESS_NAME_BYTE_LIMIT + 1)
+    var byteCount = 0
+    var terminator = -1
+    while (byteCount < bytes.size && terminator < 0) {
+        val read = input.read(bytes, byteCount, bytes.size - byteCount)
+        if (read <= 0) break
+        val end = byteCount + read
+        for (index in byteCount until end) {
+            if (bytes[index] == 0.toByte()) {
+                terminator = index
+                break
+            }
+        }
+        byteCount = end
+    }
+    if (terminator !in 1..PROCESS_NAME_BYTE_LIMIT) return null
+    return String(bytes, 0, terminator, Charsets.UTF_8)
+        .takeIf(String::isNotEmpty)
+}
+
 @Suppress("unused")
 class FlorisApplication : Application() {
     private val mainHandler by lazy { Handler(mainLooper) }
     private val scope = CoroutineScope(Dispatchers.Default)
-    val preferenceStoreLoaded = MutableStateFlow(false)
+    private val initializationStarted = AtomicBoolean(false)
+    private val completedBootstrapStages = AtomicInteger(0)
+    private val clipboardInitializationFailure = TerminalFailureLatch<ClipboardManager> {
+        it.failInitialization()
+    }
+    internal val applicationBootstrapState =
+        MutableStateFlow(ApplicationBootstrapState.LOADING)
+    internal val preferenceStoreInitializationState =
+        MutableStateFlow(PreferenceStoreInitializationState.LOADING)
 
     val cacheManager = lazy { CacheManager(this) }
-    val clipboardManager = lazy { ClipboardManager(this) }
+    val clipboardManager = lazy {
+        clipboardInitializationFailure.register(ClipboardManager(this))
+    }
     val editorInstance = lazy { EditorInstance(this) }
     val extensionManager = lazy { ExtensionManager(this) }
     val glideTypingManager = lazy { GlideTypingManager(this) }
@@ -77,24 +177,32 @@ class FlorisApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        if (BuildConfig.DEBUG) {
-            StrictMode.setThreadPolicy(
-                StrictMode.ThreadPolicy.Builder()
-                    .detectAll()
-                    .penaltyLog()
-                    .build(),
-            )
-            StrictMode.setVmPolicy(
-                StrictMode.VmPolicy.Builder()
-                    .detectActivityLeaks()
-                    .detectLeakedClosableObjects()
-                    .detectLeakedRegistrationObjects()
-                    .penaltyLog()
-                    .build(),
-            )
-        }
         FlorisApplicationReference = WeakReference(this)
+        if (
+            !shouldInitializeFlorisApplication(
+                packageName = packageName,
+                processName = currentFlorisApplicationProcessName(this),
+            )
+        ) {
+            return
+        }
         try {
+            if (BuildConfig.DEBUG) {
+                StrictMode.setThreadPolicy(
+                    StrictMode.ThreadPolicy.Builder()
+                        .detectAll()
+                        .penaltyLog()
+                        .build(),
+                )
+                StrictMode.setVmPolicy(
+                    StrictMode.VmPolicy.Builder()
+                        .detectActivityLeaks()
+                        .detectLeakedClosableObjects()
+                        .detectLeakedRegistrationObjects()
+                        .penaltyLog()
+                        .build(),
+                )
+            }
             Flog.install(
                 isLogcatEnabled = BuildConfig.DEBUG,
                 isDiagnosticCaptureEnabled = true,
@@ -111,39 +219,143 @@ class FlorisApplication : Application() {
             if (!UserManagerCompat.isUserUnlocked(this)) {
                 cacheDir?.deleteContentsRecursively()
                 extensionManager.value.init()
-                registerReceiver(BootComplete(), IntentFilter(Intent.ACTION_USER_UNLOCKED))
+                val unlockReceiver = BootComplete()
+                registerReceiver(unlockReceiver, IntentFilter(Intent.ACTION_USER_UNLOCKED))
+                // Unlock may complete between the first check and receiver
+                // registration. Recheck after registration so neither path is
+                // lost; the receiver's latch makes both paths idempotent.
+                if (UserManagerCompat.isUserUnlocked(this)) {
+                    unlockReceiver.handleUnlock()
+                }
                 return
             }
 
             init()
-        } catch (e: Exception) {
-            CrashUtility.stageException(e)
-            return
+        } catch (error: Exception) {
+            failApplicationBootstrap(error, stage = "platform")
         }
     }
 
     fun init() {
-        cacheDir?.deleteContentsRecursively()
-        scope.launch {
-            FlorisPreferenceStore.initAndroidWithLegacyMigrations(this@FlorisApplication)
-            flogInfo { "Preference store initialization completed" }
-            preferenceStoreLoaded.value = true
+        if (!initializationStarted.compareAndSet(false, true)) return
+        try {
+            cacheDir?.deleteContentsRecursively()
+            // Android 8 requires ClipboardManager to be created on a Looper thread.
+            val initializedClipboardManager = clipboardManager.value
+            scope.launch {
+                initializePreferencesAndClipboard(initializedClipboardManager)
+            }
+            extensionManager.value.init()
+            DictionaryManager.init(this)
+            completeBootstrapStage(RUNTIME_BOOTSTRAP_STAGE)
+        } catch (error: Exception) {
+            failApplicationBootstrap(error, stage = "runtime")
         }
-        extensionManager.value.init()
-        clipboardManager.value.initializeForContext(this)
-        DictionaryManager.init(this)
+    }
+
+    private suspend fun initializePreferencesAndClipboard(
+        initializedClipboardManager: ClipboardManager,
+    ) {
+        val result = try {
+            FlorisPreferenceStore.initAndroidWithLegacyMigrations(this)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Result.failure(error)
+        }
+        val error = result.exceptionOrNull()
+        if (error != null) {
+            if (error is CancellationException) throw error
+            if (error !is Exception) throw error
+            preferenceStoreInitializationState.value =
+                PreferenceStoreInitializationState.FAILED
+            failApplicationBootstrap(error, stage = "preferences")
+            return
+        }
+
+        preferenceStoreInitializationState.value =
+            PreferenceStoreInitializationState.READY
+        try {
+            flogInfo { "Preference store initialization completed" }
+        } catch (_: Exception) {
+            // Diagnostics must never decide bootstrap success.
+        }
+        try {
+            initializedClipboardManager.initializeForContext(this)
+            initializedClipboardManager.awaitInitialization()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            failApplicationBootstrap(error, stage = "clipboard")
+            return
+        }
+        completeBootstrapStage(ASYNC_BOOTSTRAP_STAGE)
+    }
+
+    private fun completeBootstrapStage(stage: Int) {
+        val completed = completedBootstrapStages.updateAndGet { it or stage }
+        if (completed == ALL_BOOTSTRAP_STAGES) {
+            applicationBootstrapState.compareAndSet(
+                expect = ApplicationBootstrapState.LOADING,
+                update = ApplicationBootstrapState.READY,
+            )
+        }
+    }
+
+    private fun failApplicationBootstrap(
+        error: Exception,
+        stage: String,
+    ) {
+        val firstFailure = applicationBootstrapState.compareAndSet(
+            expect = ApplicationBootstrapState.LOADING,
+            update = ApplicationBootstrapState.FAILED,
+        )
+        clipboardInitializationFailure.fail()
+        if (!firstFailure) return
+        try {
+            val sanitized = IllegalStateException(
+                "Application bootstrap failed at $stage: ${error::class.qualifiedName}",
+            )
+            sanitized.stackTrace = error.stackTrace
+            CrashUtility.stageException(sanitized)
+        } catch (_: Exception) {
+            // Diagnostics must not replace the original failure state.
+        }
+        try {
+            flogError {
+                "Application bootstrap failed at $stage: ${error::class.simpleName}"
+            }
+        } catch (_: Exception) {
+            // Diagnostics must not replace the original failure state.
+        }
     }
 
     private inner class BootComplete : BroadcastReceiver() {
+        private val handled = AtomicBoolean(false)
+
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent == null) return
-            if (intent.action == Intent.ACTION_USER_UNLOCKED) {
+            if (intent?.action == Intent.ACTION_USER_UNLOCKED) {
+                handleUnlock()
+            }
+        }
+
+        fun handleUnlock() {
+            if (!handled.compareAndSet(false, true)) return
+            try {
+                unregisterReceiver(this)
+            } catch (error: Exception) {
                 try {
-                    unregisterReceiver(this)
-                } catch (e: Exception) {
-                    flogError { "Failed to unregister unlock receiver: ${e::class.simpleName}" }
+                    flogError {
+                        "Failed to unregister unlock receiver: ${error::class.simpleName}"
+                    }
+                } catch (_: Exception) {
+                    // Unlock initialization must still proceed.
                 }
+            }
+            try {
                 mainHandler.post { init() }
+            } catch (error: Exception) {
+                failApplicationBootstrap(error, stage = "unlock")
             }
         }
     }

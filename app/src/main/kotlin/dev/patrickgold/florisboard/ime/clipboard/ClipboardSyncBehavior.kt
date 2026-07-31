@@ -22,3 +22,13 @@ enum class ClipboardSyncBehavior(val shouldSyncSet: Boolean, val shouldSyncClear
     ONLY_SET_EVENTS(shouldSyncSet = true, shouldSyncClear = false),
     ALL_EVENTS(shouldSyncSet = true, shouldSyncClear = true);
 }
+
+internal fun resolveSyncToFlorisBehavior(
+    useInternalClipboard: Boolean,
+    configuredBehavior: ClipboardSyncBehavior,
+): ClipboardSyncBehavior {
+    return if (useInternalClipboard) configuredBehavior else ClipboardSyncBehavior.ALL_EVENTS
+}
+
+internal val ClipboardSyncBehavior.requiresSystemClipboardRead: Boolean
+    get() = shouldSyncSet || shouldSyncClear

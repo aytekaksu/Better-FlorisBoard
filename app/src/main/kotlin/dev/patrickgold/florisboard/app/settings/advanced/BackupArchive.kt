@@ -57,6 +57,9 @@ internal object BackupArchive {
     fun defaultFileName(metadata: Metadata): String =
         "backup_${metadata.packageName}_${metadata.versionCode}_${metadata.timestamp}.zip"
 
+    internal fun isValidPackageName(packageName: String): Boolean = packageName.length in 1..MAX_PACKAGE_NAME_LENGTH &&
+        PACKAGE_NAME.matches(packageName)
+
     /**
      * Checks facts from one immutable local snapshot. [archiveSize] must be that
      * snapshot's actual byte length, not a document-provider hint.
@@ -103,6 +106,9 @@ internal object BackupArchive {
     }
 
     const val CURRENT_MANIFEST_VERSION = 1
+
+    private const val MAX_PACKAGE_NAME_LENGTH = 255
+    private val PACKAGE_NAME = Regex("""[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+""")
 }
 
 internal enum class BackupComponent(val wireId: String) {
@@ -378,12 +384,12 @@ internal class RestorePlan private constructor(
     val componentsToStage: List<ValidatedComponent>,
     internal val clipboardMediaCandidatesToStage: List<ValidatedArchiveEntry>,
     val clipboardMediaPolicy: ClipboardMediaPolicy,
-    val declaredPayloadBytes: Long,
+    val declaredComponentBytes: Long,
 ) {
     override fun toString(): String = "RestorePlan(mode=$mode, resetComponentsOnCommit=$resetComponentsOnCommit, " +
         "componentsToStage=${componentsToStage.map { it.component }}, " +
         "mediaCandidateCount=${clipboardMediaCandidatesToStage.size}, " +
-        "clipboardMediaPolicy=$clipboardMediaPolicy, declaredPayloadBytes=$declaredPayloadBytes)"
+        "clipboardMediaPolicy=$clipboardMediaPolicy, declaredComponentBytes=$declaredComponentBytes)"
 
     companion object {
         fun create(
@@ -393,7 +399,7 @@ internal class RestorePlan private constructor(
             componentsToStage: List<ValidatedComponent>,
             clipboardMediaCandidatesToStage: List<ValidatedArchiveEntry>,
             clipboardMediaPolicy: ClipboardMediaPolicy,
-            declaredPayloadBytes: Long,
+            declaredComponentBytes: Long,
         ): RestorePlan {
             authority.requireArchiveValidationAuthority()
             return RestorePlan(
@@ -402,7 +408,7 @@ internal class RestorePlan private constructor(
                 componentsToStage = componentsToStage.immutableList(),
                 clipboardMediaCandidatesToStage = clipboardMediaCandidatesToStage.immutableList(),
                 clipboardMediaPolicy = clipboardMediaPolicy,
-                declaredPayloadBytes = declaredPayloadBytes,
+                declaredComponentBytes = declaredComponentBytes,
             )
         }
     }
@@ -424,8 +430,8 @@ internal object RestorePlanner {
             it == BackupComponent.CLIPBOARD_IMAGES || it == BackupComponent.CLIPBOARD_VIDEOS
         }
         val mediaEntries = if (needsClipboardMedia) archive.clipboardMediaEntries else emptyList()
-        val declaredBytes = checkedSizeSum(
-            components.asSequence().flatMap { it.entries.asSequence() } + mediaEntries.asSequence(),
+        val declaredComponentBytes = checkedSizeSum(
+            components.asSequence().flatMap { it.entries.asSequence() },
         ) ?: return RestorePlanResult.Invalid(RestorePlanFailure.PAYLOAD_SIZE_OVERFLOW)
         val resetComponentsOnCommit = if (request.mode == RestoreMode.REPLACE_SELECTED) {
             components.map { it.component }
@@ -445,7 +451,7 @@ internal object RestorePlanner {
                     request.mode == RestoreMode.MERGE -> ClipboardMediaPolicy.COPY_SELECTED_REFERENCES
                     else -> ClipboardMediaPolicy.RECONCILE_SELECTED_REFERENCES
                 },
-                declaredPayloadBytes = declaredBytes,
+                declaredComponentBytes = declaredComponentBytes,
             ),
         )
     }
@@ -748,8 +754,7 @@ private class ArchiveDescriptorInspector(
     private fun validateMetadata(): BackupArchive.Metadata? {
         val metadata = (descriptor.metadata as? DecodedArchiveFile.Parsed)?.value ?: return null
         return metadata.takeIf {
-            it.packageName.length in 1..MAX_PACKAGE_NAME_LENGTH &&
-                PACKAGE_NAME.matches(it.packageName) &&
+            BackupArchive.isValidPackageName(it.packageName) &&
                 it.versionCode >= BackupArchive.MIN_SUPPORTED_VERSION_CODE &&
                 it.versionName.length <= MAX_VERSION_NAME_LENGTH &&
                 !it.versionName.containsUnsafeDisplayCharacter() &&
@@ -805,10 +810,8 @@ private class ArchiveDescriptorInspector(
     companion object {
         private const val MAX_COMPONENT_RECORDS = 64
         private const val MAX_COMPONENT_ID_LENGTH = 64
-        private const val MAX_PACKAGE_NAME_LENGTH = 255
         private const val MAX_VERSION_NAME_LENGTH = 128
         private val COMPONENT_ID = Regex("""[a-z][a-z0-9_.-]*""")
-        private val PACKAGE_NAME = Regex("""[A-Za-z0-9_.]+""")
 
         private fun String.containsUnsafeDisplayCharacter(): Boolean {
             var index = 0

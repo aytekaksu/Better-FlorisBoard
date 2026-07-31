@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <provider
+            android:name="dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaTestProvider"
+            android:authorities="dev.patrickgold.florisboard.test.clipboard-source"
+            android:exported="false"
+            android:grantUriPermissions="true"
+            android:process=":clipboard_source" />
+        <provider
+            android:name="dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaTestControlProvider"
+            android:authorities="dev.patrickgold.florisboard.test.clipboard-control"
+            android:exported="true"
+            android:process=":clipboard_control" />
+        <provider
+            android:name="dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaColdTypeProbeProviders$BeforeGrant"
+            android:authorities="dev.patrickgold.florisboard.test.clipboard-type-before"
+            android:exported="true"
+            android:process=":clipboard_type_before" />
+        <provider
+            android:name="dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaColdTypeProbeProviders$WhileGranted"
+            android:authorities="dev.patrickgold.florisboard.test.clipboard-type-granted"
+            android:exported="true"
+            android:process=":clipboard_type_granted" />
+        <provider
+            android:name="dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaColdTypeProbeProviders$AfterRevoke"
+            android:authorities="dev.patrickgold.florisboard.test.clipboard-type-revoked"
+            android:exported="true"
+            android:process=":clipboard_type_revoked" />
+    </application>
+</manifest>

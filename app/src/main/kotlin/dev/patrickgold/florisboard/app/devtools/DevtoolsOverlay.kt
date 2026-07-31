@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.patrickgold.florisboard.PreferenceStoreInitializationState
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.clipboardManager
@@ -69,7 +70,8 @@ fun DevtoolsOverlay(modifier: Modifier = Modifier) {
     val showInputStateOverlay by prefs.devtools.showInputStateOverlay.collectAsState()
     val showSpellingOverlay by prefs.devtools.showSpellingOverlay.collectAsState()
     val showInlineAutofillOverlay by prefs.devtools.showInlineAutofillOverlay.collectAsState()
-    val prefsLoaded by appContext.preferenceStoreLoaded.collectAsState()
+    val preferenceStoreInitializationState by
+        appContext.preferenceStoreInitializationState.collectAsState()
 
     val debugLayoutResult by keyboardManager.layoutManager.debugLayoutComputationResultFlow.collectAsState()
     val themeInfo by themeManager.activeThemeInfo.collectAsState()
@@ -94,7 +96,10 @@ fun DevtoolsOverlay(modifier: Modifier = Modifier) {
                 DevtoolsInlineAutofillOverlay()
             }
             val loadFailure = themeInfo.loadFailure
-            if (loadFailure != null && prefsLoaded) {
+            if (
+                loadFailure != null &&
+                preferenceStoreInitializationState == PreferenceStoreInitializationState.READY
+            ) {
                 DevtoolsStylesheetFailedToLoadOverlay(loadFailure)
             }
         }

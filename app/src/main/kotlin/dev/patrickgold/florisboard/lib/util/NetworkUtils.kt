@@ -35,23 +35,32 @@ object NetworkUtils {
         return UrlRegex.matches(str.trim())
     }
 
-    fun getUrls(str: CharSequence): List<MatchGroup> {
-        return UrlRegex.findAll(str).mapNotNull { it.groups["Url"] }.toList()
-    }
+    fun getUrls(str: CharSequence, maxMatches: Int): List<MatchGroup> =
+        UrlRegex.namedGroups(str, "Url", maxMatches)
 
     fun isEmailAddress(str: CharSequence): Boolean {
         return EmailRegex.matches(str.trim())
     }
 
-    fun getEmailAddresses(str: CharSequence): List<MatchGroup> {
-        return EmailRegex.findAll(str).mapNotNull { it.groups["Email"] }.toList()
-    }
+    fun getEmailAddresses(str: CharSequence, maxMatches: Int): List<MatchGroup> =
+        EmailRegex.namedGroups(str, "Email", maxMatches)
 
     fun isPhoneNumber(str: CharSequence): Boolean {
         return PhoneNumberRegex.matches(str.trim())
     }
 
-    fun getPhoneNumbers(str: CharSequence): List<MatchGroup> {
-        return PhoneNumberRegex.findAll(str).mapNotNull { it.groups["Phone"] }.toList()
+    fun getPhoneNumbers(str: CharSequence, maxMatches: Int): List<MatchGroup> =
+        PhoneNumberRegex.namedGroups(str, "Phone", maxMatches)
+
+    private fun Regex.namedGroups(
+        str: CharSequence,
+        name: String,
+        maxMatches: Int,
+    ): List<MatchGroup> {
+        if (maxMatches <= 0) return emptyList()
+        return findAll(str)
+            .mapNotNull { it.groups[name] }
+            .take(maxMatches)
+            .toList()
     }
 }

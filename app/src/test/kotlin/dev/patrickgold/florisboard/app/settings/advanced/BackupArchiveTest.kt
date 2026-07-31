@@ -91,8 +91,12 @@ class BackupArchiveTest :
         test("metadata accepts bounded provenance and rejects unsafe display fields") {
             listOf(
                 metadata(packageName = ""),
+                metadata(packageName = "keyboard"),
+                metadata(packageName = ".dev.example"),
+                metadata(packageName = "dev..example"),
+                metadata(packageName = "dev.example."),
                 metadata(packageName = "dev.example/foreign"),
-                metadata(packageName = "a".repeat(256)),
+                metadata(packageName = "a.${"b".repeat(254)}"),
                 metadata(versionCode = BackupArchive.MIN_SUPPORTED_VERSION_CODE - 1),
                 metadata(versionName = "a".repeat(129)),
                 metadata(versionName = "release\u202Eevil"),
@@ -557,7 +561,7 @@ class BackupArchiveTest :
                 BackupComponent.CLIPBOARD_TEXT,
             )
             result.plan.resetComponentsOnCommit shouldBe emptyList()
-            result.plan.declaredPayloadBytes shouldBe 15
+            result.plan.declaredComponentBytes shouldBe 15
         }
 
         test("replace plans reset exactly the selected present components") {
@@ -601,7 +605,7 @@ class BackupArchiveTest :
             ) shouldBe RestorePlanResult.Invalid(RestorePlanFailure.COMPONENT_UNAVAILABLE)
         }
 
-        test("image and video plans stage shared media once") {
+        test("image and video plans expose shared media candidates once") {
             val archive = validArchive(
                 metadataEntry(),
                 file(BackupArchive.CLIPBOARD_IMAGES_PATH, size = 2),
@@ -622,7 +626,7 @@ class BackupArchiveTest :
                 "${BackupArchive.CLIPBOARD_MEDIA_ROOT}/2",
             )
             result.plan.clipboardMediaPolicy shouldBe ClipboardMediaPolicy.COPY_SELECTED_REFERENCES
-            result.plan.declaredPayloadBytes shouldBe 17
+            result.plan.declaredComponentBytes shouldBe 5
         }
 
         test("plan output is deterministic across selection order") {
@@ -733,7 +737,7 @@ class BackupArchiveTest :
 
         test("failures and entry descriptions never retain hostile paths or IDs") {
             val marker = "private_marker"
-            val hostileMetadata = metadata(packageName = marker, versionName = marker)
+            val hostileMetadata = metadata(packageName = "dev.$marker", versionName = marker)
             hostileMetadata.toString() shouldNotContain marker
             val hostileManifest = BackupArchive.Manifest(
                 formatVersion = BackupArchive.CURRENT_MANIFEST_VERSION,

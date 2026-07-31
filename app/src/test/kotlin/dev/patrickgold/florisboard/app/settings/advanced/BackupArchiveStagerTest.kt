@@ -18,6 +18,7 @@
 
 package dev.patrickgold.florisboard.app.settings.advanced
 
+import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -135,7 +136,7 @@ class BackupArchiveStagerTest :
 
             snapshot.validSession().use { session ->
                 val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.PREFERENCES)
-                plan.declaredPayloadBytes shouldBe preferences.size.toLong()
+                plan.declaredComponentBytes shouldBe preferences.size.toLong()
 
                 val exactParent = root.stagingParent("budget-exact")
                 session.stageValid(
@@ -480,6 +481,283 @@ class BackupArchiveStagerTest :
                 }
             }
         }
+
+        test("stages only media referenced by selected clipboard indexes") {
+            val imageIndex = mediaIndexJson(ItemType.IMAGE, sourceId = 42)
+            val videoIndex = mediaIndexJson(ItemType.VIDEO, sourceId = 43)
+            val selectedMedia = "image".encodeToByteArray()
+            val snapshot = root.snapshot(
+                "selected-media-references.zip",
+                fixtureFile(BackupArchive.METADATA_JSON_NAME, metadataJson()),
+                fixtureFile(BackupArchive.CLIPBOARD_IMAGES_PATH, imageIndex),
+                fixtureFile(BackupArchive.CLIPBOARD_VIDEO_PATH, videoIndex),
+                fixtureFile("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/42", selectedMedia),
+                fixtureFile(
+                    "${BackupArchive.CLIPBOARD_MEDIA_ROOT}/43",
+                    "unselected video".encodeToByteArray(),
+                ),
+                fixtureFile(
+                    "${BackupArchive.CLIPBOARD_MEDIA_ROOT}/44",
+                    "orphan".encodeToByteArray(),
+                ),
+            ).patchCentral("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/44") { bytes, offset ->
+                val crc = bytes.u32(offset + CENTRAL_CRC_OFFSET)
+                bytes.putU32(offset + CENTRAL_CRC_OFFSET, crc xor 1L)
+            }
+            val stagingParent = root.stagingParent("selected-media-references")
+
+            snapshot.validSession().use { session ->
+                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.CLIPBOARD_IMAGES)
+                plan.declaredComponentBytes shouldBe imageIndex.size.toLong()
+                plan.clipboardMediaCandidatesToStage.size shouldBe 3
+
+                val staged = session.stageValid(
+                    plan = plan,
+                    stagingParent = stagingParent,
+                    budget = testBudget(imageIndex.size + selectedMedia.size.toLong()),
+                )
+                try {
+                    Files.readAllBytes(staged.root.resolve(BackupArchive.CLIPBOARD_IMAGES_PATH))
+                        .contentEquals(imageIndex) shouldBe true
+                    Files.readAllBytes(
+                        staged.root.resolve("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/42"),
+                    ).contentEquals(selectedMedia) shouldBe true
+                    Files.notExists(staged.root.resolve(BackupArchive.CLIPBOARD_VIDEO_PATH)) shouldBe true
+                    Files.notExists(
+                        staged.root.resolve("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/43"),
+                    ) shouldBe true
+                    Files.notExists(
+                        staged.root.resolve("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/44"),
+                    ) shouldBe true
+                    staged.entryCount shouldBe 2
+                    staged.stagedBytes shouldBe imageIndex.size + selectedMedia.size.toLong()
+
+                    val payload = ClipboardRestorePayload.prepare(
+                        stagedRoot = staged.root,
+                        sourcePackageName = "dev.patrickgold.florisboard",
+                        selectedTypes = setOf(ItemType.IMAGE),
+                    ) as ClipboardRestorePayloadResult.Valid
+                    payload.payload.media.single().ref.sourceId shouldBe 42L
+                } finally {
+                    staged.close()
+                }
+            }
+        }
+
+        test("returns typed failures for invalid or incomplete clipboard archives") {
+            val malformedSnapshot = root.snapshot(
+                "malformed-selected-index.zip",
+                fixtureFile(BackupArchive.METADATA_JSON_NAME, metadataJson()),
+                fixtureFile(
+                    BackupArchive.CLIPBOARD_IMAGES_PATH,
+                    mediaIndexJson(ItemType.IMAGE, sourceId = 42),
+                ),
+                fixtureFile(
+                    BackupArchive.CLIPBOARD_VIDEO_PATH,
+                    "[{ definitely not JSON".encodeToByteArray(),
+                ),
+                fixtureFile("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/42", byteArrayOf(1)),
+            )
+            val malformedParent = root.stagingParent("malformed-selected-index")
+            val malformedStageId = UUID(0L, 8L)
+            malformedSnapshot.validSession().use { session ->
+                val plan = session.validPlan(
+                    RestoreMode.MERGE,
+                    BackupComponent.CLIPBOARD_IMAGES,
+                    BackupComponent.CLIPBOARD_VIDEOS,
+                )
+                BackupArchiveStager.stage(
+                    session = session,
+                    plan = plan,
+                    stagingParent = malformedParent,
+                    budget = testBudget(),
+                    stageId = malformedStageId,
+                ) shouldBe BackupArchiveStagingResult.Invalid(
+                    BackupArchiveStagingFailure.CLIPBOARD_PAYLOAD_INVALID,
+                    ClipboardRestorePayloadFailure.INVALID_JSON,
+                )
+            }
+            Files.notExists(
+                malformedParent.stageContainer(malformedStageId),
+                LinkOption.NOFOLLOW_LINKS,
+            ) shouldBe true
+
+            val missingSnapshot = root.snapshot(
+                "missing-selected-media.zip",
+                fixtureFile(BackupArchive.METADATA_JSON_NAME, metadataJson()),
+                fixtureFile(
+                    BackupArchive.CLIPBOARD_IMAGES_PATH,
+                    mediaIndexJson(ItemType.IMAGE, sourceId = 42),
+                ),
+            )
+            val missingParent = root.stagingParent("missing-selected-media")
+            missingSnapshot.validSession().use { session ->
+                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.CLIPBOARD_IMAGES)
+                BackupArchiveStager.stage(
+                    session = session,
+                    plan = plan,
+                    stagingParent = missingParent,
+                    budget = testBudget(),
+                ) shouldBe BackupArchiveStagingResult.Invalid(
+                    BackupArchiveStagingFailure.CLIPBOARD_PAYLOAD_INVALID,
+                    ClipboardRestorePayloadFailure.MEDIA_UNAVAILABLE,
+                )
+            }
+            missingParent.childCount() shouldBe 0L
+
+            val invalidSourceSnapshot = root.snapshot(
+                "invalid-source-package.zip",
+                fixtureFile(BackupArchive.METADATA_JSON_NAME, metadataJson(packageName = "keyboard")),
+                fixtureFile(
+                    BackupArchive.CLIPBOARD_IMAGES_PATH,
+                    mediaIndexJson(ItemType.IMAGE, sourceId = 42),
+                ),
+                fixtureFile("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/42", byteArrayOf(1)),
+            )
+            val invalidSourceParent = root.stagingParent("invalid-source-package")
+            BackupArchiveSession.open(invalidSourceSnapshot) shouldBe
+                BackupArchiveSessionResult.Invalid(
+                    BackupArchiveSessionFailure.ArchiveRejected(ArchiveFailure.INVALID_METADATA),
+                )
+            invalidSourceParent.childCount() shouldBe 0L
+        }
+
+        test("rejects semantic records and cross-type IDs before media copying") {
+            val mediaPath = "${BackupArchive.CLIPBOARD_MEDIA_ROOT}/42"
+            val invalidMimeIndex = mediaIndexJson(ItemType.IMAGE, sourceId = 42)
+                .decodeToString()
+                .replace("\"image/png\"", "\"video/mp4\"")
+                .encodeToByteArray()
+            val invalidMimeSnapshot = root.snapshot(
+                "invalid-mime-before-media.zip",
+                fixtureFile(BackupArchive.METADATA_JSON_NAME, metadataJson()),
+                fixtureFile(BackupArchive.CLIPBOARD_IMAGES_PATH, invalidMimeIndex),
+                fixtureFile(mediaPath, "corrupt if copied".encodeToByteArray()),
+            ).patchCentral(mediaPath) { bytes, offset ->
+                val crc = bytes.u32(offset + CENTRAL_CRC_OFFSET)
+                bytes.putU32(offset + CENTRAL_CRC_OFFSET, crc xor 1L)
+            }
+            val invalidMimeParent = root.stagingParent("invalid-mime-before-media")
+            invalidMimeSnapshot.validSession().use { session ->
+                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.CLIPBOARD_IMAGES)
+                BackupArchiveStager.stage(
+                    session = session,
+                    plan = plan,
+                    stagingParent = invalidMimeParent,
+                    budget = testBudget(),
+                ) shouldBe BackupArchiveStagingResult.Invalid(
+                    BackupArchiveStagingFailure.CLIPBOARD_PAYLOAD_INVALID,
+                    ClipboardRestorePayloadFailure.INVALID_ITEM,
+                )
+            }
+            invalidMimeParent.childCount() shouldBe 0L
+
+            val crossTypeSnapshot = root.snapshot(
+                "cross-type-before-media.zip",
+                fixtureFile(BackupArchive.METADATA_JSON_NAME, metadataJson()),
+                fixtureFile(
+                    BackupArchive.CLIPBOARD_IMAGES_PATH,
+                    mediaIndexJson(ItemType.IMAGE, sourceId = 42),
+                ),
+                fixtureFile(
+                    BackupArchive.CLIPBOARD_VIDEO_PATH,
+                    mediaIndexJson(ItemType.VIDEO, sourceId = 42),
+                ),
+                fixtureFile(mediaPath, "corrupt if copied".encodeToByteArray()),
+            ).patchCentral(mediaPath) { bytes, offset ->
+                val crc = bytes.u32(offset + CENTRAL_CRC_OFFSET)
+                bytes.putU32(offset + CENTRAL_CRC_OFFSET, crc xor 1L)
+            }
+            val crossTypeParent = root.stagingParent("cross-type-before-media")
+            crossTypeSnapshot.validSession().use { session ->
+                val plan = session.validPlan(
+                    RestoreMode.MERGE,
+                    BackupComponent.CLIPBOARD_IMAGES,
+                    BackupComponent.CLIPBOARD_VIDEOS,
+                )
+                BackupArchiveStager.stage(
+                    session = session,
+                    plan = plan,
+                    stagingParent = crossTypeParent,
+                    budget = testBudget(),
+                ) shouldBe BackupArchiveStagingResult.Invalid(
+                    BackupArchiveStagingFailure.CLIPBOARD_PAYLOAD_INVALID,
+                    ClipboardRestorePayloadFailure.CONFLICTING_MEDIA_REFERENCE,
+                )
+            }
+            crossTypeParent.childCount() shouldBe 0L
+        }
+
+        test("rejects aggregate referenced media above the clipboard quota before copying") {
+            val sourceIds = (1L..6L).toList()
+            val mediaEntries = sourceIds.map { sourceId ->
+                fixtureFile("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/$sourceId", byteArrayOf(1))
+            }
+            var snapshot = root.snapshot(
+                "aggregate-media-quota.zip",
+                fixtureFile(BackupArchive.METADATA_JSON_NAME, metadataJson()),
+                fixtureFile(
+                    BackupArchive.CLIPBOARD_IMAGES_PATH,
+                    mediaIndexJson(ItemType.IMAGE, sourceIds),
+                ),
+                *mediaEntries.toTypedArray(),
+            )
+            sourceIds.forEach { sourceId ->
+                snapshot = snapshot.patchCentral(
+                    "${BackupArchive.CLIPBOARD_MEDIA_ROOT}/$sourceId",
+                ) { bytes, offset ->
+                    bytes.putU32(
+                        offset + CENTRAL_UNCOMPRESSED_SIZE_OFFSET,
+                        TEST_DECLARED_MEDIA_BYTES,
+                    )
+                }
+            }
+            val stagingParent = root.stagingParent("aggregate-media-quota")
+
+            snapshot.validSession().use { session ->
+                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.CLIPBOARD_IMAGES)
+                BackupArchiveStager.stage(
+                    session = session,
+                    plan = plan,
+                    stagingParent = stagingParent,
+                    budget = testBudget(1L shl 30),
+                ) shouldBe BackupArchiveStagingResult.Invalid(
+                    BackupArchiveStagingFailure.CLIPBOARD_PAYLOAD_INVALID,
+                    ClipboardRestorePayloadFailure.LIMIT_EXCEEDED,
+                )
+            }
+            stagingParent.childCount() shouldBe 0L
+        }
+
+        test("verifies referenced media before publishing the staged tree") {
+            val imageIndex = mediaIndexJson(ItemType.IMAGE, sourceId = 42)
+            val mediaPath = "${BackupArchive.CLIPBOARD_MEDIA_ROOT}/42"
+            val snapshot = root.snapshot(
+                "selected-media-checksum.zip",
+                fixtureFile(BackupArchive.METADATA_JSON_NAME, metadataJson()),
+                fixtureFile(BackupArchive.CLIPBOARD_IMAGES_PATH, imageIndex),
+                fixtureFile(mediaPath, "image".encodeToByteArray()),
+            ).patchCentral(mediaPath) { bytes, offset ->
+                val crc = bytes.u32(offset + CENTRAL_CRC_OFFSET)
+                bytes.putU32(offset + CENTRAL_CRC_OFFSET, crc xor 1L)
+            }
+            val stagingParent = root.stagingParent("selected-media-checksum")
+            val stageId = UUID(0L, 7L)
+
+            snapshot.validSession().use { session ->
+                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.CLIPBOARD_IMAGES)
+                BackupArchiveStager.stage(
+                    session = session,
+                    plan = plan,
+                    stagingParent = stagingParent,
+                    budget = testBudget(),
+                    stageId = stageId,
+                ) shouldBe BackupArchiveStagingResult.Invalid(
+                    BackupArchiveStagingFailure.ENTRY_CHECKSUM_MISMATCH,
+                )
+                Files.notExists(stagingParent.stageContainer(stageId), LinkOption.NOFOLLOW_LINKS) shouldBe true
+            }
+        }
     })
 
 private data class FixtureEntry(val path: String, val contents: ByteArray?)
@@ -487,6 +765,29 @@ private data class FixtureEntry(val path: String, val contents: ByteArray?)
 private fun fixtureFile(path: String, contents: ByteArray) = FixtureEntry(path, contents)
 
 private fun fixtureDirectory(path: String) = FixtureEntry("${path.trimEnd('/')}/", null)
+
+private fun mediaIndexJson(type: ItemType, sourceId: Long): ByteArray = mediaIndexJson(type, listOf(sourceId))
+
+private fun mediaIndexJson(type: ItemType, sourceIds: List<Long>): ByteArray {
+    val (path, mimeType) = when (type) {
+        ItemType.IMAGE -> "images" to "image/png"
+        ItemType.VIDEO -> "videos" to "video/mp4"
+        ItemType.TEXT -> error("Text items do not reference media.")
+    }
+    return sourceIds.joinToString(prefix = "[", postfix = "]") { sourceId ->
+        """
+            {
+              "id": $sourceId,
+              "type": "${type.name}",
+              "text": null,
+              "uri": "content://dev.patrickgold.florisboard.provider.clipboard/clips/$path/$sourceId",
+              "creationTimestampMs": 1,
+              "isPinned": false,
+              "mimeTypes": ["$mimeType"]
+            }
+        """.trimIndent()
+    }.encodeToByteArray()
+}
 
 private fun Path.snapshot(name: String, vararg entries: FixtureEntry): ArchiveSnapshot {
     val file = resolve(name)
@@ -628,10 +929,11 @@ private fun ByteArray.putU32(offset: Int, value: Long) {
     putU16(offset + 2, (value ushr 16).toInt())
 }
 
-private fun metadataJson(): ByteArray =
-    """{"package":"dev.patrickgold.florisboard","versionCode":64,"versionName":"test","timestamp":1}"""
+private fun metadataJson(packageName: String = "dev.patrickgold.florisboard"): ByteArray =
+    """{"package":"$packageName","versionCode":64,"versionName":"test","timestamp":1}"""
         .encodeToByteArray()
 
+private const val TEST_DECLARED_MEDIA_BYTES = 90L * 1024L * 1024L
 private const val CENTRAL_SIGNATURE = 0x02014b50L
 private const val CENTRAL_HEADER_BYTES = 46
 private const val CENTRAL_METHOD_OFFSET = 10
