@@ -35,7 +35,6 @@ import dev.patrickgold.florisboard.ime.keyboard.SpaceBarLanguageLabelMode
 import dev.patrickgold.florisboard.ime.keyboard.SpaceBarMode
 import dev.patrickgold.florisboard.ime.landscapeinput.LandscapeInputUiMode
 import dev.patrickgold.florisboard.ime.media.emoji.Emoji
-import dev.patrickgold.florisboard.ime.media.emoji.EmojiHairStyle
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiHistory
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSkinTone
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSuggestionType
@@ -238,10 +237,6 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "emoji__preferred_skin_tone",
             default = EmojiSkinTone.DEFAULT,
         )
-        val preferredHairStyle = enum(
-            key = "emoji__preferred_hair_style",
-            default = EmojiHairStyle.DEFAULT,
-        )
         val historyEnabled = boolean(
             key = "emoji__history_enabled",
             default = true,
@@ -407,10 +402,6 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "input_feedback__audio_feat_key_repeated_action",
             default = false,
         )
-        val audioFeatGestureSwipe = boolean(
-            key = "input_feedback__audio_feat_gesture_swipe",
-            default = false,
-        )
         val audioFeatGestureMovingSwipe = boolean(
             key = "input_feedback__audio_feat_gesture_moving_swipe",
             default = false,
@@ -447,10 +438,6 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         val hapticFeatKeyRepeatedAction = boolean(
             key = "input_feedback__haptic_feat_key_repeated_action",
             default = true,
-        )
-        val hapticFeatGestureSwipe = boolean(
-            key = "input_feedback__haptic_feat_gesture_swipe",
-            default = false,
         )
         val hapticFeatGestureMovingSwipe = boolean(
             key = "input_feedback__haptic_feat_gesture_moving_swipe",
@@ -689,14 +676,6 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "spelling__language_mode",
             default = SpellingLanguageMode.USE_KEYBOARD_SUBTYPES,
         )
-        val useContacts = boolean(
-            key = "spelling__use_contacts",
-            default = true,
-        )
-        val useUdmEntries = boolean(
-            key = "spelling__use_udm_entries",
-            default = true,
-        )
     }
 
     val suggestion = Suggestion()
@@ -861,12 +840,6 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             "media__emoji_preferred_skin_tone" -> {
                 entry.transform(
                     key = "emoji__preferred_skin_tone",
-                    rawValue = entry.rawValue.uppercase(),
-                )
-            }
-            "media__emoji_preferred_hair_style" -> {
-                entry.transform(
-                    key = "emoji__preferred_hair_style",
                     rawValue = entry.rawValue.uppercase(),
                 )
             }

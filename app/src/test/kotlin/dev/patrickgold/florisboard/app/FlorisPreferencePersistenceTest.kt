@@ -60,10 +60,7 @@ class FlorisPreferencePersistenceTest :
                     ImeFormFactor.Type.TABLET_PORTRAIT,
                 )
                 config.values.all { it.fixedMode == ImeWindowMode.Fixed.COMPACT } shouldBe true
-                fixture.exportRaw().lineSequence()
-                    .filterNot(String::isBlank)
-                    .map { it.substringAfter(';').substringBefore(';') }
-                    .toSet() shouldBe setOf("keyboard__window_config")
+                fixture.exportedKeys() shouldBe setOf("keyboard__window_config")
             }
         }
 
@@ -143,6 +140,28 @@ class FlorisPreferencePersistenceTest :
             }
         }
 
+        test("orphaned preference state imports without surviving canonical export") {
+            runTest {
+                val fixture = PersistenceFixture()
+                fixture.import(
+                    strategy = ImportStrategy.Erase,
+                    raw = persistencePayload(
+                        """b;emoji__history_enabled;false""",
+                        persistenceStringPreference("emoji__preferred_hair_style", "CURLY_HAIR"),
+                        persistenceStringPreference("media__emoji_preferred_hair_style", "curly_hair"),
+                        """b;input_feedback__audio_feat_gesture_swipe;true""",
+                        """b;input_feedback__haptic_feat_gesture_swipe;true""",
+                        """b;spelling__use_contacts;false""",
+                        """b;spelling__use_udm_entries;false""",
+                    ),
+                    sourceVersionCode = 88,
+                )
+
+                fixture.prefs.emoji.historyEnabled.get() shouldBe false
+                fixture.exportedKeys() shouldBe setOf("emoji__history_enabled")
+            }
+        }
+
         test("legacy Smartbar state imports through the current model without payload data") {
             runTest {
                 val fixture = PersistenceFixture()
@@ -171,12 +190,7 @@ class FlorisPreferencePersistenceTest :
                 arrangement.dynamicActions.all { it is QuickAction.InsertKey } shouldBe true
                 QuickActionArrangement.Serializer.serialize(arrangement).contains(marker) shouldBe false
 
-                val keys = fixture.exportRaw()
-                    .lineSequence()
-                    .filterNot(String::isBlank)
-                    .map { it.substringAfter(';').substringBefore(';') }
-                    .toSet()
-                keys shouldBe setOf(
+                fixture.exportedKeys() shouldBe setOf(
                     "smartbar__enabled",
                     "smartbar__layout",
                     "smartbar__action_arrangement",
@@ -279,6 +293,12 @@ private class PersistenceFixture {
         dataStore.export(DataStoreWriter { raw = it }).getOrThrow()
         return raw
     }
+
+    suspend fun exportedKeys(): Set<String> = exportRaw()
+        .lineSequence()
+        .filterNot(String::isBlank)
+        .map { it.substringAfter(';').substringBefore(';') }
+        .toSet()
 
     suspend fun importFailure(): Result<Unit> = dataStore.importWithLegacyMigrations(
         strategy = ImportStrategy.Erase,

@@ -57,7 +57,7 @@ active;i;emoji__history_pinned_max_size
 active;s;emoji__history_pinned_update_strategy
 active;i;emoji__history_recent_max_size
 active;s;emoji__history_recent_update_strategy
-active;s;emoji__preferred_hair_style
+retired;s;emoji__preferred_hair_style
 active;s;emoji__preferred_skin_tone
 active;i;emoji__suggestion_candidate_max_count
 active;b;emoji__suggestion_candidate_show_name
@@ -88,7 +88,7 @@ active;i;glide__trail_fade_duration
 active;s;input_feedback__audio_activation_mode
 active;b;input_feedback__audio_enabled
 active;b;input_feedback__audio_feat_gesture_moving_swipe
-active;b;input_feedback__audio_feat_gesture_swipe
+retired;b;input_feedback__audio_feat_gesture_swipe
 active;b;input_feedback__audio_feat_key_long_press
 active;b;input_feedback__audio_feat_key_press
 active;b;input_feedback__audio_feat_key_repeated_action
@@ -97,7 +97,7 @@ active;i;input_feedback__audio_volume
 active;s;input_feedback__haptic_activation_mode
 active;b;input_feedback__haptic_enabled
 active;b;input_feedback__haptic_feat_gesture_moving_swipe
-active;b;input_feedback__haptic_feat_gesture_swipe
+retired;b;input_feedback__haptic_feat_gesture_swipe
 active;b;input_feedback__haptic_feat_key_long_press
 active;b;input_feedback__haptic_feat_key_press
 active;b;input_feedback__haptic_feat_key_repeated_action
@@ -154,7 +154,7 @@ active;l;localization__active_subtype_id
 active;b;localization__display_keyboard_labels_in_subtype_language
 active;s;localization__display_language_names_in
 active;s;localization__subtypes
-legacy;s;media__emoji_preferred_hair_style
+retired;s;media__emoji_preferred_hair_style
 legacy;s;media__emoji_preferred_skin_tone
 legacy;s;media__emoji_recently_used
 legacy;i;media__emoji_recently_used_max_size
@@ -192,8 +192,8 @@ retired;b;smartbar__shared_actions_expand_with_animation
 active;b;smartbar__shared_actions_expanded
 active;s;smartbar__shared_actions_transition_mode
 active;s;spelling__language_mode
-active;b;spelling__use_contacts
-active;b;spelling__use_udm_entries
+retired;b;spelling__use_contacts
+retired;b;spelling__use_udm_entries
 active;b;suggestion__api30_inline_suggestions_enabled
 active;s;suggestion__autocorrect_plugin_component
 active;b;suggestion__block_possibly_offensive

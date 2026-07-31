@@ -16,7 +16,7 @@
     <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Emoticons</string>
     <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoji</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Preferred emoji skin tone</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Preferred emoji hair style</string>
+    <string name="prefs__media__emoji_preferred_hair_style" tools:ignore="UnusedResources">Preferred emoji hair style</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emoji history</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">Enable emoji history</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">Retain recently used emojis for quick access</string>
@@ -425,7 +425,7 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">Key press sounds</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">Key long press sounds</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">Key repeated action sounds</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">Gesture swipe sounds</string>
+    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title" tools:ignore="UnusedResources">Gesture swipe sounds</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">Gesture moving swipe sounds</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">Haptic feedback / Vibration</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">Enable haptic feedback</string>
@@ -438,12 +438,12 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Key press vibration</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Key long press vibration</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">Key repeated action vibration</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">Gesture swipe vibration</string>
+    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title" tools:ignore="UnusedResources">Gesture swipe vibration</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">Gesture moving swipe vibration</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">e.g. keys, buttons, emoji tabs</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">e.g. popup menu</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">e.g. delete key</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">not implemented</string>
+    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary" tools:ignore="UnusedResources">not implemented</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">e.g. cursor control swipe</string>
 
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Keyboard</string>
@@ -524,10 +524,10 @@
     <string name="pref__spelling__active_spellchecker__summary_disabled">Disabled system-wide. No red lines will appear in text fields for incorrect words. Tap to change.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">No inline text spell checker service set. Tap to change.</string>
     <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Languages</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">Use names from contacts</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">Look up names from your contact list</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">Use user dictionary entries</string>
-    <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref">Look up entries from the user dictionaries</string>
+    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref" tools:ignore="UnusedResources">Use names from contacts</string>
+    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref" tools:ignore="UnusedResources">Look up names from your contact list</string>
+    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref" tools:ignore="UnusedResources">Use user dictionary entries</string>
+    <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref" tools:ignore="UnusedResources">Look up entries from the user dictionaries</string>
 
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">User dictionaries</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Enable system user dictionary</string>

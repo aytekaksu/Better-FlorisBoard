@@ -22,7 +22,6 @@ import dev.patrickgold.florisboard.ime.input.HapticVibrationMode
 import dev.patrickgold.florisboard.ime.input.InputFeedbackActivationMode
 import dev.patrickgold.florisboard.ime.keyboard.IncognitoMode
 import dev.patrickgold.florisboard.ime.keyboard.SpaceBarMode
-import dev.patrickgold.florisboard.ime.media.emoji.EmojiHairStyle
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSkinTone
 import dev.patrickgold.florisboard.ime.smartbar.ExtendedActionsPlacement
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickAction
@@ -134,17 +133,14 @@ class FlorisPreferenceMigrationTest :
                 fixture.load(
                     encodedPreferences(
                         """s;media__emoji_preferred_skin_tone;"medium_dark_skin_tone"""",
-                        """s;media__emoji_preferred_hair_style;"curly_hair"""",
                         """b;keyboard__space_bar_language_display_enabled;false""",
                     ),
                 )
 
                 fixture.prefs.emoji.preferredSkinTone.get() shouldBe EmojiSkinTone.MEDIUM_DARK_SKIN_TONE
-                fixture.prefs.emoji.preferredHairStyle.get() shouldBe EmojiHairStyle.CURLY_HAIR
                 fixture.prefs.keyboard.spaceBarMode.get() shouldBe SpaceBarMode.NOTHING
                 fixture.exportedKeys() shouldContainExactlyInAnyOrder setOf(
                     "emoji__preferred_skin_tone",
-                    "emoji__preferred_hair_style",
                     "keyboard__space_bar_display_mode",
                 )
             }
