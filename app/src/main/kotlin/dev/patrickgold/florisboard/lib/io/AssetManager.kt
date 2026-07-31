@@ -29,7 +29,6 @@ import dev.patrickgold.florisboard.ime.text.keyboard.AutoTextKeyData
 import dev.patrickgold.florisboard.ime.text.keyboard.MultiTextKeyData
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import java.io.File
-import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -74,62 +73,30 @@ fun FlorisRef.delete(context: Context) {
     }
 }
 
-fun FlorisRef.list(context: Context) = list(context, files = true, dirs = true)
+fun FlorisRef.listFiles(context: Context) = list(context, directories = false)
 
-fun FlorisRef.listFiles(context: Context) = list(context, files = true, dirs = false)
+fun FlorisRef.listDirs(context: Context) = list(context, directories = true)
 
-fun FlorisRef.listDirs(context: Context) = list(context, files = false, dirs = true)
-
-private fun FlorisRef.list(appContext: Context, files: Boolean, dirs: Boolean) = runCatching<List<FlorisRef>> {
+private fun FlorisRef.list(appContext: Context, directories: Boolean) = runCatching<List<FlorisRef>> {
     when {
-        !files && !dirs -> listOf()
         isAssets -> {
             appContext.assets.list(relativePath)?.mapNotNull { fileName ->
                 val subList = appContext.assets.list("${relativePath}/$fileName") ?: return@mapNotNull null
-                when {
-                    files && dirs || files && subList.isEmpty() || dirs && subList.isNotEmpty() -> {
-                        subRef(fileName)
-                    }
-                    else -> null
-                }
-            } ?: listOf()
+                if (directories == subList.isNotEmpty()) subRef(fileName) else null
+            }.orEmpty()
         }
         isCache || isInternal -> {
             val dir = absoluteFile(appContext)
             if (dir.isDirectory) {
-                when {
-                    files && dirs -> dir.listFiles()?.toList()
-                    files -> dir.listFiles()?.filter { it.isFile }
-                    dirs -> dir.listFiles()?.filter { it.isDirectory }
-                    else -> null
-                }!!.map { subRef(it.name) }
+                dir.listFiles()!!
+                    .filter { if (directories) it.isDirectory else it.isFile }
+                    .map { subRef(it.name) }
             } else {
-                listOf()
+                emptyList()
             }
         }
         else -> error("Unsupported FlorisRef source!")
     }
-}
-
-fun <T> FlorisRef.loadJsonAsset(
-    context: Context,
-    serializer: KSerializer<T>,
-    jsonConfig: Json = DefaultJsonConfig,
-) = runCatching<T> {
-    val jsonStr = loadTextAsset(context).getOrThrow()
-    jsonConfig.decodeFromString(serializer, jsonStr)
-}
-
-inline fun <reified T> loadJsonAsset(jsonStr: String, jsonConfig: Json = DefaultJsonConfig): Result<T> {
-    return runCatching { jsonConfig.decodeFromString(jsonStr) }
-}
-
-fun <T> loadJsonAsset(
-    jsonStr: String,
-    serializer: KSerializer<T>,
-    jsonConfig: Json = DefaultJsonConfig,
-) = runCatching<T> {
-    jsonConfig.decodeFromString(serializer, jsonStr)
 }
 
 fun FlorisRef.loadTextAsset(context: Context): Result<String> {
@@ -159,4 +126,3 @@ fun FlorisRef.loadTextAsset(context: Context): Result<String> {
 private fun readTextFile(file: File) = runCatching {
     file.readText(Charsets.UTF_8)
 }
-

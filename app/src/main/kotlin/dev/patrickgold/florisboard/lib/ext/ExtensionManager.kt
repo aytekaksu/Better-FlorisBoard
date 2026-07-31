@@ -55,6 +55,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.serializer
 import org.florisboard.lib.android.FileObserver
 import org.florisboard.lib.android.writeFromFile
 import org.florisboard.lib.kotlin.io.FsDir
@@ -99,13 +100,8 @@ internal fun <T> decodeExtensionManifest(
     ExtensionJsonConfig.decodeFromString(serializer, manifestJson)
 }
 
-internal inline fun <reified T> decodeExtensionManifest(
-    manifestJson: String,
-): Result<T> = runCatching {
-    check(manifestJson.hasBoundedExtensionManifestJsonShape()) {
-        "Extension manifest exceeds structural limits."
-    }
-    ExtensionJsonConfig.decodeFromString<T>(manifestJson)
+internal fun decodeExtensionManifest(manifestJson: String): Result<Extension> {
+    return decodeExtensionManifest(manifestJson, serializer<Extension>())
 }
 
 internal data class InstalledExtensionArchiveFingerprint(

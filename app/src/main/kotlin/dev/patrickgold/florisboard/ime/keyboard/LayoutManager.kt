@@ -32,8 +32,8 @@ import dev.patrickgold.florisboard.lib.devtools.LogTopic
 import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import dev.patrickgold.florisboard.lib.devtools.flogWarning
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
+import dev.patrickgold.florisboard.lib.io.DefaultJsonConfig
 import dev.patrickgold.florisboard.lib.io.ZipUtils
-import dev.patrickgold.florisboard.lib.io.loadJsonAsset
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +43,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.decodeFromString
 import org.florisboard.lib.kotlin.DeferredResult
 import org.florisboard.lib.kotlin.runCatchingAsync
 
@@ -118,7 +119,7 @@ class LayoutManager(context: Context) {
                 val layout = async {
                     runCatching {
                         val jsonStr = ZipUtils.readFileFromArchive(appContext, ext.sourceRef!!, path).getOrThrow()
-                        val arrangement = loadJsonAsset<LayoutArrangement>(jsonStr).getOrThrow()
+                        val arrangement = DefaultJsonConfig.decodeFromString<LayoutArrangement>(jsonStr)
                         CachedLayout(ltn.type, ltn.name, meta, arrangement)
                     }
                 }
@@ -145,7 +146,7 @@ class LayoutManager(context: Context) {
                 val popupMapping = async {
                     runCatching {
                         val jsonStr = ZipUtils.readFileFromArchive(appContext, ext.sourceRef!!, path).getOrThrow()
-                        val mapping = loadJsonAsset<PopupMapping>(jsonStr).getOrThrow()
+                        val mapping = DefaultJsonConfig.decodeFromString<PopupMapping>(jsonStr)
                         CachedPopupMapping(name, meta, mapping)
                     }
                 }
