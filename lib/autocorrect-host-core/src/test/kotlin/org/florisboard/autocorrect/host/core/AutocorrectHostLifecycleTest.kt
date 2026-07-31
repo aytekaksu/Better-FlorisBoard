@@ -221,6 +221,38 @@ class AutocorrectHostLifecycleTest :
             }
         }
 
+        test("editor invalidation drops a queued provider while the old finish is pending") {
+            val host = HostTestHarness()
+            host.startActiveSession(ProviderA)
+            val oldBinding = (host.state.binding as BindingState.Connected).lease
+            val oldSession = host.state.session!!.sessionId
+
+            host.dispatch(HostEvent.SelectProvider(ProviderB))
+            host.dispatch(
+                HostEvent.OpenSession(
+                    DefaultSessionConfiguration,
+                    host.state.editorGeneration,
+                    T0,
+                ),
+            )
+            host.state.queuedProvider shouldBe ProviderB
+
+            val invalidateEffects = host.dispatch(HostEvent.InvalidateEditor)
+            assertSoftly {
+                invalidateEffects shouldBe emptyList()
+                host.state.session shouldBe null
+                host.state.queuedProvider shouldBe null
+                host.state.binding shouldBe BindingState.Connected(oldBinding)
+                host.state.pendingFinishes.keys shouldContainExactly listOf(oldSession)
+            }
+
+            val ackEffects = host.dispatch(
+                HostEvent.FinishAcknowledged(ProviderA, oldBinding.epoch, oldSession, T0),
+            )
+            ackEffects.singleEffect<HostEffect.Unbind>().lease shouldBe oldBinding
+            host.state.binding shouldBe BindingState.Unbound
+        }
+
         test("editor invalidation cancels work, finishes the session, and releases after ack") {
             val host = HostTestHarness()
             host.startActiveSession()
