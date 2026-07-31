@@ -313,15 +313,6 @@ class FlorisApplication : Application() {
         clipboardInitializationFailure.fail()
         if (!firstFailure) return
         try {
-            val sanitized = IllegalStateException(
-                "Application bootstrap failed at $stage: ${error::class.qualifiedName}",
-            )
-            sanitized.stackTrace = error.stackTrace
-            CrashUtility.stageException(sanitized)
-        } catch (_: Exception) {
-            // Diagnostics must not replace the original failure state.
-        }
-        try {
             flogError {
                 "Application bootstrap failed at $stage: ${error::class.simpleName}"
             }
