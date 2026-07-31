@@ -1165,6 +1165,7 @@
     <string name="enum__swipe_action__select_characters_precisely" comment="Enum value label">Select characters precisely</string>
     <string name="enum__swipe_action__select_words_precisely" comment="Enum value label">Select words precisely</string>
     <string name="enum__swipe_action__show_input_method_picker" comment="Enum value label">Show input method picker</string>
+    <string name="enum__swipe_action__show_subtype_picker" comment="Enum value label">Show subtype picker</string>
     <string name="enum__swipe_action__switch_to_prev_keyboard" comment="Enum value label">Switch to previous keyboard</string>
     <string name="enum__swipe_action__switch_to_prev_subtype" comment="Enum value label">Switch to previous subtype</string>
     <string name="enum__swipe_action__switch_to_next_subtype" comment="Enum value label">Switch to next subtype</string>
