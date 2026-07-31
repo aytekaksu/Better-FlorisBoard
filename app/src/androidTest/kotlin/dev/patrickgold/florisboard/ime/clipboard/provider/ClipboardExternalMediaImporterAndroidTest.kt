@@ -23,6 +23,7 @@ import android.os.Process
 import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.patrickgold.florisboard.BuildConfig
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.Executors
@@ -344,6 +345,138 @@ class ClipboardExternalMediaImporterAndroidTest {
         } finally {
             staged?.close()
             importer.close()
+            awaitCondition { partialFiles(directoryName).isEmpty() }
+        }
+    }
+
+    @Test
+    fun sharedImporterRejectsTheFirstByteBeyondItsConfiguredLimit() {
+        val directoryName = "external-content-limit-test"
+        val importer = DisposableExternalContentImporter(
+            context = context,
+            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
+            stageCapacity = { MAX_TEST_BYTES },
+            stagingDirectory = directoryName,
+        )
+
+        try {
+            assertNull(
+                importer.stage(
+                    source = ClipboardExternalMediaTestSource.healthyUri,
+                    maximumBytes = 3L,
+                ),
+            )
+            assertEquals(1, ClipboardExternalMediaTestSource.openCount())
+            assertTrue(partialFiles(directoryName).isEmpty())
+        } finally {
+            importer.close()
+            awaitCondition { partialFiles(directoryName).isEmpty() }
+        }
+    }
+
+    @Test
+    fun sharedImporterCanAdmitEmptyExtensionsWithoutChangingClipboardDefaults() {
+        val directoryName = "external-content-empty-test"
+        val importer = DisposableExternalContentImporter(
+            context = context,
+            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
+            stageCapacity = { MAX_TEST_BYTES },
+            stagingDirectory = directoryName,
+        )
+        var staged: StagedExternalContent? = null
+
+        try {
+            assertNull(importer.stage(ClipboardExternalMediaTestSource.emptyUri))
+            staged = importer.stage(
+                source = ClipboardExternalMediaTestSource.emptyUri,
+                minimumBytes = 0L,
+            )
+            val emptyStage = requireNotNull(staged)
+            assertEquals(0L, emptyStage.byteCount)
+            assertEquals(0L, Files.size(emptyStage.path))
+            assertEquals(2, ClipboardExternalMediaTestSource.openCount())
+        } finally {
+            staged?.close()
+            importer.close()
+            awaitCondition { partialFiles(directoryName).isEmpty() }
+        }
+    }
+
+    @Test
+    fun sharedImporterRejectsAmbiguousAndAppOwnedUrisBeforeProviderAccess() {
+        val directoryName = "external-content-uri-test"
+        val importer = DisposableExternalContentImporter(
+            context = context,
+            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
+            stageCapacity = { MAX_TEST_BYTES },
+            stagingDirectory = directoryName,
+        )
+        val rejectedSources = listOf(
+            Uri.parse("file:///private/source.flex"),
+            Uri.parse("CONTENT://external.example/source.flex"),
+            Uri.parse("content://external.example/source.flex#fragment"),
+            Uri.parse("content://user@external.example/source.flex"),
+            Uri.parse("content://external.example:42/source.flex"),
+            Uri.parse("content://external%2Eexample/source.flex"),
+            Uri.parse("content://${BuildConfig.APPLICATION_ID}.provider.file/source.flex"),
+        )
+
+        try {
+            rejectedSources.forEach { source ->
+                assertNull(importer.stage(source))
+            }
+            assertTrue(partialFiles(directoryName).isEmpty())
+        } finally {
+            importer.close()
+            awaitCondition { partialFiles(directoryName).isEmpty() }
+        }
+    }
+
+    @Test
+    fun sharedStagingDirectoryIsCleanedOnlyBeforeItsFirstLiveStage() {
+        val directoryName = "external-content-shared-directory-test"
+        val firstImporter = DisposableExternalContentImporter(
+            context = context,
+            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
+            stageCapacity = { MAX_TEST_BYTES },
+            stagingDirectory = directoryName,
+        )
+        val secondImporter = DisposableExternalContentImporter(
+            context = context,
+            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
+            stageCapacity = { MAX_TEST_BYTES },
+            stagingDirectory = directoryName,
+        )
+        val caller = Executors.newSingleThreadExecutor()
+        val import = caller.submit<StagedExternalContent?> {
+            firstImporter.stage(ClipboardExternalMediaTestSource.prefixThenBlockUri)
+        }
+        var staged: StagedExternalContent? = null
+
+        try {
+            assertTrue(ClipboardExternalMediaTestSource.awaitPrefixWritten(AWAIT_MS))
+            val livePartial = partialFiles(directoryName).single()
+
+            assertNull(
+                secondImporter.stage(
+                    source = ClipboardExternalMediaTestSource.healthyUri,
+                    maximumBytes = 0L,
+                ),
+            )
+            assertTrue(Files.isRegularFile(livePartial))
+
+            ClipboardExternalMediaTestSource.releaseBlockingOpen()
+            staged = import.get(AWAIT_MS, TimeUnit.MILLISECONDS)
+            assertTrue(Files.isRegularFile(requireNotNull(staged).path))
+        } finally {
+            ClipboardExternalMediaTestSource.releaseBlockingOpen()
+            staged?.close()
+            runCatching { import.get(AWAIT_MS, TimeUnit.MILLISECONDS) }
+                .getOrNull()
+                ?.close()
+            firstImporter.close()
+            secondImporter.close()
+            caller.shutdownNow()
             awaitCondition { partialFiles(directoryName).isEmpty() }
         }
     }

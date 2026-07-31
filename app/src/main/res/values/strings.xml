@@ -839,9 +839,14 @@
     <string name="ext__editor__title_edit_any">Edit extension</string>
     <string name="ext__editor__title_edit_keyboard">Edit keyboard extension</string>
     <string name="ext__editor__title_edit_theme">Edit theme extension</string>
+    <string name="ext__editor__open_failure">The extension could not be opened safely. Go back and try again.</string>
+    <string name="ext__editor__save_failure">The extension could not be saved. Your changes are still open; try again.</string>
+    <string name="ext__editor__close_failure">The editor could not close safely. Your extension and changes are still available.</string>
     <string name="ext__editor__metadata__title">Manage meta data</string>
     <string name="ext__editor__metadata__title_invalid">Invalid meta data</string>
     <string name="ext__editor__metadata__message_invalid">The meta data for this extension is not valid, please check the meta data editor for details!</string>
+    <string name="ext__editor__details__title_invalid">Invalid extension details</string>
+    <string name="ext__editor__details__message_invalid">Check the extension details and components, then try again.</string>
     <string name="ext__editor__dependencies__title">Manage dependencies</string>
     <string name="ext__editor__files__title">Manage archive files</string>
     <string name="ext__editor__files__type_fonts">Fonts</string>
@@ -881,7 +886,7 @@
     <string name="ext__validation__hint_component_label_to_long">Your component label is quite long, which may lead to clipping in the UI</string>
     <string name="ext__validation__error_author">Please enter at least one valid author</string>
     <string name="ext__validation__error_stylesheet_path_blank">The stylesheet path must not be blank</string>
-    <string name="ext__validation__error_stylesheet_path">Please enter a valid stylesheet path matching {stylesheet_path_regex}</string>
+    <string name="ext__validation__error_stylesheet_path">Please enter a safe relative stylesheet path</string>
     <string name="ext__validation__enter_property">Please enter a variable name</string>
     <string name="ext__validation__error_property">Please enter a valid variable name matching {variable_name_regex}</string>
     <string name="ext__validation__enter_color">Please enter a color string</string>

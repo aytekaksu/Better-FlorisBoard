@@ -17,6 +17,7 @@
 package dev.patrickgold.florisboard.app.settings.advanced
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -33,23 +34,27 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavBackStackEntry
 import dev.patrickgold.florisboard.BuildConfig
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceModel
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.LocalNavController
 import dev.patrickgold.florisboard.app.importWithLegacyMigrations
+import dev.patrickgold.florisboard.app.runOwnedNavigationAction
+import dev.patrickgold.florisboard.app.runOwnedNavigationActionWhenResumed
 import dev.patrickgold.florisboard.cacheManager
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
@@ -69,9 +74,9 @@ import java.nio.file.Path
 import java.text.DateFormat
 import java.util.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -122,6 +127,21 @@ private fun Exception.safeRestoreFailureName(): String = when (this) {
     else -> RestoreFlowFailure.INTERNAL_FAILURE.name
 }
 
+internal class RestoreScreenViewModel : ViewModel() {
+    val filesSelector = Backup.FilesSelector()
+    var importStrategy by mutableStateOf(ImportStrategy.Merge)
+    var workspace by mutableStateOf<CacheManager.BackupAndRestoreWorkspace?>(null)
+    var isBusy by mutableStateOf(false)
+
+    val scope: CoroutineScope
+        get() = viewModelScope
+
+    override fun onCleared() {
+        workspace?.requestClose()
+        workspace = null
+    }
+}
+
 internal object RestorePreferencePreflight {
     private val store by lazy {
         jetprefDataStoreOf(FlorisPreferenceModel::class)
@@ -155,7 +175,7 @@ internal object RestorePreferencePreflight {
 }
 
 @Composable
-fun RestoreScreen() = FlorisScreen {
+fun RestoreScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
     title = stringRes(R.string.backup_and_restore__restore__title)
     previewFieldVisible = false
 
@@ -163,13 +183,15 @@ fun RestoreScreen() = FlorisScreen {
     val context = LocalContext.current
     val cacheManager by context.cacheManager()
 
-    val restoreFilesSelector = remember { Backup.FilesSelector() }
-    var importStrategy by remember { mutableStateOf(ImportStrategy.Merge) }
-    val restoreScope = rememberCoroutineScope()
-    var restoreWorkspace by remember {
-        mutableStateOf<CacheManager.BackupAndRestoreWorkspace?>(null)
+    val model = remember(routeEntry) {
+        ViewModelProvider(routeEntry)[RestoreScreenViewModel::class.java]
     }
-    var isRestoreBusy by remember { mutableStateOf(false) }
+    val restoreFilesSelector = model.filesSelector
+    var importStrategy by model::importStrategy
+    val restoreScope = model.scope
+    var restoreWorkspace by model::workspace
+    var isRestoreBusy by model::isBusy
+    navigationIconVisible = !isRestoreBusy
 
     suspend fun closeRestoreWorkspace(
         workspace: CacheManager.BackupAndRestoreWorkspace? = restoreWorkspace,
@@ -186,14 +208,6 @@ fun RestoreScreen() = FlorisScreen {
             if (!workspace.isClosed() || stagedRestore?.isClosed == false) {
                 workspace.requestClose(stagedRestore)
             }
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            restoreScope.cancel()
-            restoreWorkspace?.requestClose()
-            restoreWorkspace = null
         }
     }
 
@@ -406,7 +420,9 @@ fun RestoreScreen() = FlorisScreen {
                 onClick = {
                     restoreWorkspace?.requestClose()
                     restoreWorkspace = null
-                    navController.navigateUp()
+                    navController.runOwnedNavigationAction(routeEntry) {
+                        navigateUp()
+                    }
                 },
                 text = stringRes(R.string.action__cancel),
                 enabled = !isRestoreBusy,
@@ -479,7 +495,9 @@ fun RestoreScreen() = FlorisScreen {
                         if (restoreSucceeded) {
                             currentCoroutineContext().ensureActive()
                             context.showLongToast(R.string.backup_and_restore__restore__success)
-                            navController.navigateUp()
+                            navController.runOwnedNavigationActionWhenResumed(routeEntry) {
+                                navigateUp()
+                            }
                         }
                     }
                 },
@@ -494,6 +512,7 @@ fun RestoreScreen() = FlorisScreen {
     }
 
     content {
+        BackHandler(enabled = isRestoreBusy) { }
         FlorisOutlinedBox(
             modifier = Modifier.defaultFlorisOutlinedBox(),
             title = stringRes(R.string.backup_and_restore__restore__mode),

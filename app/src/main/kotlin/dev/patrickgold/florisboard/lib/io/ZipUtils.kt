@@ -37,7 +37,6 @@ import java.nio.channels.Channels
 import java.nio.channels.FileChannel
 import java.util.UUID
 import java.util.zip.ZipEntry
-import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 
 object ZipUtils {
@@ -46,6 +45,7 @@ object ZipUtils {
     private const val UNSUPPORTED_ENTRY_ERROR = "Cannot archive unsupported source entries."
     private const val DESTINATION_ERROR = "Cannot create archive destination."
     private const val ARCHIVE_LIMIT_ERROR = "Archive source exceeds backup limits."
+    private val newArchivePublicationLock = Any()
 
     internal class TransferBudget(
         private val maxEntries: Int,
@@ -126,22 +126,23 @@ object ZipUtils {
     }
 
     fun readFileFromArchive(context: Context, zipRef: FlorisRef, relPath: String) = runCatching<String> {
-        when {
-            zipRef.isAssets -> {
-                zipRef.subRef(relPath).loadTextAsset(context).getOrThrow()
-            }
-            zipRef.isCache || zipRef.isInternal -> {
-                val flexHandle = FsFile(zipRef.absolutePath(context))
-                check(flexHandle.isFile) { "Given ref $zipRef is not a file!" }
-                var fileContents: String? = null
-                ZipFile(flexHandle).use { flexFile ->
-                    flexFile.getEntry(relPath)?.let { flexEntry ->
-                        fileContents = flexFile.getInputStream(flexEntry).bufferedReader().use { it.readText() }
+        BoundedExtensionArchive.protect {
+            when {
+                zipRef.isAssets -> {
+                    val assetRoot = zipRef.relativePath.removeSuffix("/")
+                    BoundedExtensionArchive.readTrustedText(relPath) { validatedPath ->
+                        val assetPath = if (assetRoot.isEmpty()) validatedPath else "$assetRoot/$validatedPath"
+                        context.assets.open(assetPath)
                     }
                 }
-                fileContents ?: error("Failed to load requested file $relPath")
+                zipRef.isCache || zipRef.isInternal -> {
+                    BoundedExtensionArchive.readText(
+                        source = FsFile(zipRef.absolutePath(context)).toPath(),
+                        relativePath = relPath,
+                    )
+                }
+                else -> error("Unsupported extension source.")
             }
-            else -> error("Unsupported source!")
         }
     }
 
@@ -149,7 +150,7 @@ object ZipUtils {
         zip(context, FsDir(srcRef.absolutePath(context)), dstRef)
 
     fun zip(context: Context, srcDir: FsDir, dstRef: FlorisRef) = runCatching {
-        val limits = WriteLimits.Unbounded
+        val limits = extensionWriteLimits()
         val entries = collectZipEntries(srcDir, limits)
         when {
             dstRef.isCache || dstRef.isInternal -> {
@@ -158,6 +159,18 @@ object ZipUtils {
             }
             else -> error("Unsupported destination!")
         }
+    }
+
+    fun zipNew(context: Context, srcDir: FsDir, dstRef: FlorisRef) = runCatching {
+        check(dstRef.isCache || dstRef.isInternal) { "Unsupported destination!" }
+        val limits = extensionWriteLimits()
+        val entries = collectZipEntries(srcDir, limits)
+        writeZipFile(
+            entries = entries,
+            destination = FsFile(dstRef.absolutePath(context)).toPath(),
+            limits = limits,
+            replaceExisting = false,
+        )
     }
 
     fun zip(srcDir: FsDir, dstFile: FsFile) {
@@ -169,8 +182,13 @@ object ZipUtils {
         writeZipFile(entries, dstFile.toPath(), limits)
     }
 
+    internal fun zipNew(srcDir: FsDir, dstFile: FsFile, limits: WriteLimits) {
+        val entries = collectZipEntries(srcDir, limits)
+        writeZipFile(entries, dstFile.toPath(), limits, replaceExisting = false)
+    }
+
     fun zip(context: Context, srcDir: FsDir, uri: Uri) = runCatching {
-        val limits = WriteLimits.Unbounded
+        val limits = extensionWriteLimits()
         val entries = collectZipEntries(srcDir, limits)
         context.contentResolver.write(uri) { fileOut ->
             ZipOutputStream(fileOut).use { zipOut ->
@@ -219,6 +237,16 @@ object ZipUtils {
         budget?.inspect(attributes)
         dstFile.parentFile?.toPath()?.let(::createDestinationDirectory)
         copySourceFile(srcFile.toPath(), dstFile.toPath(), budget)
+    }
+
+    internal fun extensionTransferBudget(checkCancelled: () -> Unit): TransferBudget {
+        val limits = BoundedExtensionArchive.DefaultLimits
+        return TransferBudget(
+            maxEntries = limits.maxEntries,
+            maxBytes = limits.maxExpandedBytes,
+            maxFileBytes = limits.maxEntryBytes,
+            checkCancelled = checkCancelled,
+        )
     }
 
     private fun collectZipEntries(
@@ -313,9 +341,13 @@ object ZipUtils {
         entries: List<ZipSourceEntry>,
         destination: Path,
         limits: WriteLimits,
+        replaceExisting: Boolean = true,
     ) {
         val parent = destination.parent ?: error(DESTINATION_ERROR)
         createDestinationDirectory(parent)
+        if (!replaceExisting) {
+            requireNewDestination(destination)
+        }
         val partial = parent.resolve(".${destination.fileName}.${UUID.randomUUID()}.partial")
         var ownsPartial = false
         try {
@@ -337,17 +369,30 @@ object ZipUtils {
                     channel.force(true)
                 }
             }
-            Files.move(
-                partial,
-                destination,
-                StandardCopyOption.ATOMIC_MOVE,
-                StandardCopyOption.REPLACE_EXISTING,
-            )
+            if (replaceExisting) {
+                Files.move(
+                    partial,
+                    destination,
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING,
+                )
+            } else {
+                synchronized(newArchivePublicationLock) {
+                    requireNewDestination(destination)
+                    Files.move(partial, destination, StandardCopyOption.ATOMIC_MOVE)
+                }
+            }
             ownsPartial = false
         } finally {
             if (ownsPartial) {
                 Files.deleteIfExists(partial)
             }
+        }
+    }
+
+    private fun requireNewDestination(destination: Path) {
+        if (!Files.notExists(destination, LinkOption.NOFOLLOW_LINKS)) {
+            throw IOException(DESTINATION_ERROR)
         }
     }
 
@@ -557,72 +602,48 @@ object ZipUtils {
     private const val COPY_BUFFER_BYTES = 64 * 1024
     private val DRIVE_PREFIX = Regex("""^[A-Za-z]:""")
 
+    private fun extensionWriteLimits(): WriteLimits {
+        val limits = BoundedExtensionArchive.DefaultLimits
+        return WriteLimits(
+            maxEntries = limits.maxEntries,
+            maxSourceBytes = limits.maxExpandedBytes,
+            maxFileBytes = limits.maxEntryBytes,
+            maxPathBytes = limits.maxPathBytes,
+            maxPathSegmentBytes = limits.maxSegmentBytes,
+            maxOutputBytes = limits.maxArchiveBytes,
+            checkCancelled = {
+                if (Thread.interrupted()) throw InterruptedException()
+            },
+        )
+    }
+
     fun unzip(context: Context, srcRef: FlorisRef, dstRef: FlorisRef) =
         unzip(context, srcRef, FsDir(dstRef.absolutePath(context)))
 
     fun unzip(context: Context, srcRef: FlorisRef, dstDir: FsFile) = runCatching {
-        check(dstDir.exists() && dstDir.isDirectory) { "Cannot unzip into file." }
-        dstDir.mkdirs()
-        when {
-            srcRef.isAssets -> {
-                context.assets.copyRecursively(srcRef.relativePath.removeSuffix("/"), dstDir)
+        BoundedExtensionArchive.protect {
+            when {
+                srcRef.isAssets -> {
+                    BoundedExtensionArchive.publishTrustedDirectory(dstDir.toPath()) { staging ->
+                        context.assets.copyRecursively(
+                            srcRef.relativePath.removeSuffix("/"),
+                            staging.toFile(),
+                        )
+                    }
+                }
+                srcRef.isCache || srcRef.isInternal -> {
+                    val flexHandle = FsFile(srcRef.absolutePath(context))
+                    unzip(srcFile = flexHandle, dstDir = dstDir)
+                }
+                else -> error("Unsupported extension source.")
             }
-            srcRef.isCache || srcRef.isInternal -> {
-                val flexHandle = FsFile(srcRef.absolutePath(context))
-                unzip(srcFile = flexHandle, dstDir = dstDir)
-            }
-            else -> error("Unsupported source!")
         }
     }
 
-    /**
-     * Unzips a given Zip file to the destination directory.
-     *
-     * @param srcFile The source Zip file handle.
-     * @param dstDir The destination directory where the [srcFile] contents should be unzipped to.
-     *
-     * @throws IllegalArgumentException If the given [srcFile] is not existing on the file system or if it points to
-     *  a directory instead.
-     * @throws java.lang.SecurityException If the current file system does not permit an action.
-     * @throws java.util.zip.ZipException If a Zip format error has occurred.
-     * @throws java.io.IOException If an I/O error has occurred.
-     */
+    /** Materializes an extension archive without exposing partial output. */
     fun unzip(srcFile: FsFile, dstDir: FsDir) {
-        require(srcFile.exists() && srcFile.isFile) { "Given src file `$srcFile` is not valid or a directory." }
-        dstDir.mkdirs()
-        ZipFile(srcFile).use { flexFile ->
-            val flexEntries = flexFile.entries()
-            while (flexEntries.hasMoreElements()) {
-                val flexEntry = flexEntries.nextElement()
-                if (flexEntry.name.length > 255) {
-                    continue
-                }
-                val flexEntryFile = FsFile(dstDir, flexEntry.name)
-                val canonicalDestinationDirPath = dstDir.canonicalPath
-                val canonicalDestinationFilePath = flexEntryFile.canonicalPath
-                if (canonicalDestinationFilePath.length > 1023) {
-                    continue
-                }
-                if (!canonicalDestinationFilePath.startsWith(canonicalDestinationDirPath + FsFile.separator)) {
-                    continue
-                }
-                if (flexEntry.isDirectory) {
-                    flexEntryFile.mkdir()
-                } else {
-                    flexFile.copy(flexEntry, flexEntryFile)
-                }
-            }
-        }
-    }
-
-    private fun ZipFile.copy(srcEntry: ZipEntry, dstFile: FsFile) {
-        dstFile.outputStream().use { outStream ->
-            if (srcEntry.size > 100000000) {
-                return
-            }
-            this.getInputStream(srcEntry).use { inStream ->
-                inStream.copyTo(outStream)
-            }
+        BoundedExtensionArchive.protect {
+            BoundedExtensionArchive.extract(srcFile.toPath(), dstDir.toPath())
         }
     }
 }

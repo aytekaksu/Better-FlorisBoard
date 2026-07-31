@@ -16,7 +16,6 @@
 
 package dev.patrickgold.florisboard.app.settings.advanced
 
-import android.annotation.SuppressLint
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -29,6 +28,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.florisboard.lib.android.conservativeUsableSpace
 import java.io.Closeable
 import java.io.IOException
 import java.io.InputStream
@@ -522,7 +522,6 @@ internal object BackupArchiveStager {
     }
 
     // Keep this check conservative instead of evicting unrelated cached data.
-    @SuppressLint("UsableSpace")
     private fun enforceRuntimeBudget(stagingParent: Path, budget: RestoreStagingBudget, declaredBytes: Long) {
         if (budget.maxBytes < 0L || budget.requiredFreeBytes < 0L) {
             failStage(BackupArchiveStagingFailure.INVALID_BUDGET)
@@ -540,7 +539,7 @@ internal object BackupArchiveStager {
             failStage(BackupArchiveStagingFailure.UNSAFE_STAGING_ROOT)
         }
         val usableBytes = try {
-            stagingParent.toFile().usableSpace
+            stagingParent.toFile().conservativeUsableSpace()
         } catch (_: Exception) {
             failStage(BackupArchiveStagingFailure.IO_FAILURE)
         }

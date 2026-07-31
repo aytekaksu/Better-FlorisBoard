@@ -20,6 +20,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -34,6 +35,23 @@ import dev.patrickgold.jetpref.datastore.model.collectAsState
 import org.florisboard.lib.snygg.ui.ProvideSnyggTheme
 import org.florisboard.lib.snygg.ui.rememberSnyggTheme
 
+internal class ThemeMaterializationLeaseHolder(
+    materialization: ThemeMaterialization?,
+) : RememberObserver {
+    private val lease = materialization?.tryAcquire()
+    val directory = lease?.directory
+
+    override fun onRemembered() = Unit
+
+    override fun onForgotten() {
+        lease?.close()
+    }
+
+    override fun onAbandoned() {
+        lease?.close()
+    }
+}
+
 @Composable
 fun FlorisImeTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
@@ -47,8 +65,16 @@ fun FlorisImeTheme(content: @Composable () -> Unit) {
 
     val activeThemeInfo by themeManager.activeThemeInfo.collectAsState()
 
-    val assetResolver = remember(activeThemeInfo.loadedDir) {
-        FlorisAssetResolver(activeThemeInfo.loadedDir)
+    val materializationLeaseHolder = remember(activeThemeInfo.materialization) {
+        ThemeMaterializationLeaseHolder(activeThemeInfo.materialization)
+    }
+    val loadedDir = when {
+        materializationLeaseHolder.directory != null -> materializationLeaseHolder.directory
+        activeThemeInfo.materialization == null -> activeThemeInfo.loadedDir
+        else -> null
+    }
+    val assetResolver = remember(loadedDir) {
+        FlorisAssetResolver(loadedDir)
     }
     val snyggTheme = rememberSnyggTheme(activeThemeInfo.stylesheet, assetResolver)
     val windowSpec by windowController.activeWindowSpec.collectAsState()

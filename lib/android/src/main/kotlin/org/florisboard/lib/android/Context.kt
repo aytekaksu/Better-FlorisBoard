@@ -18,8 +18,10 @@
 
 package org.florisboard.lib.android
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.annotation.StringRes
+import java.io.File
 import org.florisboard.lib.kotlin.CurlyArg
 import org.florisboard.lib.kotlin.curlyFormat
 import kotlin.reflect.KClass
@@ -57,6 +59,10 @@ fun <T : Any> Context.systemServiceOrNull(kClass: KClass<T>): T? {
         null
     }
 }
+
+/** Counts only space available now, without assuming other apps' caches can be evicted. */
+@SuppressLint("UsableSpace")
+fun File.conservativeUsableSpace(): Long = usableSpace
 
 /**
  * Return the string value associated with a particular resource ID. It will be stripped of any styled text

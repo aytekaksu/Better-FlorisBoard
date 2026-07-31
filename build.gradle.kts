@@ -42,6 +42,35 @@ val backupArchiveKotlinSources = fileTree("app/src") {
     include("**/settings/advanced/BackupArchive*.kt")
 }
 
+val extensionHardeningKotlinSources = files(
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/app/ext/ExtensionEditorLifecycle.kt"),
+    file(
+        "app/src/main/kotlin/dev/patrickgold/florisboard/ime/clipboard/provider/" +
+            "DisposableExternalContentImporter.kt",
+    ),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/keyboard/CurrencySet.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/composing/Composer.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/theme/ThemeMaterialization.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/ext/ExtensionMaintainer.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/ext/ExtensionImportValidation.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/ext/SafeRelativePath.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/io/BoundedExtensionArchive.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/io/ExtensionImportBudget.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/io/ExtensionZipContainerGate.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/ext/ExtensionEditorLifecycleTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/han/LanguagePackConnectionsTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/theme/ThemeMaterializationTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/ext/ExtensionAuthorTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/ext/ExtensionImportValidationTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/ext/SafeRelativePathTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/io/BoundedExtensionArchiveTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/io/ExtensionImportBudgetTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/cache/ImportDisplayLabelTest.kt"),
+    file("app/src/androidTest/kotlin/dev/patrickgold/florisboard/lib/cache/CacheManagerAndroidTest.kt"),
+    file("app/src/androidTest/kotlin/dev/patrickgold/florisboard/lib/ext/ExtensionLifecycleAndroidTest.kt"),
+    file("app/src/androidTest/kotlin/org/florisboard/lib/android/ContentResolverAndroidTest.kt"),
+)
+
 val qualityKotlinSources = files(
     fileTree("app/src") {
         include("**/ime/nlp/plugin/**/*.kt")
@@ -56,6 +85,7 @@ val qualityKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacyPreferencePayloadPreprocessorTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacySmartbarPreferencePayloadTest.kt"),
     backupArchiveKotlinSources,
+    extensionHardeningKotlinSources,
     fileTree("lib/autocorrect-api/src") {
         include("**/*.kt")
     },
@@ -104,6 +134,7 @@ val formattedKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacyPreferencePayloadPreprocessorTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacySmartbarPreferencePayloadTest.kt"),
     backupArchiveKotlinSources,
+    extensionHardeningKotlinSources,
     file(
         "app/src/test/kotlin/dev/patrickgold/florisboard/app/settings/localization/" +
             "SelectLocaleScreenTest.kt",

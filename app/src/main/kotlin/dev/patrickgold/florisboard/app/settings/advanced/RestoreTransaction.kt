@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard.app.settings.advanced
 
+import dev.patrickgold.florisboard.lib.ext.ExtensionManager
 import dev.patrickgold.florisboard.lib.io.ZipUtils
 import java.io.IOException
 import java.nio.file.FileVisitResult
@@ -83,13 +84,15 @@ internal object RestoreTransaction {
         }
         validatePlans(scratchParent, preferences, directories)
         transactionLock.withLock {
-            executeLocked(
-                scratchParent = scratchParent,
-                eraseExisting = eraseExisting,
-                preferences = preferences,
-                directories = directories,
-                finalCommit = finalCommit,
-            )
+            ExtensionManager.withStorageMutation {
+                executeLocked(
+                    scratchParent = scratchParent,
+                    eraseExisting = eraseExisting,
+                    preferences = preferences,
+                    directories = directories,
+                    finalCommit = finalCommit,
+                )
+            }
         }
     }
 

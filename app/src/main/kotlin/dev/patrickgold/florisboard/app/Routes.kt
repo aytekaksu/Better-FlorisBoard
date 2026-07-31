@@ -328,8 +328,12 @@ object Routes {
 
             composableWithDeepLink(Settings.Other::class) { OtherScreen() }
             composableWithDeepLink(Settings.PhysicalKeyboard::class) { PhysicalKeyboardScreen() }
-            composableWithDeepLink(Settings.Backup::class) { BackupScreen() }
-            composableWithDeepLink(Settings.Restore::class) { RestoreScreen() }
+            composableWithDeepLink(Settings.Backup::class) { routeEntry ->
+                BackupScreen(routeEntry)
+            }
+            composableWithDeepLink(Settings.Restore::class) { routeEntry ->
+                RestoreScreen(routeEntry)
+            }
 
             composableWithDeepLink(Settings.About::class) { AboutScreen() }
             composableWithDeepLink(Settings.ProjectLicense::class) { ProjectLicenseScreen() }
@@ -356,22 +360,23 @@ object Routes {
                 ExtensionEditScreen(
                     id = extensionId,
                     createSerialType = serialType.takeIf { !it.isNullOrBlank() },
+                    routeEntry = navBackStack,
                 )
             }
             composableWithDeepLink(Ext.Export::class) { navBackStack ->
                 val payload = navBackStack.toRoute<Ext.Export>()
                 val extensionId = payload.id
-                ExtensionExportScreen(id = extensionId)
+                ExtensionExportScreen(extensionId, navBackStack)
             }
             composableWithDeepLink(Ext.Import::class) { navBackStack ->
                 val payload = navBackStack.toRoute<Ext.Import>()
                 val uuid = payload.uuid
-                ExtensionImportScreen(payload.type, uuid)
+                ExtensionImportScreen(payload.type, uuid, navBackStack)
             }
             composableWithDeepLink(Ext.View::class) { navBackStack ->
                 val payload = navBackStack.toRoute<Ext.View>()
                 val extensionId = payload.id
-                ExtensionViewScreen(id = extensionId)
+                ExtensionViewScreen(id = extensionId, routeEntry = navBackStack)
             }
             composableWithDeepLink(Ext.CheckUpdates::class) {
                 CheckUpdatesScreen()

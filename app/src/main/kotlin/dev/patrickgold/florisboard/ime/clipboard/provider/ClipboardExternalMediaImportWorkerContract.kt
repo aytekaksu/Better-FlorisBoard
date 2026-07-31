@@ -16,6 +16,8 @@
 
 package dev.patrickgold.florisboard.ime.clipboard.provider
 
+import android.content.ContentResolver
+import android.net.Uri
 import dev.patrickgold.florisboard.BuildConfig
 
 /**
@@ -38,12 +40,13 @@ internal object ClipboardExternalMediaImportWorkerContract {
     const val KEY_DEADLINE_ELAPSED_REALTIME_MS = "deadline_elapsed_realtime_ms"
     const val KEY_SOURCE_URI = "source_uri"
     const val KEY_DESTINATION = "destination"
+    const val KEY_MINIMUM_BYTES = "minimum_bytes"
     const val KEY_MAXIMUM_BYTES = "maximum_bytes"
     const val KEY_BYTE_COUNT = "byte_count"
     const val KEY_DISPLAY_NAME = "display_name"
     const val KEY_SOURCE_MIME_TYPE = "source_mime_type"
 
-    const val PROTOCOL_VERSION = 1
+    const val PROTOCOL_VERSION = 2
     const val STATUS_ACCEPTED = 1
     const val STATUS_BUSY = 2
     const val STATUS_SUCCESS = 3
@@ -57,4 +60,25 @@ internal object ClipboardExternalMediaImportWorkerContract {
     val TOKEN = Regex(
         "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
     )
+
+    /**
+     * Accepts only an unambiguous external content URI. The caller and remote
+     * worker both apply this check so malformed or app-owned authorities never
+     * reach a provider.
+     */
+    fun admitsExternalSource(source: Uri): Boolean {
+        val authority = source.authority ?: return false
+        val encodedSource = source.toString()
+        return encodedSource.length in 1..MAX_SOURCE_URI_LENGTH &&
+            source.scheme == ContentResolver.SCHEME_CONTENT &&
+            source.isHierarchical &&
+            authority.isNotEmpty() &&
+            source.encodedAuthority == authority &&
+            source.host == authority &&
+            source.userInfo == null &&
+            source.port == -1 &&
+            source.fragment == null &&
+            authority != BuildConfig.APPLICATION_ID &&
+            !authority.startsWith("${BuildConfig.APPLICATION_ID}.")
+    }
 }

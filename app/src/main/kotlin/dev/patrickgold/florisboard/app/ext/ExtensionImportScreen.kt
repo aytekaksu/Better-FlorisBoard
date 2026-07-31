@@ -17,6 +17,7 @@
 package dev.patrickgold.florisboard.app.ext
 
 import android.text.format.Formatter
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
@@ -28,22 +29,27 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavBackStackEntry
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.LocalNavController
+import dev.patrickgold.florisboard.app.OwnedRoutePopResult
+import dev.patrickgold.florisboard.app.popOwnedRoute
+import dev.patrickgold.florisboard.app.popOwnedRouteWhenResumed
 import dev.patrickgold.florisboard.cacheManager
 import dev.patrickgold.florisboard.extensionManager
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardExtension
@@ -51,20 +57,22 @@ import dev.patrickgold.florisboard.ime.nlp.LanguagePackExtension
 import dev.patrickgold.florisboard.ime.theme.ThemeExtension
 import dev.patrickgold.florisboard.lib.cache.CacheManager
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
+import dev.patrickgold.florisboard.lib.ext.Extension
 import dev.patrickgold.florisboard.lib.io.FileRegistry
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import org.florisboard.lib.compose.FlorisBulletSpacer
 import org.florisboard.lib.compose.FlorisButtonBar
 import org.florisboard.lib.compose.FlorisOutlinedBox
 import org.florisboard.lib.compose.FlorisOutlinedButton
 import org.florisboard.lib.compose.defaultFlorisOutlinedBox
-import org.florisboard.lib.compose.florisHorizontalScroll
 import org.florisboard.lib.compose.stringRes
-import org.florisboard.lib.android.showLongToastSync
+import org.florisboard.lib.android.showLongToast
 import org.florisboard.lib.kotlin.resultOk
 
 enum class ExtensionImportScreenType(
     val id: String,
-    @StringRes val titleResId: Int,
+    @param:StringRes val titleResId: Int,
     val supportedFiles: List<FileRegistry.Entry>,
 ) {
     EXT_ANY(
@@ -90,39 +98,60 @@ enum class ExtensionImportScreenType(
 }
 
 @Composable
-fun ExtensionImportScreen(type: ExtensionImportScreenType, initUuid: String?) = FlorisScreen {
+fun ExtensionImportScreen(
+    type: ExtensionImportScreenType,
+    initUuid: String?,
+    routeEntry: NavBackStackEntry,
+) = FlorisScreen {
     title = stringRes(type.titleResId)
 
     val navController = LocalNavController.current
     val context = LocalContext.current
     val cacheManager by context.cacheManager()
     val extensionManager by context.extensionManager()
+    val genericErrorMessage = stringRes(R.string.error__snackbar_message)
+
+    fun supportsExtension(ext: Extension): Boolean = when (type) {
+        ExtensionImportScreenType.EXT_ANY -> true
+        ExtensionImportScreenType.EXT_KEYBOARD -> ext is KeyboardExtension
+        ExtensionImportScreenType.EXT_THEME -> ext is ThemeExtension
+        ExtensionImportScreenType.EXT_LANGUAGEPACK -> ext is LanguagePackExtension
+    }
 
     fun getSkipReason(fileInfo: CacheManager.FileInfo): Int? {
+        if (!FileRegistry.matchesFileFilter(fileInfo, type.supportedFiles)) {
+            return R.string.ext__import__file_skip_unsupported
+        }
+        val ext = fileInfo.ext ?: return R.string.ext__import__file_skip_ext_corrupted
+        val installed = extensionManager.getExtensionById(ext.meta.id)
         return when {
-            !FileRegistry.matchesFileFilter(fileInfo, type.supportedFiles) -> {
+            installed?.sourceRef?.isAssets == true -> R.string.ext__import__file_skip_ext_core
+            installed != null && installed.serialType() != ext.serialType() -> {
                 R.string.ext__import__file_skip_unsupported
             }
-            fileInfo.ext != null -> {
-                val ext = fileInfo.ext
-                if (extensionManager.getExtensionById(ext.meta.id)?.sourceRef?.isAssets == true) {
-                    R.string.ext__import__file_skip_ext_core
-                } else {
-                    null
-                }
-            }
-            else -> { // ext == null
-                R.string.ext__import__file_skip_ext_corrupted
-            }
+            !supportsExtension(ext) -> R.string.ext__import__file_skip_unsupported
+            else -> null
         }
     }
 
     fun Result<CacheManager.ImporterWorkspace>.mapSkipReasons(): Result<CacheManager.ImporterWorkspace> {
-        return this.map { workspace ->
+        val workspace = getOrNull() ?: return this
+        return runCatching {
+            val acceptedIds = mutableSetOf<String>()
             workspace.inputFileInfos.forEach { fileInfo ->
-                fileInfo.skipReason = getSkipReason(fileInfo)
+                val skipReason = getSkipReason(fileInfo)
+                fileInfo.skipReason = if (
+                    skipReason == null &&
+                    fileInfo.ext?.meta?.id?.let(acceptedIds::add) == false
+                ) {
+                    R.string.ext__import__file_skip_unsupported
+                } else {
+                    skipReason
+                }
             }
             workspace
+        }.onFailure {
+            workspace.close()
         }
     }
 
@@ -132,6 +161,18 @@ fun ExtensionImportScreen(type: ExtensionImportScreenType, initUuid: String?) = 
             ?.mapSkipReasons()
         mutableStateOf(workspace)
     }
+    var isReadingUris by remember { mutableStateOf(false) }
+    var isImporting by remember { mutableStateOf(false) }
+    val importScope = rememberCoroutineScope()
+    val isBusy = isReadingUris || isImporting
+    navigationIconVisible = !isBusy
+
+    DisposableEffect(importResult?.getOrNull()) {
+        val workspace = importResult?.getOrNull()
+        onDispose {
+            workspace?.close()
+        }
+    }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents(),
@@ -139,9 +180,21 @@ fun ExtensionImportScreen(type: ExtensionImportScreenType, initUuid: String?) = 
             // If uri is null it indicates that the selection activity
             //  was cancelled (mostly by pressing the back button), so
             //  we don't display an error message here.
-            if (uriList.isEmpty()) return@rememberLauncherForActivityResult
+            if (uriList.isEmpty() || isReadingUris) return@rememberLauncherForActivityResult
+            isReadingUris = true
             importResult?.getOrNull()?.close()
-            importResult = runCatching { cacheManager.readFromUriIntoCache(uriList) }.mapSkipReasons()
+            importResult = null
+            importScope.launch {
+                try {
+                    importResult = runCatching {
+                        cacheManager.readFromUriIntoCache(uriList)
+                    }.onFailure { error ->
+                        if (error is CancellationException) throw error
+                    }.mapSkipReasons()
+                } finally {
+                    isReadingUris = false
+                }
+            }
         },
     )
 
@@ -150,9 +203,11 @@ fun ExtensionImportScreen(type: ExtensionImportScreenType, initUuid: String?) = 
             ButtonBarSpacer()
             ButtonBarTextButton(
                 text = stringRes(R.string.action__cancel),
+                enabled = !isBusy,
             ) {
-                importResult?.getOrNull()?.close()
-                navController.popBackStack()
+                if (navController.popOwnedRoute(routeEntry) == OwnedRoutePopResult.POPPED) {
+                    importResult?.getOrNull()?.close()
+                }
             }
             val enabled = remember(importResult) {
                 importResult?.getOrNull()?.takeIf { workspace ->
@@ -161,47 +216,50 @@ fun ExtensionImportScreen(type: ExtensionImportScreenType, initUuid: String?) = 
             }
             ButtonBarButton(
                 text = stringRes(R.string.action__import),
-                enabled = enabled,
+                enabled = enabled && !isImporting,
             ) {
                 val workspace = importResult!!.getOrThrow()
-                runCatching {
-                    for (fileInfo in workspace.inputFileInfos) {
-                        if (fileInfo.skipReason != null) {
-                            continue
+                isImporting = true
+                importScope.launch {
+                    try {
+                        runCatching {
+                            for (fileInfo in workspace.inputFileInfos) {
+                                if (fileInfo.skipReason == null) {
+                                    fileInfo.ext?.let { extensionManager.import(it) }
+                                }
+                            }
+                        }.onFailure { error ->
+                            if (error is CancellationException) throw error
+                        }.onSuccess {
+                            context.showLongToast(R.string.ext__import__success)
+                            if (
+                                navController.popOwnedRouteWhenResumed(routeEntry) ==
+                                OwnedRoutePopResult.POPPED
+                            ) {
+                                workspace.close()
+                            }
+                        }.onFailure {
+                            context.showLongToast(
+                                R.string.ext__import__failure,
+                                "error_message" to genericErrorMessage,
+                            )
                         }
-                        val ext = fileInfo.ext
-                        when (type) {
-                            ExtensionImportScreenType.EXT_ANY -> {
-                                ext?.let { extensionManager.import(it) }
-                            }
-                            ExtensionImportScreenType.EXT_KEYBOARD -> {
-                                ext.takeIf { it is KeyboardExtension }?.let { extensionManager.import(it) }
-                            }
-                            ExtensionImportScreenType.EXT_THEME -> {
-                                ext.takeIf { it is ThemeExtension }?.let { extensionManager.import(it) }
-                            }
-                            ExtensionImportScreenType.EXT_LANGUAGEPACK -> {
-                                ext.takeIf { it is LanguagePackExtension }?.let { extensionManager.import(it) }
-                            }
-                        }
+                    } finally {
+                        isImporting = false
                     }
-                }.onSuccess {
-                    workspace.close()
-                    context.showLongToastSync(R.string.ext__import__success)
-                    navController.popBackStack()
-                }.onFailure { error ->
-                    context.showLongToastSync(R.string.ext__import__failure, "error_message" to error.localizedMessage)
                 }
             }
         }
     }
 
     content {
+        BackHandler(enabled = isBusy) { }
         if (initUuid == null) {
             FlorisOutlinedButton(
                 onClick = {
                     importLauncher.launch("*/*")
                 },
+                enabled = !isBusy,
                 modifier = Modifier
                     .padding(vertical = 16.dp)
                     .align(Alignment.CenterHorizontally),
@@ -233,17 +291,6 @@ fun ExtensionImportScreen(type: ExtensionImportScreenType, initUuid: String?) = 
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
-                SelectionContainer {
-                    Text(
-                        modifier = Modifier
-                            .florisHorizontalScroll()
-                            .padding(horizontal = 16.dp),
-                        text = result.exceptionOrNull()?.stackTraceToString() ?: "null",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                        fontStyle = FontStyle.Italic,
-                    )
-                }
             }
         }
     }
@@ -255,7 +302,7 @@ private fun FileInfoView(
 ) {
     FlorisOutlinedBox(
         modifier = Modifier.defaultFlorisOutlinedBox(),
-        title = fileInfo.file.name,
+        title = fileInfo.displayLabel,
         subtitle = fileInfo.mediaType ?: "application/unknown",
     ) {
         Column(

@@ -53,18 +53,12 @@ object Appender : Composer {
     override val label = "Appender"
     override val toRead = 0
 
-    override fun getActions(precedingText: String, toInsert: String): Pair<Int, String> {
-        return 0 to toInsert
-    }
+    override fun getActions(precedingText: String, toInsert: String): Pair<Int, String> = 0 to toInsert
 }
 
 @Serializable
 @SerialName("with-rules")
-class WithRules(
-    override val id: String,
-    override val label: String,
-    val rules: Map<String, String>,
-) : Composer {
+class WithRules(override val id: String, override val label: String, val rules: Map<String, String>) : Composer {
     init {
         require(rules.keys.none(String::isEmpty)) {
             "Composer rules must not use empty keys"
@@ -73,11 +67,17 @@ class WithRules(
 
     override val toRead = (rules.keys.maxOfOrNull(String::length) ?: 1) - 1
 
-    @Transient val ruleOrder = rules.keys.sortedByDescending(String::length)
+    @Transient
+    private var cachedRuleOrder: List<String>? = null
+
+    private fun orderedRuleKeys(): List<String> {
+        cachedRuleOrder?.let { return it }
+        return rules.keys.sortedByDescending(String::length).also { cachedRuleOrder = it }
+    }
 
     override fun getActions(precedingText: String, toInsert: String): Pair<Int, String> {
         val str = precedingText + toInsert
-        for (key in ruleOrder) {
+        for (key in orderedRuleKeys()) {
             if (str.endsWith(key, ignoreCase = true)) {
                 val value = rules.getValue(key)
                 val firstOfKey = str[str.length - key.length]

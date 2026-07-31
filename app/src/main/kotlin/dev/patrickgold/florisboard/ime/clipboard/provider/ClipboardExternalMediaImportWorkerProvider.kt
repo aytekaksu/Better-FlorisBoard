@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Runs all calls into foreign clipboard providers in a disposable process.
+ * Runs all calls into foreign content providers in a disposable process.
  *
  * The app accesses this provider only through an unstable provider client, so
  * the watchdog can terminate this process without terminating the app process.
@@ -128,7 +128,7 @@ internal class ClipboardExternalMediaImportWorkerProvider : ContentProvider() {
         return try {
             request.watchdog = hardKillExecutor.schedule(
                 {
-                    if (activeRequest.get() === request) {
+                    if (claimTermination(request)) {
                         Process.killProcess(Process.myPid())
                     }
                 },
@@ -142,6 +142,19 @@ internal class ClipboardExternalMediaImportWorkerProvider : ContentProvider() {
         } catch (_: RuntimeException) {
             activeRequest.compareAndSet(request, null)
             rejected()
+        }
+    }
+
+    private fun claimTermination(request: ActiveRequest): Boolean {
+        if (activeRequest.get() !== request) return false
+        while (true) {
+            val phase = request.phase.get()
+            if (phase == RequestPhase.CANCELLING || phase == RequestPhase.FINISHED) {
+                return false
+            }
+            if (request.phase.compareAndSet(phase, RequestPhase.CANCELLING)) {
+                return true
+            }
         }
     }
 
@@ -235,8 +248,8 @@ internal class ClipboardExternalMediaImportWorkerProvider : ContentProvider() {
         if (!request.phase.compareAndSet(RequestPhase.COMPLETED, RequestPhase.FINISHED)) {
             return rejected()
         }
-        request.watchdog?.cancel(false)
         activeRequest.compareAndSet(request, null)
+        request.watchdog?.cancel(false)
         return when (val completion = request.completion.getAndSet(null)) {
             is StageCompletion.Success -> response(
                 status = ClipboardExternalMediaImportWorkerContract.STATUS_SUCCESS,
@@ -252,8 +265,8 @@ internal class ClipboardExternalMediaImportWorkerProvider : ContentProvider() {
 
     private fun finishRejectedStart(request: ActiveRequest) {
         request.phase.set(RequestPhase.FINISHED)
-        request.watchdog?.cancel(false)
         activeRequest.compareAndSet(request, null)
+        request.watchdog?.cancel(false)
     }
 
     private fun parseGenerationRequest(
@@ -325,7 +338,9 @@ internal class ClipboardExternalMediaImportWorkerProvider : ContentProvider() {
                     }
                 }
             }
-            if (byteCount <= 0L) throw IOException("Clipboard media is empty.")
+            if (byteCount < input.minimumBytes) {
+                throw IOException("Clipboard media is empty.")
+            }
             StageResult(
                 byteCount = byteCount,
                 displayName = displayName,
@@ -455,25 +470,26 @@ internal class ClipboardExternalMediaImportWorkerProvider : ContentProvider() {
         } catch (_: RuntimeException) {
             return null
         }
-        if (source.scheme != ContentResolver.SCHEME_CONTENT ||
-            source.authority.isNullOrEmpty() ||
-            source.host != source.authority ||
-            source.userInfo != null ||
-            source.authority == ClipboardExternalMediaImportWorkerContract.AUTHORITY ||
-            source.authority == ClipboardMediaProvider.AUTHORITY ||
-            source.authority == OreoSystemClipboardMediaProvider.AUTHORITY
-        ) {
+        if (!ClipboardExternalMediaImportWorkerContract.admitsExternalSource(source)) {
             return null
         }
+        val minimumBytes = input.getLong(
+            ClipboardExternalMediaImportWorkerContract.KEY_MINIMUM_BYTES,
+            Long.MIN_VALUE,
+        )
         val maximumBytes = input.getLong(
             ClipboardExternalMediaImportWorkerContract.KEY_MAXIMUM_BYTES,
             Long.MIN_VALUE,
         )
-        if (maximumBytes !in 1..ClipboardFileStorage.MAX_MEDIA_BYTES) return null
+        if (maximumBytes !in 1..ClipboardFileStorage.MAX_MEDIA_BYTES ||
+            minimumBytes !in 0..maximumBytes
+        ) {
+            return null
+        }
         val destination = input.parcelFileDescriptor(
             ClipboardExternalMediaImportWorkerContract.KEY_DESTINATION,
         ) ?: return null
-        return StageInput(generation, source, destination, maximumBytes)
+        return StageInput(generation, source, destination, minimumBytes, maximumBytes)
     }
 
     private fun parseCancel(
@@ -604,6 +620,7 @@ internal class ClipboardExternalMediaImportWorkerProvider : ContentProvider() {
         val generation: String,
         val source: Uri,
         val destination: ParcelFileDescriptor,
+        val minimumBytes: Long,
         val maximumBytes: Long,
     )
 
@@ -654,6 +671,7 @@ internal class ClipboardExternalMediaImportWorkerProvider : ContentProvider() {
             ClipboardExternalMediaImportWorkerContract.KEY_GENERATION,
             ClipboardExternalMediaImportWorkerContract.KEY_SOURCE_URI,
             ClipboardExternalMediaImportWorkerContract.KEY_DESTINATION,
+            ClipboardExternalMediaImportWorkerContract.KEY_MINIMUM_BYTES,
             ClipboardExternalMediaImportWorkerContract.KEY_MAXIMUM_BYTES,
         )
         private val CANCEL_KEYS = setOf(

@@ -18,7 +18,6 @@ package dev.patrickgold.florisboard.lib.cache
 
 import android.content.Context
 import android.net.Uri
-import android.provider.OpenableColumns
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -27,28 +26,44 @@ import dev.patrickgold.florisboard.app.ext.EditorAction
 import dev.patrickgold.florisboard.app.settings.advanced.BackupArchive
 import dev.patrickgold.florisboard.app.settings.advanced.BackupArchiveSession
 import dev.patrickgold.florisboard.appContext
+import dev.patrickgold.florisboard.ime.clipboard.provider.DisposableExternalContentImporter
+import dev.patrickgold.florisboard.ime.clipboard.provider.StagedExternalContent
 import dev.patrickgold.florisboard.ime.theme.ThemeExtensionEditor
+import dev.patrickgold.florisboard.ime.theme.ThemeMaterialization
 import dev.patrickgold.florisboard.lib.ext.Extension
 import dev.patrickgold.florisboard.lib.ext.ExtensionDefaults
 import dev.patrickgold.florisboard.lib.ext.ExtensionEditor
-import dev.patrickgold.florisboard.lib.ext.ExtensionJsonConfig
+import dev.patrickgold.florisboard.lib.ext.InstalledExtensionArchiveFingerprint
+import dev.patrickgold.florisboard.lib.ext.decodeExtensionManifest
+import dev.patrickgold.florisboard.lib.ext.validateForImport
+import dev.patrickgold.florisboard.lib.io.BoundedExtensionArchive
+import dev.patrickgold.florisboard.lib.io.ExtensionImportBudget
+import dev.patrickgold.florisboard.lib.io.ExtensionImportLimitException
 import dev.patrickgold.florisboard.lib.io.FileRegistry
-import dev.patrickgold.florisboard.lib.io.ZipUtils
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import org.florisboard.lib.android.query
-import org.florisboard.lib.android.readToFile
+import kotlinx.coroutines.runInterruptible
+import org.florisboard.lib.android.conservativeUsableSpace
 import org.florisboard.lib.kotlin.io.FsDir
 import org.florisboard.lib.kotlin.io.FsFile
-import org.florisboard.lib.kotlin.io.readJson
 import org.florisboard.lib.kotlin.io.subDir
 import org.florisboard.lib.kotlin.io.subFile
 import java.io.Closeable
 import java.io.File
+import java.io.IOException
+import java.nio.file.Files
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+
+internal inline fun <T> StagedExternalContent?.useForExtensionImport(
+    block: (StagedExternalContent) -> T,
+): T = use { staged ->
+    if (Thread.currentThread().isInterrupted) throw InterruptedException()
+    block(staged ?: throw ExtensionImportException())
+}
 
 class CacheManager(context: Context) {
     companion object {
@@ -60,47 +75,196 @@ class CacheManager(context: Context) {
         private const val EditorDirName = "editor"
         private const val BackupAndRestoreDirName = "backup-and-restore"
 
-        const val LoadedDirName = "loaded"
+        private const val DefaultImportDisplayLabel = "Extension file"
+        private const val ExtensionSourceStagingDirName = "extension-provider-imports"
+        private const val ExtensionSourceTimeoutMs = 30_000L
+        private const val ImportStorageHeadroom = 128L * 1_024L * 1_024L
+        private const val MaxImportFiles = 64
+        private const val MaxManifestSize = 1L * 1_024L * 1_024L
+        internal const val MaxImportDisplayLabelLength = 128
+        const val MaxImportSourceSize = 64L * 1024L * 1024L
+
+        internal fun sanitizeImportDisplayLabel(rawLabel: String?): String {
+            if (rawLabel == null) return DefaultImportDisplayLabel
+            return buildString(minOf(rawLabel.length, MaxImportDisplayLabelLength)) {
+                var pendingSpace = false
+                for (char in rawLabel) {
+                    val isUnsafe = char == '/' ||
+                        char == '\\' ||
+                        char.isISOControl() ||
+                        Character.getType(char) == Character.FORMAT.toInt()
+                    if (isUnsafe || char.isWhitespace()) {
+                        pendingSpace = isNotEmpty()
+                        continue
+                    }
+                    if (pendingSpace && length < MaxImportDisplayLabelLength) {
+                        append(' ')
+                    }
+                    if (length >= MaxImportDisplayLabelLength) break
+                    append(char)
+                    pendingSpace = false
+                }
+            }.ifBlank { DefaultImportDisplayLabel }
+        }
     }
 
     private val appContext by context.appContext()
+    private val extensionSourceImporter = DisposableExternalContentImporter(
+        context = context,
+        timeoutMs = ExtensionSourceTimeoutMs,
+        stageCapacity = { MaxImportSourceSize },
+        stagingDirectory = ExtensionSourceStagingDirName,
+    )
     private val workspaceCleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val importer = WorkspacesContainer(ImporterDirName) { ImporterWorkspace(it) }
     val exporter = WorkspacesContainer(ExporterDirName) { ExporterWorkspace(it) }
     val themeExtEditor = WorkspacesContainer(EditorDirName) { ExtEditorWorkspace<ThemeExtensionEditor>(it) }
     val backupAndRestore = WorkspacesContainer(BackupAndRestoreDirName) { BackupAndRestoreWorkspace(it) }
 
-    fun readFromUriIntoCache(uri: Uri) = readFromUriIntoCache(listOf(uri))
+    private fun createWorkspaceDirectory(directory: FsDir) {
+        if (!directory.isDirectory && !directory.mkdirs()) {
+            throw IOException("Unable to create private workspace.")
+        }
+    }
 
-    fun readFromUriIntoCache(uriList: List<Uri>): ImporterWorkspace {
-        val contentResolver = appContext.contentResolver ?: error("Content resolver is null.")
-        val workspace = ImporterWorkspace(uuid = UUID.randomUUID().toString()).also { it.mkdirs() }
-        workspace.inputFileInfos = buildList {
-            for (uri in uriList) {
-                val info = contentResolver.query(uri)?.use { cursor ->
-                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
-                    cursor.moveToFirst()
-                    val file = workspace.inputDir.subFile(cursor.getString(nameIndex))
-                    contentResolver.readToFile(uri, file)
-                    val ext = runCatching {
-                        val extWorkingDir = workspace.outputDir.subDir(file.nameWithoutExtension)
-                        ZipUtils.unzip(srcFile = file, dstDir = extWorkingDir)
-                        val extJsonFile = extWorkingDir.subFile(ExtensionDefaults.MANIFEST_FILE_NAME)
-                        extJsonFile.readJson<Extension>(ExtensionJsonConfig).also { it.workingDir = extWorkingDir }
+    private fun requireImportStorage(directory: FsDir, maximumWriteBytes: Long) {
+        val requiredBytes = maximumWriteBytes + ImportStorageHeadroom
+        if (maximumWriteBytes < 0L ||
+            requiredBytes < maximumWriteBytes ||
+            directory.conservativeUsableSpace() < requiredBytes
+        ) {
+            throw ExtensionImportException()
+        }
+    }
+
+    private fun removeRejectedImport(file: FsFile, extractedDir: FsDir) {
+        val extractedRemoved = !extractedDir.exists() || extractedDir.deleteRecursively()
+        val sourceRemoved = !file.exists() || file.delete()
+        if (!extractedRemoved || !sourceRemoved) {
+            throw IOException("Unable to clean private import data.")
+        }
+    }
+
+    private fun ensureImportThreadActive() {
+        if (Thread.currentThread().isInterrupted) throw InterruptedException()
+    }
+
+    suspend fun readFromUriIntoCache(uri: Uri) = readFromUriIntoCache(listOf(uri))
+
+    suspend fun readFromUriIntoCache(uriList: List<Uri>): ImporterWorkspace {
+        var completedWorkspace: ImporterWorkspace? = null
+        try {
+            return runInterruptible(Dispatchers.IO) {
+                readFromUriIntoCacheBlocking(uriList).also { completedWorkspace = it }
+            }
+        } catch (error: CancellationException) {
+            runCatching { completedWorkspace?.close() }
+            throw error
+        }
+    }
+
+    private fun readFromUriIntoCacheBlocking(uriList: List<Uri>): ImporterWorkspace {
+        if (uriList.size !in 1..MaxImportFiles) {
+            throw ExtensionImportException()
+        }
+        val workspace = try {
+            importer.new()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: InterruptedException) {
+            throw error
+        } catch (_: Exception) {
+            throw ExtensionImportException()
+        }
+        var completed = false
+        try {
+            val importBudget = ExtensionImportBudget()
+            workspace.inputFileInfos = buildList {
+                for (uri in uriList) {
+                    importBudget.beginInput().use { admission ->
+                        requireImportStorage(workspace.dir, MaxImportSourceSize)
+                        val sourceLimit = minOf(
+                            MaxImportSourceSize,
+                            admission.remainingSourceBytes(),
+                        )
+                        if (sourceLimit <= 0L) throw ExtensionImportLimitException()
+                        extensionSourceImporter.stage(
+                            source = uri,
+                            maximumBytes = sourceLimit,
+                            minimumBytes = 0L,
+                        ).useForExtensionImport { staged ->
+                            val file = workspace.inputDir.subFile("${UUID.randomUUID()}.flex")
+                            val displayLabel = sanitizeImportDisplayLabel(staged.displayName)
+                            val actualSize = staged.byteCount
+                            val sourceMimeType = staged.sourceMimeType
+                            Files.move(staged.path, file.toPath())
+                            admission.addSourceBytes(actualSize.toInt())
+                            requireImportStorage(
+                                workspace.dir,
+                                BoundedExtensionArchive.DefaultLimits.maxExpandedBytes,
+                            )
+                            val extWorkingDir = workspace.outputDir.subDir(file.nameWithoutExtension)
+                            val ext = try {
+                                val decodedExtension =
+                                    BoundedExtensionArchive.extractAfterInspectingText(
+                                    source = file.toPath(),
+                                    destination = extWorkingDir.toPath(),
+                                    relativePath = ExtensionDefaults.MANIFEST_FILE_NAME,
+                                    maxTextBytes = MaxManifestSize,
+                                    admission = admission,
+                                ) { manifestJson ->
+                                    decodeExtensionManifest<Extension>(manifestJson)
+                                        .getOrThrow()
+                                        .also {
+                                            check(it.validateForImport().isValid) {
+                                                "Extension manifest is invalid."
+                                            }
+                                        }
+                                    }
+                                ensureImportThreadActive()
+                                decodedExtension.also { it.workingDir = extWorkingDir }
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: InterruptedException) {
+                                throw error
+                            } catch (error: ExtensionImportLimitException) {
+                                throw error
+                            } catch (_: Exception) {
+                                null
+                            }
+                            ensureImportThreadActive()
+                            if (ext == null) {
+                                removeRejectedImport(file, extWorkingDir)
+                                admission.commitAttempt()
+                            } else {
+                                admission.commit()
+                            }
+                            add(
+                                FileInfo(
+                                    file,
+                                    displayLabel,
+                                    FileRegistry.guessMediaType(file, sourceMimeType),
+                                    actualSize,
+                                    ext,
+                                ),
+                            )
+                        }
                     }
-                    FileInfo(
-                        file = file,
-                        mediaType = FileRegistry.guessMediaType(file, contentResolver.getType(uri)),
-                        size = cursor.getLong(sizeIndex),
-                        ext = ext.getOrNull(),
-                    )
-                } ?: error("Unable to fetch info about one or more resources to be imported.")
-                add(info)
+                }
+            }
+            completed = true
+            return workspace
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: InterruptedException) {
+            throw error
+        } catch (_: Exception) {
+            throw ExtensionImportException()
+        } finally {
+            if (!completed) {
+                runCatching { workspace.close() }
             }
         }
-        importer.add(workspace)
-        return workspace
     }
 
     open inner class WorkspacesContainer<T : Workspace> internal constructor(
@@ -112,15 +276,26 @@ class CacheManager(context: Context) {
         val dir: FsDir = appContext.cacheDir.subDir(dirName)
 
         fun new(uuid: String = UUID.randomUUID().toString()): T {
-            return factory(uuid).also { it.mkdirs(); add(it) }
+            val workspace = factory(uuid)
+            add(workspace)
+            try {
+                workspace.mkdirs()
+                return workspace
+            } catch (error: Throwable) {
+                runCatching { workspace.close() }
+                throw error
+            }
         }
 
         internal fun add(workspace: T) {
             workspaces[workspace.uuid] = workspace
         }
 
-        internal fun remove(workspace: T) {
-            workspaces.remove(workspace.uuid, workspace)
+        internal fun remove(workspace: Workspace) {
+            val registered = workspaces[workspace.uuid]
+            if (registered === workspace) {
+                workspaces.remove(workspace.uuid, registered)
+            }
         }
 
         fun getWorkspaceByUuid(uuid: String): T? = workspaces[uuid]
@@ -128,9 +303,10 @@ class CacheManager(context: Context) {
 
     abstract inner class Workspace(val uuid: String) : Closeable {
         abstract val dir: FsDir
+        private val closeGuard = Any()
 
         open fun mkdirs() {
-            dir.mkdirs()
+            createWorkspaceDirectory(dir)
         }
 
         fun isOpen() = dir.exists()
@@ -138,8 +314,23 @@ class CacheManager(context: Context) {
         fun isClosed() = !dir.exists()
 
         override fun close() {
-            dir.deleteRecursively()
+            synchronized(closeGuard) {
+                try {
+                    repeat(2) {
+                        if (dir.exists()) {
+                            dir.deleteRecursively()
+                        }
+                    }
+                    if (dir.exists()) {
+                        throw IOException("Unable to delete private workspace.")
+                    }
+                } finally {
+                    unregister()
+                }
+            }
         }
+
+        protected open fun unregister() = Unit
     }
 
     inner class ImporterWorkspace(uuid: String) : Workspace(uuid) {
@@ -152,18 +343,21 @@ class CacheManager(context: Context) {
 
         override fun mkdirs() {
             super.mkdirs()
-            inputDir.mkdirs()
-            outputDir.mkdirs()
+            createWorkspaceDirectory(inputDir)
+            createWorkspaceDirectory(outputDir)
         }
 
-        override fun close() {
-            super.close()
+        override fun unregister() {
             importer.remove(this)
         }
     }
 
     inner class ExporterWorkspace(uuid: String) : Workspace(uuid) {
         override val dir: FsDir = exporter.dir.subDir(uuid)
+
+        override fun unregister() {
+            exporter.remove(this)
+        }
     }
 
     inner class ExtEditorWorkspace<T : ExtensionEditor>(uuid: String) : Workspace(uuid) {
@@ -171,18 +365,22 @@ class CacheManager(context: Context) {
 
         val extDir: FsDir = dir.subDir("ext")
         val saverDir: FsDir = dir.subDir("saver")
+        val previewMaterialization = ThemeMaterialization(extDir) { }
 
         var currentAction by mutableStateOf<EditorAction?>(null)
         var ext: Extension? = null
         var editor by mutableStateOf<T?>(null)
+        internal var originalArchiveFingerprint: InstalledExtensionArchiveFingerprint? = null
+        var saveInProgress by mutableStateOf(false)
+        var archiveSaved by mutableStateOf(false)
         var version by mutableIntStateOf(0)
 
         val isModified get() = version > 0
 
         override fun mkdirs() {
             super.mkdirs()
-            extDir.mkdirs()
-            saverDir.mkdirs()
+            createWorkspaceDirectory(extDir)
+            createWorkspaceDirectory(saverDir)
         }
 
         inline fun <R> update(block: T.() -> R): R {
@@ -190,6 +388,10 @@ class CacheManager(context: Context) {
             val ret = block(editor!!)
             version++
             return ret
+        }
+
+        override fun unregister() {
+            themeExtEditor.remove(this)
         }
     }
 
@@ -234,8 +436,8 @@ class CacheManager(context: Context) {
 
         override fun mkdirs() {
             super.mkdirs()
-            inputDir.mkdirs()
-            outputDir.mkdirs()
+            createWorkspaceDirectory(inputDir)
+            createWorkspaceDirectory(outputDir)
         }
 
         override fun close() {
@@ -251,23 +453,25 @@ class CacheManager(context: Context) {
                 try {
                     sessionToClose?.close()
                 } finally {
-                    try {
-                        super.close()
-                    } finally {
-                        if (isClosed()) {
-                            backupAndRestore.remove(this)
-                        }
-                    }
+                    super.close()
                 }
             }
+        }
+
+        override fun unregister() {
+            backupAndRestore.remove(this)
         }
     }
 
     data class FileInfo(
         val file: FsFile,
+        val displayLabel: String,
         val mediaType: String?,
         val size: Long,
         val ext: Extension?,
         var skipReason: Int? = null,
     )
 }
+
+class ExtensionImportException internal constructor() :
+    IOException("Unable to import selected extension data.")

@@ -114,6 +114,7 @@ public final class ClipboardExternalMediaTestProvider extends ContentProvider {
         }
         if (
             "/healthy".equals(path)
+                || "/empty".equals(path)
                 || "/cancellation-aware".equals(path)
                 || "/prefix-then-block".equals(path)
                 || "/blocking-display-name".equals(path)
@@ -209,6 +210,9 @@ public final class ClipboardExternalMediaTestProvider extends ContentProvider {
                 Binder.getCallingUid()
             );
             return HEALTHY_BYTES;
+        }
+        if ("/empty".equals(path)) {
+            return new byte[0];
         }
         if ("/svg".equals(path)) {
             return SVG_BYTES;

@@ -19,15 +19,19 @@ package dev.patrickgold.florisboard.lib.ext
 import android.content.Context
 import android.net.Uri
 import dev.patrickgold.florisboard.BuildConfig
+import dev.patrickgold.florisboard.lib.io.BoundedExtensionArchive
 import dev.patrickgold.florisboard.lib.io.FlorisRef
 import dev.patrickgold.florisboard.lib.io.ZipUtils
 import kotlinx.serialization.Polymorphic
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlinx.coroutines.CancellationException
+import org.florisboard.lib.android.conservativeUsableSpace
 import org.florisboard.lib.kotlin.io.FsDir
-import org.florisboard.lib.kotlin.io.FsFile
+import org.florisboard.lib.kotlin.io.subDir
 import org.florisboard.lib.kotlin.resultErr
 import org.florisboard.lib.kotlin.resultOk
+import java.util.UUID
 
 /**
  * An extension container holding a parsed config, a working directory file
@@ -43,6 +47,9 @@ import org.florisboard.lib.kotlin.resultOk
 abstract class Extension {
     @Transient var workingDir: FsDir? = null
     @Transient var sourceRef: FlorisRef? = null
+    @Transient internal var sourceArchiveFingerprint: InstalledExtensionArchiveFingerprint? = null
+    @Transient private var ownedRuntimeDir: FsDir? = null
+    @Transient private val lifecycleGuard = Any()
 
     abstract val meta: ExtensionMeta
     abstract val dependencies: List<String>?
@@ -61,23 +68,47 @@ abstract class Extension {
         /* Empty */
     }
 
-    fun load(context: Context, force: Boolean = false): Result<Unit> {
-        val cacheDir = FsDir(context.cacheDir, meta.id)
-        if (cacheDir.exists()) {
-            if (force) {
-                cacheDir.deleteRecursively()
-            } else {
-                // TODO: check if extension loaded should be kept as is
-                cacheDir.deleteRecursively()
+    fun load(context: Context, force: Boolean = false): Result<Unit> = synchronized(lifecycleGuard) {
+        if (!force && workingDir?.isDirectory == true) {
+            return@synchronized resultOk()
+        }
+        if (workingDir != null || ownedRuntimeDir != null) {
+            unloadLocked(context)
+        }
+        val sourceRef = sourceRef ?: return@synchronized resultOk()
+        val runtimeRoot = try {
+            prepareRuntimeRoot(context)
+        } catch (error: Exception) {
+            return@synchronized resultErr(error)
+        }
+        val cacheDir = runtimeRoot.subDir(UUID.randomUUID().toString())
+        try {
+            check(
+                runtimeRoot.conservativeUsableSpace() >=
+                    BoundedExtensionArchive.DefaultLimits.maxExpandedBytes + MinFreeSpaceBytes,
+            ) {
+                "Not enough space to load extension data."
+            }
+            check(cacheDir.mkdirs()) { "Unable to create extension runtime directory." }
+            onBeforeLoad(context, cacheDir)
+            ZipUtils.unzip(context, sourceRef, cacheDir).getOrThrow()
+            workingDir = cacheDir
+            ownedRuntimeDir = cacheDir
+            onAfterLoad(context, cacheDir)
+            resultOk()
+        } catch (error: Throwable) {
+            runCatching { onBeforeUnload(context, cacheDir) }
+            cacheDir.deleteRecursively()
+            workingDir = null
+            ownedRuntimeDir = null
+            runCatching { onAfterUnload(context, cacheDir) }
+            when (error) {
+                is InterruptedException -> throw error
+                is CancellationException -> throw error
+                is Exception -> resultErr(error)
+                else -> throw error
             }
         }
-        cacheDir.mkdirs()
-        val sourceRef = sourceRef ?: return resultOk()
-        onBeforeLoad(context, cacheDir)
-        ZipUtils.unzip(context, sourceRef, cacheDir).onFailure { return resultErr(it) }
-        workingDir = cacheDir
-        onAfterLoad(context, cacheDir)
-        return resultOk()
     }
 
     open fun onBeforeUnload(context: Context, cacheDir: FsDir) {
@@ -88,31 +119,49 @@ abstract class Extension {
         /* Empty */
     }
 
-    fun unload(context: Context) {
-        val cacheDir = workingDir ?: FsDir(context.cacheDir, meta.id)
-        if (!cacheDir.exists()) return
-        onBeforeUnload(context, cacheDir)
-        cacheDir.deleteRecursively()
-        workingDir = null
-        onAfterUnload(context, cacheDir)
+    fun unload(context: Context) = synchronized(lifecycleGuard) {
+        unloadLocked(context)
     }
 
-    fun readExtensionFile(context: Context, relPath: String): String? {
-        val cacheDir = FsDir(context.cacheDir, meta.id)
-        if (cacheDir.exists() && cacheDir.isDirectory) {
-            val file = FsFile(cacheDir, relPath)
-            if (file.exists() && file.isFile) {
-                return try {
-                    file.readText()
-                } catch (e: Exception) {
-                    null
-                }
-            }
+    private fun unloadLocked(context: Context) {
+        val cacheDir = ownedRuntimeDir
+        if (cacheDir == null) {
+            workingDir = null
+            return
         }
-        return null
+        try {
+            onBeforeUnload(context, cacheDir)
+        } finally {
+            cacheDir.deleteRecursively()
+            if (workingDir == cacheDir) {
+                workingDir = null
+            }
+            ownedRuntimeDir = null
+            onAfterUnload(context, cacheDir)
+        }
     }
 
     abstract fun edit(): ExtensionEditor
+
+    private companion object {
+        const val RuntimeRootDirName = "extension-runtime"
+        const val MinFreeSpaceBytes = 128L * 1_024 * 1_024
+        val RuntimeRootGuard = Any()
+        val PreparedRuntimeRoots = mutableSetOf<String>()
+
+        fun prepareRuntimeRoot(context: Context): FsDir = synchronized(RuntimeRootGuard) {
+            val root = FsDir(context.cacheDir, RuntimeRootDirName)
+            if (PreparedRuntimeRoots.add(root.absolutePath)) {
+                check(!root.exists() || root.deleteRecursively()) {
+                    "Unable to clean stale extension runtime data."
+                }
+            }
+            check(root.isDirectory || root.mkdirs()) {
+                "Unable to create extension runtime directory."
+            }
+            root
+        }
+    }
 }
 
 /**
@@ -123,24 +172,16 @@ abstract class Extension {
  * @return the Url
  */
 internal fun List<Extension>.generateUpdateUrl(
-    version: String = BuildConfig.FLADDONS_API_VERSION,
     host: String = BuildConfig.FLADDONS_STORE_URL,
 ): String {
     return Uri.Builder().run {
         scheme("https")
         authority(host)
         appendPath("check-updates")
-        // TODO: Uncomment when version is supported by the addons store api
-        //appendPath(version)
         encodedFragment(
             buildString {
                 append("data={")
-                for (extension in this@generateUpdateUrl) {
-                    append(extension.meta.getUpdateJsonPair())
-                    if (extension != this@generateUpdateUrl.last()) {
-                        append(",")
-                    }
-                }
+                append(this@generateUpdateUrl.joinToString(",") { it.meta.getUpdateJsonPair() })
                 append("}")
             }
         )

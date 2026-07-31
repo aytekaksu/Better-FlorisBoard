@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard.app.settings.advanced
 
+import dev.patrickgold.florisboard.lib.ext.ExtensionManager
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -23,6 +24,10 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 class RestoreTransactionTest :
     FunSpec({
@@ -117,6 +122,43 @@ class RestoreTransactionTest :
             finalCommitCalled shouldBe true
             preferences shouldBe "new preferences"
             live.contents() shouldBe mapOf("new.flex" to "new keyboard")
+            fixture.hasScratchData() shouldBe false
+        }
+
+        test("restore excludes competing extension storage mutations through final commit") {
+            val fixture = root.fixture("storage-guard")
+            val source = fixture.source("theme").apply {
+                write("incoming.flex", "new theme")
+            }
+            val live = fixture.live("theme")
+            val commitEntered = CompletableDeferred<Unit>()
+            val releaseCommit = CompletableDeferred<Unit>()
+
+            coroutineScope {
+                val restore = async {
+                    RestoreTransaction.execute(
+                        scratchParent = fixture.scratchParent,
+                        eraseExisting = false,
+                        preferences = null,
+                        directories = listOf(RestoreDirectoryTransaction(source, live)),
+                        finalCommit = {
+                            commitEntered.complete(Unit)
+                            releaseCommit.await()
+                        },
+                    )
+                }
+                commitEntered.await()
+                val competingMutation = async(start = CoroutineStart.UNDISPATCHED) {
+                    ExtensionManager.withStorageMutation { }
+                }
+
+                competingMutation.isCompleted shouldBe false
+                releaseCommit.complete(Unit)
+                restore.await()
+                competingMutation.await()
+            }
+
+            live.contents() shouldBe mapOf("incoming.flex" to "new theme")
             fixture.hasScratchData() shouldBe false
         }
 

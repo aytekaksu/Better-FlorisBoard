@@ -90,6 +90,7 @@ import dev.patrickgold.florisboard.lib.compose.PreviewKeyboardField
 import dev.patrickgold.florisboard.lib.compose.Validation
 import dev.patrickgold.florisboard.lib.compose.rememberPreviewFieldController
 import dev.patrickgold.florisboard.lib.ext.ExtensionValidation
+import dev.patrickgold.florisboard.lib.ext.SafeRelativePath
 import dev.patrickgold.florisboard.lib.rememberValidationResult
 import dev.patrickgold.florisboard.themeManager
 import dev.patrickgold.jetpref.datastore.model.collectAsState
@@ -106,7 +107,6 @@ import org.florisboard.lib.compose.defaultFlorisOutlinedBox
 import org.florisboard.lib.compose.florisVerticalScroll
 import org.florisboard.lib.compose.rippleClickable
 import org.florisboard.lib.compose.stringRes
-import org.florisboard.lib.kotlin.io.subFile
 import org.florisboard.lib.snygg.SnyggAnnotationRule
 import org.florisboard.lib.snygg.SnyggElementRule
 import org.florisboard.lib.snygg.SnyggJsonConfiguration
@@ -119,6 +119,10 @@ import org.florisboard.lib.snygg.SnyggSpecDecl
 import org.florisboard.lib.snygg.SnyggStylesheet
 import org.florisboard.lib.snygg.SnyggStylesheetEditor
 import org.florisboard.lib.snygg.ui.Saver
+import java.nio.file.Files
+import java.nio.file.LinkOption
+
+private const val MAX_STYLESHEET_BYTES = 8L * 1_024 * 1_024
 
 internal val PrettyPrintConfig = SnyggJsonConfiguration.of(
     prettyPrint = true,
@@ -166,10 +170,16 @@ fun ThemeEditorScreen(
             stylesheetEditorFailure = null
             val stylesheetPath = editor.stylesheetPath()
             editor.stylesheetPathOnLoad = stylesheetPath
-            val stylesheetFile = workspace.extDir.subFile(stylesheetPath)
-            val stylesheetEditor = if (stylesheetFile.exists()) {
+            val stylesheetFile = SafeRelativePath.parse(stylesheetPath)
+                .mapCatching { it.resolveWithin(workspace.extDir.toPath()).getOrThrow() }
+                .getOrNull()
+            val stylesheetEditor = if (
+                stylesheetFile != null &&
+                Files.isRegularFile(stylesheetFile, LinkOption.NOFOLLOW_LINKS) &&
+                Files.size(stylesheetFile) <= MAX_STYLESHEET_BYTES
+            ) {
                 try {
-                    val stylesheetJson = stylesheetFile.readText()
+                    val stylesheetJson = stylesheetFile.toFile().readText()
                     val config = when (stylesheetLoadingStrategy) {
                         StylesheetLoadingStrategy.TRY_LOAD_OR_PARSE_LENIENT -> LenientConfig
                         else -> PrettyPrintConfig
@@ -180,10 +190,10 @@ fun ThemeEditorScreen(
                         StylesheetLoadingStrategy.TRY_LOAD_OR_ASK_ON_CONFLICT -> error
                         else -> null
                     }
-                    SnyggStylesheetEditor(SnyggStylesheet.SCHEMA_V2, comparator = CustomRuleComparator)
+                    newEmptyThemeStylesheetEditor()
                 }
             } else {
-                SnyggStylesheetEditor(SnyggStylesheet.SCHEMA_V2, comparator = CustomRuleComparator)
+                newEmptyThemeStylesheetEditor()
             }
             stylesheetEditor.rules.putIfAbsent(SnyggAnnotationRule.Defines, SnyggSinglePropertySetEditor())
             stylesheetEditor
@@ -256,7 +266,7 @@ fun ThemeEditorScreen(
     }
 
     content {
-        stylesheetEditorFailure?.let { failure ->
+        if (stylesheetEditorFailure != null) {
             JetPrefAlertDialog(
                 title = stringRes(R.string.settings__theme_editor__stylesheet_error_title),
                 confirmLabel = stringRes(R.string.action__yes),
@@ -270,16 +280,9 @@ fun ThemeEditorScreen(
                     stylesheetLoadingStrategy = StylesheetLoadingStrategy.TRY_LOAD_OR_EMPTY
                 },
             ) {
-                Column {
-                    Text(
-                        modifier = Modifier.padding(bottom = 8.dp),
-                        text = failure.message.toString(),
-                        fontStyle = FontStyle.Italic,
-                    )
-                    Text(
-                        text = stringRes(R.string.settings__theme_editor__stylesheet_error_description),
-                    )
-                }
+                Text(
+                    text = stringRes(R.string.settings__theme_editor__stylesheet_error_description),
+                )
             }
         }
 
@@ -313,14 +316,18 @@ fun ThemeEditorScreen(
         }
 
         DisposableEffect(workspace.version) {
-            themeManager.previewThemeInfo.value = ThemeManager.ThemeInfo.DEFAULT.copy(
+            val preview = ThemeManager.ThemeInfo.DEFAULT.copy(
                 name = extPreviewTheme(System.currentTimeMillis().toString()),
                 config = editor.build(),
                 stylesheet = stylesheetEditor.build(),
                 loadedDir = workspace.extDir,
+                materialization = workspace.previewMaterialization,
             )
+            themeManager.previewThemeInfo.value = preview
             onDispose {
-                themeManager.previewThemeInfo.value = null
+                if (themeManager.previewThemeInfo.value === preview) {
+                    themeManager.previewThemeInfo.value = null
+                }
             }
         }
 
@@ -879,6 +886,11 @@ internal fun DialogProperty(
         content()
     }
 }
+
+internal fun newEmptyThemeStylesheetEditor() =
+    SnyggStylesheetEditor(SnyggStylesheet.SCHEMA_V2, comparator = CustomRuleComparator).also {
+        it.rules[SnyggAnnotationRule.Defines] = SnyggSinglePropertySetEditor()
+    }
 
 private object CustomRuleComparator : Comparator<SnyggRule> {
     @Suppress("IfThenToElvis")
