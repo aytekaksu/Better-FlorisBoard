@@ -141,13 +141,14 @@ abstract class Extension {
         }
     }
 
-    private companion object {
-        const val RuntimeRootDirName = "extension-runtime"
-        const val MinFreeSpaceBytes = 128L * 1_024 * 1_024
-        val RuntimeRootGuard = Any()
-        val PreparedRuntimeRoots = mutableSetOf<String>()
+    // Serialization generates Extension.serializer() here, so this companion must stay visible.
+    companion object {
+        private const val RuntimeRootDirName = "extension-runtime"
+        private const val MinFreeSpaceBytes = 128L * 1_024 * 1_024
+        private val RuntimeRootGuard = Any()
+        private val PreparedRuntimeRoots = mutableSetOf<String>()
 
-        fun prepareRuntimeRoot(context: Context): FsDir = synchronized(RuntimeRootGuard) {
+        private fun prepareRuntimeRoot(context: Context): FsDir = synchronized(RuntimeRootGuard) {
             val root = FsDir(context.cacheDir, RuntimeRootDirName)
             if (PreparedRuntimeRoots.add(root.absolutePath)) {
                 check(!root.exists() || root.deleteRecursively()) {
