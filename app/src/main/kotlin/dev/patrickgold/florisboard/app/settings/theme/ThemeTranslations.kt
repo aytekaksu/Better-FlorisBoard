@@ -24,6 +24,7 @@ import dev.patrickgold.jetpref.material.ui.ColorRepresentation
 import org.florisboard.lib.kotlin.simpleNameOrEnclosing
 import org.florisboard.lib.snygg.Snygg
 import org.florisboard.lib.snygg.SnyggElementRule
+import org.florisboard.lib.snygg.SnyggSelector
 import org.florisboard.lib.snygg.value.SnyggCircleShapeValue
 import org.florisboard.lib.snygg.value.SnyggCustomFontFamilyValue
 import org.florisboard.lib.snygg.value.SnyggCutCornerDpShapeValue
@@ -64,6 +65,22 @@ internal fun Context.translateElementName(element: String, level: SnyggLevel): S
         SnyggLevel.DEVELOPER -> null
         else -> FlorisImeUi.elementNamesToTranslation[element]?.let { getString(it) }
     }
+}
+
+private val SelectorNameMap: Map<SnyggSelector, Int> = linkedMapOf(
+    SnyggSelector.PRESSED to R.string.snygg__rule_selector__pressed,
+    SnyggSelector.FOCUS to R.string.snygg__rule_selector__focus,
+    SnyggSelector.HOVER to R.string.snygg__rule_selector__hover,
+    SnyggSelector.DISABLED to R.string.snygg__rule_selector__disabled,
+)
+
+internal val SelectableSnyggSelectors = SelectorNameMap.keys
+
+internal fun Context.translateSelectorName(selector: SnyggSelector, level: SnyggLevel): String {
+    return when (level) {
+        SnyggLevel.DEVELOPER -> null
+        else -> SelectorNameMap[selector]
+    }?.let { getString(it) } ?: selector.id
 }
 
 private val PropertyNameMap = mapOf(
