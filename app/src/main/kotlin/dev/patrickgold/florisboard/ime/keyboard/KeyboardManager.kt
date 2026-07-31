@@ -81,7 +81,7 @@ import org.florisboard.autocorrect.api.AutocorrectAcceptanceKind
 import org.florisboard.autocorrect.api.AutocorrectTextEventKind
 import org.florisboard.lib.android.AndroidKeyguardManager
 import org.florisboard.lib.android.showLongToast
-import org.florisboard.lib.android.showShortToastSync
+import org.florisboard.lib.android.showShortToast
 import org.florisboard.lib.android.systemService
 import org.florisboard.lib.kotlin.collectIn
 import org.florisboard.lib.kotlin.collectLatestIn
@@ -882,7 +882,9 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                     clipboardManager.primaryClip?.let { clipboardManager.deleteClip(it, onlyIfUnpinned = true) }
                 }
                 clipboardManager.updatePrimaryClip(null)
-                appContext.showShortToastSync(R.string.clipboard__cleared_primary_clip)
+                scope.launch(Dispatchers.Main.immediate) {
+                    appContext.showShortToast(R.string.clipboard__cleared_primary_clip)
+                }
             }
             KeyCode.TOGGLE_FLOATING_WINDOW -> windowController.actions.toggleFloatingWindow()
             KeyCode.TOGGLE_COMPACT_LAYOUT -> windowController.actions.toggleCompactLayout()

@@ -71,7 +71,7 @@ import org.florisboard.lib.android.AndroidClipboardManager_OnPrimaryClipChangedL
 import org.florisboard.lib.android.AndroidKeyguardManager
 import org.florisboard.lib.android.clearPrimaryClipAnyApi
 import org.florisboard.lib.android.setOrClearPrimaryClip
-import org.florisboard.lib.android.showShortToastSync
+import org.florisboard.lib.android.showShortToast
 import org.florisboard.lib.android.systemService
 import org.florisboard.lib.kotlin.tryOrNull
 
@@ -1243,7 +1243,7 @@ class ClipboardManager(
     ) {
         onResult(result)
         if (!result) {
-            appContext.showShortToastSync("Failed to paste item.")
+            ioScope.launch(Dispatchers.Main.immediate) { appContext.showShortToast("Failed to paste item.") }
         }
     }
 

@@ -32,6 +32,7 @@ import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
 import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.subtypeManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -112,6 +113,10 @@ abstract class AbstractEditorInstance(context: Context) {
     private val nlpManager by context.nlpManager()
     private val scope = MainScope()
     protected val breakIterators = BreakIteratorGroup()
+
+    protected fun launchOnMain(block: suspend () -> Unit) {
+        scope.launch(Dispatchers.Main.immediate) { block() }
+    }
 
     private val _activeInfoFlow = MutableStateFlow(FlorisEditorInfo.Unspecified)
     val activeInfoFlow = _activeInfoFlow.asStateFlow()

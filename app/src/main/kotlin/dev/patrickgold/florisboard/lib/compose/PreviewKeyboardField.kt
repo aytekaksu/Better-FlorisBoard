@@ -37,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -55,7 +56,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.lib.util.InputMethodUtils
-import org.florisboard.lib.android.showShortToastSync
+import kotlinx.coroutines.launch
 import org.florisboard.lib.android.showShortToast
 import org.florisboard.lib.compose.stringRes
 import org.florisboard.lib.compose.verticalTween
@@ -86,6 +87,7 @@ fun PreviewKeyboardField(
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
 
     AnimatedVisibility(
         visible = controller.isVisible,
@@ -118,7 +120,7 @@ fun PreviewKeyboardField(
                     Row {
                         IconButton(onClick = {
                             if (!InputMethodUtils.showImePicker(context)) {
-                                context.showShortToastSync("Error: InputMethodManager service not available!")
+                                scope.launch { context.showShortToast("Error: InputMethodManager service not available!") }
                             }
                         }) {
                             Icon(

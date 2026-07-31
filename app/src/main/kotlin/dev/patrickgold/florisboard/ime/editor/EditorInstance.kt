@@ -44,7 +44,7 @@ import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.subtypeManager
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.runBlocking
-import org.florisboard.lib.android.showShortToastSync
+import org.florisboard.lib.android.showShortToast
 
 internal inline fun dispatchMediaPasteContent(
     pasteAccess: ClipboardMediaPasteAccess,
@@ -669,7 +669,9 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         if (text != null) {
             clipboardManager.addNewPlaintext(text.toString())
         } else {
-            appContext.showShortToastSync("Failed to retrieve selected text requested to cut: Eiter selection state is invalid or an error occurred within the input connection.")
+            launchOnMain {
+                appContext.showShortToast("Failed to retrieve selected text requested to cut: Either selection state is invalid or an error occurred within the input connection.")
+            }
         }
         return deleteBackwards(OperationUnit.CHARACTERS)
     }
@@ -687,7 +689,9 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         if (text != null) {
             clipboardManager.addNewPlaintext(text.toString())
         } else {
-            appContext.showShortToastSync("Failed to retrieve selected text requested to copy: Eiter selection state is invalid or an error occurred within the input connection.")
+            launchOnMain {
+                appContext.showShortToast("Failed to retrieve selected text requested to copy: Either selection state is invalid or an error occurred within the input connection.")
+            }
         }
         val activeSelection = activeContent.selection
         return setSelection(activeSelection.end, activeSelection.end)
@@ -709,7 +713,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         }
         return commitClipboardItem(item).also { result ->
             if (!result) {
-                appContext.showShortToastSync("Failed to paste item.")
+                launchOnMain { appContext.showShortToast("Failed to paste item.") }
             }
         }
     }

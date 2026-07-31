@@ -99,7 +99,7 @@ import dev.patrickgold.jetpref.material.ui.JetPrefDropdown
 import dev.patrickgold.jetpref.material.ui.JetPrefListItem
 import dev.patrickgold.jetpref.material.ui.JetPrefTextField
 import kotlinx.coroutines.launch
-import org.florisboard.lib.android.showLongToastSync
+import org.florisboard.lib.android.showLongToast
 import org.florisboard.lib.color.MaterialYouFlagsSaver
 import org.florisboard.lib.compose.FlorisIconButton
 import org.florisboard.lib.compose.FlorisOutlinedBox
@@ -621,6 +621,7 @@ private fun ComponentMetaEditorDialog(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var showValidationErrors by rememberSaveable { mutableStateOf(false) }
 
     var id by rememberSaveable { mutableStateOf(editor.id) }
@@ -645,7 +646,7 @@ private fun ComponentMetaEditorDialog(
             if (!allFieldsValid) {
                 showValidationErrors = true
             } else if (id != editor.id && (workspace.editor as? ThemeExtensionEditor)?.themes?.find { it.id == id.trim() } != null) {
-                context.showLongToastSync("A theme with this ID already exists!")
+                scope.launch { context.showLongToast("A theme with this ID already exists!") }
             } else {
                 workspace.update {
                     editor.id = id.trim()

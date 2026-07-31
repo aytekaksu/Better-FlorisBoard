@@ -129,7 +129,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.florisboard.lib.android.AndroidKeyguardManager
 import org.florisboard.lib.android.AndroidVersion
-import org.florisboard.lib.android.showShortToastSync
+import org.florisboard.lib.android.showShortToast
 import org.florisboard.lib.android.systemService
 import org.florisboard.lib.compose.LocalLocalizedDateTimeFormatter
 import org.florisboard.lib.compose.LocalResourcesLocale
@@ -796,7 +796,7 @@ fun ClipboardInputLayout(
                                 attributes = mapOf("action" to "yes"),
                                 onClick = {
                                     clipboardManager.clearExactHistory(filteredHistory.unpinned)
-                                    context.showShortToastSync(R.string.clipboard__cleared_history)
+                                    scope.launch { context.showShortToast(R.string.clipboard__cleared_history) }
                                     showClearAllHistory = false
                                 },
                             ) {
