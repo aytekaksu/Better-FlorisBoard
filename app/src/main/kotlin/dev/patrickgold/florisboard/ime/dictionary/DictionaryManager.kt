@@ -19,8 +19,6 @@ package dev.patrickgold.florisboard.ime.dictionary
 import android.content.Context
 import androidx.room.Room
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
-import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
-import dev.patrickgold.florisboard.ime.nlp.WordSuggestionCandidate
 import dev.patrickgold.florisboard.lib.FlorisLocale
 import java.lang.ref.WeakReference
 
@@ -53,41 +51,6 @@ class DictionaryManager private constructor(context: Context) {
                 )
             }
         }
-    }
-
-    fun queryUserDictionary(word: String, locale: FlorisLocale): List<SuggestionCandidate> {
-        val florisDao = florisUserDictionaryDao()
-        val systemDao = systemUserDictionaryDao()
-        if (florisDao == null && systemDao == null) {
-            return emptyList()
-        }
-        return buildList {
-            if (prefs.dictionary.enableFlorisUserDictionary.get()) {
-                florisDao?.query(word, locale)?.let {
-                    for (entry in it) {
-                        add(WordSuggestionCandidate(entry.word, confidence = entry.freq / 255.0))
-                    }
-                }
-                florisDao?.queryShortcut(word, locale)?.let {
-                    for (entry in it) {
-                        add(WordSuggestionCandidate(entry.word, confidence = entry.freq / 255.0))
-                    }
-                }
-            }
-            if (prefs.dictionary.enableSystemUserDictionary.get()) {
-                systemDao?.query(word, locale)?.let {
-                    for (entry in it) {
-                        add(WordSuggestionCandidate(entry.word, confidence = entry.freq / 255.0))
-                    }
-                }
-                systemDao?.queryShortcut(word, locale)?.let {
-                    for (entry in it) {
-                        add(WordSuggestionCandidate(entry.word, confidence = entry.freq / 255.0))
-                    }
-                }
-            }
-        }
-
     }
 
     fun spell(word: String, locale: FlorisLocale): Boolean {
@@ -157,17 +120,6 @@ class DictionaryManager private constructor(context: Context) {
         }
         if (systemUserDictionaryDatabase == null && prefs.dictionary.enableSystemUserDictionary.get()) {
             systemUserDictionaryDatabase = SystemUserDictionaryDatabase(context)
-        }
-    }
-
-    @Synchronized
-    fun unloadUserDictionariesIfNecessary() {
-        if (florisUserDictionaryDatabase != null) {
-            florisUserDictionaryDatabase?.close()
-            florisUserDictionaryDatabase = null
-        }
-        if (systemUserDictionaryDatabase != null) {
-            systemUserDictionaryDatabase = null
         }
     }
 }

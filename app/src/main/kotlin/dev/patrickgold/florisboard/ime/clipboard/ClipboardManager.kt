@@ -1745,16 +1745,6 @@ private class ClipboardActorState(
         finishHistoryMutation()
     }
 
-    suspend fun retireMedia(media: Set<OwnedClipboardMediaUri>) {
-        try {
-            prepareMediaRetirement(media)
-        } catch (_: Exception) {
-            pendingMediaCleanup += media
-            systemObservationConfirmed = false
-        }
-        finishHistoryMutation()
-    }
-
     suspend fun retryInstallCleanup(installs: List<InstalledClipboardMedia>) {
         installs.forEach { installed ->
             pendingInstallCleanup[installed.ownedUri] = installed

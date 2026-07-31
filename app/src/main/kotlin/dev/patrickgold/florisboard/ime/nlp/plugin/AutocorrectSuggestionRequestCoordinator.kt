@@ -209,15 +209,6 @@ internal class AutocorrectSuggestionRequestCoordinator(circuitPolicy: CircuitPol
         ).requireValid()
     }
 
-    @Synchronized
-    fun currentRequestLease(requestId: Long): RequestLease? {
-        if (requestId <= 0L) return null
-        return knownLeases[RequestId(requestId)]
-    }
-
-    @Synchronized
-    fun stateSnapshot(): HostState = state
-
     private fun reduce(event: HostEvent) = reducer.reduce(state, event).also {
         state = it.state
     }
