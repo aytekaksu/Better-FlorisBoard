@@ -248,39 +248,13 @@ internal fun EditRuleDialog(
                         modifier = Modifier.florisHorizontalScroll(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        // TODO: avoid code duplication
-                        FlorisChip(
-                            onClick = { updateCurrentRule(SnyggSelector.PRESSED) },
-                            text = when (level) {
-                                SnyggLevel.DEVELOPER -> SnyggSelector.PRESSED.id
-                                else -> stringRes(R.string.snygg__rule_selector__pressed)
-                            },
-                            selected = selector == SnyggSelector.PRESSED,
-                        )
-                        FlorisChip(
-                            onClick = { updateCurrentRule(SnyggSelector.FOCUS) },
-                            text = when (level) {
-                                SnyggLevel.DEVELOPER -> SnyggSelector.FOCUS.id
-                                else -> stringRes(R.string.snygg__rule_selector__focus)
-                            },
-                            selected = selector == SnyggSelector.FOCUS,
-                        )
-                        FlorisChip(
-                            onClick = { updateCurrentRule(SnyggSelector.HOVER) },
-                            text = when (level) {
-                                SnyggLevel.DEVELOPER -> SnyggSelector.HOVER.id
-                                else -> stringRes(R.string.snygg__rule_selector__hover)
-                            },
-                            selected = selector == SnyggSelector.HOVER,
-                        )
-                        FlorisChip(
-                            onClick = { updateCurrentRule(SnyggSelector.DISABLED) },
-                            text = when (level) {
-                                SnyggLevel.DEVELOPER -> SnyggSelector.DISABLED.id
-                                else -> stringRes(R.string.snygg__rule_selector__disabled)
-                            },
-                            selected = selector == SnyggSelector.DISABLED,
-                        )
+                        SelectableSnyggSelectors.forEach { candidate ->
+                            FlorisChip(
+                                onClick = { updateCurrentRule(candidate) },
+                                text = context.translateSelectorName(candidate, level),
+                                selected = selector == candidate,
+                            )
+                        }
                     }
                 }
 

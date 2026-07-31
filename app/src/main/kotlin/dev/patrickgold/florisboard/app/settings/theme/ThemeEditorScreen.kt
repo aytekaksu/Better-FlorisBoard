@@ -808,37 +808,8 @@ private fun SnyggRuleRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    if (rule.selector == SnyggSelector.PRESSED) {
-                        Selector(
-                            text = when (level) {
-                                SnyggLevel.DEVELOPER -> SnyggSelector.PRESSED.id
-                                else -> stringRes(R.string.snygg__rule_selector__pressed)
-                            }
-                        )
-                    }
-                    if (rule.selector == SnyggSelector.FOCUS) {
-                        Selector(
-                            text = when (level) {
-                                SnyggLevel.DEVELOPER -> SnyggSelector.FOCUS.id
-                                else -> stringRes(R.string.snygg__rule_selector__focus)
-                            }
-                        )
-                    }
-                    if (rule.selector == SnyggSelector.HOVER) {
-                        Selector(
-                            text = when (level) {
-                                SnyggLevel.DEVELOPER -> SnyggSelector.HOVER.id
-                                else -> stringRes(R.string.snygg__rule_selector__hover)
-                            }
-                        )
-                    }
-                    if (rule.selector == SnyggSelector.DISABLED) {
-                        Selector(
-                            text = when (level) {
-                                SnyggLevel.DEVELOPER -> SnyggSelector.DISABLED.id
-                                else -> stringRes(R.string.snygg__rule_selector__disabled)
-                            }
-                        )
+                    if (rule.selector != SnyggSelector.NONE) {
+                        Selector(text = context.translateSelectorName(rule.selector, level))
                     }
                 }
                 for ((attrKey, attrValue) in rule.attributes) {
