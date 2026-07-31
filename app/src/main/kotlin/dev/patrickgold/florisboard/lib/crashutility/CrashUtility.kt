@@ -62,125 +62,79 @@ abstract class CrashUtility private constructor() {
         private const val UNHANDLED_STACKTRACE_FILE_EXT = "stacktrace"
 
         private var lastActivityCreated: WeakReference<Activity?> = WeakReference(null)
-        private var stagedException: Throwable? = null
 
-        /**
-         * Installs the CrashUtility crash handler for the given package [context]. Also registers
-         * a notification channel for devices with Android 8.0+.
-         *
-         * @param context The current package context. If null is supplied, this function does
-         *  nothing.
-         * @return True if the installation was successful, false otherwise.
-         */
-        fun install(context: Context?): Boolean {
-            if (context == null) {
-                flogError(LogTopic.CRASH_UTILITY) {
-                    "Can't install crash handler with a null Context object, doing nothing!"
-                }
-                return false
-            }
+        /** Installs the crash handler and its notification channel. */
+        fun install(application: Application): Boolean {
             val oldHandler = Thread.getDefaultUncaughtExceptionHandler()
             if (oldHandler is UncaughtExceptionHandler) {
                 flogInfo(LogTopic.CRASH_UTILITY) {
                     "Crash handler is already installed, doing nothing!"
                 }
-            } else {
-                val application = context.applicationContext
-                if (application != null && application is Application) {
-                    try {
-                        Thread.setDefaultUncaughtExceptionHandler(
-                            UncaughtExceptionHandler(
-                                WeakReference(application),
-                                WeakReference(oldHandler),
-                                context.getUstDir(),
-                            )
-                        )
-                        flogInfo(LogTopic.CRASH_UTILITY) {
-                            "Successfully installed crash handler for this application!"
-                        }
-                    } catch (e: SecurityException) {
-                        flogError(LogTopic.CRASH_UTILITY) {
-                            "Failed to install crash handler: reason=security, error=${e.javaClass.simpleName}"
-                        }
-                        return false
-                    } catch (e: Exception) {
-                        flogError(LogTopic.CRASH_UTILITY) {
-                            "Failed to install crash handler: reason=unexpected, error=${e.javaClass.simpleName}"
-                        }
-                        return false
+                return true
+            }
+            try {
+                Thread.setDefaultUncaughtExceptionHandler(
+                    UncaughtExceptionHandler(
+                        WeakReference(application),
+                        application.getUstDir(),
+                    )
+                )
+                flogInfo(LogTopic.CRASH_UTILITY) {
+                    "Successfully installed crash handler for this application!"
+                }
+            } catch (e: SecurityException) {
+                flogError(LogTopic.CRASH_UTILITY) {
+                    "Failed to install crash handler: reason=security, error=${e.javaClass.simpleName}"
+                }
+                return false
+            } catch (e: Exception) {
+                flogError(LogTopic.CRASH_UTILITY) {
+                    "Failed to install crash handler: reason=unexpected, error=${e.javaClass.simpleName}"
+                }
+                return false
+            }
+            application.registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+                override fun onActivityCreated(
+                    activity: Activity,
+                    savedInstanceState: Bundle?,
+                ) {
+                    if (activity !is CrashDialogActivity) {
+                        lastActivityCreated = WeakReference(activity)
                     }
-                    application.registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
-                        override fun onActivityCreated(
-                            activity: Activity,
-                            savedInstanceState: Bundle?,
-                        ) {
-                            if (activity !is CrashDialogActivity) {
-                                lastActivityCreated = WeakReference(activity)
-                            }
-                        }
-                        override fun onActivityStarted(activity: Activity) {}
-                        override fun onActivityResumed(activity: Activity) {}
-                        override fun onActivityPaused(activity: Activity) {}
-                        override fun onActivityStopped(activity: Activity) {}
-                        override fun onActivitySaveInstanceState(
-                            activity: Activity,
-                            outState: Bundle,
-                        ) {}
-                        override fun onActivityDestroyed(activity: Activity) {}
-                    })
-                    try {
-                        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE)
-                        if (notificationManager != null && notificationManager is NotificationManager) {
-                            val notificationChannel = NotificationChannel(
-                                NOTIFICATION_CHANNEL_ID,
-                                context.resources.getString(R.string.crash_notification_channel__title),
-                                NotificationManager.IMPORTANCE_HIGH
-                            )
-                            notificationManager.createNotificationChannel(notificationChannel)
-                        }
-                        flogInfo(LogTopic.CRASH_UTILITY) {
-                            "Successfully created crash handler notification channel!"
-                        }
-                    } catch (e: Exception) {
-                        flogError(LogTopic.CRASH_UTILITY) {
-                            "Failed to create crash notification channel: error=${e.javaClass.simpleName}"
-                        }
-                    }
-                } else {
-                    flogError(LogTopic.CRASH_UTILITY) {
-                        "Can't install crash handler with a null Application object, doing nothing!"
-                    }
-                    return false
+                }
+                override fun onActivityStarted(activity: Activity) {}
+                override fun onActivityResumed(activity: Activity) {}
+                override fun onActivityPaused(activity: Activity) {}
+                override fun onActivityStopped(activity: Activity) {}
+                override fun onActivitySaveInstanceState(
+                    activity: Activity,
+                    outState: Bundle,
+                ) {}
+                override fun onActivityDestroyed(activity: Activity) {}
+            })
+            try {
+                val notificationManager = application.getSystemService(Context.NOTIFICATION_SERVICE)
+                if (notificationManager is NotificationManager) {
+                    val notificationChannel = NotificationChannel(
+                        NOTIFICATION_CHANNEL_ID,
+                        application.resources.getString(R.string.crash_notification_channel__title),
+                        NotificationManager.IMPORTANCE_HIGH
+                    )
+                    notificationManager.createNotificationChannel(notificationChannel)
+                }
+                flogInfo(LogTopic.CRASH_UTILITY) {
+                    "Successfully created crash handler notification channel!"
+                }
+            } catch (e: Exception) {
+                flogError(LogTopic.CRASH_UTILITY) {
+                    "Failed to create crash notification channel: error=${e.javaClass.simpleName}"
                 }
             }
             return true
         }
 
-        fun stageException(e: Throwable?) {
-            if (stagedException == null) {
-                stagedException = e
-            }
-        }
-
-        @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-        fun handleStagedButUnhandledExceptions() {
-            val e = stagedException ?: return
-            val handler = Thread.getDefaultUncaughtExceptionHandler()
-            if (handler is UncaughtExceptionHandler) {
-                stagedException = null
-                handler.uncaughtException(null, e)
-            }
-        }
-
-        /**
-         * Reads and returns all unhandled stacktrace files.
-         *
-         * @param context The current package context. If null is supplied, this function returns
-         *  an empty string.
-         * @return All unhandled stacktrace files or an empty list.
-         */
-        fun getUnhandledStacktraces(context: Context?): List<Stacktrace> {
-            context ?: return listOf()
+        /** Reads and removes all stored unhandled crash reports. */
+        fun getUnhandledStacktraces(context: Context): List<Stacktrace> {
             val retList = mutableListOf<Stacktrace>()
             val ustDir = context.getUstDir()
             if (ustDir.isDirectory) {
@@ -197,69 +151,34 @@ abstract class CrashUtility private constructor() {
             return retList.toList()
         }
 
-        /**
-         * Gets the last crash timestamp from the shared preferences.
-         *
-         * @param context The current package context. If null is supplied, this function returns
-         *  the default value for the timestamp (0).
-         * @return The last time crash timestamp or 0.
-         */
-        private fun getLastCrashTimestamp(context: Context?): Long {
-            context ?: return 0
+        private fun getLastCrashTimestamp(context: Context): Long {
             return context.getSharedPreferences(SHARED_PREFS_FILE, Context.MODE_PRIVATE)
                 .getLong(SHARED_PREFS_LAST_CRASH_TIMESTAMP, 0)
         }
 
-        /**
-         * Sets the last crash timestamp in the shared preferences.
-         *
-         * @param context The current package context. If null is supplied, this function does
-         *  nothing.
-         * @param value The timestamp of the current crash.
-         */
         @SuppressLint("ApplySharedPref")
-        private fun setLastCrashTimestamp(context: Context?, value: Long) {
-            context ?: return
-            // Note: must use commit() instead of apply(), as the value must be immediately written
-            //       to be possibly instantly read again.
+        private fun setLastCrashTimestamp(context: Context, value: Long) {
+            // A following crash may read this value immediately, so it must be written synchronously.
             context.getSharedPreferences(SHARED_PREFS_FILE, Context.MODE_PRIVATE)
                 .edit()
                 .putLong(SHARED_PREFS_LAST_CRASH_TIMESTAMP, value)
                 .commit()
         }
 
-        /**
-         * Gets a reference to the current unhandled stacktrace directory.
-         *
-         * @return The File object for the directory.
-         */
+        /** Returns the directory that stores unhandled crash reports. */
         private fun Context.getUstDir(): FsDir {
             return this.noBackupFilesDir.subDir(UNHANDLED_STACKTRACES_DIR_NAME).also { it.mkdirs() }
         }
 
-        /**
-         * Gets a reference to the stacktrace file for given [timestamp].
-         *
-         * @param timestamp The timestamp of the stacktrace file to get.
-         * @return The File object for the stacktrace file.
-         */
+        /** Returns the crash-report file for [timestamp]. */
         private fun Context.getUstFile(timestamp: Long): FsFile {
             return this.getUstDir().subFile("$timestamp.$UNHANDLED_STACKTRACE_FILE_EXT")
         }
 
-        /**
-         * Push a notification which opens [CrashDialogActivity] with given parameters.
-         *
-         * @param context The current package context. If null is supplied, this function does
-         *  nothing.
-         * @param id The ID of the notification.
-         * @param title The title of the notification.
-         * @param body The body of the notification.
-         */
-        private fun pushNotification(context: Context?, id: Int, title: String, body: String) {
-            context ?: return
+        /** Posts a notification that opens [CrashDialogActivity]. */
+        private fun pushNotification(context: Context, id: Int, title: String, body: String) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE)
-            if (notificationManager != null && notificationManager is NotificationManager) {
+            if (notificationManager is NotificationManager) {
                 val notificationBuilder = Notification.Builder(context.applicationContext, NOTIFICATION_CHANNEL_ID)
                 val crashDialogIntent = Intent(context, CrashDialogActivity::class.java)
                 val notification = notificationBuilder.run {
@@ -276,14 +195,7 @@ abstract class CrashUtility private constructor() {
             }
         }
 
-        /**
-         * Push a notification configured for a single crash.
-         *
-         * @param context The current package context. If null is supplied, this function does
-         *  nothing.
-         */
-        private fun pushCrashOnceNotification(context: Context?) {
-            context ?: return
+        private fun pushCrashOnceNotification(context: Context) {
             pushNotification(
                 context,
                 NOTIFICATION_ID.toInt(),
@@ -292,14 +204,7 @@ abstract class CrashUtility private constructor() {
             )
         }
 
-        /**
-         * Push a notification configured for multiple crashes.
-         *
-         * @param context The current package context. If null is supplied, this function does
-         *  nothing.
-         */
-        private fun pushCrashMultipleNotification(context: Context?) {
-            context ?: return
+        private fun pushCrashMultipleNotification(context: Context) {
             pushNotification(
                 context,
                 NOTIFICATION_ID.toInt(),
@@ -308,12 +213,7 @@ abstract class CrashUtility private constructor() {
             )
         }
 
-        /**
-         * Reads a given [file] and returns its content.
-         *
-         * @param file The file object.
-         * @return The contents of the file or an empty string, if the file does not exist.
-         */
+        /** Reads [file], or returns an empty string if it does not exist. */
         private fun readFile(file: FsFile): String {
             val retText = StringBuilder()
             if (file.exists()) {
@@ -326,14 +226,7 @@ abstract class CrashUtility private constructor() {
             return retText.toString()
         }
 
-        /**
-         * Writes given [text] to given [file]. If the file already exists, its current content
-         * will be overwritten.
-         *
-         * @param file The file object.
-         * @param text The text to write to the file.
-         * @return The contents of the file or an empty string, if the file does not exist.
-         */
+        /** Overwrites [file] with [text]. */
         private fun writeToFile(file: FsFile, text: String) {
             try {
                 file.writeText(text)
@@ -359,7 +252,6 @@ abstract class CrashUtility private constructor() {
      */
     class UncaughtExceptionHandler(
         private val application: WeakReference<Application>,
-        private val oldHandler: WeakReference<Thread.UncaughtExceptionHandler?>,
         private val ustDir: FsDir,
     ) : Thread.UncaughtExceptionHandler {
         override fun uncaughtException(thread: Thread, throwable: Throwable) {
@@ -391,7 +283,6 @@ abstract class CrashUtility private constructor() {
             }
             val lastActivity = lastActivityCreated.get()
             if (lastActivity != null) {
-                //oldHandler.get()?.uncaughtException(thread, throwable)
                 lastActivity.finish()
                 lastActivityCreated.clear()
             }
