@@ -65,9 +65,9 @@ configure<LibraryExtension> {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    // FIXME: This is a workaround! Otherwise :lib:snygg:generateJsonSchema breakes.
-    //  Remove the lint block when we've migrated to the newDsl.
+
     lint {
+        // Lint 9.0 crashes in these detectors while resolving a ContentResolver lambda.
         disable.addAll(
             listOf(
                 "UElementAsPsi",

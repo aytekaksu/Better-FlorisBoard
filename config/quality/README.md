@@ -68,10 +68,8 @@ Reviewers should reject unexplained markers and exceptions covering raw user
 content.
 
 All production `print`/`println` calls are rejected regardless of payload so
-they cannot bypass structured logging review. The one full-line
-`quality: allow-console-output -- reason` marker belongs to the command-line
-Snygg schema generator, where it reports generator progress rather than app or
-user data. `printStackTrace()` cannot be suppressed.
+they cannot bypass structured logging review. `printStackTrace()` cannot be
+suppressed.
 
 ## Temporary Android lint workaround
 

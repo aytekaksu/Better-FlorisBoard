@@ -1,5 +1,14 @@
 import com.android.build.api.dsl.LibraryExtension
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.gradle.process.CommandLineArgumentProvider
+import org.gradle.work.DisableCachingByDefault
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -18,6 +27,58 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+abstract class SchemaOutputArgumentProvider : CommandLineArgumentProvider {
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
+
+    override fun asArguments(): Iterable<String> {
+        return listOf(outputFile.get().asFile.absolutePath)
+    }
+}
+
+@DisableCachingByDefault(because = "Verification has no outputs.")
+abstract class VerifySnyggJsonSchemaTask : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val generatedSchema: RegularFileProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val trackedSchema: RegularFileProperty
+
+    @TaskAction
+    fun verify() {
+        val generated = generatedSchema.get().asFile
+        val tracked = trackedSchema.get().asFile
+        if (!tracked.isFile || !tracked.readBytes().contentEquals(generated.readBytes())) {
+            throw GradleException(
+                "Snygg JSON schema is out of date. Run :lib:snygg:updateSnyggJsonSchema.",
+            )
+        }
+    }
+}
+
+@DisableCachingByDefault(because = "Updates a source-controlled file.")
+abstract class UpdateSnyggJsonSchemaTask : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val generatedSchema: RegularFileProperty
+
+    @get:OutputFile
+    abstract val trackedSchema: RegularFileProperty
+
+    @TaskAction
+    fun update() {
+        val tracked = trackedSchema.get().asFile
+        tracked.parentFile?.let { parent ->
+            check(parent.mkdirs() || parent.isDirectory) {
+                "Unable to create the tracked schema directory."
+            }
+        }
+        generatedSchema.get().asFile.copyTo(tracked, overwrite = true)
+    }
+}
 
 plugins {
     alias(libs.plugins.agp.library)
@@ -98,24 +159,47 @@ dependencies {
     testImplementation(libs.kotlin.test.junit5)
 }
 
-tasks.register<JavaExec>("generateJsonSchema") {
-    description = "Generate the JSON schema for Snygg themes"
-    dependsOn("compileDebugKotlin")
-    mainClass.set("org.florisboard.lib.snygg.SnyggJsonSchemaGenerator")
+val generatedSnyggSchema = layout.buildDirectory.file("generated/snygg/stylesheet.schema.json")
+val trackedSnyggSchema = layout.projectDirectory.file("schemas/stylesheet.schema.json")
+val schemaOutputArgumentProvider = objects.newInstance<SchemaOutputArgumentProvider>().apply {
+    outputFile.set(generatedSnyggSchema)
+}
+
+val generateSnyggJsonSchema by tasks.registering(JavaExec::class) {
+    val compileSchemaGenerator = tasks.named<KotlinCompile>("compileDebugUnitTestKotlin")
+    val compileSnygg = tasks.named<KotlinCompile>("compileDebugKotlin")
     val debugRuntime = configurations.named("debugRuntimeClasspath")
-    val compileTask = tasks.named<KotlinCompile>("compileDebugKotlin")
     val debugRuntimeArtifactView = debugRuntime.get().incoming.artifactView {
         attributes { attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, "android-classes") }
     }
+    group = "build"
+    description = "Generates the Snygg JSON schema under the build directory."
+    dependsOn(compileSchemaGenerator)
+    mainClass.set("org.florisboard.lib.snygg.SnyggJsonSchemaGenerator")
     classpath = files(
-        compileTask.map { it.destinationDirectory },
-        debugRuntimeArtifactView.files
+        compileSchemaGenerator.map { it.destinationDirectory },
+        compileSnygg.map { it.destinationDirectory },
+        debugRuntimeArtifactView.files,
     )
-    args = listOf("schemas/stylesheet.schema.json")
-    workingDir = projectDir
-    standardOutput = System.out
+    argumentProviders.add(schemaOutputArgumentProvider)
 }
 
-tasks.matching { it.name == "compileDebugKotlin" }.configureEach {
-    finalizedBy("generateJsonSchema")
+val verifySnyggJsonSchema by tasks.registering(VerifySnyggJsonSchemaTask::class) {
+    group = "verification"
+    description = "Checks that the tracked Snygg JSON schema is current."
+    dependsOn(generateSnyggJsonSchema)
+    generatedSchema.set(generatedSnyggSchema)
+    trackedSchema.set(trackedSnyggSchema)
+}
+
+val updateSnyggJsonSchema by tasks.registering(UpdateSnyggJsonSchemaTask::class) {
+    group = "build setup"
+    description = "Updates the tracked Snygg JSON schema."
+    dependsOn(generateSnyggJsonSchema)
+    generatedSchema.set(generatedSnyggSchema)
+    trackedSchema.set(trackedSnyggSchema)
+}
+
+tasks.named("check") {
+    dependsOn(verifySnyggJsonSchema)
 }
