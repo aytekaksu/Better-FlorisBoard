@@ -55,8 +55,6 @@ configure<LibraryExtension> {
 dependencies {
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
-    // testImplementation(composeBom)
-    // androidTestImplementation(composeBom)
     api(libs.material.kolor)
     implementation(libs.androidx.compose.material3)
     implementation(libs.kotlinx.serialization.json)
@@ -64,4 +62,3 @@ dependencies {
     implementation(projects.lib.android)
     implementation(projects.lib.kotlin)
 }
-

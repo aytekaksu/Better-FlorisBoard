@@ -23,7 +23,6 @@ plugins {
     alias(libs.plugins.agp.library)
     alias(libs.plugins.kotlin.plugin.compose)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.kotlinx.kover)
 }
 
 val projectMinSdk: String by project
@@ -80,21 +79,13 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-kover {
-    useJacoco()
-}
-
 dependencies {
-    implementation(projects.lib.android)
     implementation(projects.lib.color)
     implementation(projects.lib.kotlin)
 
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
-    // testImplementation(composeBom)
-    // androidTestImplementation(composeBom)
 
-    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material.icons)

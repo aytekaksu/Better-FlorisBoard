@@ -90,8 +90,8 @@ inline fun <reified T : Any> NavGraphBuilder.composableWithDeepLink(
     kClass: KClass<T>,
     noinline content: @Composable (AnimatedContentScope.(NavBackStackEntry) -> Unit),
 ) {
-    val deeplink = requireNotNull(kClass.annotations.firstOrNull { it is Deeplink } as? Deeplink) {
-        "faulty class: $kClass with annotations ${kClass.annotations}"
+    val deeplink = requireNotNull(kClass.java.getAnnotation(Deeplink::class.java)) {
+        "Route must declare @Deeplink"
     }
     composable<T>(
         deepLinks = listOf(navDeepLink<T>(basePath = "ui://florisboard/${deeplink.path}")),

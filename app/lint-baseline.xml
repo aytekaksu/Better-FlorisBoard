@@ -102,17 +102,6 @@
 
     <issue
         id="GradleDependency"
-        message="A newer version of org.jetbrains.kotlin:kotlin-reflect than 2.3.20 is available: 2.4.0"
-        errorLine1="kotlin = &quot;2.3.20&quot;"
-        errorLine2="         ~~~~~~~~">
-        <location
-            file="../gradle/libs.versions.toml"
-            line="19"
-            column="10"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
         message="A newer version of com.google.devtools.ksp than 2.3.5 is available: 2.3.8"
         errorLine1="ksp = &quot;2.3.5&quot;"
         errorLine2="      ~~~~~~~">
@@ -153,17 +142,6 @@
             file="../gradle/libs.versions.toml"
             line="17"
             column="8"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of org.jetbrains.kotlin.android than 2.3.20 is available: 2.4.10"
-        errorLine1="kotlin = &quot;2.3.20&quot;"
-        errorLine2="         ~~~~~~~~">
-        <location
-            file="../gradle/libs.versions.toml"
-            line="19"
-            column="10"/>
     </issue>
 
     <issue
@@ -2633,39 +2611,6 @@
 
     <issue
         id="UnusedResources"
-        message="The resource `R.string.unit__hours__symbol` appears to be unused"
-        errorLine1="    &lt;string name=&quot;unit__hours__symbol&quot; translatable=&quot;false&quot;>{v} h&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="1179"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.unit__minutes__symbol` appears to be unused"
-        errorLine1="    &lt;string name=&quot;unit__minutes__symbol&quot; translatable=&quot;false&quot;>{v} m&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="1180"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.unit__seconds__symbol` appears to be unused"
-        errorLine1="    &lt;string name=&quot;unit__seconds__symbol&quot; translatable=&quot;false&quot;>{v} s&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="1181"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
         message="The resource `R.plurals.unit__hours__written` appears to be unused"
         errorLine1="    &lt;plurals name=&quot;unit__hours__written&quot;>"
         errorLine2="             ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
@@ -2673,39 +2618,6 @@
             file="src/main/res/values/strings.xml"
             line="1188"
             column="14"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.key__dotted_circle` appears to be unused"
-        errorLine1="    &lt;string name=&quot;key__dotted_circle&quot; translatable=&quot;false&quot;>&amp;#9676;&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings_dont_translate.xml"
-            line="24"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.media__tab__emoticons_label` appears to be unused"
-        errorLine1="    &lt;string name=&quot;media__tab__emoticons_label&quot; translatable=&quot;false&quot;>;-)&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings_dont_translate.xml"
-            line="29"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.media__tab__kaomoji_label` appears to be unused"
-        errorLine1="    &lt;string name=&quot;media__tab__kaomoji_label&quot; translatable=&quot;false&quot;>(^-^*)/&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings_dont_translate.xml"
-            line="30"
-            column="13"/>
     </issue>
 
     <issue
@@ -2816,17 +2728,6 @@
             file="src/main/res/values-pt/strings.xml"
             line="762"
             column="128"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="                    val mediaUri = Uri.parse(values.getAsString(Columns.MediaUri))"
-        errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/ime/clipboard/provider/ClipboardMediaProvider.kt"
-            line="141"
-            column="36"/>
     </issue>
 
     <issue
