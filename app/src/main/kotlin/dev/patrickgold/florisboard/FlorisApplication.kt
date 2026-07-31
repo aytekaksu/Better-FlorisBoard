@@ -26,7 +26,7 @@ import android.content.IntentFilter
 import android.os.Build
 import android.os.Handler
 import android.os.StrictMode
-import androidx.core.os.UserManagerCompat
+import android.os.UserManager
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.initAndroidWithLegacyMigrations
 import dev.patrickgold.florisboard.ime.clipboard.ClipboardManager
@@ -148,7 +148,6 @@ internal fun readBoundedProcessName(input: InputStream): String? {
         .takeIf(String::isNotEmpty)
 }
 
-@Suppress("unused")
 class FlorisApplication : Application() {
     private val mainHandler by lazy { Handler(mainLooper) }
     private val scope = CoroutineScope(Dispatchers.Default)
@@ -217,7 +216,7 @@ class FlorisApplication : Application() {
             CrashUtility.install(this)
             FlorisEmojiCompat.init(this)
 
-            if (!UserManagerCompat.isUserUnlocked(this)) {
+            if (getSystemService(UserManager::class.java)?.isUserUnlocked != true) {
                 cacheDir?.deleteContentsRecursively()
                 extensionManager.value.init()
                 val unlockReceiver = BootComplete()
@@ -225,7 +224,7 @@ class FlorisApplication : Application() {
                 // Unlock may complete between the first check and receiver
                 // registration. Recheck after registration so neither path is
                 // lost; the receiver's latch makes both paths idempotent.
-                if (UserManagerCompat.isUserUnlocked(this)) {
+                if (getSystemService(UserManager::class.java)?.isUserUnlocked == true) {
                     unlockReceiver.handleUnlock()
                 }
                 return

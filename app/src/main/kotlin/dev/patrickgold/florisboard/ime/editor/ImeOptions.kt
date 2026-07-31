@@ -17,7 +17,6 @@
 package dev.patrickgold.florisboard.ime.editor
 
 import android.view.inputmethod.EditorInfo
-import androidx.core.view.inputmethod.EditorInfoCompat
 
 /**
  * Class which holds the same information as an [EditorInfo.imeOptions] int but more accessible and
@@ -34,7 +33,7 @@ value class ImeOptions private constructor(val raw: Int) {
         get() = raw and EditorInfo.IME_FLAG_NO_ENTER_ACTION != 0
 
     val flagNoPersonalizedLearning: Boolean
-        get() = raw and EditorInfoCompat.IME_FLAG_NO_PERSONALIZED_LEARNING != 0
+        get() = raw and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0
 
     companion object {
         fun wrap(imeOptions: Int) = ImeOptions(imeOptions)

@@ -284,7 +284,7 @@ class FlorisImeService : LifecycleInputMethodService() {
         systemLocalesFlow.value = resources.configuration.locales
 
         WindowCompat.setDecorFitsSystemWindows(window.window!!, false)
-        windowController.onConfigurationChanged(resources.configuration)
+        windowController.onConfigurationChanged()
         windowController.activeWindowConfig.collectLatestIn(lifecycleScope) {
             keyboardManager.updateActiveEvaluators() // TODO: wacky solution, but works for now
         }
@@ -349,7 +349,7 @@ class FlorisImeService : LifecycleInputMethodService() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         systemLocalesFlow.value = newConfig.locales
-        windowController.onConfigurationChanged(newConfig)
+        windowController.onConfigurationChanged()
         themeManager.configurationChangeCounter.update { it + 1 }
     }
 

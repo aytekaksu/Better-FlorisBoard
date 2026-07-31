@@ -16,7 +16,6 @@
 
 package dev.patrickgold.florisboard.ime.window
 
-import android.content.res.Configuration
 import android.inputmethodservice.InputMethodService
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.max
@@ -249,8 +248,7 @@ class ImeWindowController(
         outInsets.touchableInsets = InputMethodService.Insets.TOUCHABLE_INSETS_REGION
     }
 
-    fun onConfigurationChanged(@Suppress("UNUSED_PARAMETER") newConfig: Configuration) {
-        // As of writing newConfig is unused, but kept for forward-compatibility.
+    fun onConfigurationChanged() {
         editor.disable()
     }
 

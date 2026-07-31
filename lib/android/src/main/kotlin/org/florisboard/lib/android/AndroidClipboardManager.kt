@@ -17,8 +17,6 @@
 package org.florisboard.lib.android
 
 typealias AndroidClipboardManager = android.content.ClipboardManager
-// TODO: remove this once https://youtrack.jetbrains.com/issue/KT-34281 is fixed
-typealias AndroidClipboardManager_OnPrimaryClipChangedListener = android.content.ClipboardManager.OnPrimaryClipChangedListener
 
 fun AndroidClipboardManager.clearPrimaryClipAnyApi() {
     if (AndroidVersion.ATLEAST_API28_P) {

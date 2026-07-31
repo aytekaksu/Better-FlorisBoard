@@ -17,7 +17,7 @@
 package dev.patrickgold.florisboard.ime.dictionary
 
 import android.content.Context
-import androidx.core.os.UserManagerCompat
+import android.os.UserManager
 import androidx.room.Room
 
 /**
@@ -27,7 +27,7 @@ class DictionaryManager(context: Context) {
     private val applicationContext = context.applicationContext ?: context
 
     val florisUserDictionary: UserDictionaryDatabase by lazy {
-        check(UserManagerCompat.isUserUnlocked(applicationContext)) {
+        check(applicationContext.getSystemService(UserManager::class.java)?.isUserUnlocked == true) {
             "The Floris user dictionary is unavailable before user unlock."
         }
         Room.databaseBuilder(
