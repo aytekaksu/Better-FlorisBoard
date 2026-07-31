@@ -26,36 +26,14 @@ import org.florisboard.lib.kotlin.CurlyArg
 import org.florisboard.lib.kotlin.curlyFormat
 import kotlin.reflect.KClass
 
-/**
- * Gets the system service instance of given class by first resolving its name and then
- * passing it to the system service resolver of this context.
- *
- * @param kClass The class of the system service instance which should be returned.
- *
- * @return The system service instance.
- *
- * @throws NullPointerException if no name can be found for given class.
- * @throws ClassCastException if the context returns a different class for resolved service name.
- */
-@Throws(NullPointerException::class, ClassCastException::class)
-fun <T : Any> Context.systemService(kClass: KClass<T>): T {
-    val serviceName = this.getSystemServiceName(kClass.java)!!
-    @Suppress("UNCHECKED_CAST")
-    return this.getSystemService(serviceName) as T
-}
+/** Returns the requested system service, or throws if the device does not provide it. */
+fun <T : Any> Context.systemService(kClass: KClass<T>): T = getSystemService(kClass.java)!!
 
-/**
- * Gets the system service instance of given class by first resolving its name and then
- * passing it to the system service resolver of this context.
- *
- * @param kClass The class of the system service instance which should be returned.
- *
- * @return The system service instance or null if no service instance for passed class is available.
- */
+/** Returns the requested system service when the device provides it. */
 fun <T : Any> Context.systemServiceOrNull(kClass: KClass<T>): T? {
     return try {
-        this.systemService(kClass)
-    } catch (e: Exception) {
+        getSystemService(kClass.java)
+    } catch (_: Exception) {
         null
     }
 }

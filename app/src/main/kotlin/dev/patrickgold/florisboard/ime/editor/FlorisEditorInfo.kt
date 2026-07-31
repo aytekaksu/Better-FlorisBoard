@@ -86,8 +86,8 @@ class FlorisEditorInfo private constructor(val base: EditorInfo) {
         return result
     }
 
-    val contentMimeTypes: Array<String>
-        get() = EditorInfoCompat.getContentMimeTypes(base)
+    val contentMimeTypes: Array<out String>
+        get() = base.contentMimeTypes.orEmpty()
 
     val extractedActionLabel: String?
         get() = base.actionLabel?.toString()

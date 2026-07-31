@@ -17,7 +17,6 @@
 package org.florisboard.lib.compose
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -111,7 +110,6 @@ class FlorisStepLayoutScope(
     }
 }
 
-@Suppress("unused")
 class FlorisStepState private constructor(
     private val currentAuto: MutableState<Int>,
     private val currentManual: MutableState<Int> = mutableIntStateOf(-1),
@@ -185,7 +183,6 @@ fun FlorisStepLayout(
     }
 }
 
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun ColumnScope.Step(
     ownStepId: Int,

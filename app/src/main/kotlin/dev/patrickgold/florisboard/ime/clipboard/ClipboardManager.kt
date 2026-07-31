@@ -19,6 +19,7 @@ package dev.patrickgold.florisboard.ime.clipboard
 import android.app.AppOpsManager
 import android.content.ClipData
 import android.content.ClipDescription
+import android.content.ClipboardManager.OnPrimaryClipChangedListener
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -67,7 +68,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.florisboard.lib.android.AndroidClipboardManager
-import org.florisboard.lib.android.AndroidClipboardManager_OnPrimaryClipChangedListener
 import org.florisboard.lib.android.AndroidKeyguardManager
 import org.florisboard.lib.android.clearPrimaryClipAnyApi
 import org.florisboard.lib.android.setOrClearPrimaryClip
@@ -587,7 +587,7 @@ internal fun commitSystemClipboardMediaPublication(
  */
 class ClipboardManager(
     context: Context,
-) : AndroidClipboardManager_OnPrimaryClipChangedListener, Closeable {
+) : OnPrimaryClipChangedListener, Closeable {
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
     private val editorInstance by context.editorInstance()

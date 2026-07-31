@@ -32,7 +32,6 @@ java {
 tasks {
     compileKotlin {
         compilerOptions.jvmTarget = JvmTarget.JVM_11
-        compilerOptions.freeCompilerArgs.add("-jvm-default=enable")
     }
     compileTestKotlin {
         compilerOptions.jvmTarget = JvmTarget.JVM_11
