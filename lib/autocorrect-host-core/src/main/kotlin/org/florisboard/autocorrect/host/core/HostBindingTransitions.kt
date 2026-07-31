@@ -275,7 +275,7 @@ internal fun HostReduction.endActiveSession(cancellationReason: RequestCancellat
     ) {
         emitFinish(active, connected.lease, retainFinish)
     }
-    state = state.copy(session = null)
+    state = state.copy(session = null, queuedProvider = null)
 }
 
 private fun HostReduction.emitFinish(session: HostSession, binding: BindingLease, retainFinish: Boolean) {
