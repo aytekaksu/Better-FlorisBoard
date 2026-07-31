@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
-    <cloud-backup>
+    <!-- Keyboard settings and dictionaries may contain sensitive personal data. -->
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
         <include
             domain="root"
             path="jetpref_datastore"/>
