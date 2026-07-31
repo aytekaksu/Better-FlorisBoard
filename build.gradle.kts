@@ -312,8 +312,6 @@ val privacySourceCheck by tasks.registering {
             "(?s)/\\*.*?\\*/|//[^\\n]*|\"\"\".*?\"\"\"|'(?:\\\\.|[^'\\\\])*'|\"(?:\\\\.|[^\"\\\\])*\"",
         )
         val logMarker = Regex("""^\s*//\s*quality: allow-sensitive-log\s+--\s+\S.*$""")
-        val consoleMarker = Regex("""^\s*//\s*quality: allow-console-output\s+--\s+\S.*$""")
-        val schemaGenerator = "lib/snygg/src/main/kotlin/org/florisboard/lib/snygg/SnyggJsonSchemaGenerator.kt"
         val violations = linkedSetOf<String>()
 
         fun codeMask(source: String) = nonCode.replace(source) { match ->
@@ -509,7 +507,6 @@ val privacySourceCheck by tasks.registering {
         check(safeExamples.all { logCalls(it).single().let { call -> !isUnsafeLog(call.first, call.third) } })
         val validMarker = "// quality: allow-sensitive-log -- reviewed enum-only value\nflogDebug { text }"
         val invalidMarker = "// quality: allow-sensitive-log -- \nflogDebug { text }"
-        val validConsoleMarker = "// quality: allow-console-output -- generator progress only\nprintln(\"done\")"
         val rawErrorMessage = errorMessageArgument.find(""""error_message" to error,""")!!.groupValues[1]
         val interpolatedErrorMessages = listOf(
             """"error_message" to "${'$'}error",""",
@@ -539,13 +536,7 @@ val privacySourceCheck by tasks.registering {
                 !isUnsafePayload(safeErrorMessage) &&
                 previousLineMatches(validMarker, validMarker.indexOf("flog"), logMarker) &&
                 !previousLineMatches(invalidMarker, invalidMarker.indexOf("flog"), logMarker) &&
-                previousLineMatches(
-                    validConsoleMarker,
-                    validConsoleMarker.indexOf("println"),
-                    consoleMarker,
-                ) &&
                 !logMarker.matches("val bypass = 1 // quality: allow-sensitive-log -- reason") &&
-                !consoleMarker.matches("// quality: allow-console-output -- ") &&
                 isUnsafeLog("Log.d", logCalls("Log\n . \n d(TAG, text)").single().third) &&
                 isUnsafeLog("Flog.log", logCalls("""Flog . log(LEVEL, "redacted")""").single().third) &&
                 isUnsafePayload(argumentsAt("appendLine(nested(prefix(), failure))", 0).single()) &&
@@ -583,9 +574,7 @@ val privacySourceCheck by tasks.registering {
                 violations += "$path:${contents.take(it.range.first).count { char -> char == '\n' } + 1}"
             }
             consoleOutput.findAll(code).forEach {
-                val allowed = path == schemaGenerator &&
-                    previousLineMatches(contents, it.range.first, consoleMarker)
-                if (!allowed) violations += "$path:${contents.take(it.range.first).count { char -> char == '\n' } + 1}"
+                violations += "$path:${contents.take(it.range.first).count { char -> char == '\n' } + 1}"
             }
             if (diagnosticExportDeclaration.containsMatchIn(code)) {
                 appendStart.findAll(code).forEach {
@@ -734,8 +723,15 @@ val documentationCheck by tasks.registering {
 
 val ciStaticAnalysis by tasks.registering {
     group = "verification"
-    description = "Runs formatting, Detekt, Android lint, documentation, and privacy checks."
-    dependsOn(formatCheck, tasks.named("detekt"), ciLint, documentationCheck, privacySourceCheck)
+    description = "Runs formatting, Detekt, lint, documentation, privacy, and schema checks."
+    dependsOn(
+        formatCheck,
+        tasks.named("detekt"),
+        ciLint,
+        documentationCheck,
+        privacySourceCheck,
+        ":lib:snygg:verifySnyggJsonSchema",
+    )
 }
 
 val ciPackage by tasks.registering {

@@ -17,10 +17,11 @@
 package org.florisboard.lib.snygg
 
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.JsonPrimitive
 import org.florisboard.lib.kotlin.io.writeJson
 import org.florisboard.lib.kotlin.simpleNameOrEnclosing
 import org.florisboard.lib.snygg.value.SnyggKeywordValueSpec
@@ -32,7 +33,14 @@ object SnyggJsonSchemaGenerator {
     @OptIn(ExperimentalSerializationApi::class)
     @JvmStatic
     fun main(args: Array<String>) {
-        val jsonSchemaFilePath = args.getOrElse(0) { error("No path provided to persist json schema") }
+        val jsonSchemaFile = File(
+            args.getOrElse(0) { error("No schema output path provided.") },
+        )
+        jsonSchemaFile.parentFile?.let { parent ->
+            check(parent.mkdirs() || parent.isDirectory) {
+                "Unable to create the schema output directory."
+            }
+        }
         val spec = SnyggSpec
 
         val jsonSchema = mapWithoutEmptyValuesOf(
@@ -71,9 +79,7 @@ object SnyggJsonSchemaGenerator {
         )
 
         val jsonSchemaObj = convertToJsonObject(jsonSchema)
-        // quality: allow-console-output -- command-line generator progress, never app or user data
-        println("Writing $jsonSchemaFilePath")
-        File(jsonSchemaFilePath).writeJson(jsonSchemaObj, Json {
+        jsonSchemaFile.writeJson(jsonSchemaObj, Json {
             prettyPrint = true
             prettyPrintIndent = "  "
         })
@@ -83,84 +89,60 @@ object SnyggJsonSchemaGenerator {
         return "snygg-${name}-property-set"
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun convertToJsonObject(map: Map<String, Any?>): JsonObject {
-        return JsonObject(
-            map.mapValues { (_, value) ->
-                when (value) {
-                    is Map<*, *> -> Json.encodeToJsonElement(convertToJsonObject(value as Map<String, Any?>))
-                    is List<*> if (value.isEmpty() || value[0] is String) -> {
-                        Json.encodeToJsonElement(value as List<String>)
-                    }
-                    is List<*> -> {
-                        Json.encodeToJsonElement(convertToJsonObjectList(value))
-                    }
-                    is String -> Json.encodeToJsonElement(String.serializer(), value)
-                    is Boolean -> Json.encodeToJsonElement(Boolean.serializer(), value)
-                    else -> error("unknown")
-                }
-            }
-        )
+        return JsonObject(map.mapValues { (_, value) -> value.toJsonElement() })
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private fun convertToJsonObjectList(list: List<Any?>): List<JsonObject> {
-        return list.map { convertToJsonObject(it as Map<String, Any?>) }
+    private fun Any?.toJsonElement(): JsonElement {
+        return when (this) {
+            is Map<*, *> -> JsonObject(entries.associate { (key, value) ->
+                check(key is String) { "JSON schema keys must be strings." }
+                key to value.toJsonElement()
+            })
+            is List<*> -> JsonArray(map { it.toJsonElement() })
+            is String -> JsonPrimitive(this)
+            is Boolean -> JsonPrimitive(this)
+            else -> error("Unknown JSON schema value.")
+        }
     }
 
     private fun convertToSchema(props: SnyggSpecDecl.PropertySet): Map<String, Any> {
         return when (props.type) {
-            SnyggSpecDecl.PropertySet.Type.SINGLE_SET -> {
+            SnyggSpecDecl.PropertySet.Type.SINGLE_SET -> (
                 mapWithoutEmptyValuesOf(
                     "title" to props.meta.title,
                     "description" to props.meta.description,
-                    "type" to "object",
-                    "patternProperties" to props.patternProperties.mapValues { (_, propertySpec) ->
-                        mapWithoutEmptyValuesOf(
-                            "title" to propertySpec.meta.title,
-                            "description" to propertySpec.meta.description,
-                            "oneOf" to oneOfList(propertySpec.encoders)
-                        )
-                    }.mapKeys { (key, _) -> key.toString() },
-                    "properties" to props.properties.mapValues { (_, propertySpec) ->
-                        mapWithoutEmptyValuesOf(
-                            "title" to propertySpec.meta.title,
-                            "description" to propertySpec.meta.description,
-                            "oneOf" to oneOfList(propertySpec.encoders)
-                        )
-                    },
-                    "additionalProperties" to false,
-                    "required" to props.properties.filter { it.value.required }.keys.toList(),
-                )
-            }
+                ) + props.objectSchema()
+            )
             SnyggSpecDecl.PropertySet.Type.MULTIPLE_SETS -> {
                 mapWithoutEmptyValuesOf(
                     "title" to props.meta.title,
                     "description" to props.meta.description,
                     "type" to "array",
-                    "items" to mapWithoutEmptyValuesOf(
-                        "type" to "object",
-                        "patternProperties" to props.patternProperties.mapValues { (_, propertySpec) ->
-                            mapWithoutEmptyValuesOf(
-                                "title" to propertySpec.meta.title,
-                                "description" to propertySpec.meta.description,
-                                "oneOf" to oneOfList(propertySpec.encoders)
-                            )
-                        }.mapKeys { (key, _) -> key.toString() },
-                        "properties" to props.properties.mapValues { (_, propertySpec) ->
-                            mapWithoutEmptyValuesOf(
-                                "title" to propertySpec.meta.title,
-                                "description" to propertySpec.meta.description,
-                                "oneOf" to oneOfList(propertySpec.encoders)
-                            )
-                        },
-                        "additionalProperties" to false,
-                        "required" to props.properties.filter { it.value.required }.keys.toList(),
-                    )
+                    "items" to props.objectSchema(),
                 )
             }
         }
+    }
 
+    private fun SnyggSpecDecl.PropertySet.objectSchema(): Map<String, Any> {
+        return mapWithoutEmptyValuesOf(
+            "type" to "object",
+            "patternProperties" to patternProperties
+                .mapValues { (_, property) -> property.schema() }
+                .mapKeys { (key, _) -> key.toString() },
+            "properties" to properties.mapValues { (_, property) -> property.schema() },
+            "additionalProperties" to false,
+            "required" to properties.filter { it.value.required }.keys.toList(),
+        )
+    }
+
+    private fun SnyggSpecDecl.Property.schema(): Map<String, Any> {
+        return mapWithoutEmptyValuesOf(
+            "title" to meta.title,
+            "description" to meta.description,
+            "oneOf" to oneOfList(encoders),
+        )
     }
 
     private fun oneOfList(encoders: Set<SnyggValueEncoder>): List<Map<String, Any>> {
