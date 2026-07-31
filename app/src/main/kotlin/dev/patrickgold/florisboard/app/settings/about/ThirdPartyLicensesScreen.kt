@@ -39,7 +39,7 @@ fun ThirdPartyLicensesScreen() = FlorisScreen {
     iconSpaceReserved = false
 
     val lazyListState = rememberLazyListState()
-    val libs by produceLibraries()
+    val libs by produceLibraries(R.raw.aboutlibraries)
 
     content {
         LibrariesContainer(

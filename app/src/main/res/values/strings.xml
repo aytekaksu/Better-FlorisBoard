@@ -1182,9 +1182,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">Dynamic: Switch to emojis / Switch language</string>
 
     <!-- Unit strings (symbols) -->
-    <string name="unit__hours__symbol" translatable="false">{v} h</string>
-    <string name="unit__minutes__symbol" translatable="false">{v} m</string>
-    <string name="unit__seconds__symbol" translatable="false">{v} s</string>
     <string name="unit__milliseconds__symbol" translatable="false">{v} ms</string>
     <string name="unit__percent__symbol" translatable="false">{v}%</string>
     <string name="unit__display_pixel__symbol" translatable="false">{v} dp</string>

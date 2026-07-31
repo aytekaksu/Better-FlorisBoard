@@ -293,6 +293,12 @@ class ThemeManager(context: Context) {
         val styleSet = CachedInlineSuggestionsChipStyleSet ?: return null
         val bgColor = styleSet.background(default = Color.White)
         val fgColor = styleSet.foreground(default = Color.Black)
+        val bgHorizontalPadding = context.resources
+            .getDimension(R.dimen.suggestion_chip_bg_padding_horizontal)
+            .toInt()
+        val fgHorizontalMargin = context.resources
+            .getDimension(R.dimen.suggestion_chip_fg_margin_horizontal)
+            .toInt()
 
         val bgDrawableId = R.drawable.inline_autofill_chip_bg
         val bgDrawable = Icon.createWithResource(context, bgDrawableId).apply {
@@ -301,10 +307,10 @@ class ThemeManager(context: Context) {
         val chipStyle = ViewStyle.Builder().run {
             setBackground(bgDrawable)
             setPadding(
-                context.resources.getDimension(R.dimen.suggestion_chip_bg_padding_start).toInt(),
-                context.resources.getDimension(R.dimen.suggestion_chip_bg_padding_top).toInt(),
-                context.resources.getDimension(R.dimen.suggestion_chip_bg_padding_end).toInt(),
-                context.resources.getDimension(R.dimen.suggestion_chip_bg_padding_bottom).toInt(),
+                bgHorizontalPadding,
+                0,
+                bgHorizontalPadding,
+                0,
             )
             build()
         }
@@ -314,10 +320,10 @@ class ThemeManager(context: Context) {
         }
         val titleStyle = TextViewStyle.Builder().run {
             setLayoutMargin(
-                context.resources.getDimension(R.dimen.suggestion_chip_fg_title_margin_start).toInt(),
-                context.resources.getDimension(R.dimen.suggestion_chip_fg_title_margin_top).toInt(),
-                context.resources.getDimension(R.dimen.suggestion_chip_fg_title_margin_end).toInt(),
-                context.resources.getDimension(R.dimen.suggestion_chip_fg_title_margin_bottom).toInt(),
+                fgHorizontalMargin,
+                0,
+                fgHorizontalMargin,
+                0,
             )
             setTextColor(fgColor.toArgb())
             setTextSize(16f)
@@ -325,10 +331,10 @@ class ThemeManager(context: Context) {
         }
         val subtitleStyle = TextViewStyle.Builder().run {
             setLayoutMargin(
-                context.resources.getDimension(R.dimen.suggestion_chip_fg_subtitle_margin_start).toInt(),
-                context.resources.getDimension(R.dimen.suggestion_chip_fg_subtitle_margin_top).toInt(),
-                context.resources.getDimension(R.dimen.suggestion_chip_fg_subtitle_margin_end).toInt(),
-                context.resources.getDimension(R.dimen.suggestion_chip_fg_subtitle_margin_bottom).toInt(),
+                fgHorizontalMargin,
+                0,
+                fgHorizontalMargin,
+                0,
             )
             setTextColor(ColorUtils.setAlphaComponent(fgColor.toArgb(), 150))
             setTextSize(14f)
