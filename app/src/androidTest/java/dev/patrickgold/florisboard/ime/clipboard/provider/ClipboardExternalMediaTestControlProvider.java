@@ -66,6 +66,7 @@ public class ClipboardExternalMediaTestControlProvider extends ContentProvider {
         TARGET_PACKAGE + ".provider.clipboard-import-worker";
     private static final String[] FIXTURE_URIS = new String[] {
         "content://dev.patrickgold.florisboard.test.clipboard-source/healthy",
+        "content://dev.patrickgold.florisboard.test.clipboard-source/empty",
         "content://dev.patrickgold.florisboard.test.clipboard-source/svg",
         "content://dev.patrickgold.florisboard.test.clipboard-source/oriented-jpeg",
         "content://dev.patrickgold.florisboard.test.clipboard-source/blocking",

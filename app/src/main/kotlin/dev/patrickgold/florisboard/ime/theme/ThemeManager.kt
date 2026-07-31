@@ -38,27 +38,32 @@ import dev.patrickgold.florisboard.extensionManager
 import dev.patrickgold.florisboard.ime.smartbar.CachedInlineSuggestionsChipStyleSet
 import dev.patrickgold.florisboard.lib.devtools.flogInfo
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
-import dev.patrickgold.florisboard.lib.ext.ExtensionMeta
+import dev.patrickgold.florisboard.lib.io.BoundedExtensionArchive
 import dev.patrickgold.florisboard.lib.io.ZipUtils
 import dev.patrickgold.florisboard.lib.util.TimeUtils.javaLocalTime
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.florisboard.lib.android.conservativeUsableSpace
 import org.florisboard.lib.kotlin.collectIn
 import org.florisboard.lib.kotlin.io.FsDir
-import org.florisboard.lib.kotlin.io.deleteContentsRecursively
 import org.florisboard.lib.kotlin.io.subDir
-import org.florisboard.lib.kotlin.io.subFile
 import org.florisboard.lib.snygg.SnyggStylesheet
 import org.florisboard.lib.snygg.value.SnyggStaticColorValue
 import java.time.LocalTime
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Core class which manages the keyboard theme. Note, that this does not affect the UI theme of the
@@ -80,6 +85,9 @@ class ThemeManager(context: Context) {
     val configurationChangeCounter = MutableStateFlow(0)
 
     private val cachedThemeInfos = mutableListOf<ThemeInfo>()
+    private val materializationRoot = appContext.cacheDir.subDir("theme-materializations")
+    private var materializationRootPrepared = false
+    private var activeMaterializationLease: ThemeMaterialization.Lease? = null
     private val activeThemeGuard = Mutex(locked = false)
     private val _activeThemeInfo = MutableStateFlow(ThemeInfo.DEFAULT)
     val activeThemeInfo get() = _activeThemeInfo.asStateFlow()
@@ -96,7 +104,7 @@ class ThemeManager(context: Context) {
             } to version
         }
         indexedThemeConfigs.collectIn(scope) {
-            updateActiveTheme { cachedThemeInfos.clear() }
+            updateActiveTheme { clearCachedThemes() }
         }
         combine(
             prefs.theme.mode.asFlow(),
@@ -117,47 +125,130 @@ class ThemeManager(context: Context) {
     suspend fun updateActiveTheme(action: () -> Unit = { }) = activeThemeGuard.withLock {
         action()
         previewThemeInfo.value?.let { previewThemeInfo ->
-            _activeThemeInfo.value = previewThemeInfo
+            publishTheme(previewThemeInfo)
             return@withLock
         }
         val activeName = evaluateActiveThemeName()
         val cachedInfo = cachedThemeInfos.find { it.name == activeName }
         if (cachedInfo != null) {
-            _activeThemeInfo.value = cachedInfo
+            cachedThemeInfos.remove(cachedInfo)
+            cachedThemeInfos.add(cachedInfo)
+            publishTheme(cachedInfo)
             return@withLock
         }
         val themeExt = extensionManager.getExtensionById(activeName.extensionId) as? ThemeExtension
         val themeExtRef = themeExt?.sourceRef
         if (themeExtRef == null) {
+            publishTheme(ThemeInfo.DEFAULT)
             return@withLock
         }
         val themeConfig = themeExt.themes.find { it.id == activeName.componentId }
         if (themeConfig == null) {
+            publishTheme(ThemeInfo.DEFAULT)
             return@withLock
         }
-        // TODO: loaded dir is implemented already...
-        // TODO: this leaks the loaded dir, but at least the state is not kaput from compose viewpoint
-        val loadedDir = appContext.cacheDir.subDir("loaded").subDir(UUID.randomUUID().toString())
-        runCatching {
-            loadedDir.mkdirs()
-            loadedDir.deleteContentsRecursively()
-            ZipUtils.unzip(appContext, themeExtRef, loadedDir).getOrThrow()
-            flogInfo { "Theme extension loaded" }
-            val stylesheetFile = loadedDir.subFile(themeConfig.stylesheetPath())
-            val stylesheetJson = stylesheetFile.readText()
-            SnyggStylesheet.fromJson(stylesheetJson).getOrThrow()
-        }.fold(
-            onSuccess = { newStylesheet ->
-                val newInfo = ThemeInfo(activeName, themeConfig, newStylesheet, loadedDir, null)
-                cachedThemeInfos.add(newInfo)
-                _activeThemeInfo.value = newInfo
+        val pendingMaterialization = AtomicReference<ThemeMaterialization?>()
+        val loaded = try {
+            val assets = runInterruptible(Dispatchers.IO) {
+                prepareMaterializationRoot()
+                check(
+                    materializationRoot.conservativeUsableSpace() >=
+                        BoundedExtensionArchive.DefaultLimits.maxExpandedBytes + MinFreeSpaceBytes,
+                ) {
+                    "Not enough space to load theme assets."
+                }
+                val loadedDir = materializationRoot.subDir(UUID.randomUUID().toString())
+                try {
+                    val stylesheetJson = ZipUtils.readFileFromArchive(
+                        appContext,
+                        themeExtRef,
+                        themeConfig.stylesheetPath(),
+                    ).getOrThrow()
+                    val stylesheet = SnyggStylesheet.fromJson(stylesheetJson).getOrThrow()
+                    ZipUtils.unzip(appContext, themeExtRef, loadedDir).getOrThrow()
+                    val materialization = ThemeMaterialization(loadedDir, ::scheduleMaterializationDelete)
+                    pendingMaterialization.set(materialization)
+                    Triple(stylesheet, loadedDir, materialization)
+                } catch (error: Throwable) {
+                    loadedDir.deleteRecursively()
+                    throw error
+                }
+            }
+            currentCoroutineContext().ensureActive()
+            check(pendingMaterialization.compareAndSet(assets.third, null)) {
+                "Theme asset ownership transfer failed."
+            }
+            Result.success(assets)
+        } catch (error: CancellationException) {
+            pendingMaterialization.getAndSet(null)?.retire()
+            throw error
+        } catch (error: InterruptedException) {
+            pendingMaterialization.getAndSet(null)?.retire()
+            throw error
+        } catch (error: Exception) {
+            pendingMaterialization.getAndSet(null)?.retire()
+            Result.failure(error)
+        }
+        loaded.fold(
+            onSuccess = { (newStylesheet, loadedDir, materialization) ->
+                flogInfo { "Theme extension loaded" }
+                val newInfo = ThemeInfo(
+                    activeName,
+                    themeConfig,
+                    newStylesheet,
+                    loadedDir,
+                    null,
+                    materialization,
+                )
+                cacheTheme(newInfo)
+                publishTheme(newInfo)
             },
             onFailure = { cause ->
-                _activeThemeInfo.value = ThemeInfo.DEFAULT.copy(
-                    loadFailure = LoadFailure(themeExt.meta, themeConfig, cause)
+                publishTheme(
+                    ThemeInfo.DEFAULT.copy(
+                        loadFailure = LoadFailure(cause),
+                    ),
                 )
             },
         )
+    }
+
+    private fun prepareMaterializationRoot() {
+        if (materializationRootPrepared) return
+        check(!materializationRoot.exists() || materializationRoot.deleteRecursively()) {
+            "Unable to clean stale theme assets."
+        }
+        check(materializationRoot.mkdirs()) { "Unable to create theme asset cache." }
+        materializationRootPrepared = true
+    }
+
+    private fun cacheTheme(info: ThemeInfo) {
+        while (cachedThemeInfos.size >= MaxCachedThemes) {
+            cachedThemeInfos.removeAt(0).materialization?.retire()
+        }
+        cachedThemeInfos.add(info)
+    }
+
+    private fun clearCachedThemes() {
+        cachedThemeInfos.forEach { it.materialization?.retire() }
+        cachedThemeInfos.clear()
+    }
+
+    private fun publishTheme(info: ThemeInfo) {
+        val nextLease = info.materialization?.acquire()
+        val previousLease = activeMaterializationLease
+        activeMaterializationLease = nextLease
+        _activeThemeInfo.value = info
+        previousLease?.close()
+    }
+
+    private fun scheduleMaterializationDelete(directory: FsDir) {
+        scope.launch(Dispatchers.IO) {
+            repeat(2) {
+                if (!directory.exists()) return@launch
+                directory.deleteRecursively()
+            }
+        }
     }
 
     private fun evaluateActiveThemeName(): ExtensionComponentName {
@@ -264,9 +355,10 @@ class ThemeManager(context: Context) {
         val stylesheet: SnyggStylesheet,
         val loadedDir: FsDir?,
         val loadFailure: LoadFailure?,
+        val materialization: ThemeMaterialization? = null,
     ) {
         override fun toString(): String {
-            return "ThemeInfo(name=$name, config=$config, loadedDir=$loadedDir)"
+            return "ThemeInfo(hasAssets=${loadedDir != null}, failed=${loadFailure != null})"
         }
 
         companion object {
@@ -280,11 +372,9 @@ class ThemeManager(context: Context) {
         }
     }
 
-    data class LoadFailure(
-        val extension: ExtensionMeta,
-        val component: ThemeExtensionComponent,
-        val cause: Throwable,
-    )
+    class LoadFailure(val cause: Throwable) {
+        override fun toString() = "LoadFailure(type=${cause.javaClass.simpleName})"
+    }
 
     data class RemoteColors(
         val packageName: String,
@@ -295,5 +385,10 @@ class ThemeManager(context: Context) {
         companion object {
             val DEFAULT = RemoteColors("undefined", null, null, null)
         }
+    }
+
+    private companion object {
+        const val MaxCachedThemes = 2
+        const val MinFreeSpaceBytes = 128L * 1_024 * 1_024
     }
 }

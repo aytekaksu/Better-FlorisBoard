@@ -16,7 +16,6 @@
 
 package dev.patrickgold.florisboard.app.settings.advanced
 
-import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.net.Uri
 import android.os.CancellationSignal
@@ -28,6 +27,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.florisboard.lib.android.conservativeUsableSpace
 import java.io.Closeable
 import java.io.InputStream
 import java.nio.ByteBuffer
@@ -191,10 +191,9 @@ internal object BackupArchiveSnapshot {
     }
 
     // Keep this check conservative instead of evicting unrelated cached data.
-    @SuppressLint("UsableSpace")
     private fun runtimeArchiveLimit(workspaceDir: Path, configuredLimit: Long): Long? {
         if (configuredLimit < 0L) return null
-        val usableBytes = workspaceDir.toFile().usableSpace
+        val usableBytes = workspaceDir.toFile().conservativeUsableSpace()
         if (usableBytes <= PRIVATE_SPACE_RESERVE_BYTES) return null
         return min(configuredLimit, usableBytes - PRIVATE_SPACE_RESERVE_BYTES)
     }

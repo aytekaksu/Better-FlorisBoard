@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -31,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.lib.ext.ExtensionMaintainer
+import dev.patrickgold.florisboard.lib.ext.safeMaintainerWebUrlOrNull
 import dev.patrickgold.florisboard.lib.util.launchUrl
 import dev.patrickgold.jetpref.material.ui.JetPrefAlertDialog
 import org.florisboard.lib.compose.FlorisChip
@@ -42,21 +44,24 @@ fun ExtensionMaintainerChip(
 ) {
     val context = LocalContext.current
     var showDialog by rememberSaveable { mutableStateOf(false) }
+    val safeUrl = remember(maintainer.url) {
+        maintainer.url?.safeMaintainerWebUrlOrNull()
+    }
 
     FlorisChip(
         modifier = modifier,
         text = maintainer.name,
         trailingIcons = when {
-            maintainer.email != null && maintainer.url != null -> listOf(
+            maintainer.email != null && safeUrl != null -> listOf(
                 Icons.Outlined.Mail,
                 Icons.Default.Link,
             )
             maintainer.email != null -> listOf(Icons.Outlined.Mail)
-            maintainer.url != null -> listOf(Icons.Default.Link)
+            safeUrl != null -> listOf(Icons.Default.Link)
             else -> listOf()
         },
         onClick = { showDialog = !showDialog },
-        enabled = maintainer.email != null || maintainer.url != null,
+        enabled = maintainer.email != null || safeUrl != null,
         shape = RoundedCornerShape(4.dp),
     )
 
@@ -74,10 +79,10 @@ fun ExtensionMaintainerChip(
                         shape = RoundedCornerShape(4.dp),
                     )
                 }
-                if (maintainer.url != null) {
+                if (safeUrl != null) {
                     FlorisChip(
-                        onClick = { context.launchUrl(maintainer.url) },
-                        text = maintainer.url,
+                        onClick = { context.launchUrl(safeUrl) },
+                        text = maintainer.url.orEmpty(),
                         leadingIcons = listOf(Icons.Default.Link),
                         shape = RoundedCornerShape(4.dp),
                     )

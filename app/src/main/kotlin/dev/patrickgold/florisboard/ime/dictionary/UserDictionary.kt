@@ -50,9 +50,6 @@ const val FREQUENCY_MIN = 0
 const val FREQUENCY_MAX = 255
 const val FREQUENCY_DEFAULT = 128
 
-private const val SORT_BY_WORD_ASC = "${UserDictionary.Words.WORD} ASC"
-private const val SORT_BY_WORD_DESC = "${UserDictionary.Words.WORD} DESC"
-private const val SORT_BY_FREQ_ASC = "${UserDictionary.Words.FREQUENCY} ASC"
 private const val SORT_BY_FREQ_DESC = "${UserDictionary.Words.FREQUENCY} DESC"
 
 private val PROJECTIONS: Array<String> = arrayOf(
@@ -561,40 +558,35 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
 
         override fun queryLanguageList(): List<FlorisLocale?> {
             val resolver = applicationContext.contentResolver
-            val cursor = resolver.query(
+            return resolver.query(
                 UserDictionary.Words.CONTENT_URI,
                 PROJECTIONS_LANGUAGE,
                 null,
                 null,
                 null
-            ) ?: return listOf()
-            if (cursor.count <= 0) {
-                return listOf()
-            }
-            val localeIndex = cursor.getColumnIndex(UserDictionary.Words.LOCALE)
-            val retList = mutableSetOf<FlorisLocale?>()
-            while (cursor.moveToNext()) {
-                val localeStr = cursor.getString(localeIndex)
-                if (localeStr == null) {
-                    retList.add(null)
-                } else {
-                    retList.add(FlorisLocale.fromTag(localeStr))
+            )?.use { cursor ->
+                if (cursor.count <= 0) {
+                    return@use emptyList()
                 }
-            }
-            cursor.close()
-            return retList.toList()
+                val localeIndex = cursor.getColumnIndex(UserDictionary.Words.LOCALE)
+                buildSet {
+                    while (cursor.moveToNext()) {
+                        val localeStr = cursor.getString(localeIndex)
+                        add(localeStr?.let(FlorisLocale::fromTag))
+                    }
+                }.toList()
+            } ?: emptyList()
         }
 
         private fun queryResolver(selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): List<UserDictionaryEntry> {
             val resolver = applicationContext.contentResolver
-            val cursor = resolver.query(
+            return resolver.query(
                 UserDictionary.Words.CONTENT_URI,
                 PROJECTIONS,
                 selection,
                 selectionArgs,
                 sortOrder
-            ) ?: return listOf()
-            return parseEntries(cursor).also { cursor.close() }
+            )?.use(::parseEntries) ?: emptyList()
         }
 
         private fun parseEntries(cursor: Cursor): List<UserDictionaryEntry> {

@@ -26,10 +26,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Input
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Input
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -37,12 +36,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.R
-import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.LocalNavController
 import dev.patrickgold.florisboard.app.Routes
 import dev.patrickgold.florisboard.app.ext.ExtensionImportScreenType
@@ -50,15 +49,14 @@ import dev.patrickgold.florisboard.extensionManager
 import dev.patrickgold.florisboard.lib.compose.FlorisConfirmDeleteDialog
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.lib.ext.Extension
-import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
 import dev.patrickgold.jetpref.datastore.ui.ExperimentalJetPrefDatastoreUi
 import dev.patrickgold.jetpref.datastore.ui.Preference
 import dev.patrickgold.jetpref.material.ui.JetPrefListItem
-import org.florisboard.lib.android.showLongToastSync
+import kotlinx.coroutines.launch
+import org.florisboard.lib.android.showLongToast
 import org.florisboard.lib.compose.FlorisOutlinedBox
 import org.florisboard.lib.compose.FlorisTextButton
 import org.florisboard.lib.compose.defaultFlorisOutlinedBox
-import org.florisboard.lib.compose.rippleClickable
 import org.florisboard.lib.compose.stringRes
 
 enum class LanguagePackManagerScreenAction(val id: String) {
@@ -74,13 +72,12 @@ fun LanguagePackManagerScreen(action: LanguagePackManagerScreenAction?) = Floris
         else -> error("LanguagePack manager screen action must not be null")
     })
 
-    val prefs by FlorisPreferenceStore
     val navController = LocalNavController.current
     val context = LocalContext.current
     val extensionManager by context.extensionManager()
+    val operationScope = rememberCoroutineScope()
 
     val indexedLanguagePackExtensions by extensionManager.languagePacks.collectAsState()
-    val selectedManagerLanguagePackId = remember { mutableStateOf<ExtensionComponentName?>(null) }
     val extGroupedLanguagePacks = remember(indexedLanguagePackExtensions) {
         buildMap {
             for (ext in indexedLanguagePackExtensions) {
@@ -89,24 +86,9 @@ fun LanguagePackManagerScreen(action: LanguagePackManagerScreenAction?) = Floris
         }.mapValues { (_, configs) -> configs.sortedBy { it.label } }
     }
 
-    fun getLanguagePackIdPref(): Nothing = TODO("Not implemented yet")
-
-    fun setLanguagePack(extId: String, componentId: String) {
-        val extComponentName = ExtensionComponentName(extId, componentId)
-        when (action) {
-            LanguagePackManagerScreenAction.MANAGE -> {
-                selectedManagerLanguagePackId.value = extComponentName
-            }
-        }
-    }
-
-    val activeLanguagePackId by when (action) {
-        LanguagePackManagerScreenAction.MANAGE -> selectedManagerLanguagePackId
-    }
     var languagePackExtToDelete by remember { mutableStateOf<Extension?>(null) }
 
     content {
-        val grayColor = LocalContentColor.current.copy(alpha = 0.56f)
         if (action == LanguagePackManagerScreenAction.MANAGE) {
             FlorisOutlinedBox(
                 modifier = Modifier.defaultFlorisOutlinedBox(),
@@ -115,7 +97,7 @@ fun LanguagePackManagerScreen(action: LanguagePackManagerScreenAction?) = Floris
                     onClick = { navController.navigate(
                         Routes.Ext.Import(ExtensionImportScreenType.EXT_LANGUAGEPACK, null)
                     ) },
-                    icon = Icons.Default.Input,
+                    icon = Icons.AutoMirrored.Filled.Input,
                     title = stringRes(R.string.action__import),
                 )
             }
@@ -137,29 +119,7 @@ fun LanguagePackManagerScreen(action: LanguagePackManagerScreenAction?) = Floris
                 ) {
                     for (config in configs) key(extensionId, config.id) {
                         JetPrefListItem(
-                            modifier = Modifier.rippleClickable {
-                                setLanguagePack(extensionId, config.id)
-                            },
-//                        icon = {
-//                            RadioButton(
-//                                selected = activeLanguagePackId?.extensionId == extensionId &&
-//                                    activeLanguagePackId?.componentId == config.id,
-//                                onClick = null,
-//                            )
-//                        },
                             text = config.label,
-//                        trailing = {
-//                            Icon(
-//                                modifier = Modifier.size(ButtonDefaults.IconSize),
-//                                painter = painterResource(if (config.isNightLanguagePack) {
-//                                    R.drawable.ic_dark_mode
-//                                } else {
-//                                    R.drawable.ic_light_mode
-//                                }),
-//                                contentDescription = null,
-//                                tint = grayColor,
-//                            )
-//                        },
                         )
                     }
                 }
@@ -180,13 +140,6 @@ fun LanguagePackManagerScreen(action: LanguagePackManagerScreenAction?) = Floris
                             ),
                         )
                         Spacer(modifier = Modifier.weight(1f))
-//                        FlorisTextButton(
-//                            onClick = {
-//                                navController.navigate(Routes.Ext.Edit(ext.meta.id))
-//                            },
-//                            icon = painterResource(R.drawable.ic_edit),
-//                            text = stringRes(R.string.action__edit),
-//                        )
                     }
                 }
             }
@@ -195,15 +148,15 @@ fun LanguagePackManagerScreen(action: LanguagePackManagerScreenAction?) = Floris
         if (languagePackExtToDelete != null) {
             FlorisConfirmDeleteDialog(
                 onConfirm = {
-                    runCatching {
-                        extensionManager.delete(languagePackExtToDelete!!)
-                    }.onFailure { error ->
-                        context.showLongToastSync(
-                            R.string.error__snackbar_message,
-                            "error_message" to error.localizedMessage,
-                        )
-                    }
+                    val extension = languagePackExtToDelete!!
                     languagePackExtToDelete = null
+                    operationScope.launch {
+                        runCatching {
+                            extensionManager.delete(extension)
+                        }.onFailure {
+                            context.showLongToast(R.string.error__snackbar_message)
+                        }
+                    }
                 },
                 onDismiss = { languagePackExtToDelete = null },
                 what = languagePackExtToDelete!!.meta.title,

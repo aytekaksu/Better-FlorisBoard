@@ -22,40 +22,55 @@ import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlin.math.min
 
 @Serializable(with = ExtensionMaintainerSerializer::class)
-data class ExtensionMaintainer(
-    val name: String,
-    val email: String? = null,
-    val url: String? = null,
-) {
+data class ExtensionMaintainer(val name: String, val email: String? = null, val url: String? = null) {
     companion object {
-        private val ValidationRegex = """^\s*[\p{L}\d._-][\p{L}\d\s._-]*(<[^<>]+>)?\s*(\([^()]+\))?\s*$""".toRegex()
-
+        @Suppress("ReturnCount") // Guard clauses keep this linear parser easy to audit.
         fun from(str: String): ExtensionMaintainer? {
-            if (str.isBlank() || !ValidationRegex.matches(str)) {
+            var index = str.skipMaintainerWhitespace(0)
+            if (index == str.length) {
                 return null
             }
-            val emailStart = str.indexOf('<').let { if (it < 0) str.length else (it + 1) }
-            val emailEnd = str.indexOf('>').let { if (it < 0) str.length else it }
-            val urlStart = str.indexOf('(').let { if (it < 0) str.length else (it + 1) }
-            val urlEnd = str.indexOf(')').let { if (it < 0) str.length else it }
-            val nameStart = 0
-            val nameEnd = if (emailStart == str.length && urlStart == str.length) {
-                str.length
-            } else {
-                (min(emailStart, urlStart) - 1)
+
+            val nameStart = index
+            var codePoint = Character.codePointAt(str, index)
+            if (!codePoint.isMaintainerNameSymbol()) {
+                return null
             }
-            val name = str.substring(nameStart, nameEnd).trim()
-            val email = str.substring(emailStart, emailEnd).trim().takeIf { it.isNotBlank() }
-            val url = str.substring(urlStart, urlEnd).trim().takeIf { it.isNotBlank() }
-            return ExtensionMaintainer(name, email, url)
+            index += Character.charCount(codePoint)
+            while (index < str.length) {
+                codePoint = Character.codePointAt(str, index)
+                if (!codePoint.isMaintainerNamePart()) {
+                    break
+                }
+                index += Character.charCount(codePoint)
+            }
+            val nameEnd = index
+
+            var email: String? = null
+            if (str.getOrNull(index) == '<') {
+                val emailStart = index + 1
+                val emailEnd = str.endOfMaintainerField(index, '<', '>') ?: return null
+                email = str.substring(emailStart, emailEnd).trim().takeIf { it.isNotBlank() }
+                index = emailEnd + 1
+            }
+            index = str.skipMaintainerWhitespace(index)
+
+            var url: String? = null
+            if (str.getOrNull(index) == '(') {
+                val urlStart = index + 1
+                val urlEnd = str.endOfMaintainerField(index, '(', ')') ?: return null
+                url = str.substring(urlStart, urlEnd).trim().takeIf { it.isNotBlank() }
+                index = urlEnd + 1
+            }
+            if (str.skipMaintainerWhitespace(index) != str.length) {
+                return null
+            }
+            return ExtensionMaintainer(str.substring(nameStart, nameEnd).trim(), email, url)
         }
 
-        fun fromOrTakeRaw(str: String): ExtensionMaintainer {
-            return from(str) ?: ExtensionMaintainer(str)
-        }
+        fun fromOrTakeRaw(str: String): ExtensionMaintainer = from(str) ?: ExtensionMaintainer(str)
     }
 
     override fun toString() = buildString {
@@ -69,14 +84,45 @@ data class ExtensionMaintainer(
     }
 }
 
-private class ExtensionMaintainerSerializer : KSerializer<ExtensionMaintainer> {
+private fun String.skipMaintainerWhitespace(startIndex: Int): Int {
+    var index = startIndex
+    while (index < length && this[index].isMaintainerWhitespace()) {
+        index++
+    }
+    return index
+}
+
+private fun String.endOfMaintainerField(startIndex: Int, opening: Char, closing: Char): Int? {
+    var index = startIndex + 1
+    while (index < length) {
+        when (this[index]) {
+            opening -> return null
+            closing -> return index.takeIf { it > startIndex + 1 }
+            else -> index++
+        }
+    }
+    return null
+}
+
+private fun Int.isMaintainerNameSymbol(): Boolean = Character.isLetter(this) ||
+    this in '0'.code..'9'.code ||
+    this == '.'.code ||
+    this == '_'.code ||
+    this == '-'.code
+
+private fun Int.isMaintainerNamePart(): Boolean = isMaintainerNameSymbol() ||
+    this == ' '.code ||
+    this in '\t'.code..'\r'.code
+
+private fun Char.isMaintainerWhitespace(): Boolean = this == ' ' || this in '\t'..'\r'
+
+object ExtensionMaintainerSerializer : KSerializer<ExtensionMaintainer> {
     override val descriptor = PrimitiveSerialDescriptor("ExtensionMaintainer", PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: ExtensionMaintainer) {
         encoder.encodeString(value.toString())
     }
 
-    override fun deserialize(decoder: Decoder): ExtensionMaintainer {
-        return ExtensionMaintainer.fromOrTakeRaw(decoder.decodeString())
-    }
+    override fun deserialize(decoder: Decoder): ExtensionMaintainer =
+        ExtensionMaintainer.fromOrTakeRaw(decoder.decodeString())
 }

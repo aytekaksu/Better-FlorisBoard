@@ -38,11 +38,14 @@ import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ShareCompat
 import androidx.core.content.FileProvider
+import androidx.navigation.NavBackStackEntry
 import dev.patrickgold.florisboard.BuildConfig
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceModel
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.LocalNavController
+import dev.patrickgold.florisboard.app.popOwnedRoute
+import dev.patrickgold.florisboard.app.popOwnedRouteWhenResumed
 import dev.patrickgold.florisboard.cacheManager
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
@@ -167,7 +170,7 @@ object Backup {
 }
 
 @Composable
-fun BackupScreen() = FlorisScreen {
+fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
     title = stringRes(R.string.backup_and_restore__back_up__title)
     previewFieldVisible = false
 
@@ -243,7 +246,7 @@ fun BackupScreen() = FlorisScreen {
                 }
                 if (failureClass == null) {
                     context.showLongToast(R.string.backup_and_restore__back_up__success)
-                    navController.popBackStack()
+                    navController.popOwnedRouteWhenResumed(routeEntry)
                 } else {
                     context.showLongToast(
                         R.string.backup_and_restore__back_up__failure,
@@ -277,21 +280,23 @@ fun BackupScreen() = FlorisScreen {
                     FlorisPreferenceStore.export(fileBasedStorage).getOrThrow()
                 }
                 val workspaceFilesDir = workspace.inputDir.subDir("files")
-                if (selection.imeKeyboard) {
-                    ZipUtils.copyDirectoryNoFollow(
-                        srcDir = context.filesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH),
-                        dstDir = workspaceFilesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH),
-                        allowMissing = true,
-                        budget = transferBudget,
-                    )
-                }
-                if (selection.imeTheme) {
-                    ZipUtils.copyDirectoryNoFollow(
-                        srcDir = context.filesDir.subDir(ExtensionManager.IME_THEME_PATH),
-                        dstDir = workspaceFilesDir.subDir(ExtensionManager.IME_THEME_PATH),
-                        allowMissing = true,
-                        budget = transferBudget,
-                    )
+                ExtensionManager.withStorageMutation {
+                    if (selection.imeKeyboard) {
+                        ZipUtils.copyDirectoryNoFollow(
+                            srcDir = context.filesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH),
+                            dstDir = workspaceFilesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH),
+                            allowMissing = true,
+                            budget = transferBudget,
+                        )
+                    }
+                    if (selection.imeTheme) {
+                        ZipUtils.copyDirectoryNoFollow(
+                            srcDir = context.filesDir.subDir(ExtensionManager.IME_THEME_PATH),
+                            dstDir = workspaceFilesDir.subDir(ExtensionManager.IME_THEME_PATH),
+                            allowMissing = true,
+                            budget = transferBudget,
+                        )
+                    }
                 }
 
                 if (selection.provideClipboardItems()) {
@@ -423,7 +428,7 @@ fun BackupScreen() = FlorisScreen {
             ButtonBarTextButton(
                 onClick = {
                     closeBackupWorkspace()
-                    navController.popBackStack()
+                    navController.popOwnedRoute(routeEntry)
                 },
                 text = stringRes(R.string.action__cancel),
                 enabled = !isBackupBusy,

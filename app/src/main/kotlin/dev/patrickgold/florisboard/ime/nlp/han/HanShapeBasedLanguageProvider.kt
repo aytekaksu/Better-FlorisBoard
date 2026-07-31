@@ -19,7 +19,6 @@ package dev.patrickgold.florisboard.ime.nlp.han
 import android.content.Context
 import android.database.sqlite.SQLiteException
 import android.icu.text.BreakIterator
-import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.extensionManager
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.editor.EditorContent
@@ -35,108 +34,85 @@ import dev.patrickgold.florisboard.ime.nlp.WordSuggestionCandidate
 import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.subtypeManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class HanShapeBasedLanguageProvider(val context: Context) : SpellingProvider, SuggestionProvider {
+class HanShapeBasedLanguageProvider(context: Context) : SpellingProvider, SuggestionProvider {
     companion object {
         // Default user ID used for all subtypes, unless otherwise specified.
         // See `ime/core/Subtype.kt` Line 210 and 211 for the default usage
         const val ProviderId = "org.florisboard.nlp.providers.han.shape"
 
-        const val DB_PATH = "han.sqlite3";
+        private const val DEFAULT_KEY_CODE_ID = "default"
+        private val DEFAULT_KEY_CODES = "abcdefghijklmnopqrstuvwxyz".toSet()
     }
 
+    private val appContext = context.applicationContext
+    private val extensionManager by appContext.extensionManager()
+    private val subtypeManager by appContext.subtypeManager()
+    private val lifecycleGuard = Mutex()
+    private val resourceGuard = Mutex()
 
-    private val appContext by context.appContext()
+    private var refreshOwner: Job? = null
+    private var refreshCollector: Job? = null
 
-    private val maxFreqBySubType = mutableMapOf<String, Int>();
-    private val extensionManager by context.extensionManager()
-    private val subtypeManager by context.subtypeManager()
-    private val allLanguagePacks: List<LanguagePackExtension>
-        // Assume other types of extensions do not extend LanguagePackExtension
-        get() = extensionManager.languagePacks.value
-    private var __connectedActiveLanguagePacks: Set<LanguagePackExtension> = setOf() // FIXME: hack for not able to observe extensionManager.languagePacks and subtypeManager.subtypes
-    private var languagePackItems: Map<String, LanguagePackComponent> = mapOf() // init in refreshLanguagePacks()
-    private var keyCode: Map<String, Set<Char>> = mapOf() // init in refreshLanguagePacks()
-    private val activeLanguagePacks  // language packs referenced in subtypes
-        get() = buildSet {
-            val locales = subtypeManager.subtypes.map { it.primaryLocale.localeTag() }.toSet()
-            for (languagePack in allLanguagePacks) {
-                // FIXME: skip checking language pack type because it always is for now
-                if (languagePack.items.any { it.locale.localeTag() in locales }) {
-                    add(languagePack)
+    @Volatile
+    private var languagePackState = emptyLanguagePackState()
+
+    private val connections = LanguagePackConnections(
+        isUsable = { pack: LanguagePackExtension ->
+            pack.hasOpenHanDatabase()
+        },
+        connect = { pack ->
+            pack.loadForHanProvider(appContext)
+                .fold(
+                    onSuccess = { true },
+                    onFailure = {
+                        flogError { "Failed to load Han language pack" }
+                        false
+                    },
+                )
+        },
+        disconnect = { pack ->
+            pack.unloadForHanProvider(appContext)
+                .onFailure {
+                    flogError { "Failed to unload Han language pack" }
                 }
-            }
-        }
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())  // same as NlpManager's preload()
+            Unit
+        },
+    )
 
     override val providerId = ProviderId
 
-//    init {
-//        // FIXME: observeForever only callable on the main thread.
-//        extensionManager.languagePacks.observeForever { refreshLanguagePacks() }
-//    }
-
-    private fun refreshLanguagePacks() {
-        scope.launch { create() }
-    }
-
     override suspend fun create() {
-        // Here we initialize our provider, set up all things which are not language dependent.
-        // Refresh language pack parsing
+        lifecycleGuard.withLock {
+            if (refreshCollector?.isActive == true) return
 
-        // build index of available language packs
-        languagePackItems = buildMap {
-            for (languagePack in allLanguagePacks) {
-                // FIXME: skip checking language pack type because it always is for now
-//                if (languagePack is HanShapeBasedLanguagePackExtensionImpl)
-                for (languagePackItem in languagePack.items) {
-                    put(languagePackItem.locale.localeTag(), languagePackItem)
-                    // FIXME: how to put this in deserialization?
-                    languagePackItem.parent = languagePack
-                }
-            }
-        }.toMap()
-        keyCode = buildMap {
-            languagePackItems.forEach { (tag, languagePackItem) ->
-                put(tag, languagePackItem.hanShapeBasedKeyCode.toSet())
-            }
-            put("default", "abcdefghijklmnopqrstuvwxyz".toSet())
-        }.toMap()
+            refreshOwner?.cancel()
+            refreshCollector?.join()
+            reconcileLanguagePacks(currentRefreshInput())
 
-        // Load all actively used language packs.
-        val activeLanguagePacks = activeLanguagePacks
-        for (activeLanguagePack in activeLanguagePacks) {
-            if (!activeLanguagePack.isLoaded()) {
-                // populates activeLanguagePack.hanShapeBasedSQLiteDatabase
-                // FIXME: every time this is copied over to cache.
-                activeLanguagePack.load(context)
+            val owner = SupervisorJob()
+            refreshOwner = owner
+            refreshCollector = CoroutineScope(Dispatchers.Default + owner).launch {
+                observeLanguagePackChanges()
             }
         }
-        __connectedActiveLanguagePacks = activeLanguagePacks
     }
 
-    override suspend fun preload(subtype: Subtype) = withContext(Dispatchers.IO) {
-        // Here we have the chance to preload dictionaries and prepare a neural network for a specific language.
-        // Is kept in sync with the active keyboard subtype of the user, however a new preload does not necessary mean
-        // the previous language is not needed anymore (e.g. if the user constantly switches between two subtypes)
-
-        // To read a file from the APK assets the following methods can be used:
-        // appContext.assets.open()
-        // appContext.assets.reader()
-        // appContext.assets.bufferedReader()
-        // appContext.assets.readText()
-        // To copy an APK file/dir to the file system cache (appContext.cacheDir), the following methods are available:
-        // appContext.assets.copy()
-        // appContext.assets.copyRecursively()
-
-        // The subtype we get here contains a lot of data, however we are only interested in subtype.primaryLocale and
-        // subtype.secondaryLocales.
-    }
+    override suspend fun preload(subtype: Subtype) = Unit
 
     override suspend fun spell(
         subtype: Subtype,
@@ -165,135 +141,129 @@ class HanShapeBasedLanguageProvider(val context: Context) : SpellingProvider, Su
         allowPossiblyOffensive: Boolean,
         isPrivateSession: Boolean,
     ): List<SuggestionCandidate> {
-        if (__connectedActiveLanguagePacks != activeLanguagePacks) {
-            // FIXME: hack for not able to observe extensionManager.languagePacks
-            refreshLanguagePacks()
-        }
         if (content.composingText.isEmpty()) {
             return emptyList()
         }
-        val (languagePackItem, languagePackExtension) =
-            getLanguagePack(subtype) ?: return emptyList()
-        val layout = languagePackItem.hanShapeBasedTable
-        return try {
-            val database = languagePackExtension.hanShapeBasedSQLiteDatabase
-            database.query(
-                layout,
-                arrayOf("code", "text"),
-                "code LIKE ? || '%'",
-                arrayOf(content.composingText),
-                null,
-                null,
-                "code ASC, weight DESC",
-                maxCandidateCount.toString(),
-            ).use { cursor ->
-                val suggestions = buildList {
-                    while (cursor.moveToNext()) {
-                        add(
-                            WordSuggestionCandidate(
-                                text = cursor.getString(1),
-                                secondaryText = cursor.getString(0),
-                                confidence = 0.5,
-                                isEligibleForAutoCommit = isEmpty(),
-                                sourceProvider = this@HanShapeBasedLanguageProvider,
-                            ),
-                        )
+        return withContext(Dispatchers.IO) {
+            resourceGuard.withLock {
+                val (languagePackItem, languagePackExtension) =
+                    getLanguagePack(subtype) ?: return@withLock emptyList()
+                val layout = languagePackItem.hanShapeBasedTable
+                try {
+                    languagePackExtension.withHanDatabase { database ->
+                        database.query(
+                            layout,
+                            arrayOf("code", "text"),
+                            "code LIKE ? || '%'",
+                            arrayOf(content.composingText),
+                            null,
+                            null,
+                            "code ASC, weight DESC",
+                            maxCandidateCount.toString(),
+                        ).use { cursor ->
+                            val suggestions = buildList<SuggestionCandidate> {
+                                while (cursor.moveToNext()) {
+                                    add(
+                                        WordSuggestionCandidate(
+                                            text = cursor.getString(1),
+                                            secondaryText = cursor.getString(0),
+                                            confidence = 0.5,
+                                            isEligibleForAutoCommit = isEmpty(),
+                                            sourceProvider = this@HanShapeBasedLanguageProvider,
+                                        ),
+                                    )
+                                }
+                            }
+                            flogDebug {
+                                "Dictionary query completed, resultCount=${suggestions.size}"
+                            }
+                            suggestions
+                        }
+                    } ?: emptyList()
+                } catch (_: IllegalStateException) {
+                    flogError { "Dictionary layout is invalid" }
+                    emptyList()
+                } catch (error: SQLiteException) {
+                    flogError {
+                        "Dictionary query failed: error=${error::class.simpleName}"
                     }
+                    emptyList()
                 }
-                flogDebug { "Dictionary query completed, resultCount=${suggestions.size}" }
-                suggestions
             }
-        } catch (e: IllegalStateException) {
-            flogError { "Invalid dictionary layout: layout=$layout" }
-            emptyList()
-        } catch (e: SQLiteException) {
-            flogError { "Dictionary query failed: layout=$layout, error=${e::class.simpleName}" }
-            emptyList()
         }
     }
 
-    override suspend fun notifySuggestionAccepted(subtype: Subtype, candidate: SuggestionCandidate) {
+    override suspend fun notifySuggestionAccepted(
+        subtype: Subtype,
+        candidate: SuggestionCandidate,
+    ) {
         flogDebug { "Suggestion accepted, kind=${candidate::class.simpleName}" }
     }
 
-    override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {
+    override suspend fun notifySuggestionReverted(
+        subtype: Subtype,
+        candidate: SuggestionCandidate,
+    ) {
         flogDebug { "Suggestion reverted, kind=${candidate::class.simpleName}" }
     }
 
-    override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
+    override suspend fun removeSuggestion(
+        subtype: Subtype,
+        candidate: SuggestionCandidate,
+    ): Boolean {
         flogDebug { "Suggestion removal requested, kind=${candidate::class.simpleName}" }
         return false
     }
 
     fun getLanguagePack(subtype: Subtype): Pair<LanguagePackComponent, LanguagePackExtension>? {
-        val languagePackItem = languagePackItems[subtype.primaryLocale.localeTag()]
-        val languagePackExtension = languagePackItem?.parent
-        if (languagePackItem == null || languagePackExtension == null) {
-            flogError { "Could not read language pack item / extension" }
-            return null;
-        }
-        return Pair(languagePackItem, languagePackExtension)
+        return languagePackState.bindings[subtype.primaryLocale.localeTag()]
+            ?.let { binding -> binding.component to binding.extension }
     }
 
-    override suspend fun getListOfWords(subtype: Subtype): List<String> {
-        return emptyList()
-//        val (languagePackItem, languagePackExtension) = getLanguagePack(subtype) ?: return emptyList();
-//        val layout: String = languagePackItem.hanShapeBasedTable
-//        try {
-//            val database = languagePackExtension.hanShapeBasedSQLiteDatabase
-//            val cur = database.query(layout, arrayOf ( "text" ), "", arrayOf(), "", "", "weight DESC, code ASC", "");
-//            cur.moveToFirst();
-//            val rowCount = cur.getCount();
-//            val suggestions = buildList {
-//                for (n in 0 until rowCount) {
-//                    val word = cur.getString(0);
-//                    cur.moveToNext();
-//                    add(word)
-//                }
-//            }
-//            flogDebug { "Read ${suggestions.size} words for ${subtype.primaryLocale.localeTag()}" }
-//            return suggestions;
-//        } catch (e: SQLiteException) {
-//            flogError { "Encountered an SQL error: ${e}" }
-//            return emptyList();
-//        }
-    }
+    override suspend fun getListOfWords(subtype: Subtype): List<String> = emptyList()
 
-    override suspend fun getFrequencyForWord(subtype: Subtype, word: String): Double {
-        return 0.0
-//        val (languagePackItem, languagePackExtension) = getLanguagePack(subtype) ?: return 0.0;
-//        val layout: String = languagePackItem.hanShapeBasedTable
-//        try {
-//            val database = languagePackExtension.hanShapeBasedSQLiteDatabase
-//            val cur = database.query(layout, arrayOf ( "weight" ), "code = ?", arrayOf(word), "", "", "", "");
-//            cur.moveToFirst();
-//            return try { cur.getDouble(0) } catch (e: Exception) { 0.0 };
-//        } catch (e: SQLiteException) {
-//            return 0.0;
-//        }
-    }
+    override suspend fun getFrequencyForWord(subtype: Subtype, word: String): Double = 0.0
 
     override suspend fun destroy() {
-        // Here we have the chance to de-allocate memory and finish our work. However this might never be called if
-        // the app process is killed (which will most likely always be the case).
+        lifecycleGuard.withLock {
+            val owner = refreshOwner
+            val collector = refreshCollector
+            refreshOwner = null
+            refreshCollector = null
+            owner?.cancel()
+            withContext(NonCancellable) {
+                collector?.join()
+                withContext(Dispatchers.IO) {
+                    resourceGuard.withLock {
+                        connections.clear()
+                        languagePackState = emptyLanguagePackState()
+                    }
+                }
+            }
+        }
     }
 
     override suspend fun determineLocalComposing(
         subtype: Subtype,
         textBeforeSelection: CharSequence,
         breakIterators: BreakIteratorGroup,
-        localLastCommitPosition: Int
+        localLastCommitPosition: Int,
     ): EditorRange {
         return breakIterators.character(subtype.primaryLocale) {
             it.setText(textBeforeSelection.toString())
             val end = it.last()
             var start = end
             var next = it.previous()
-            val keyCodeLocale = keyCode[subtype.primaryLocale.localeTag()]?: keyCode["default"]?: emptySet()
+            val keyCodes = languagePackState.keyCodes
+            val keyCodeLocale =
+                keyCodes[subtype.primaryLocale.localeTag()]
+                    ?: keyCodes[DEFAULT_KEY_CODE_ID]
+                    ?: emptySet()
             while (next != BreakIterator.DONE && start > localLastCommitPosition) {
                 val sub = textBeforeSelection.substring(next, start)
-                if (! sub.all { char -> char in keyCodeLocale })
+                if (!sub.all { char -> char in keyCodeLocale }) {
                     break
+                }
                 start = next
                 next = it.previous()
             }
@@ -309,4 +279,138 @@ class HanShapeBasedLanguageProvider(val context: Context) : SpellingProvider, Su
 
     override val forcesSuggestionOn
         get() = true
+
+    private suspend fun observeLanguagePackChanges() = coroutineScope {
+        val requests = Channel<LanguagePackRefreshInput>(Channel.CONFLATED)
+        launch {
+            try {
+                combine(
+                    extensionManager.languagePacks,
+                    subtypeManager.subtypesFlow,
+                ) { languagePacks, subtypes ->
+                    refreshInput(languagePacks, subtypes)
+                }.collect { input ->
+                    requests.trySend(input)
+                }
+            } finally {
+                requests.close()
+            }
+        }
+        for (input in requests) {
+            try {
+                reconcileLanguagePacks(input)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                flogError { "Failed to refresh Han language packs" }
+            }
+        }
+    }
+
+    private suspend fun reconcileLanguagePacks(input: LanguagePackRefreshInput) {
+        if (languagePackState.input == input) return
+        withContext(Dispatchers.IO) {
+            resourceGuard.withLock {
+                if (languagePackState.input == input) return@withLock
+                val desired = input.languagePacks.filter { languagePack ->
+                    languagePack.items.any { item ->
+                        item.locale.localeTag() in input.activeLocales
+                    }
+                }
+                val connected = connections.replace(desired)
+                val bindings = buildMap {
+                    for (languagePack in connected) {
+                        for (component in languagePack.items) {
+                            put(
+                                component.locale.localeTag(),
+                                LanguagePackBinding(component, languagePack),
+                            )
+                        }
+                    }
+                }
+                val keyCodes = buildMap {
+                    for ((tag, binding) in bindings) {
+                        put(tag, binding.component.hanShapeBasedKeyCode.toSet())
+                    }
+                    put(DEFAULT_KEY_CODE_ID, DEFAULT_KEY_CODES)
+                }
+                languagePackState = LanguagePackState(
+                    input = input,
+                    bindings = bindings,
+                    keyCodes = keyCodes,
+                )
+            }
+        }
+    }
+
+    private fun currentRefreshInput(): LanguagePackRefreshInput =
+        refreshInput(
+            extensionManager.languagePacks.value,
+            subtypeManager.subtypesFlow.value,
+        )
+
+    private fun refreshInput(
+        languagePacks: List<LanguagePackExtension>,
+        subtypes: List<Subtype>,
+    ) = LanguagePackRefreshInput(
+        languagePacks = languagePacks.toList(),
+        activeLocales = subtypes.mapTo(linkedSetOf()) {
+            it.primaryLocale.localeTag()
+        },
+    )
+
+    private fun emptyLanguagePackState() = LanguagePackState(
+        input = null,
+        bindings = emptyMap(),
+        keyCodes = mapOf(DEFAULT_KEY_CODE_ID to DEFAULT_KEY_CODES),
+    )
+
+    private data class LanguagePackRefreshInput(
+        val languagePacks: List<LanguagePackExtension>,
+        val activeLocales: Set<String>,
+    )
+
+    private data class LanguagePackBinding(
+        val component: LanguagePackComponent,
+        val extension: LanguagePackExtension,
+    )
+
+    private data class LanguagePackState(
+        val input: LanguagePackRefreshInput?,
+        val bindings: Map<String, LanguagePackBinding>,
+        val keyCodes: Map<String, Set<Char>>,
+    )
+}
+
+internal class LanguagePackConnections<T>(
+    private val isUsable: (T) -> Boolean,
+    private val connect: (T) -> Boolean,
+    private val disconnect: (T) -> Unit,
+) {
+    private val connected = linkedSetOf<T>()
+
+    fun replace(desired: Iterable<T>): Set<T> {
+        val desiredSet = desired.toCollection(linkedSetOf())
+        val removed = connected.filterNot(desiredSet::contains)
+        for (candidate in removed) {
+            disconnect(candidate)
+            connected.remove(candidate)
+        }
+        for (candidate in desiredSet) {
+            if (candidate in connected && isUsable(candidate)) continue
+            connected.remove(candidate)
+            if (connect(candidate)) {
+                connected.add(candidate)
+            } else {
+                disconnect(candidate)
+            }
+        }
+        return connected.toSet()
+    }
+
+    fun clear() {
+        val previous = connected.toList()
+        connected.clear()
+        previous.forEach(disconnect)
+    }
 }

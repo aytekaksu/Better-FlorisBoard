@@ -289,6 +289,30 @@ class BackupArchiveZipWriterTest :
                 archive.readText("root.txt") shouldBe "root"
             }
         }
+
+        test("new archive publication cannot replace an existing file") {
+            val source = Files.createDirectory(testRoot.resolve("new-archive-source"))
+            Files.write(source.resolve("data.txt"), "new archive".encodeToByteArray())
+            val originalBytes = "keep existing".encodeToByteArray()
+            val existing = Files.write(testRoot.resolve("existing-new-archive.zip"), originalBytes)
+
+            shouldThrow<IOException> {
+                ZipUtils.zipNew(
+                    source.toFile(),
+                    existing.toFile(),
+                    ZipUtils.WriteLimits.Unbounded,
+                )
+            }
+
+            Files.readAllBytes(existing).contentEquals(originalBytes) shouldBe true
+            partialSiblings(existing) shouldBe emptyList()
+
+            val fresh = testRoot.resolve("fresh-new-archive.zip")
+            ZipUtils.zipNew(source.toFile(), fresh.toFile(), ZipUtils.WriteLimits.Unbounded)
+            ZipFile(fresh.toFile()).use { archive ->
+                archive.readText("data.txt") shouldBe "new archive"
+            }
+        }
     })
 
 private fun ZipFile.readText(path: String): String = getInputStream(getEntry(path)).bufferedReader().use {

@@ -239,16 +239,6 @@ private fun DevtoolsInlineAutofillOverlay() {
 @Composable
 private fun DevtoolsStylesheetFailedToLoadOverlay(loadFailure: ThemeManager.LoadFailure) {
     DevtoolsOverlayBox(title = "Failed to load stylesheet, fell back to base style") {
-        DevtoolsSubGroup(title = "Extension") {
-            DevtoolsText(text = "id:       ${loadFailure.extension.id}")
-            DevtoolsText(text = "title:    ${loadFailure.extension.title}")
-            DevtoolsText(text = "version:  ${loadFailure.extension.version}")
-        }
-        DevtoolsSubGroup(title = "Component") {
-            DevtoolsText(text = "id:       ${loadFailure.component.id}")
-            DevtoolsText(text = "label:    ${loadFailure.component.label}")
-            DevtoolsText(text = "path:     ${loadFailure.component.stylesheetPath()}")
-        }
         val cause = loadFailure.cause
         DevtoolsSubGroup(title = "Cause") {
             DevtoolsText(text = failureClassName(cause))

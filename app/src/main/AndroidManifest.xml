@@ -141,7 +141,7 @@
             android:exported="false">
         </provider>
 
-        <!-- Disposable process for calls into untrusted clipboard providers. -->
+        <!-- Disposable process for calls into untrusted content providers. -->
         <provider
             android:name="dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaImportWorkerProvider"
             android:authorities="${applicationId}.provider.clipboard-import-worker"

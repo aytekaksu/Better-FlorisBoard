@@ -73,6 +73,7 @@ import dev.patrickgold.florisboard.lib.util.AppVersionUtils
 import dev.patrickgold.jetpref.datastore.model.collectAsState
 import dev.patrickgold.jetpref.datastore.ui.ProvideDefaultDialogPrefStrings
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CancellationException
 import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.android.hideAppIcon
 import org.florisboard.lib.android.showAppIcon
@@ -315,8 +316,21 @@ class FlorisAppActivity : ComponentActivity() {
                     } else {
                         intent.clipData!!.getItemAt(0).uri
                     }
-                    val workspace = runCatching { cacheManager.readFromUriIntoCache(data) }.getOrNull()
-                    navController.navigate(Routes.Ext.Import(ExtensionImportScreenType.EXT_ANY, workspace?.uuid))
+                    val workspace = try {
+                        cacheManager.readFromUriIntoCache(data)
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                        null
+                    }
+                    try {
+                        navController.navigate(
+                            Routes.Ext.Import(ExtensionImportScreenType.EXT_ANY, workspace?.uuid),
+                        )
+                    } catch (error: Throwable) {
+                        workspace?.close()
+                        throw error
+                    }
                 }
             }
             intentToBeHandled = null

@@ -27,7 +27,6 @@ import org.florisboard.lib.snygg.value.SnyggVarValue
 object ExtensionValidation {
     private val MetaIdRegex = """^[a-z][a-z0-9_]*(\.[a-z0-9][a-z0-9_]*)*${'$'}""".toRegex()
     private val ComponentIdRegex = """^[a-z][a-z0-9_]*${'$'}""".toRegex()
-    private val ThemeComponentStylesheetPathRegex = """^[^:*<>"']*${'$'}""".toRegex()
 
     val MetaId = ValidationRule<String> {
         forKlass = ExtensionMeta::class
@@ -129,8 +128,11 @@ object ExtensionValidation {
             when {
                 str.isEmpty() -> resultValid()
                 str.isBlank() -> resultInvalid(error = R.string.ext__validation__error_stylesheet_path_blank)
-                !ThemeComponentStylesheetPathRegex.matches(str) -> {
-                    resultInvalid(error = R.string.ext__validation__error_stylesheet_path, "stylesheet_path_regex" to ThemeComponentStylesheetPathRegex)
+                SafeRelativePath.parse(str).isFailure -> {
+                    resultInvalid(
+                        error = R.string.ext__validation__error_stylesheet_path,
+                        "stylesheet_path_regex" to "a safe relative path",
+                    )
                 }
                 else -> resultValid()
             }

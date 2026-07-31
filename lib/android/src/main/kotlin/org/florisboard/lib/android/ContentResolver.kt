@@ -19,11 +19,12 @@
 package org.florisboard.lib.android
 
 import android.content.ContentResolver
-import android.content.res.AssetFileDescriptor
 import android.net.Uri
 import org.florisboard.lib.kotlin.io.FsFile
 import java.io.BufferedReader
 import java.io.BufferedWriter
+import java.io.FilterInputStream
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import kotlin.contracts.InvocationKind
@@ -49,25 +50,29 @@ inline fun ContentResolver.read(uri: Uri, maxSize: Long = Long.MAX_VALUE, block:
     }
     require(maxSize > 0) { "Argument `maxSize` must be greater than 0" }
     val inputStream = this.openInputStream(uri)
-        ?: error("Cannot open input stream for given uri '$uri'")
-    val assetFileDescriptor = this.openAssetFileDescriptor(uri, "r")
-        ?: error("Cannot open asset file descriptor for given uri '$uri'")
-    assetFileDescriptor.use {
-        val assetFileSize = assetFileDescriptor.length
-        if (assetFileSize != AssetFileDescriptor.UNKNOWN_LENGTH) {
-            if (assetFileSize > maxSize) {
-                error("Contents of given uri '$uri' exceeds maximum size of $maxSize bytes!")
-            }
-        }
+        ?: throw ContentReadException()
+    inputStream.use {
+        block(SizeLimitedInputStream(it, maxSize))
     }
-    inputStream.use(block)
 }
 
-inline fun ContentResolver.readToFile(uri: Uri, file: FsFile) {
-    this.read(uri) { inStream ->
-        file.outputStream().use { outStream ->
-            inStream.copyTo(outStream)
+fun ContentResolver.readToFile(
+    uri: Uri,
+    file: FsFile,
+    maxSize: Long = Long.MAX_VALUE,
+): Long {
+    var copiedSize = 0L
+    val deleteOnFailure = !file.exists()
+    try {
+        this.read(uri, maxSize) { inStream ->
+            file.outputStream().use { outStream ->
+                copiedSize = inStream.copyTo(outStream)
+            }
         }
+        return copiedSize
+    } catch (error: Throwable) {
+        if (deleteOnFailure) file.delete()
+        throw error
     }
 }
 
@@ -117,5 +122,60 @@ inline fun ContentResolver.writeText(uri: Uri, block: (BufferedWriter) -> Unit) 
 inline fun ContentResolver.writeAllText(uri: Uri, text: String) {
     this.write(uri) { outStream ->
         outStream.bufferedWriter().use { it.write(text) }
+    }
+}
+
+class ContentReadException : IOException("Unable to read selected content.")
+
+class ContentSizeLimitExceededException :
+    IOException("Selected content exceeds the allowed size.")
+
+@PublishedApi
+internal class SizeLimitedInputStream(
+    inputStream: InputStream,
+    private val maxSize: Long,
+) : FilterInputStream(inputStream) {
+    private var readSize = 0L
+
+    override fun read(): Int {
+        return super.read().also { value ->
+            if (value >= 0) recordRead(1)
+        }
+    }
+
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+        if (length == 0) return 0
+        val remaining = maxSize - readSize
+        val allowedRead = if (remaining >= length) length else (remaining + 1).toInt()
+        return super.read(buffer, offset, allowedRead).also { count ->
+            if (count > 0) recordRead(count)
+        }
+    }
+
+    override fun skip(byteCount: Long): Long {
+        if (byteCount <= 0) return 0
+        var remaining = byteCount
+        var skipped = 0L
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (remaining > 0) {
+            val count = read(buffer, 0, minOf(buffer.size.toLong(), remaining).toInt())
+            if (count < 0) break
+            remaining -= count
+            skipped += count
+        }
+        return skipped
+    }
+
+    override fun markSupported() = false
+
+    override fun mark(readLimit: Int) = Unit
+
+    override fun reset(): Nothing = throw IOException("Stream reset is not supported.")
+
+    private fun recordRead(count: Int) {
+        if (readSize > maxSize - count) {
+            throw ContentSizeLimitExceededException()
+        }
+        readSize += count
     }
 }

@@ -38,15 +38,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavBackStackEntry
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.LocalNavController
 import dev.patrickgold.florisboard.app.Routes
+import dev.patrickgold.florisboard.app.popOwnedRouteWhenResumed
 import dev.patrickgold.florisboard.extensionManager
 import dev.patrickgold.florisboard.ime.nlp.LanguagePackExtension
 import dev.patrickgold.florisboard.ime.theme.ThemeExtension
@@ -58,31 +61,33 @@ import dev.patrickgold.florisboard.lib.ext.Extension
 import dev.patrickgold.florisboard.lib.ext.ExtensionMaintainer
 import dev.patrickgold.florisboard.lib.ext.ExtensionMeta
 import dev.patrickgold.florisboard.lib.io.FlorisRef
-import org.florisboard.lib.android.showLongToastSync
+import kotlinx.coroutines.launch
+import org.florisboard.lib.android.showLongToast
 import org.florisboard.lib.compose.FlorisOutlinedButton
 import org.florisboard.lib.compose.defaultFlorisOutlinedBox
 import org.florisboard.lib.compose.stringRes
 
 @Composable
-fun ExtensionViewScreen(id: String) {
+fun ExtensionViewScreen(id: String, routeEntry: NavBackStackEntry) {
     val context = LocalContext.current
     val extensionManager by context.extensionManager()
 
     val ext = extensionManager.getExtensionById(id)
     if (ext != null) {
-        ViewScreen(ext)
+        ViewScreen(ext, routeEntry)
     } else {
         ExtensionNotFoundScreen(id)
     }
 }
 
 @Composable
-private fun ViewScreen(ext: Extension) = FlorisScreen {
+private fun ViewScreen(ext: Extension, routeEntry: NavBackStackEntry? = null) = FlorisScreen {
     title = ext.meta.title
 
     val navController = LocalNavController.current
     val context = LocalContext.current
     val extensionManager by context.extensionManager()
+    val operationScope = rememberCoroutineScope()
 
     var extToDelete by remember { mutableStateOf<Extension?>(null) }
 
@@ -197,17 +202,17 @@ private fun ViewScreen(ext: Extension) = FlorisScreen {
         if (extToDelete != null) {
             FlorisConfirmDeleteDialog(
                 onConfirm = {
-                    runCatching {
-                        extensionManager.delete(extToDelete!!)
-                    }.onSuccess {
-                        navController.popBackStack()
-                    }.onFailure { error ->
-                        context.showLongToastSync(
-                            R.string.error__snackbar_message,
-                            "error_message" to error.localizedMessage,
-                        )
-                    }
+                    val extension = extToDelete!!
                     extToDelete = null
+                    operationScope.launch {
+                        runCatching {
+                            extensionManager.delete(extension)
+                        }.onSuccess {
+                            routeEntry?.let { navController.popOwnedRouteWhenResumed(it) }
+                        }.onFailure {
+                            context.showLongToast(R.string.error__snackbar_message)
+                        }
+                    }
                 },
                 onDismiss = { extToDelete = null },
                 what = extToDelete!!.meta.title,
