@@ -213,7 +213,7 @@ class CacheManager(context: Context) {
                                     maxTextBytes = MaxManifestSize,
                                     admission = admission,
                                 ) { manifestJson ->
-                                    decodeExtensionManifest<Extension>(manifestJson)
+                                    decodeExtensionManifest(manifestJson)
                                         .getOrThrow()
                                         .also {
                                             check(it.validateForImport().isValid) {

@@ -437,7 +437,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggIcon.kt"
-            line="58"
+            line="57"
             column="5"/>
     </issue>
 
@@ -448,18 +448,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggIcon.kt"
-            line="96"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggIcon.kt"
-            line="134"
+            line="95"
             column="5"/>
     </issue>
 

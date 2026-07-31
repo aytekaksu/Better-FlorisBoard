@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
@@ -63,44 +62,6 @@ fun SnyggIcon(
         Icon(
             modifier = modifier.snyggIconSize(style),
             imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = style.foreground(),
-        )
-    }
-}
-
-/**
- * Simple Icon composable, which displays a given [bitmap] annotated by the [contentDescription].
- *
- * This composable infers its style from the current [SnyggTheme][org.florisboard.lib.snygg.SnyggTheme], which is
- * required to be provided by [ProvideSnyggTheme].
- *
- * @param elementName The name of this element. If `null` the style will be inherited from the parent element.
- * @param attributes The attributes of the element used to refine the query.
- * @param selector A specific SnyggSelector to query the style for.
- * @param modifier The modifier to be applied to the Icon.
- * @param bitmap The imageBitmap which will be drawn as Icon.
- * @param contentDescription Text used by accessibility services to describe what this icon represents.
- * This should always be provided unless this icon is used for decorative purposes,
- * and does not represent a meaningful action that a user can take.
- *
- * @since 0.5.0-alpha01
- *
- * @see [Icon]
- */
-@Composable
-fun SnyggIcon(
-    elementName: String? = null,
-    attributes: SnyggQueryAttributes = emptyMap(),
-    selector: SnyggSelector? = null,
-    modifier: Modifier = Modifier,
-    bitmap: ImageBitmap,
-    contentDescription: String? = null,
-) {
-    ProvideSnyggStyle(elementName, attributes, selector) { style ->
-        Icon(
-            modifier = modifier.snyggIconSize(style),
-            bitmap = bitmap,
             contentDescription = contentDescription,
             tint = style.foreground(),
         )
