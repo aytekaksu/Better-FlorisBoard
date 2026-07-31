@@ -40,9 +40,9 @@ import android.view.accessibility.AccessibilityManager
 import androidx.core.content.ContextCompat
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
+import dev.patrickgold.florisboard.dictionaryManager
 import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.ime.core.Subtype
-import dev.patrickgold.florisboard.ime.dictionary.SystemUserDictionaryDatabase
 import dev.patrickgold.florisboard.ime.dictionary.UserDictionaryEntry
 import dev.patrickgold.florisboard.ime.dictionary.storedUserDictionaryLocale
 import dev.patrickgold.florisboard.ime.dictionary.strictUserDictionaryLocale
@@ -314,6 +314,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     }
 
     private val appContext by context.appContext()
+    private val dictionaryManager by context.dictionaryManager()
     private val editorInstance by context.editorInstance()
     private val keyboardManager by context.keyboardManager()
     private val subtypeManager by context.subtypeManager()
@@ -335,7 +336,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     private val hostSettingMutationGuard = Mutex()
     private val providerQueryGuard = Mutex()
     private val userDictionaryRequestGuard = Mutex()
-    private val hostUserDictionary by lazy { SystemUserDictionaryDatabase(appContext) }
+    private val hostUserDictionary get() = dictionaryManager.systemUserDictionary
     private val _providers = MutableStateFlow<List<AutocorrectPluginDescriptor>>(emptyList())
     private val _pluginUi = MutableStateFlow<AutocorrectPluginUi?>(null)
     private val _pluginUiLoading = MutableStateFlow(false)

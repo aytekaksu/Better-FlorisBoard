@@ -4395,7 +4395,6 @@ HSPLdev/patrickgold/florisboard/ime/core/SubtypeLayoutMap$Companion;-><init>()V
 HSPLdev/patrickgold/florisboard/ime/core/SubtypeLayoutMap;-><clinit>()V
 HSPLdev/patrickgold/florisboard/ime/core/SubtypeLayoutMap;-><init>(Ldev/patrickgold/florisboard/lib/ext/ExtensionComponentName;I)V
 HSPLdev/patrickgold/florisboard/ime/core/SubtypeLayoutMap;-><init>(Ldev/patrickgold/florisboard/lib/ext/ExtensionComponentName;Ldev/patrickgold/florisboard/lib/ext/ExtensionComponentName;Ldev/patrickgold/florisboard/lib/ext/ExtensionComponentName;Ldev/patrickgold/florisboard/lib/ext/ExtensionComponentName;Ldev/patrickgold/florisboard/lib/ext/ExtensionComponentName;Ldev/patrickgold/florisboard/lib/ext/ExtensionComponentName;Ldev/patrickgold/florisboard/lib/ext/ExtensionComponentName;Ldev/patrickgold/florisboard/lib/ext/ExtensionComponentName;)V
-HSPLdev/patrickgold/florisboard/ime/dictionary/DictionaryManager$Companion;-><init>()V
 HSPLdev/patrickgold/florisboard/ime/dictionary/DictionaryManager;-><clinit>()V
 HSPLdev/patrickgold/florisboard/ime/dictionary/DictionaryManager;-><init>(Landroid/content/Context;)V
 HSPLdev/patrickgold/florisboard/ime/landscapeinput/LandscapeInputUiMode;-><clinit>()V
@@ -4417,10 +4416,10 @@ HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$init$2;->invok
 HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat;-><clinit>()V
 HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat;-><init>()V
 HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat;->init(Landroid/content/Context;)V
+HSPLdev/patrickgold/florisboard/ime/nlp/SpellingLanguageMode;-><clinit>()V
+HSPLdev/patrickgold/florisboard/ime/nlp/SpellingLanguageMode;-><init>(Ljava/lang/String;I)V
 HSPLdev/patrickgold/florisboard/ime/onehanded/OneHandedMode;-><clinit>()V
 HSPLdev/patrickgold/florisboard/ime/onehanded/OneHandedMode;-><init>(Ljava/lang/String;I)V
-HSPLdev/patrickgold/florisboard/ime/spelling/SpellingLanguageMode;-><clinit>()V
-HSPLdev/patrickgold/florisboard/ime/spelling/SpellingLanguageMode;-><init>(Ljava/lang/String;I)V
 HSPLdev/patrickgold/florisboard/ime/text/gestures/SwipeAction$Companion;-><init>()V
 HSPLdev/patrickgold/florisboard/ime/text/gestures/SwipeAction;-><clinit>()V
 HSPLdev/patrickgold/florisboard/ime/text/gestures/SwipeAction;-><init>(Ljava/lang/String;I)V
@@ -7509,7 +7508,6 @@ Ldev/patrickgold/florisboard/ime/core/Subtype$Companion;
 Ldev/patrickgold/florisboard/ime/core/Subtype;
 Ldev/patrickgold/florisboard/ime/core/SubtypeLayoutMap$Companion;
 Ldev/patrickgold/florisboard/ime/core/SubtypeLayoutMap;
-Ldev/patrickgold/florisboard/ime/dictionary/DictionaryManager$Companion;
 Ldev/patrickgold/florisboard/ime/dictionary/DictionaryManager;
 Ldev/patrickgold/florisboard/ime/landscapeinput/LandscapeInputUiMode;
 Ldev/patrickgold/florisboard/ime/media/emoji/EmojiHairStyle;
@@ -7520,8 +7518,8 @@ Ldev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$InstanceHandler;
 Ldev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$init$1;
 Ldev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$init$2;
 Ldev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat;
+Ldev/patrickgold/florisboard/ime/nlp/SpellingLanguageMode;
 Ldev/patrickgold/florisboard/ime/onehanded/OneHandedMode;
-Ldev/patrickgold/florisboard/ime/spelling/SpellingLanguageMode;
 Ldev/patrickgold/florisboard/ime/text/gestures/SwipeAction$Companion;
 Ldev/patrickgold/florisboard/ime/text/gestures/SwipeAction;
 Ldev/patrickgold/florisboard/ime/text/key/KeyHintMode;
