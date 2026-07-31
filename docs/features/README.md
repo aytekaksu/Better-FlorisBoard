@@ -13,6 +13,7 @@ changes.
 | Glide typing | Detect a word gesture, classify it externally or locally, and commit only a current result | [Glide typing](glide-typing/README.md) |
 | Preferences | Define stored settings and preserve supported upgrade and restore behavior | [Preferences](preferences/README.md) |
 | Backup and restore | Validate archive contents and plan exactly which selected data may change | [Backup and restore](backup-restore/README.md) |
+| Clipboard | Synchronize text and media while keeping history, URI grants, and private files consistent | [Clipboard](clipboard/README.md) |
 
 The [provider API guide](../../AUTOCORRECT_PLUGIN_API.md) is the authoritative
 provider-facing protocol guide. Feature documents explain the host and do not
