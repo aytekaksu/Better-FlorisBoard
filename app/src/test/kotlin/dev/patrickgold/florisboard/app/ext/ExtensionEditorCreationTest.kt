@@ -19,14 +19,11 @@ package dev.patrickgold.florisboard.app.ext
 import dev.patrickgold.florisboard.app.settings.theme.PrettyPrintConfig
 import dev.patrickgold.florisboard.ime.theme.ThemeExtension
 import dev.patrickgold.florisboard.ime.theme.ThemeExtensionComponentImpl
-import dev.patrickgold.florisboard.lib.ext.Extension
-import dev.patrickgold.florisboard.lib.ext.ExtensionJsonConfig
 import dev.patrickgold.florisboard.lib.ext.ExtensionMaintainer
 import dev.patrickgold.florisboard.lib.ext.ExtensionMeta
+import dev.patrickgold.florisboard.lib.ext.decodeExtensionManifest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
 import org.florisboard.lib.snygg.SnyggStylesheet
 
 class ExtensionEditorCreationTest :
@@ -89,9 +86,11 @@ class ExtensionEditorCreationTest :
             edited.dependencies shouldBe listOf("org.example.base", "org.example.extra")
             edited.themes.single().label shouldBe "Edited day"
 
-            val decoded = ExtensionJsonConfig.decodeFromString<Extension>(
-                savePlan.serializedManifest,
-            ) as ThemeExtension
-            ExtensionJsonConfig.encodeToString<Extension>(decoded) shouldBe savePlan.serializedManifest
+            val decoded = decodeExtensionManifest(savePlan.serializedManifest).getOrThrow() as ThemeExtension
+            decoded.meta.title shouldBe "Edited"
+            decoded.dependencies shouldBe listOf("org.example.base", "org.example.extra")
+            decoded.themes.single().label shouldBe "Edited day"
+            createExtensionEditorSavePlan(decoded.edit(), decoded).serializedManifest shouldBe
+                savePlan.serializedManifest
         }
     })
