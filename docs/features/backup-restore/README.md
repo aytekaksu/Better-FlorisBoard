@@ -5,8 +5,9 @@ change. The live restore screen now copies the selected document into private
 storage, validates the ZIP, and stages only the selected components before it
 touches live app data.
 
-This is a structural and byte-integrity boundary, not a transactional restore.
-The current commit step still has the important limitations listed below.
+This provides a structural and byte-integrity boundary plus bounded in-process
+rollback. It is not crash-safe: process death or power loss can still interrupt
+a live restore.
 
 ## Stable archive layout
 
@@ -117,34 +118,48 @@ deterministic.
 - Apply order is preferences, keyboard extensions, themes, then clipboard
   text, images, and videos.
 
-This structural plan is not a commit plan. The live screen now completes
-bounded staging before calling the existing executor, but the executor does not
-yet provide semantic validation, rollback, or durable completion.
+The live screen completes bounded staging before it applies the plan. It then
+snapshots selected preferences and extension directories, validates preferences
+in an isolated store, applies preferences and extensions, and commits clipboard
+history last in one Room transaction. A failure in this sequence attempts to
+restore the touched snapshots in reverse order before it returns.
 
-Clipboard media is not independently selectable. Candidate media is staged
-once when clipboard images or videos are selected and is otherwise ignored. A
-plan never authorizes blanket deletion of shared media.
+Clipboard media is not independently selectable. Only media referenced by
+selected, semantically valid clipboard records is staged; other candidates are
+ignored. A plan never authorizes blanket deletion of shared media.
+
+Legacy clipboard MIME lists are reduced to the current bounded format when
+their image or video family is unambiguous. Unsafe wildcards and mixed media
+families still fail closed. Restored timestamps are clamped to the local
+restore start, so clock skew from another device cannot put an item in the
+future.
+
+Clipboard media display names are optional for compatibility with older
+archives. New backups preserve a bounded, normalized name; restore uses the
+generic `Image` or `Video` fallback when it is absent and rejects conflicting
+names for the same media reference.
 
 ## Important current limitations
 
-The current restore commit step is **not transactional**. A structurally valid and
-byte-complete stage can still fail after live state has started changing.
-These parts remain deferred:
+The transaction is limited to failures observed by the running process. It has
+no persistent journal, so process death or power loss can leave a partial
+restore. Rollback gets two bounded attempts; if both fail, the restore reports
+that live state may need manual recovery. Preferences are preflighted before
+mutation, while extension payloads keep their existing load-time semantic
+validation.
 
-- Semantic validation of preferences, keyboard and theme extensions, and
-  clipboard indexes before commit.
-- Two-phase clipboard media handling: validate selected indexes first, then
-  stage and copy only referenced media while preserving references kept by
-  unselected indexes.
-- Replacement of only the selected clipboard types. The existing executor can
-  still clear broader clipboard history and shared media.
-- A durable, suspendable commit that finishes database and provider work before
-  reporting success.
-- Rollback and process-death recovery for interrupted or failed commits.
+Clipboard restore now validates selected indexes before install, copies only
+referenced media, preserves unselected history, and holds exact install
+receipts until its Room transaction commits. A rejected clipboard commit
+attempts to remove those fresh installs. Cleanup failures are reported and
+remain queued for retry. Merge can still reject an otherwise valid archive
+when the configured history or media budget is already full; deterministic
+eviction and replacement-aware quota planning remain deferred.
 
-Until those pieces land, staging protects the live app from malformed ZIP
-structure, unsafe paths, resource overruns, and corrupt selected entry bytes. It
-does not guarantee an all-or-nothing restore.
+Staging protects live data from malformed ZIP structure, unsafe paths, resource
+overruns, and corrupt selected entry bytes. The overall restore is
+all-or-rollback only while the process remains alive and rollback succeeds; it
+does not promise crash- or power-loss atomicity.
 
 ## Verification
 
@@ -157,10 +172,14 @@ Run the archive and plan contract tests with the app JVM suite:
 Run `./gradlew qualityGate` before merging a backup-format or restore-policy
 change.
 
-The Android storage behavior has a focused connected test:
+The Android storage, clipboard payload, commit, and manager-backup behavior has
+focused connected tests:
 
 ```shell
 ./gradlew :app:connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=\
-dev.patrickgold.florisboard.app.settings.advanced.BackupArchiveStagerAndroidTest
+dev.patrickgold.florisboard.app.settings.advanced.BackupArchiveStagerAndroidTest,\
+dev.patrickgold.florisboard.app.settings.advanced.ClipboardBackupPayloadAndroidTest,\
+dev.patrickgold.florisboard.app.settings.advanced.ClipboardRestoreCommitAndroidTest,\
+dev.patrickgold.florisboard.app.settings.advanced.ClipboardManagerBackupAndroidTest
 ```
