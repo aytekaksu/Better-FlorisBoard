@@ -460,10 +460,6 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
 
     val internal = Internal()
     inner class Internal {
-        val homeIsBetaToolboxCollapsed = boolean(
-            key = "internal__home_is_beta_toolbox_collapsed_040a01",
-            default = false,
-        )
         val isImeSetUp = boolean(
             key = "internal__is_ime_set_up",
             default = false,
