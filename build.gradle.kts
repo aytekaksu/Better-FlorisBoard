@@ -68,7 +68,6 @@ val extensionHardeningKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/cache/ImportDisplayLabelTest.kt"),
     file("app/src/androidTest/kotlin/dev/patrickgold/florisboard/lib/cache/CacheManagerAndroidTest.kt"),
     file("app/src/androidTest/kotlin/dev/patrickgold/florisboard/lib/ext/ExtensionLifecycleAndroidTest.kt"),
-    file("app/src/androidTest/kotlin/org/florisboard/lib/android/ContentResolverAndroidTest.kt"),
 )
 
 val qualityKotlinSources = files(

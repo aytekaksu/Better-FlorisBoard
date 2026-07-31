@@ -197,17 +197,6 @@ abstract class CrashUtility private constructor() {
             return retList.toList()
         }
 
-        fun hasUnhandledStacktraceFiles(context: Context): Boolean {
-            val ustDir = context.getUstDir()
-            return if (ustDir.isDirectory) {
-                (ustDir.listFiles { pathname ->
-                    pathname.name.endsWith(".$UNHANDLED_STACKTRACE_FILE_EXT")
-                })?.isNotEmpty() ?: false
-            } else {
-                false
-            }
-        }
-
         /**
          * Gets the last crash timestamp from the shared preferences.
          *

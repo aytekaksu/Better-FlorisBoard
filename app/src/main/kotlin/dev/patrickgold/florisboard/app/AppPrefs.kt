@@ -62,7 +62,7 @@ import dev.patrickgold.florisboard.ime.theme.extCoreTheme
 import dev.patrickgold.florisboard.ime.window.ImeWindowConfig
 import dev.patrickgold.florisboard.ime.window.KeyboardContentScaleMode
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
-import dev.patrickgold.florisboard.lib.util.VersionName
+import dev.patrickgold.florisboard.lib.util.DEFAULT_VERSION_NAME
 import dev.patrickgold.jetpref.datastore.annotations.Preferences
 import dev.patrickgold.jetpref.datastore.jetprefDataStoreOf
 import dev.patrickgold.jetpref.datastore.model.LocalTime
@@ -470,15 +470,15 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         )
         val versionOnInstall = string(
             key = "internal__version_on_install",
-            default = VersionName.DEFAULT_RAW,
+            default = DEFAULT_VERSION_NAME,
         )
         val versionLastUse = string(
             key = "internal__version_last_use",
-            default = VersionName.DEFAULT_RAW,
+            default = DEFAULT_VERSION_NAME,
         )
         val versionLastChangelog = string(
             key = "internal__version_last_changelog",
-            default = VersionName.DEFAULT_RAW,
+            default = DEFAULT_VERSION_NAME,
         )
         val notificationPermissionState = enum(
             key = "internal__notification_permission_state",

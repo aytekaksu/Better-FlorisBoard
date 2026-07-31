@@ -17,7 +17,6 @@
 package org.florisboard.lib.kotlin.io
 
 import kotlinx.serialization.StringFormat
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -43,11 +42,6 @@ inline fun FsDir.subFile(relPath: String) = FsFile(this, relPath)
 
 fun FsDir.deleteContentsRecursively() {
     this.listFiles()?.forEach { it.deleteRecursively() }
-}
-
-inline fun <reified T> FsFile.readJson(config: StringFormat = Json): T {
-    val text = this.readText()
-    return config.decodeFromString(text)
 }
 
 inline fun <reified T> FsFile.writeJson(value: T, config: StringFormat = Json) {

@@ -23,27 +23,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.isUnspecified
-import androidx.compose.ui.unit.sp
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-
-infix fun TextUnit.safeTimes(other: Float): TextUnit {
-    return if (this.isUnspecified) 0.sp else this.times(other)
-}
-
-infix fun TextUnit.safeTimes(other: Double): TextUnit {
-    return if (this.isUnspecified) this else this.times(other)
-}
-
-infix fun TextUnit.safeTimes(other: Int): TextUnit {
-    return if (this.isUnspecified) this else this.times(other)
-}
 
 val DpSizeSaver = Saver<Dp, Float>(
     save = { it.value },

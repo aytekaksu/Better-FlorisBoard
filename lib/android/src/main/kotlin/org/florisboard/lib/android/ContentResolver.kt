@@ -30,20 +30,6 @@ import java.io.OutputStream
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
-/**
- * Shorthand function for querying a Uri without any other arguments.
- *
- * @see android.content.ContentResolver.query
- */
-inline fun ContentResolver.query(uri: Uri) = this.query(uri, null, null, null, null)
-
-/**
- * Shorthand function for querying a Uri and projection without any other arguments.
- *
- * @see android.content.ContentResolver.query
- */
-inline fun ContentResolver.query(uri: Uri, projection: Array<String>) = this.query(uri, projection, null, null, null)
-
 inline fun ContentResolver.read(uri: Uri, maxSize: Long = Long.MAX_VALUE, block: (InputStream) -> Unit) {
     contract {
         callsInPlace(block, InvocationKind.EXACTLY_ONCE)
@@ -56,26 +42,6 @@ inline fun ContentResolver.read(uri: Uri, maxSize: Long = Long.MAX_VALUE, block:
     }
 }
 
-fun ContentResolver.readToFile(
-    uri: Uri,
-    file: FsFile,
-    maxSize: Long = Long.MAX_VALUE,
-): Long {
-    var copiedSize = 0L
-    val deleteOnFailure = !file.exists()
-    try {
-        this.read(uri, maxSize) { inStream ->
-            file.outputStream().use { outStream ->
-                copiedSize = inStream.copyTo(outStream)
-            }
-        }
-        return copiedSize
-    } catch (error: Throwable) {
-        if (deleteOnFailure) file.delete()
-        throw error
-    }
-}
-
 inline fun ContentResolver.readText(uri: Uri, block: (BufferedReader) -> Unit) {
     contract {
         callsInPlace(block, InvocationKind.EXACTLY_ONCE)
@@ -83,14 +49,6 @@ inline fun ContentResolver.readText(uri: Uri, block: (BufferedReader) -> Unit) {
     this.read(uri) { inStream ->
         inStream.bufferedReader().use(block)
     }
-}
-
-inline fun ContentResolver.readAllText(uri: Uri): String {
-    val text: String
-    this.read(uri) { inStream ->
-        text = inStream.bufferedReader().use { it.readText() }
-    }
-    return text
 }
 
 inline fun ContentResolver.write(uri: Uri, block: (OutputStream) -> Unit) {
@@ -116,12 +74,6 @@ inline fun ContentResolver.writeText(uri: Uri, block: (BufferedWriter) -> Unit) 
     }
     this.write(uri) { outStream ->
         outStream.bufferedWriter().use(block)
-    }
-}
-
-inline fun ContentResolver.writeAllText(uri: Uri, text: String) {
-    this.write(uri) { outStream ->
-        outStream.bufferedWriter().use { it.write(text) }
     }
 }
 

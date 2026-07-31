@@ -120,6 +120,5 @@ device tests:
   -Pandroid.testInstrumentationRunnerArguments.class=\
 dev.patrickgold.florisboard.lib.cache.CacheManagerAndroidTest,\
 dev.patrickgold.florisboard.lib.ext.ExtensionLifecycleAndroidTest,\
-dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaImporterAndroidTest,\
-org.florisboard.lib.android.ContentResolverAndroidTest
+dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaImporterAndroidTest
 ```

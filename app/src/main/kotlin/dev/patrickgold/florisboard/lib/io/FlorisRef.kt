@@ -27,8 +27,6 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import java.io.File
-import kotlin.contracts.InvocationKind
-import kotlin.contracts.contract
 
 /**
  * A universal resource reference, capable to point to destinations within
@@ -297,44 +295,6 @@ value class FlorisRef private constructor(val uri: Uri) {
         appendEncodedPath(name)
         build()
     })
-
-    /**
-     * Allows this URI to be used depending on where this reference points to.
-     * It is guaranteed that one of the four lambda parameters is executed.
-     *
-     * @param assets The lambda to run when the reference points to the FlorisBoard
-     *  screen UI resources. Defaults to do nothing.
-     * @param assets The lambda to run when the reference points to the FlorisBoard
-     *  APK assets. Defaults to do nothing.
-     * @param cache The lambda to run when the reference points to the FlorisBoard
-     *  cache resources. Defaults to do nothing.
-     * @param internal The lambda to run when the reference points to the FlorisBoard
-     *  internal storage. Defaults to do nothing.
-     * @param external The lambda to run when the reference points to an external
-     * resource. Defaults to do nothing.
-     */
-    fun whenSchemeIs(
-        appUi: (ref: FlorisRef) -> Unit = { /* Do nothing */ },
-        assets: (ref: FlorisRef) -> Unit = { /* Do nothing */ },
-        cache: (ref: FlorisRef) -> Unit = { /* Do nothing */ },
-        internal: (ref: FlorisRef) -> Unit = { /* Do nothing */ },
-        external: (ref: FlorisRef) -> Unit = { /* Do nothing */ }
-    ) {
-        contract {
-            callsInPlace(appUi, InvocationKind.AT_MOST_ONCE)
-            callsInPlace(assets, InvocationKind.AT_MOST_ONCE)
-            callsInPlace(cache, InvocationKind.AT_MOST_ONCE)
-            callsInPlace(internal, InvocationKind.AT_MOST_ONCE)
-            callsInPlace(external, InvocationKind.AT_MOST_ONCE)
-        }
-        when {
-            isAppUi -> appUi(this)
-            isAssets -> assets(this)
-            isCache -> cache(this)
-            isInternal -> internal(this)
-            else -> external(this)
-        }
-    }
 
     /**
      * Returns the encoded string representation of this URI.

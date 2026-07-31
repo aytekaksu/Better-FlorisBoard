@@ -19,6 +19,8 @@ package dev.patrickgold.florisboard.lib.util
 import android.content.Context
 import dev.patrickgold.florisboard.app.FlorisPreferenceModel
 
+internal const val DEFAULT_VERSION_NAME = "0.0.0"
+
 object AppVersionUtils {
     private fun getRawVersionName(context: Context): String {
         return try {
@@ -28,97 +30,11 @@ object AppVersionUtils {
         }
     }
 
-    fun shouldShowChangelog(context: Context, prefs: FlorisPreferenceModel): Boolean {
-        val installVersion =
-            VersionName.fromString(prefs.internal.versionOnInstall.get()) ?: VersionName.DEFAULT
-        val lastChangelogVersion =
-            VersionName.fromString(prefs.internal.versionLastChangelog.get()) ?: VersionName.DEFAULT
-        val currentVersion =
-            VersionName.fromString(getRawVersionName(context)) ?: VersionName.DEFAULT
-
-        return lastChangelogVersion < currentVersion && installVersion != currentVersion
-    }
-
     suspend fun updateVersionOnInstallAndLastUse(context: Context, prefs: FlorisPreferenceModel) {
-        if (prefs.internal.versionOnInstall.get() == VersionName.DEFAULT_RAW) {
-            prefs.internal.versionOnInstall.set(getRawVersionName(context))
+        val currentVersion = getRawVersionName(context)
+        if (prefs.internal.versionOnInstall.get() == DEFAULT_VERSION_NAME) {
+            prefs.internal.versionOnInstall.set(currentVersion)
         }
-        prefs.internal.versionLastUse.set(getRawVersionName(context))
-    }
-
-    suspend fun updateVersionLastChangelog(context: Context, prefs: FlorisPreferenceModel) {
-        prefs.internal.versionLastChangelog.set(getRawVersionName(context))
-    }
-}
-
-data class VersionName(
-    val major: Int,
-    val minor: Int,
-    val patch: Int,
-    val extraName: String? = null,
-    val extraValue: Int? = null
-) {
-    companion object {
-        val DEFAULT: VersionName = VersionName(0, 0, 0)
-        const val DEFAULT_RAW: String = "0.0.0"
-
-        fun fromString(raw: String): VersionName? {
-            if (raw.matches("""[0-9]+[.][0-9]+[.][0-9]+""".toRegex())) {
-                val list = raw.split(".").map { it.toInt() }
-                if (list.size == 3) {
-                    return VersionName(list[0], list[1], list[2])
-                }
-            } else if (raw.matches("""[0-9]+[.][0-9]+[.][0-9]+[-][0-9]+""".toRegex())) {
-                val list = raw.split(".").map { it.toInt() }
-                if (list.size == 4) {
-                    return VersionName(list[0], list[1], list[2], null, list[3])
-                }
-            } else if (raw.matches("""[0-9]+[.][0-9]+[.][0-9]+[-][a-zA-Z]+""".toRegex())) {
-                val list = raw.split(".")
-                if (list.size == 4) {
-                    return VersionName(
-                        list[0].toInt(), list[1].toInt(), list[2].toInt(),
-                        list[3], null
-                    )
-                }
-            } else if (raw.matches("""[0-9]+[.][0-9]+[.][0-9]+[-][a-zA-Z]+[0-9]+""".toRegex())) {
-                val list = raw.split(".")
-                if (list.size == 4) {
-                    val extraName = list[3].split("""[0-9]+""".toRegex())[0]
-                    val extraValue = list[3].split("""[a-zA-Z]+""".toRegex())[1].toInt()
-                    return VersionName(
-                        list[0].toInt(), list[1].toInt(), list[2].toInt(),
-                        extraName, extraValue
-                    )
-                }
-            }
-            return null
-        }
-    }
-
-    override fun toString(): String {
-        val mmp = "$major.$minor.$patch"
-        return if (extraName != null || extraValue != null) {
-            val extraName = extraName ?: ""
-            val extraValue = extraValue?.toString() ?: ""
-            "$mmp.$extraName$extraValue"
-        } else {
-            mmp
-        }
-    }
-
-    operator fun compareTo(other: VersionName): Int {
-        if (major != other.major) {
-            return major.compareTo(other.major)
-        } else if (minor != other.minor) {
-            return minor.compareTo(other.minor)
-        } else if (patch != other.patch) {
-            return patch.compareTo(other.patch)
-        } else if (extraValue != null && other.extraValue != null) {
-            if (extraValue != other.extraValue) {
-                return extraValue.compareTo(other.extraValue)
-            }
-        }
-        return 0
+        prefs.internal.versionLastUse.set(currentVersion)
     }
 }
