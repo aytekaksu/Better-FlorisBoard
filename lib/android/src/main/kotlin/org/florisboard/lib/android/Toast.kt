@@ -20,7 +20,6 @@ import android.content.Context
 import android.widget.Toast
 import androidx.annotation.StringRes
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.florisboard.lib.kotlin.CurlyArg
 
@@ -85,59 +84,3 @@ suspend fun Context.showLongToast(@StringRes id: Int, vararg args: CurlyArg): To
     val text = this.stringRes(id, *args)
     return showLongToast(text)
 }
-
-
-
-
-// These wrappers are temporary, but needed.
-// Gradually in the future all event logic will be suspendable, then these wrappers will not be needed anymore.
-// DO NOT USE THESE IN SUSPENDABLE CONTEXTS, THIS CAUSES ISSUES
-
-@Deprecated(
-    "Use suspend showShortToast instead",
-    ReplaceWith("showShortToast(text)")
-)
-fun Context.showShortToastSync(text: String): Toast = runBlocking {
-    showShortToast(text)
-}
-
-@Deprecated(
-    "Use suspend showShortToast instead",
-    ReplaceWith("showShortToast(id)")
-)
-fun Context.showShortToastSync(@StringRes id: Int): Toast = runBlocking {
-    showShortToast(id)
-}
-
-@Deprecated(
-    "Use suspend showShortToast instead",
-    ReplaceWith("showShortToast(id, *args)")
-)
-fun Context.showShortToastSync(@StringRes id: Int, vararg args: CurlyArg): Toast = runBlocking {
-    showShortToast(id, *args)
-}
-
-@Deprecated(
-    "Use suspend showLongToast instead",
-    ReplaceWith("showLongToast(text)")
-)
-fun Context.showLongToastSync(text: String): Toast = runBlocking {
-    showLongToast(text)
-}
-
-@Deprecated(
-    "Use suspend showLongToast instead",
-    ReplaceWith("showLongToast(id)")
-)
-fun Context.showLongToastSync(@StringRes id: Int): Toast = runBlocking {
-    showLongToast(id)
-}
-
-@Deprecated(
-    "Use suspend showLongToast instead",
-    ReplaceWith("showLongToast(id, *args)")
-)
-fun Context.showLongToastSync(@StringRes id: Int, vararg args: CurlyArg): Toast = runBlocking {
-    showLongToast(id, *args)
-}
-

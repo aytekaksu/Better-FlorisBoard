@@ -72,9 +72,7 @@ import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 import org.florisboard.lib.android.conservativeUsableSpace
 import org.florisboard.lib.android.showLongToast
-import org.florisboard.lib.android.showLongToastSync
 import org.florisboard.lib.android.showShortToast
-import org.florisboard.lib.android.showShortToastSync
 import org.florisboard.lib.compose.FlorisIconButton
 import org.florisboard.lib.compose.stringRes
 import org.florisboard.lib.kotlin.io.subDir
@@ -334,32 +332,33 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ExtEditorWorkspace<*>) = Fl
                     neutralLabel = stringRes(R.string.action__delete),
                     allowOutsideDismissal = true,
                     onNeutral = {
-                        if (file.delete()) {
+                        val message = if (file.delete()) {
                             workspace.update { }
-                            context.showShortToastSync("Successfully deleted")
+                            "Successfully deleted"
                         } else {
-                            context.showShortToastSync("Failed to delete")
+                            "Failed to delete"
                         }
+                        importScope.launch { context.showShortToast(message) }
                         dialogFile = null
                         version++
                     },
                     onConfirm = {
                         val newFile = file.parentFile!!.subFile(fileNameInput).canonicalFile
                         if (newFile.parentFile != file.canonicalFile.parentFile) {
-                            context.showLongToastSync("Invalid file name!")
+                            importScope.launch { context.showLongToast("Invalid file name!") }
                             return@JetPrefAlertDialog
                         }
                         if (newFile.exists()) {
-                            context.showShortToastSync("Filename already exists.")
+                            importScope.launch { context.showShortToast("Filename already exists.") }
                             return@JetPrefAlertDialog
                         }
-                        val success = file.renameTo(newFile)
-                        if (success) {
+                        val message = if (file.renameTo(newFile)) {
                             workspace.update { }
-                            context.showShortToastSync("Successfully renamed")
+                            "Successfully renamed"
                         } else {
-                            context.showShortToastSync("Failed to rename the file.")
+                            "Failed to rename the file."
                         }
+                        importScope.launch { context.showShortToast(message) }
                         dialogFile = null
                         version++
                     },
