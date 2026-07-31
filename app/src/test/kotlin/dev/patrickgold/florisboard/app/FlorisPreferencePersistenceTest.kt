@@ -151,6 +151,9 @@ class FlorisPreferencePersistenceTest :
                     strategy = ImportStrategy.Erase,
                     raw = persistencePayload(
                         """b;smartbar__enabled;false""",
+                        """b;smartbar__action_row_auto_expand_collapse;false""",
+                        """b;smartbar__primary_actions_auto_expand_collapse;false""",
+                        """b;smartbar__shared_actions_auto_expand_collapse;false""",
                         """b;smartbar__secondary_actions_expanded;true""",
                         persistenceStringPreference(
                             "smartbar__quick_actions",

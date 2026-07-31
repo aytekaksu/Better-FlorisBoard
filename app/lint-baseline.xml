@@ -2226,17 +2226,6 @@
 
     <issue
         id="UnusedResources"
-        message="The resource `R.string.pref__smartbar__shared_actions_auto_expand_collapse__summary` appears to be unused"
-        errorLine1="    &lt;string name=&quot;pref__smartbar__shared_actions_auto_expand_collapse__summary&quot; comment=&quot;Preference summary&quot;>Auto-expands/collapses the shared action row based on current state&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="486"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
         message="The resource `R.string.about__app_icon_content_description` appears to be unused"
         errorLine1="    &lt;string name=&quot;about__app_icon_content_description&quot; comment=&quot;Content description of app icon in About&quot;>App icon of FlorisBoard&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
