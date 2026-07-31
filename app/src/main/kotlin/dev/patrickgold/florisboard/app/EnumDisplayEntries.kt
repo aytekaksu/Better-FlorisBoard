@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard.app
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.settings.theme.DisplayKbdAfterDialogs
@@ -49,6 +50,7 @@ import dev.patrickgold.florisboard.ime.text.key.UtilityKeyAction
 import dev.patrickgold.florisboard.ime.theme.ThemeMode
 import dev.patrickgold.florisboard.ime.window.ImeWindowMode
 import dev.patrickgold.florisboard.ime.window.KeyboardContentScaleMode
+import dev.patrickgold.jetpref.datastore.ui.ListPreferenceEntriesScope
 import dev.patrickgold.jetpref.datastore.ui.ListPreferenceEntry
 import dev.patrickgold.jetpref.datastore.ui.listPrefEntries
 import dev.patrickgold.jetpref.material.ui.ColorRepresentation
@@ -58,56 +60,41 @@ import kotlin.reflect.KClass
 
 private const val DEFAULT = ""
 
+@Composable
+private fun <V : Any> ListPreferenceEntriesScope<V>.ResourceEntry(
+    key: V,
+    @StringRes labelRes: Int,
+) = entry(key = key, label = stringRes(labelRes))
+
 private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable () -> List<ListPreferenceEntry<*>>>(
     AppTheme::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = AppTheme.AUTO,
-                label = stringRes(R.string.settings__system_default),
-            )
-            entry(
-                key = AppTheme.AUTO_AMOLED,
-                label = stringRes(R.string.pref__other__settings_theme__auto_amoled),
-            )
-            entry(
-                key = AppTheme.LIGHT,
-                label = stringRes(R.string.pref__other__settings_theme__light),
-            )
-            entry(
-                key = AppTheme.DARK,
-                label = stringRes(R.string.pref__other__settings_theme__dark),
-            )
-            entry(
-                key = AppTheme.AMOLED_DARK,
-                label = stringRes(R.string.pref__other__settings_theme__amoled_dark),
-            )
+            ResourceEntry(AppTheme.AUTO, R.string.settings__system_default)
+            ResourceEntry(AppTheme.AUTO_AMOLED, R.string.pref__other__settings_theme__auto_amoled)
+            ResourceEntry(AppTheme.LIGHT, R.string.pref__other__settings_theme__light)
+            ResourceEntry(AppTheme.DARK, R.string.pref__other__settings_theme__dark)
+            ResourceEntry(AppTheme.AMOLED_DARK, R.string.pref__other__settings_theme__amoled_dark)
         }
     },
     CandidatesDisplayMode::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = CandidatesDisplayMode.CLASSIC,
-                label = stringRes(R.string.enum__candidates_display_mode__classic),
-            )
-            entry(
-                key = CandidatesDisplayMode.DYNAMIC,
-                label = stringRes(R.string.enum__candidates_display_mode__dynamic),
-            )
-            entry(
-                key = CandidatesDisplayMode.DYNAMIC_SCROLLABLE,
-                label = stringRes(R.string.enum__candidates_display_mode__dynamic_scrollable),
+            ResourceEntry(CandidatesDisplayMode.CLASSIC, R.string.enum__candidates_display_mode__classic)
+            ResourceEntry(CandidatesDisplayMode.DYNAMIC, R.string.enum__candidates_display_mode__dynamic)
+            ResourceEntry(
+                CandidatesDisplayMode.DYNAMIC_SCROLLABLE,
+                R.string.enum__candidates_display_mode__dynamic_scrollable,
             )
         }
     },
     CapitalizationBehavior::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = CapitalizationBehavior.CAPSLOCK_BY_DOUBLE_TAP,
-                label = stringRes(R.string.enum__capitalization_behavior__capslock_by_double_tap),
+            ResourceEntry(
+                CapitalizationBehavior.CAPSLOCK_BY_DOUBLE_TAP,
+                R.string.enum__capitalization_behavior__capslock_by_double_tap,
             )
-            entry(
-                key = CapitalizationBehavior.CAPSLOCK_BY_CYCLE,
-                label = stringRes(R.string.enum__capitalization_behavior__capslock_by_cycle),
+            ResourceEntry(
+                CapitalizationBehavior.CAPSLOCK_BY_CYCLE,
+                R.string.enum__capitalization_behavior__capslock_by_cycle,
             )
         }
     },
@@ -341,25 +328,19 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
     },
     KeyHintPlacement::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = KeyHintPlacement.CORNER,
-                label = stringRes(R.string.enum__key_hint_placement__corner),
-            )
-            entry(
-                key = KeyHintPlacement.INSET,
-                label = stringRes(R.string.enum__key_hint_placement__inset),
-            )
+            ResourceEntry(KeyHintPlacement.CORNER, R.string.enum__key_hint_placement__corner)
+            ResourceEntry(KeyHintPlacement.INSET, R.string.enum__key_hint_placement__inset)
         }
     },
     IncognitoDisplayMode::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = IncognitoDisplayMode.REPLACE_SHARED_ACTIONS_TOGGLE,
-                label = stringRes(id = R.string.enum__incognito_display_mode__replace_shared_actions_toggle),
+            ResourceEntry(
+                IncognitoDisplayMode.REPLACE_SHARED_ACTIONS_TOGGLE,
+                R.string.enum__incognito_display_mode__replace_shared_actions_toggle,
             )
-            entry(
-                key = IncognitoDisplayMode.DISPLAY_BEHIND_KEYBOARD,
-                label = stringRes(id = R.string.enum__incognito_display_mode__display_behind_keyboard),
+            ResourceEntry(
+                IncognitoDisplayMode.DISPLAY_BEHIND_KEYBOARD,
+                R.string.enum__incognito_display_mode__display_behind_keyboard,
             )
         }
     },
@@ -387,118 +368,67 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
     },
     InputFeedbackActivationMode::class to "audio" to {
         listPrefEntries {
-            entry(
-                key = InputFeedbackActivationMode.RESPECT_SYSTEM_SETTINGS,
-                label = stringRes(R.string.enum__input_feedback_activation_mode__audio_respect_system_settings),
+            ResourceEntry(
+                InputFeedbackActivationMode.RESPECT_SYSTEM_SETTINGS,
+                R.string.enum__input_feedback_activation_mode__audio_respect_system_settings,
             )
-            entry(
-                key = InputFeedbackActivationMode.IGNORE_SYSTEM_SETTINGS,
-                label = stringRes(R.string.enum__input_feedback_activation_mode__audio_ignore_system_settings),
+            ResourceEntry(
+                InputFeedbackActivationMode.IGNORE_SYSTEM_SETTINGS,
+                R.string.enum__input_feedback_activation_mode__audio_ignore_system_settings,
             )
         }
     },
     InputFeedbackActivationMode::class to "haptic" to {
         listPrefEntries {
-            entry(
-                key = InputFeedbackActivationMode.RESPECT_SYSTEM_SETTINGS,
-                label = stringRes(R.string.enum__input_feedback_activation_mode__haptic_respect_system_settings),
+            ResourceEntry(
+                InputFeedbackActivationMode.RESPECT_SYSTEM_SETTINGS,
+                R.string.enum__input_feedback_activation_mode__haptic_respect_system_settings,
             )
-            entry(
-                key = InputFeedbackActivationMode.IGNORE_SYSTEM_SETTINGS,
-                label = stringRes(R.string.enum__input_feedback_activation_mode__haptic_ignore_system_settings),
+            ResourceEntry(
+                InputFeedbackActivationMode.IGNORE_SYSTEM_SETTINGS,
+                R.string.enum__input_feedback_activation_mode__haptic_ignore_system_settings,
             )
         }
     },
     InputShiftState::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = InputShiftState.UNSHIFTED,
-                label = stringRes(R.string.enum__input_shift_state__unshifted),
-            )
-            entry(
-                key = InputShiftState.SHIFTED_MANUAL,
-                label = stringRes(R.string.enum__input_shift_state__shifted_manual),
-            )
-            entry(
-                key = InputShiftState.SHIFTED_AUTOMATIC,
-                label = stringRes(R.string.enum__input_shift_state__shifted_automatic),
-            )
-            entry(
-                key = InputShiftState.CAPS_LOCK,
-                label = stringRes(R.string.enum__input_shift_state__caps_lock),
-            )
+            ResourceEntry(InputShiftState.UNSHIFTED, R.string.enum__input_shift_state__unshifted)
+            ResourceEntry(InputShiftState.SHIFTED_MANUAL, R.string.enum__input_shift_state__shifted_manual)
+            ResourceEntry(InputShiftState.SHIFTED_AUTOMATIC, R.string.enum__input_shift_state__shifted_automatic)
+            ResourceEntry(InputShiftState.CAPS_LOCK, R.string.enum__input_shift_state__caps_lock)
         }
     },
     ImeWindowMode::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = ImeWindowMode.FIXED,
-                label = stringRes(R.string.enum__ime_window_mode__fixed),
-            )
-            entry(
-                key = ImeWindowMode.FLOATING,
-                label = stringRes(R.string.enum__ime_window_mode__floating),
-            )
+            ResourceEntry(ImeWindowMode.FIXED, R.string.enum__ime_window_mode__fixed)
+            ResourceEntry(ImeWindowMode.FLOATING, R.string.enum__ime_window_mode__floating)
         }
     },
     KeyboardContentScaleMode::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = KeyboardContentScaleMode.FOLLOW_KEYBOARD_HEIGHT,
-                label = stringRes(R.string.enum__keyboard_content_scale_mode__follow_keyboard_height),
+            ResourceEntry(
+                KeyboardContentScaleMode.FOLLOW_KEYBOARD_HEIGHT,
+                R.string.enum__keyboard_content_scale_mode__follow_keyboard_height,
             )
-            entry(
-                key = KeyboardContentScaleMode.FIXED,
-                label = stringRes(R.string.enum__keyboard_content_scale_mode__fixed),
-            )
+            ResourceEntry(KeyboardContentScaleMode.FIXED, R.string.enum__keyboard_content_scale_mode__fixed)
         }
     },
     KeyboardMode::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = KeyboardMode.CHARACTERS,
-                label = stringRes(R.string.enum__keyboard_mode__characters),
-            )
-            entry(
-                key = KeyboardMode.SYMBOLS,
-                label = stringRes(R.string.enum__keyboard_mode__symbols),
-            )
-            entry(
-                key = KeyboardMode.SYMBOLS2,
-                label = stringRes(R.string.enum__keyboard_mode__symbols2),
-            )
-            entry(
-                key = KeyboardMode.NUMERIC,
-                label = stringRes(R.string.enum__keyboard_mode__numeric),
-            )
-            entry(
-                key = KeyboardMode.NUMERIC_ADVANCED,
-                label = stringRes(R.string.enum__keyboard_mode__numeric_advanced),
-            )
-            entry(
-                key = KeyboardMode.PHONE,
-                label = stringRes(R.string.enum__keyboard_mode__phone),
-            )
-            entry(
-                key = KeyboardMode.PHONE2,
-                label = stringRes(R.string.enum__keyboard_mode__phone2),
-            )
+            ResourceEntry(KeyboardMode.CHARACTERS, R.string.enum__keyboard_mode__characters)
+            ResourceEntry(KeyboardMode.SYMBOLS, R.string.enum__keyboard_mode__symbols)
+            ResourceEntry(KeyboardMode.SYMBOLS2, R.string.enum__keyboard_mode__symbols2)
+            ResourceEntry(KeyboardMode.NUMERIC, R.string.enum__keyboard_mode__numeric)
+            ResourceEntry(KeyboardMode.NUMERIC_ADVANCED, R.string.enum__keyboard_mode__numeric_advanced)
+            ResourceEntry(KeyboardMode.PHONE, R.string.enum__keyboard_mode__phone)
+            ResourceEntry(KeyboardMode.PHONE2, R.string.enum__keyboard_mode__phone2)
         }
     },
     LandscapeInputUiMode::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = LandscapeInputUiMode.NEVER_SHOW,
-                label = stringRes(R.string.enum__landscape_input_ui_mode__never_show),
-            )
-            entry(
-                key = LandscapeInputUiMode.ALWAYS_SHOW,
-                label = stringRes(R.string.enum__landscape_input_ui_mode__always_show),
-            )
-            entry(
-                key = LandscapeInputUiMode.DYNAMICALLY_SHOW,
-                label = stringRes(R.string.enum__landscape_input_ui_mode__dynamically_show),
-            )
+            ResourceEntry(LandscapeInputUiMode.NEVER_SHOW, R.string.enum__landscape_input_ui_mode__never_show)
+            ResourceEntry(LandscapeInputUiMode.ALWAYS_SHOW, R.string.enum__landscape_input_ui_mode__always_show)
+            ResourceEntry(LandscapeInputUiMode.DYNAMICALLY_SHOW, R.string.enum__landscape_input_ui_mode__dynamically_show)
         }
     },
     SmartbarLayout::class to DEFAULT to {
@@ -527,30 +457,15 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
     },
     SharedActionsTransitionMode::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = SharedActionsTransitionMode.CURRENT,
-                label = stringRes(R.string.enum__shared_actions_transition_mode__current),
-            )
-            entry(
-                key = SharedActionsTransitionMode.CLASSIC,
-                label = stringRes(R.string.enum__shared_actions_transition_mode__classic),
-            )
+            ResourceEntry(SharedActionsTransitionMode.CURRENT, R.string.enum__shared_actions_transition_mode__current)
+            ResourceEntry(SharedActionsTransitionMode.CLASSIC, R.string.enum__shared_actions_transition_mode__classic)
         }
     },
     SmartbarMotionMode::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = SmartbarMotionMode.STANDARD,
-                label = stringRes(R.string.enum__smartbar_motion_mode__standard),
-            )
-            entry(
-                key = SmartbarMotionMode.REDUCED,
-                label = stringRes(R.string.enum__smartbar_motion_mode__reduced),
-            )
-            entry(
-                key = SmartbarMotionMode.OFF,
-                label = stringRes(R.string.enum__smartbar_motion_mode__off),
-            )
+            ResourceEntry(SmartbarMotionMode.STANDARD, R.string.enum__smartbar_motion_mode__standard)
+            ResourceEntry(SmartbarMotionMode.REDUCED, R.string.enum__smartbar_motion_mode__reduced)
+            ResourceEntry(SmartbarMotionMode.OFF, R.string.enum__smartbar_motion_mode__off)
         }
     },
     SnyggLevel::class to DEFAULT to {
@@ -577,245 +492,107 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
     },
     SpaceBarMode::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = SpaceBarMode.NOTHING,
-                label = stringRes(R.string.enum__space_bar_mode__nothing),
-            )
-            entry(
-                key = SpaceBarMode.CURRENT_LANGUAGE,
-                label = stringRes(R.string.enum__space_bar_mode__current_language),
-            )
-            entry(
-                key = SpaceBarMode.SPACE_BAR_KEY,
-                label = stringRes(R.string.enum__space_bar_mode__space_bar_key),
-            )
+            ResourceEntry(SpaceBarMode.NOTHING, R.string.enum__space_bar_mode__nothing)
+            ResourceEntry(SpaceBarMode.CURRENT_LANGUAGE, R.string.enum__space_bar_mode__current_language)
+            ResourceEntry(SpaceBarMode.SPACE_BAR_KEY, R.string.enum__space_bar_mode__space_bar_key)
         }
     },
     SpaceBarLanguageLabelMode::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = SpaceBarLanguageLabelMode.LOCALE_NAME,
-                label = stringRes(R.string.enum__space_bar_language_label_mode__locale_name),
+            ResourceEntry(SpaceBarLanguageLabelMode.LOCALE_NAME, R.string.enum__space_bar_language_label_mode__locale_name)
+            ResourceEntry(
+                SpaceBarLanguageLabelMode.LANGUAGE_NAME,
+                R.string.enum__space_bar_language_label_mode__language_name,
             )
-            entry(
-                key = SpaceBarLanguageLabelMode.LANGUAGE_NAME,
-                label = stringRes(R.string.enum__space_bar_language_label_mode__language_name),
-            )
-            entry(
-                key = SpaceBarLanguageLabelMode.LANGUAGE_CODE,
-                label = stringRes(R.string.enum__space_bar_language_label_mode__language_code),
+            ResourceEntry(
+                SpaceBarLanguageLabelMode.LANGUAGE_CODE,
+                R.string.enum__space_bar_language_label_mode__language_code,
             )
         }
     },
     SpellingLanguageMode::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = SpellingLanguageMode.USE_SYSTEM_LANGUAGES,
-                label = stringRes(R.string.enum__spelling_language_mode__use_system_languages),
+            ResourceEntry(
+                SpellingLanguageMode.USE_SYSTEM_LANGUAGES,
+                R.string.enum__spelling_language_mode__use_system_languages,
             )
-            entry(
-                key = SpellingLanguageMode.USE_KEYBOARD_SUBTYPES,
-                label = stringRes(R.string.enum__spelling_language_mode__use_keyboard_subtypes),
+            ResourceEntry(
+                SpellingLanguageMode.USE_KEYBOARD_SUBTYPES,
+                R.string.enum__spelling_language_mode__use_keyboard_subtypes,
             )
         }
     },
     SwipeActivationArea::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = SwipeActivationArea.KEYS_ONLY,
-                label = stringRes(R.string.enum__swipe_activation_area__keys_only),
-            )
-            entry(
-                key = SwipeActivationArea.ENTIRE_KEYBOARD,
-                label = stringRes(R.string.enum__swipe_activation_area__entire_keyboard),
-            )
+            ResourceEntry(SwipeActivationArea.KEYS_ONLY, R.string.enum__swipe_activation_area__keys_only)
+            ResourceEntry(SwipeActivationArea.ENTIRE_KEYBOARD, R.string.enum__swipe_activation_area__entire_keyboard)
         }
     },
     SwipeAction::class to "general" to {
         listPrefEntries {
-            entry(
-                key = SwipeAction.NO_ACTION,
-                label = stringRes(R.string.enum__swipe_action__no_action),
+            ResourceEntry(SwipeAction.NO_ACTION, R.string.enum__swipe_action__no_action)
+            ResourceEntry(
+                SwipeAction.CYCLE_TO_PREVIOUS_KEYBOARD_MODE,
+                R.string.enum__swipe_action__cycle_to_previous_keyboard_mode,
             )
-            entry(
-                key = SwipeAction.CYCLE_TO_PREVIOUS_KEYBOARD_MODE,
-                label = stringRes(R.string.enum__swipe_action__cycle_to_previous_keyboard_mode),
-            )
-            entry(
-                key = SwipeAction.CYCLE_TO_NEXT_KEYBOARD_MODE,
-                label = stringRes(R.string.enum__swipe_action__cycle_to_next_keyboard_mode),
-            )
-            entry(
-                key = SwipeAction.DELETE_WORD,
-                label = stringRes(R.string.enum__swipe_action__delete_word),
-            )
-            entry(
-                key = SwipeAction.HIDE_KEYBOARD,
-                label = stringRes(R.string.enum__swipe_action__hide_keyboard),
-            )
-            entry(
-                key = SwipeAction.INSERT_SPACE,
-                label = stringRes(R.string.enum__swipe_action__insert_space),
-            )
-            entry(
-                key = SwipeAction.MOVE_CURSOR_UP,
-                label = stringRes(R.string.enum__swipe_action__move_cursor_up),
-            )
-            entry(
-                key = SwipeAction.MOVE_CURSOR_DOWN,
-                label = stringRes(R.string.enum__swipe_action__move_cursor_down),
-            )
-            entry(
-                key = SwipeAction.MOVE_CURSOR_LEFT,
-                label = stringRes(R.string.enum__swipe_action__move_cursor_left),
-            )
-            entry(
-                key = SwipeAction.MOVE_CURSOR_RIGHT,
-                label = stringRes(R.string.enum__swipe_action__move_cursor_right),
-            )
-            entry(
-                key = SwipeAction.MOVE_CURSOR_START_OF_LINE,
-                label = stringRes(R.string.enum__swipe_action__move_cursor_start_of_line),
-            )
-            entry(
-                key = SwipeAction.MOVE_CURSOR_END_OF_LINE,
-                label = stringRes(R.string.enum__swipe_action__move_cursor_end_of_line),
-            )
-            entry(
-                key = SwipeAction.MOVE_CURSOR_START_OF_PAGE,
-                label = stringRes(R.string.enum__swipe_action__move_cursor_start_of_page),
-            )
-            entry(
-                key = SwipeAction.MOVE_CURSOR_END_OF_PAGE,
-                label = stringRes(R.string.enum__swipe_action__move_cursor_end_of_page),
-            )
-            entry(
-                key = SwipeAction.SHIFT,
-                label = stringRes(R.string.enum__swipe_action__shift),
-            )
-            entry(
-                key = SwipeAction.REDO,
-                label = stringRes(R.string.enum__swipe_action__redo),
-            )
-            entry(
-                key = SwipeAction.UNDO,
-                label = stringRes(R.string.enum__swipe_action__undo),
-            )
-            entry(
-                key = SwipeAction.SWITCH_TO_CLIPBOARD_CONTEXT,
-                label = stringRes(R.string.enum__swipe_action__switch_to_clipboard_context),
-            )
-            entry(
-                key = SwipeAction.SWITCH_TO_MEDIA_CONTEXT,
-                label = stringRes(R.string.enum__swipe_action__switch_to_media_context)
-            )
-            entry(
-                key = SwipeAction.SHOW_INPUT_METHOD_PICKER,
-                label = stringRes(R.string.enum__swipe_action__show_input_method_picker),
-            )
-            entry(
-                key = SwipeAction.SHOW_SUBTYPE_PICKER,
-                label = "Show subtype picker"
-            )
-            entry(
-                key = SwipeAction.SWITCH_TO_PREV_SUBTYPE,
-                label = stringRes(R.string.enum__swipe_action__switch_to_prev_subtype),
-            )
-            entry(
-                key = SwipeAction.SWITCH_TO_NEXT_SUBTYPE,
-                label = stringRes(R.string.enum__swipe_action__switch_to_next_subtype),
-            )
-            entry(
-                key = SwipeAction.SWITCH_TO_PREV_KEYBOARD,
-                label = stringRes(R.string.enum__swipe_action__switch_to_prev_keyboard),
-            )
-            entry(
-                key = SwipeAction.TOGGLE_SMARTBAR_VISIBILITY,
-                label = stringRes(R.string.enum__swipe_action__toggle_smartbar_visibility),
-            )
-            entry(
-                key = SwipeAction.TOGGLE_COMPACT_LAYOUT,
-                label = stringRes(R.string.enum__swipe_action__toggle_compact_layout),
-            )
+            ResourceEntry(SwipeAction.CYCLE_TO_NEXT_KEYBOARD_MODE, R.string.enum__swipe_action__cycle_to_next_keyboard_mode)
+            ResourceEntry(SwipeAction.DELETE_WORD, R.string.enum__swipe_action__delete_word)
+            ResourceEntry(SwipeAction.HIDE_KEYBOARD, R.string.enum__swipe_action__hide_keyboard)
+            ResourceEntry(SwipeAction.INSERT_SPACE, R.string.enum__swipe_action__insert_space)
+            ResourceEntry(SwipeAction.MOVE_CURSOR_UP, R.string.enum__swipe_action__move_cursor_up)
+            ResourceEntry(SwipeAction.MOVE_CURSOR_DOWN, R.string.enum__swipe_action__move_cursor_down)
+            ResourceEntry(SwipeAction.MOVE_CURSOR_LEFT, R.string.enum__swipe_action__move_cursor_left)
+            ResourceEntry(SwipeAction.MOVE_CURSOR_RIGHT, R.string.enum__swipe_action__move_cursor_right)
+            ResourceEntry(SwipeAction.MOVE_CURSOR_START_OF_LINE, R.string.enum__swipe_action__move_cursor_start_of_line)
+            ResourceEntry(SwipeAction.MOVE_CURSOR_END_OF_LINE, R.string.enum__swipe_action__move_cursor_end_of_line)
+            ResourceEntry(SwipeAction.MOVE_CURSOR_START_OF_PAGE, R.string.enum__swipe_action__move_cursor_start_of_page)
+            ResourceEntry(SwipeAction.MOVE_CURSOR_END_OF_PAGE, R.string.enum__swipe_action__move_cursor_end_of_page)
+            ResourceEntry(SwipeAction.SHIFT, R.string.enum__swipe_action__shift)
+            ResourceEntry(SwipeAction.REDO, R.string.enum__swipe_action__redo)
+            ResourceEntry(SwipeAction.UNDO, R.string.enum__swipe_action__undo)
+            ResourceEntry(SwipeAction.SWITCH_TO_CLIPBOARD_CONTEXT, R.string.enum__swipe_action__switch_to_clipboard_context)
+            ResourceEntry(SwipeAction.SWITCH_TO_MEDIA_CONTEXT, R.string.enum__swipe_action__switch_to_media_context)
+            ResourceEntry(SwipeAction.SHOW_INPUT_METHOD_PICKER, R.string.enum__swipe_action__show_input_method_picker)
+            ResourceEntry(SwipeAction.SHOW_SUBTYPE_PICKER, R.string.enum__swipe_action__show_subtype_picker)
+            ResourceEntry(SwipeAction.SWITCH_TO_PREV_SUBTYPE, R.string.enum__swipe_action__switch_to_prev_subtype)
+            ResourceEntry(SwipeAction.SWITCH_TO_NEXT_SUBTYPE, R.string.enum__swipe_action__switch_to_next_subtype)
+            ResourceEntry(SwipeAction.SWITCH_TO_PREV_KEYBOARD, R.string.enum__swipe_action__switch_to_prev_keyboard)
+            ResourceEntry(SwipeAction.TOGGLE_SMARTBAR_VISIBILITY, R.string.enum__swipe_action__toggle_smartbar_visibility)
+            ResourceEntry(SwipeAction.TOGGLE_COMPACT_LAYOUT, R.string.enum__swipe_action__toggle_compact_layout)
         }
     },
     SwipeAction::class to "deleteSwipe" to {
         listPrefEntries {
-            entry(
-                key = SwipeAction.NO_ACTION,
-                label = stringRes(R.string.enum__swipe_action__no_action),
-            )
-            entry(
-                key = SwipeAction.DELETE_CHARACTERS_PRECISELY,
-                label = stringRes(R.string.enum__swipe_action__delete_characters_precisely),
-            )
-            entry(
-                key = SwipeAction.DELETE_WORD,
-                label = stringRes(R.string.enum__swipe_action__delete_word),
-            )
-            entry(
-                key = SwipeAction.DELETE_WORDS_PRECISELY,
-                label = stringRes(R.string.enum__swipe_action__delete_words_precisely),
-            )
-            entry(
-                key = SwipeAction.SELECT_CHARACTERS_PRECISELY,
-                label = stringRes(R.string.enum__swipe_action__select_characters_precisely),
-            )
-            entry(
-                key = SwipeAction.SELECT_WORDS_PRECISELY,
-                label = stringRes(R.string.enum__swipe_action__select_words_precisely),
-            )
+            ResourceEntry(SwipeAction.NO_ACTION, R.string.enum__swipe_action__no_action)
+            ResourceEntry(SwipeAction.DELETE_CHARACTERS_PRECISELY, R.string.enum__swipe_action__delete_characters_precisely)
+            ResourceEntry(SwipeAction.DELETE_WORD, R.string.enum__swipe_action__delete_word)
+            ResourceEntry(SwipeAction.DELETE_WORDS_PRECISELY, R.string.enum__swipe_action__delete_words_precisely)
+            ResourceEntry(SwipeAction.SELECT_CHARACTERS_PRECISELY, R.string.enum__swipe_action__select_characters_precisely)
+            ResourceEntry(SwipeAction.SELECT_WORDS_PRECISELY, R.string.enum__swipe_action__select_words_precisely)
         }
     },
     SwipeAction::class to "deleteLongPress" to {
         listPrefEntries {
-            entry(
-                key = SwipeAction.DELETE_CHARACTER,
-                label = stringRes(R.string.enum__swipe_action__delete_character),
-            )
-            entry(
-                key = SwipeAction.DELETE_WORD,
-                label = stringRes(R.string.enum__swipe_action__delete_word),
-            )
+            ResourceEntry(SwipeAction.DELETE_CHARACTER, R.string.enum__swipe_action__delete_character)
+            ResourceEntry(SwipeAction.DELETE_WORD, R.string.enum__swipe_action__delete_word)
         }
     },
     ThemeMode::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = ThemeMode.ALWAYS_DAY,
-                label = stringRes(R.string.enum__theme_mode__always_day),
-            )
-            entry(
-                key = ThemeMode.ALWAYS_NIGHT,
-                label = stringRes(R.string.enum__theme_mode__always_night),
-            )
-            entry(
-                key = ThemeMode.FOLLOW_SYSTEM,
-                label = stringRes(R.string.enum__theme_mode__follow_system),
-            )
-            entry(
-                key = ThemeMode.FOLLOW_TIME,
-                label = stringRes(R.string.enum__theme_mode__follow_time),
-            )
+            ResourceEntry(ThemeMode.ALWAYS_DAY, R.string.enum__theme_mode__always_day)
+            ResourceEntry(ThemeMode.ALWAYS_NIGHT, R.string.enum__theme_mode__always_night)
+            ResourceEntry(ThemeMode.FOLLOW_SYSTEM, R.string.enum__theme_mode__follow_system)
+            ResourceEntry(ThemeMode.FOLLOW_TIME, R.string.enum__theme_mode__follow_time)
         }
     },
     UtilityKeyAction::class to DEFAULT to {
         listPrefEntries {
-            entry(
-                key = UtilityKeyAction.SWITCH_TO_EMOJIS,
-                label = stringRes(R.string.enum__utility_key_action__switch_to_emojis),
-            )
-            entry(
-                key = UtilityKeyAction.SWITCH_LANGUAGE,
-                label = stringRes(R.string.enum__utility_key_action__switch_language),
-            )
-            entry(
-                key = UtilityKeyAction.SWITCH_KEYBOARD_APP,
-                label = stringRes(R.string.enum__utility_key_action__switch_keyboard_app),
-            )
-            entry(
-                key = UtilityKeyAction.DYNAMIC_SWITCH_LANGUAGE_EMOJIS,
-                label = stringRes(R.string.enum__utility_key_action__dynamic_switch_language_emojis),
+            ResourceEntry(UtilityKeyAction.SWITCH_TO_EMOJIS, R.string.enum__utility_key_action__switch_to_emojis)
+            ResourceEntry(UtilityKeyAction.SWITCH_LANGUAGE, R.string.enum__utility_key_action__switch_language)
+            ResourceEntry(UtilityKeyAction.SWITCH_KEYBOARD_APP, R.string.enum__utility_key_action__switch_keyboard_app)
+            ResourceEntry(
+                UtilityKeyAction.DYNAMIC_SWITCH_LANGUAGE_EMOJIS,
+                R.string.enum__utility_key_action__dynamic_switch_language_emojis,
             )
         }
     },
