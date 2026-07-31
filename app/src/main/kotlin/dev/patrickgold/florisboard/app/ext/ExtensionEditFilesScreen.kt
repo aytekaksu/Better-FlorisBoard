@@ -153,7 +153,7 @@ val MIME_TYPES = mapOf(
 )
 
 @Composable
-fun ExtensionEditFilesScreen(workspace: CacheManager.ExtEditorWorkspace<*>) = FlorisScreen {
+fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = FlorisScreen {
     title = stringRes(R.string.ext__editor__files__title)
 
     val context = LocalContext.current

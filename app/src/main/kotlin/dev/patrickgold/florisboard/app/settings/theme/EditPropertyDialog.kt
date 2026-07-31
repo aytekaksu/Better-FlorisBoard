@@ -188,7 +188,7 @@ internal fun EditPropertyDialog(
     colorRepresentation: ColorRepresentation,
     definedVariables: Map<String, SnyggValue>,
     fontNames: List<String>,
-    workspace: CacheManager.ExtEditorWorkspace<*>,
+    workspace: CacheManager.ThemeEditorWorkspace,
     onConfirmNewValue: (String, SnyggValue) -> Boolean,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
@@ -417,7 +417,7 @@ private fun PropertyValueEditor(
     colorRepresentation: ColorRepresentation,
     definedVariables: Map<String, SnyggValue>,
     fontNames: List<String>,
-    workspace: CacheManager.ExtEditorWorkspace<*>,
+    workspace: CacheManager.ThemeEditorWorkspace,
     modifier: Modifier = Modifier,
     isError: Boolean = false,
 ) {

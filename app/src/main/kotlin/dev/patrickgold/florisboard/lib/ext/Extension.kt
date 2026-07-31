@@ -141,8 +141,6 @@ abstract class Extension {
         }
     }
 
-    abstract fun edit(): ExtensionEditor
-
     private companion object {
         const val RuntimeRootDirName = "extension-runtime"
         const val MinFreeSpaceBytes = 128L * 1_024 * 1_024
@@ -186,11 +184,4 @@ internal fun List<Extension>.generateUpdateUrl(
             }
         )
     }.build().toString()
-}
-
-interface ExtensionEditor {
-    var meta: ExtensionMeta
-    val dependencies: MutableList<String>
-
-    fun build(): Extension
 }

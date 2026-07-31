@@ -23,7 +23,6 @@ import dev.patrickgold.florisboard.ime.text.composing.Composer
 import dev.patrickgold.florisboard.lib.ext.Extension
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponent
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
-import dev.patrickgold.florisboard.lib.ext.ExtensionEditor
 import dev.patrickgold.florisboard.lib.ext.ExtensionMeta
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -51,9 +50,6 @@ data class KeyboardExtension(
         return emptyList()
     }
 
-    override fun edit(): ExtensionEditor {
-        TODO("Not yet implemented")
-    }
 }
 
 @Suppress("NOTHING_TO_INLINE")

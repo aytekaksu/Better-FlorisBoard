@@ -81,7 +81,6 @@ import dev.patrickgold.florisboard.app.ext.ExtensionComponentView
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.ime.theme.ThemeExtensionComponent
 import dev.patrickgold.florisboard.ime.theme.ThemeExtensionComponentEditor
-import dev.patrickgold.florisboard.ime.theme.ThemeExtensionEditor
 import dev.patrickgold.florisboard.ime.theme.ThemeManager
 import dev.patrickgold.florisboard.ime.theme.extPreviewTheme
 import dev.patrickgold.florisboard.lib.cache.CacheManager
@@ -147,7 +146,7 @@ private enum class StylesheetLoadingStrategy {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ThemeEditorScreen(
-    workspace: CacheManager.ExtEditorWorkspace<*>,
+    workspace: CacheManager.ThemeEditorWorkspace,
     editor: ThemeExtensionComponentEditor,
 ) = FlorisScreen {
     title = stringRes(R.string.ext__editor__edit_component__title_theme)
@@ -343,7 +342,7 @@ fun ThemeEditorScreen(
                 Column {
                     ExtensionComponentView(
                         modifier = Modifier.defaultFlorisOutlinedBox(),
-                        meta = workspace.editor!!.meta,
+                        meta = workspace.editor.meta,
                         component = editor,
                         onEditBtnClick = { showEditComponentMetaDialog = true },
                     )
@@ -615,7 +614,7 @@ fun ThemeEditorScreen(
 
 @Composable
 private fun ComponentMetaEditorDialog(
-    workspace: CacheManager.ExtEditorWorkspace<*>,
+    workspace: CacheManager.ThemeEditorWorkspace,
     editor: ThemeExtensionComponentEditor,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
@@ -645,7 +644,7 @@ private fun ComponentMetaEditorDialog(
                 stylesheetPathValidation.isValid()
             if (!allFieldsValid) {
                 showValidationErrors = true
-            } else if (id != editor.id && (workspace.editor as? ThemeExtensionEditor)?.themes?.find { it.id == id.trim() } != null) {
+            } else if (id != editor.id && workspace.editor.themes.any { it.id == id.trim() }) {
                 scope.launch { context.showLongToast("A theme with this ID already exists!") }
             } else {
                 workspace.update {
