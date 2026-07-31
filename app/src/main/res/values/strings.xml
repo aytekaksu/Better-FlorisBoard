@@ -946,6 +946,8 @@
     <string name="error__invalid">Invalid</string>
     <string name="error__snackbar_message">Something went wrong</string>
     <string name="error__snackbar_message_template">Something went wrong: {error_message}</string>
+    <string name="preference_store__load_failure_title">Settings unavailable</string>
+    <string name="preference_store__load_failure_message">FlorisBoard could not load its settings. Close the app and try again. If this keeps happening, report the problem.</string>
 
     <!-- General strings -->
     <string name="general__example_given" comment="This string is used where an example will be inserted in the {example} block. When translating, use the abbreviation used in your language for 'example given'.">e.g. {example}</string>

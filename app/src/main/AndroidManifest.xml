@@ -141,6 +141,25 @@
             android:exported="false">
         </provider>
 
+        <!-- Disposable process for calls into untrusted clipboard providers. -->
+        <provider
+            android:name="dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaImportWorkerProvider"
+            android:authorities="${applicationId}.provider.clipboard-import-worker"
+            android:exported="false"
+            android:grantUriPermissions="false"
+            android:process=":clipboard_import" />
+
+        <!--
+          Android 8 cannot delegate grants from its ClipboardService. This
+          API-qualified provider serves only exact, current system roots.
+        -->
+        <provider
+            android:name="dev.patrickgold.florisboard.ime.clipboard.provider.OreoSystemClipboardMediaProvider"
+            android:authorities="${applicationId}.provider.clipboard.oreo-system"
+            android:enabled="@bool/oreo_system_clipboard_provider_enabled"
+            android:exported="@bool/oreo_system_clipboard_provider_enabled">
+        </provider>
+
         <!-- Default file provider to share files from the "files" or "cache" dir -->
         <provider
             android:name="androidx.core.content.FileProvider"

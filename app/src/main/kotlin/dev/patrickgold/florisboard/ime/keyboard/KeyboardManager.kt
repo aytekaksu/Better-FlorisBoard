@@ -45,6 +45,7 @@ import dev.patrickgold.florisboard.ime.input.CapitalizationBehavior
 import dev.patrickgold.florisboard.ime.input.InputEventDispatcher
 import dev.patrickgold.florisboard.ime.input.InputKeyEventReceiver
 import dev.patrickgold.florisboard.ime.input.InputShiftState
+import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.nlp.ClipboardSuggestionCandidate
 import dev.patrickgold.florisboard.ime.nlp.PunctuationRule
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
@@ -96,6 +97,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     private val extensionManager by context.extensionManager()
     private val nlpManager by context.nlpManager()
     private val subtypeManager by context.subtypeManager()
+    private val keyguardManager = appContext.systemService(AndroidKeyguardManager::class)
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     val layoutManager = LayoutManager(context)
@@ -320,6 +322,22 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         if (!autocorrectPluginManager.canCommitCandidate(candidate)) {
             return EditorEditResult.NOT_APPLICABLE
         }
+        if (candidate is ClipboardSuggestionCandidate &&
+            (activeState.isIncognitoMode || isClipboardAccessLocked())
+        ) {
+            return EditorEditResult.NOT_APPLICABLE
+        }
+        if (candidate is ClipboardSuggestionCandidate &&
+            candidate.clipboardItem.type != ItemType.TEXT
+        ) {
+            clipboardManager.pasteItem(candidate.clipboardItem) { committed ->
+                if (committed) {
+                    autocorrectPluginManager.clearInputTrace()
+                    notifyCandidateAccepted(candidate, acceptanceKind)
+                }
+            }
+            return EditorEditResult.NOT_APPLICABLE
+        }
         val result = when (candidate) {
             is ClipboardSuggestionCandidate ->
                 editorInstance.commitClipboardItem(candidate.clipboardItem).asEditorEditResult()
@@ -332,19 +350,30 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             autocorrectPluginManager.clearInputTrace()
         }
         if (result == EditorEditResult.SUCCESS) {
-            if (candidate.sourceProvider === autocorrectPluginManager) {
-                autocorrectPluginManager.notifySuggestionAccepted(candidate, acceptanceKind)
-            } else {
-                scope.launch {
-                    candidate.sourceProvider?.notifySuggestionAccepted(
-                        subtypeManager.activeSubtype,
-                        candidate,
-                    )
-                }
-            }
+            notifyCandidateAccepted(candidate, acceptanceKind)
         }
         return result
     }
+
+    private fun notifyCandidateAccepted(
+        candidate: SuggestionCandidate,
+        acceptanceKind: AutocorrectAcceptanceKind,
+    ) {
+        if (candidate.sourceProvider === autocorrectPluginManager) {
+            autocorrectPluginManager.notifySuggestionAccepted(candidate, acceptanceKind)
+        } else {
+            scope.launch {
+                candidate.sourceProvider?.notifySuggestionAccepted(
+                    subtypeManager.activeSubtype,
+                    candidate,
+                )
+            }
+        }
+    }
+
+    private fun isClipboardAccessLocked(): Boolean = runCatching {
+        keyguardManager.isDeviceLocked || keyguardManager.isKeyguardLocked
+    }.getOrDefault(true)
 
     private fun commitAutoCorrectionCandidate(): Pair<SuggestionCandidate?, EditorEditResult> {
         val candidate = nlpManager.getAutoCommitCandidate()
@@ -1112,8 +1141,6 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
 
         override fun context(): Context = appContext
 
-        val androidKeyguardManager = context().systemService(AndroidKeyguardManager::class)
-
         override fun displayLanguageNamesIn(): DisplayLanguageNamesIn {
             return prefs.localization.displayLanguageNamesIn.get()
         }
@@ -1129,8 +1156,8 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                     state.isSelectionMode && editorInfo.isRichInputEditor
                 }
                 KeyCode.CLIPBOARD_PASTE -> {
-                    !androidKeyguardManager.let { it.isDeviceLocked || it.isKeyguardLocked }
-                        && clipboardManager.canBePasted(clipboardManager.primaryClip)
+                    !isClipboardAccessLocked() &&
+                        clipboardManager.canBePasted(clipboardManager.primaryClip)
                 }
                 KeyCode.CLIPBOARD_CLEAR_PRIMARY_CLIP -> {
                     clipboardManager.canBePasted(clipboardManager.primaryClip)

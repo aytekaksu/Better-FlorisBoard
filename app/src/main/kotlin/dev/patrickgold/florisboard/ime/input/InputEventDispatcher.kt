@@ -50,6 +50,7 @@ internal class OrderedInputEventQueue {
 
     private class Barrier(
         val onLaterInputQueued: () -> Unit,
+        val onInvalidated: () -> Unit,
         val start: ((() -> Unit) -> Unit),
     ) : Entry {
         var isComplete = false
@@ -74,9 +75,10 @@ internal class OrderedInputEventQueue {
     @Synchronized
     fun defer(
         onLaterInputQueued: () -> Unit = {},
+        onInvalidated: () -> Unit = {},
         start: ((() -> Unit) -> Unit),
     ) {
-        val barrier = Barrier(onLaterInputQueued, start)
+        val barrier = Barrier(onLaterInputQueued, onInvalidated, start)
         if (isDraining && activeBarrier == null) {
             startBarrier(barrier)
         } else {
@@ -88,9 +90,11 @@ internal class OrderedInputEventQueue {
 
     @Synchronized
     fun invalidate() {
-        activeBarrier?.isComplete = true
+        val invalidatedBarrier = activeBarrier
+        invalidatedBarrier?.isComplete = true
         activeBarrier = null
         entries.clear()
+        runCatching { invalidatedBarrier?.onInvalidated?.invoke() }
     }
 
     private fun signalLaterInput() {
@@ -175,9 +179,10 @@ class InputEventDispatcher private constructor(private val repeatableKeyCodes: I
 
     internal fun deferInputEvents(
         onLaterInputQueued: () -> Unit = {},
+        onInvalidated: () -> Unit = {},
         start: ((() -> Unit) -> Unit),
     ) {
-        receiverQueue.defer(onLaterInputQueued, start)
+        receiverQueue.defer(onLaterInputQueued, onInvalidated, start)
     }
 
     internal fun dispatchInputEvent(action: () -> Unit) {

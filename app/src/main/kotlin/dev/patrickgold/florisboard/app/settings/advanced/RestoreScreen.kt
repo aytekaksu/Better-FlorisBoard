@@ -52,18 +52,20 @@ import dev.patrickgold.florisboard.app.LocalNavController
 import dev.patrickgold.florisboard.app.importWithLegacyMigrations
 import dev.patrickgold.florisboard.cacheManager
 import dev.patrickgold.florisboard.clipboardManager
-import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardFileStorage
-import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.lib.cache.CacheManager
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.ext.ExtensionManager
+import dev.patrickgold.jetpref.datastore.jetprefDataStoreOf
 import dev.patrickgold.jetpref.datastore.runtime.AndroidAppDataStorage
 import dev.patrickgold.jetpref.datastore.runtime.FileBasedStorage
 import dev.patrickgold.jetpref.datastore.runtime.ImportStrategy
+import dev.patrickgold.jetpref.datastore.runtime.LoadStrategy
+import dev.patrickgold.jetpref.datastore.runtime.PersistStrategy
 import dev.patrickgold.jetpref.datastore.ui.Preference
 import java.io.File
+import java.nio.file.Path
 import java.text.DateFormat
 import java.util.*
 import kotlinx.coroutines.CancellationException
@@ -73,6 +75,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.florisboard.lib.android.showLongToast
 import org.florisboard.lib.compose.FlorisButtonBar
@@ -81,8 +85,6 @@ import org.florisboard.lib.compose.FlorisOutlinedBox
 import org.florisboard.lib.compose.FlorisOutlinedButton
 import org.florisboard.lib.compose.defaultFlorisOutlinedBox
 import org.florisboard.lib.compose.stringRes
-import org.florisboard.lib.kotlin.io.deleteContentsRecursively
-import org.florisboard.lib.kotlin.io.readJson
 import org.florisboard.lib.kotlin.io.subDir
 import org.florisboard.lib.kotlin.io.subFile
 
@@ -105,12 +107,52 @@ private enum class RestoreFlowFailure {
     ARCHIVE_REJECTED,
     PLAN_REJECTED,
     STAGING_REJECTED,
+    CLIPBOARD_PAYLOAD_REJECTED,
+    CLIPBOARD_COMMIT_FAILED,
+    CLIPBOARD_ROLLBACK_FAILED,
+    RESTORE_ROLLBACK_FAILED,
+    INTERNAL_FAILURE,
 }
 
 private class RestoreFlowException(val failure: RestoreFlowFailure) : RuntimeException()
 
-private fun Exception.safeRestoreFailureName(): String =
-    (this as? RestoreFlowException)?.failure?.name ?: javaClass.simpleName
+private fun Exception.safeRestoreFailureName(): String = when (this) {
+    is RestoreFlowException -> failure.name
+    is RestoreTransactionRollbackException -> RestoreFlowFailure.RESTORE_ROLLBACK_FAILED.name
+    else -> RestoreFlowFailure.INTERNAL_FAILURE.name
+}
+
+internal object RestorePreferencePreflight {
+    private val store by lazy {
+        jetprefDataStoreOf(FlorisPreferenceModel::class)
+    }
+    private val lock = Mutex()
+
+    suspend fun prepare(
+        stagedSource: Path,
+        snapshot: Path,
+        canonicalDestination: Path,
+        strategy: ImportStrategy,
+        sourceVersionCode: Int?,
+        sourceVersionName: String?,
+    ) = lock.withLock {
+        store.init(
+            loadStrategy = LoadStrategy.UseReader(
+                FileBasedStorage(snapshot.toFile().path),
+            ),
+            persistStrategy = PersistStrategy.Disabled,
+        ).getOrThrow()
+        store.importWithLegacyMigrations(
+            strategy = strategy,
+            reader = FileBasedStorage(stagedSource.toFile().path),
+            sourceVersionCode = sourceVersionCode,
+            sourceVersionName = sourceVersionName,
+        ).getOrThrow()
+        store.export(
+            FileBasedStorage(canonicalDestination.toFile().path),
+        ).getOrThrow()
+    }
+}
 
 @Composable
 fun RestoreScreen() = FlorisScreen {
@@ -137,14 +179,13 @@ fun RestoreScreen() = FlorisScreen {
         if (restoreWorkspace === workspace) {
             restoreWorkspace = null
         }
-        val cleanupComplete = withContext(NonCancellable + Dispatchers.IO) {
-            stagedRestore?.close()
-            workspace.close()
-            stagedRestore?.close()
-            workspace.isClosed() && (stagedRestore == null || stagedRestore.isClosed)
-        }
-        if (!cleanupComplete) {
-            workspace.requestClose(stagedRestore)
+        withContext(NonCancellable + Dispatchers.IO) {
+            runCatching { stagedRestore?.close() }
+            runCatching { workspace.close() }
+            runCatching { stagedRestore?.close() }
+            if (!workspace.isClosed() || stagedRestore?.isClosed == false) {
+                workspace.requestClose(stagedRestore)
+            }
         }
     }
 
@@ -235,71 +276,125 @@ fun RestoreScreen() = FlorisScreen {
         strategy: ImportStrategy,
     ) {
         val shouldReset = strategy == ImportStrategy.Erase
-        if (selection.jetprefDatastore) {
-            val file = stagedRoot
-                .subDir(AndroidAppDataStorage.JETPREF_DIR_NAME)
-                .subFile("${FlorisPreferenceModel.NAME}.${AndroidAppDataStorage.JETPREF_FILE_EXT}")
-            val fileBasedStorage = FileBasedStorage(file.path)
-            FlorisPreferenceStore.importWithLegacyMigrations(
-                strategy = strategy,
-                reader = fileBasedStorage,
-                sourceVersionCode = metadata.versionCode,
-                sourceVersionName = metadata.versionName,
-            ).getOrThrow()
-        }
-        val workspaceFilesDir = stagedRoot.subDir("files")
-        if (selection.imeKeyboard) {
-            val srcDir = workspaceFilesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH)
-            val dstDir = context.filesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH)
-            if (shouldReset) {
-                dstDir.deleteContentsRecursively()
+        val preparedClipboard = withContext(Dispatchers.IO) {
+            val clipboardTypes = buildSet {
+                if (selection.clipboardTextItems) add(ItemType.TEXT)
+                if (selection.clipboardImageItems) add(ItemType.IMAGE)
+                if (selection.clipboardVideoItems) add(ItemType.VIDEO)
             }
-            srcDir.copyRecursively(dstDir, overwrite = true)
-        }
-        if (selection.imeTheme) {
-            val srcDir = workspaceFilesDir.subDir(ExtensionManager.IME_THEME_PATH)
-            val dstDir = context.filesDir.subDir(ExtensionManager.IME_THEME_PATH)
-            if (shouldReset) {
-                dstDir.deleteContentsRecursively()
-            }
-            srcDir.copyRecursively(dstDir, overwrite = true)
-        }
-        val clipboardManager = context.clipboardManager().value
-        if (shouldReset && selection.provideClipboardItems()) {
-            clipboardManager.clearFullHistory()
-            ClipboardFileStorage.resetClipboardFileStorage(context)
-        }
-
-        if (selection.provideClipboardItems()) {
-            val clipboardFilesDir = stagedRoot.subDir("clipboard")
-
-            fun restoreClipboardItems(type: ItemType, jsonName: String) {
-                val items = clipboardFilesDir.subFile(jsonName)
-                    .readJson<List<ClipboardItem>>()
-                    .filter { it.type == type }
-                if (type != ItemType.TEXT) {
-                    for (item in items) {
-                        val mediaFileName = item.uri!!.path!!.substringAfterLast('/')
-                        val mediaFile = clipboardFilesDir.subFile(
-                            "${ClipboardFileStorage.CLIPBOARD_FILES_PATH}/$mediaFileName",
-                        )
-                        ClipboardFileStorage.insertFileFromBackupIfNotExisting(
-                            context,
-                            mediaFile,
-                        )
+            val clipboardPayload = if (clipboardTypes.isNotEmpty()) {
+                val operationContext = currentCoroutineContext()
+                when (
+                    val result = ClipboardRestorePayload.prepare(
+                        stagedRoot = stagedRoot.toPath(),
+                        sourcePackageName = metadata.packageName,
+                        selectedTypes = clipboardTypes,
+                        checkActive = operationContext::ensureActive,
+                    )
+                ) {
+                    is ClipboardRestorePayloadResult.Valid -> result.payload
+                    is ClipboardRestorePayloadResult.Invalid -> {
+                        throw RestoreFlowException(RestoreFlowFailure.CLIPBOARD_PAYLOAD_REJECTED)
                     }
                 }
-                clipboardManager.restoreHistory(items)
+            } else {
+                null
             }
+            clipboardPayload
+        }
 
-            if (selection.clipboardTextItems) {
-                restoreClipboardItems(ItemType.TEXT, BackupArchive.CLIPBOARD_TEXT_ITEMS_JSON_NAME)
+        suspend fun commitClipboard() {
+            val payload = preparedClipboard ?: return
+            when (
+                val result = ClipboardRestoreCommit.commit(
+                    context = context,
+                    clipboardManager = context.clipboardManager().value,
+                    payload = payload,
+                    replaceSelected = shouldReset,
+                )
+            ) {
+                ClipboardRestoreCommitResult.Committed -> Unit
+                is ClipboardRestoreCommitResult.Failed -> {
+                    val failure = if (result.failure == ClipboardRestoreCommitFailure.MEDIA_CLEANUP_FAILED) {
+                        RestoreFlowFailure.CLIPBOARD_ROLLBACK_FAILED
+                    } else {
+                        RestoreFlowFailure.CLIPBOARD_COMMIT_FAILED
+                    }
+                    throw RestoreFlowException(failure)
+                }
             }
-            if (selection.clipboardImageItems) {
-                restoreClipboardItems(ItemType.IMAGE, BackupArchive.CLIPBOARD_IMAGES_JSON_NAME)
+        }
+
+        val preferenceSource = stagedRoot
+            .subDir(AndroidAppDataStorage.JETPREF_DIR_NAME)
+            .subFile("${FlorisPreferenceModel.NAME}.${AndroidAppDataStorage.JETPREF_FILE_EXT}")
+            .toPath()
+        val preferenceTransaction = if (selection.jetprefDatastore) {
+            RestorePreferenceTransaction(
+                stagedSource = preferenceSource,
+                snapshot = { destination ->
+                    FlorisPreferenceStore.export(
+                        FileBasedStorage(destination.toFile().path),
+                    ).getOrThrow()
+                },
+                prepare = { stagedSource, snapshot, canonicalDestination ->
+                    RestorePreferencePreflight.prepare(
+                        stagedSource = stagedSource,
+                        snapshot = snapshot,
+                        canonicalDestination = canonicalDestination,
+                        strategy = strategy,
+                        sourceVersionCode = metadata.versionCode,
+                        sourceVersionName = metadata.versionName,
+                    )
+                },
+                apply = { canonicalSource ->
+                    FlorisPreferenceStore.import(
+                        strategy = ImportStrategy.Erase,
+                        reader = FileBasedStorage(canonicalSource.toFile().path),
+                    ).getOrThrow()
+                },
+                rollback = { snapshot ->
+                    FlorisPreferenceStore.import(
+                        strategy = ImportStrategy.Erase,
+                        reader = FileBasedStorage(snapshot.toFile().path),
+                    ).getOrThrow()
+                },
+            )
+        } else {
+            null
+        }
+        val stagedFilesRoot = stagedRoot.toPath().resolve("files")
+        val liveFilesRoot = context.filesDir.toPath()
+        val directoryTransactions = buildList {
+            if (selection.imeKeyboard) {
+                add(
+                    RestoreDirectoryTransaction(
+                        stagedSource = stagedFilesRoot.resolve(ExtensionManager.IME_KEYBOARD_PATH),
+                        liveTarget = liveFilesRoot.resolve(ExtensionManager.IME_KEYBOARD_PATH),
+                    ),
+                )
             }
-            if (selection.clipboardVideoItems) {
-                restoreClipboardItems(ItemType.VIDEO, BackupArchive.CLIPBOARD_VIDEO_JSON_NAME)
+            if (selection.imeTheme) {
+                add(
+                    RestoreDirectoryTransaction(
+                        stagedSource = stagedFilesRoot.resolve(ExtensionManager.IME_THEME_PATH),
+                        liveTarget = liveFilesRoot.resolve(ExtensionManager.IME_THEME_PATH),
+                    ),
+                )
+            }
+        }
+
+        withContext(Dispatchers.IO) {
+            if (preferenceTransaction == null && directoryTransactions.isEmpty()) {
+                commitClipboard()
+            } else {
+                RestoreTransaction.execute(
+                    scratchParent = requireNotNull(stagedRoot.toPath().parent),
+                    eraseExisting = shouldReset,
+                    preferences = preferenceTransaction,
+                    directories = directoryTransactions,
+                    finalCommit = { commitClipboard() },
+                )
             }
         }
     }
@@ -323,6 +418,9 @@ fun RestoreScreen() = FlorisScreen {
                     val selection = restoreFilesSelector.snapshot()
                     val strategy = importStrategy
                     val workspace = restoreWorkspace
+                    if (restoreWorkspace === workspace) {
+                        restoreWorkspace = null
+                    }
                     restoreScope.launch {
                         var stagedRestore: StagedRestore? = null
                         var restoreSucceeded = false
@@ -421,13 +519,12 @@ fun RestoreScreen() = FlorisScreen {
                 isRestoreBusy = true
                 runCatching {
                     restoreDataFromFileSystemLauncher.launch("*/*")
-                }.onFailure { error ->
+                }.onFailure {
                     isRestoreBusy = false
-                    val failureClass = error.javaClass.simpleName
                     restoreScope.launch {
                         context.showLongToast(
                             R.string.backup_and_restore__restore__failure,
-                            "error_message" to failureClass,
+                            "error_message" to "INTERNAL_FAILURE",
                         )
                     }
                 }

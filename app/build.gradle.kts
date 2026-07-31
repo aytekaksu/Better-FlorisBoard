@@ -82,6 +82,9 @@ configure<ApplicationExtension> {
             maybeCreate("main").apply {
                 assets.directories += "src/main/assets"
             }
+            maybeCreate("androidTest").apply {
+                assets.directories += "$projectDir/schemas"
+            }
         }
     }
 
@@ -235,6 +238,7 @@ dependencies {
     testImplementation(libs.turbine)
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(libs.androidx.room.testing)
 }
 
 fun getGitCommitHash(short: Boolean = false): Provider<String> {

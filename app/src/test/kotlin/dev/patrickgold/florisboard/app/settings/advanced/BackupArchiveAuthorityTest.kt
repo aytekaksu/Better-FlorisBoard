@@ -82,7 +82,7 @@ class BackupArchiveAuthorityTest :
                     componentsToStage = listOf(component),
                     clipboardMediaCandidatesToStage = emptyList(),
                     clipboardMediaPolicy = ClipboardMediaPolicy.NONE,
-                    declaredPayloadBytes = 1,
+                    declaredComponentBytes = 1,
                 )
             }
         }

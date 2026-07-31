@@ -93,6 +93,7 @@ class InputEventDispatcherOrderingTest {
     fun lifecycleInvalidationClearsDroppedDoubleTapHistory() {
         val dispatcher = InputEventDispatcher.new()
         val consecutiveEvents = mutableListOf<Boolean>()
+        var invalidations = 0
         dispatcher.keyEventReceiver = object : InputKeyEventReceiver {
             override fun onInputKeyDown(data: KeyData) {
                 consecutiveEvents.add(dispatcher.isConsecutiveDown(data))
@@ -106,13 +107,17 @@ class InputEventDispatcherOrderingTest {
 
             override fun onInputKeyCancel(data: KeyData) = Unit
         }
-        dispatcher.deferInputEvents {}
+        dispatcher.deferInputEvents(
+            onInvalidated = { invalidations += 1 },
+            start = {},
+        )
         dispatcher.sendDownUp(TextKeyData.SPACE)
         dispatcher.invalidatePendingInputEvents()
 
         dispatcher.sendDownUp(TextKeyData.SPACE)
 
         assertEquals(listOf(false, false), consecutiveEvents)
+        assertEquals(1, invalidations)
         dispatcher.close()
     }
 

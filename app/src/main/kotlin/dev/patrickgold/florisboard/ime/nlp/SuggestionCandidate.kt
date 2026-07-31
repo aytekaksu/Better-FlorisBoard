@@ -175,8 +175,10 @@ data class ClipboardSuggestionCandidate(
     val clipboardItem: ClipboardItem,
     override val sourceProvider: SuggestionProvider?,
     val context: Context,
+    /** The exact primary-clipboard object which produced this candidate. */
+    val sourceClipboardItem: ClipboardItem = clipboardItem,
 ) : SuggestionCandidate {
-    override val text: CharSequence = clipboardItem.displayText(context)
+    override val text: CharSequence = boundedClipboardSuggestionText(clipboardItem.displayText(context))
 
     override val secondaryText: CharSequence? = null
 
@@ -197,6 +199,23 @@ data class ClipboardSuggestionCandidate(
         ItemType.VIDEO -> Icons.Default.Videocam
     }
 }
+
+internal fun boundedClipboardSuggestionText(text: CharSequence): String =
+    if (text.length <= MAX_CLIPBOARD_SUGGESTION_DISPLAY_CHARS) {
+        text.toString()
+    } else {
+        text.take(MAX_CLIPBOARD_SUGGESTION_DISPLAY_CHARS - 1).toString() + "…"
+    }
+
+internal fun isNewClipboardSuggestionCopy(
+    current: ClipboardItem,
+    suppressed: ClipboardItem?,
+): Boolean = current !== suppressed
+
+internal const val MAX_CLIPBOARD_SUGGESTION_CANDIDATES = 16
+internal const val MAX_CLIPBOARD_SUGGESTION_SCAN_CHARS = 2_048
+internal const val MAX_CLIPBOARD_SUGGESTION_DISPLAY_CHARS = 512
+internal const val MAX_CLIPBOARD_SUGGESTION_RAW_MATCHES = 64
 
 /**
  * Represents a candidate suggestion for an emoji.

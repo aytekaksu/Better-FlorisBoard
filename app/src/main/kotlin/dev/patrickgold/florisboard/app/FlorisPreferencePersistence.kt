@@ -26,6 +26,9 @@ import dev.patrickgold.jetpref.datastore.runtime.ImportStrategy
 import dev.patrickgold.jetpref.datastore.runtime.LoadStrategy
 import dev.patrickgold.jetpref.datastore.runtime.PersistStrategy
 import dev.patrickgold.jetpref.datastore.runtime.jetprefDatastoreDir
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.LinkOption
 
 internal fun DataStoreReader.withLegacyPreferencePreprocessing(
     baseWindowConfig: ImeWindowConfigByType? = null,
@@ -43,13 +46,24 @@ internal fun DataStoreReader.withLegacyPreferencePreprocessing(
 }
 
 internal suspend fun DataStore<FlorisPreferenceModel>.initAndroidWithLegacyMigrations(context: Context): Result<Unit> {
-    val storage = FileBasedStorage(
-        context.jetprefDatastoreDir
-            .resolve("${FlorisPreferenceModel.NAME}.${AndroidAppDataStorage.JETPREF_FILE_EXT}")
-            .absolutePath,
-    )
+    val datastoreFile = context.jetprefDatastoreDir
+        .resolve("${FlorisPreferenceModel.NAME}.${AndroidAppDataStorage.JETPREF_FILE_EXT}")
+    val storage = FileBasedStorage(datastoreFile.absolutePath)
+    val loadStrategy = try {
+        when {
+            Files.notExists(datastoreFile.toPath(), LinkOption.NOFOLLOW_LINKS) ->
+                LoadStrategy.Disabled
+
+            Files.isRegularFile(datastoreFile.toPath(), LinkOption.NOFOLLOW_LINKS) ->
+                LoadStrategy.UseReader(storage.withLegacyPreferencePreprocessing())
+
+            else -> return Result.failure(IOException("Preference storage is unavailable."))
+        }
+    } catch (error: SecurityException) {
+        return Result.failure(error)
+    }
     return init(
-        loadStrategy = LoadStrategy.UseReader(storage.withLegacyPreferencePreprocessing()),
+        loadStrategy = loadStrategy,
         persistStrategy = PersistStrategy.UseWriter(storage),
     )
 }

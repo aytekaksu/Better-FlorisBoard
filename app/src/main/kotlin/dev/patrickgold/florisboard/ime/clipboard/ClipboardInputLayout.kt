@@ -16,7 +16,10 @@
 
 package dev.patrickgold.florisboard.ime.clipboard
 
-import android.content.ContentUris
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.media.ThumbnailUtils
@@ -69,6 +72,7 @@ import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -81,6 +85,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -88,6 +93,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.clipboardManager
@@ -95,6 +104,7 @@ import dev.patrickgold.florisboard.ime.ImeUiMode
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardFileStorage
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
+import dev.patrickgold.florisboard.ime.clipboard.provider.OwnedClipboardMediaUri
 import dev.patrickgold.florisboard.ime.keyboard.FlorisImeSizing
 import dev.patrickgold.florisboard.ime.media.KeyboardLikeButton
 import dev.patrickgold.florisboard.ime.smartbar.AnimationDuration
@@ -106,9 +116,17 @@ import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.lib.observeAsTransformingState
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
 import dev.patrickgold.jetpref.datastore.model.collectAsState
+import java.io.File
 import java.time.Instant
+import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import org.florisboard.lib.android.AndroidKeyguardManager
 import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.android.showShortToastSync
@@ -120,6 +138,7 @@ import org.florisboard.lib.compose.florisHorizontalScroll
 import org.florisboard.lib.compose.florisVerticalScroll
 import org.florisboard.lib.compose.rippleClickable
 import org.florisboard.lib.compose.stringRes
+import org.florisboard.lib.kotlin.tryOrNull
 import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.ui.SnyggBox
 import org.florisboard.lib.snygg.ui.SnyggButton
@@ -129,6 +148,208 @@ import org.florisboard.lib.snygg.ui.SnyggIcon
 import org.florisboard.lib.snygg.ui.SnyggIconButton
 import org.florisboard.lib.snygg.ui.SnyggRow
 import org.florisboard.lib.snygg.ui.SnyggText
+
+private sealed interface ClipboardMediaPreview {
+    data object Loading : ClipboardMediaPreview
+
+    data object Unavailable : ClipboardMediaPreview
+
+    data class Ready(val bitmap: ImageBitmap) : ClipboardMediaPreview
+}
+
+private val clipboardMediaPreviewDecodeSlots = Semaphore(MAX_CONCURRENT_PREVIEW_DECODES)
+
+@Composable
+private fun rememberClipboardMediaPreview(
+    context: Context,
+    item: ClipboardItem,
+): ClipboardMediaPreview {
+    val preview = remember(item.id, item.type, item.uri, item.isSensitive) {
+        mutableStateOf<ClipboardMediaPreview>(ClipboardMediaPreview.Loading)
+    }
+    LaunchedEffect(preview) {
+        preview.value = if (item.isSensitive) {
+            ClipboardMediaPreview.Unavailable
+        } else {
+            clipboardMediaPreviewDecodeSlots.withPermit {
+                withContext(Dispatchers.IO) {
+                    currentCoroutineContext().ensureActive()
+                    loadClipboardMediaPreview(context, item)
+                        ?.let(ClipboardMediaPreview::Ready)
+                        ?: ClipboardMediaPreview.Unavailable
+                }
+            }
+        }
+    }
+    return preview.value
+}
+
+private fun loadClipboardMediaPreview(context: Context, item: ClipboardItem): ImageBitmap? {
+    val ownedUri = item.uri?.let { OwnedClipboardMediaUri.parse(it, item.type) } ?: return null
+    val file = tryOrNull { ClipboardFileStorage.ownedFile(context, ownedUri) } ?: return null
+    return tryOrNull {
+        when (item.type) {
+            ItemType.TEXT -> null
+            ItemType.IMAGE -> loadImagePreview(file)
+            ItemType.VIDEO -> loadVideoPreview(file)
+        }
+    }
+}
+
+private fun loadImagePreview(file: File): ImageBitmap? {
+    val bounds = BitmapFactory.Options().apply {
+        inJustDecodeBounds = true
+    }
+    BitmapFactory.decodeFile(file.absolutePath, bounds)
+    val width = bounds.outWidth.takeIf { it > 0 } ?: return null
+    val height = bounds.outHeight.takeIf { it > 0 } ?: return null
+    if (width > MAX_PREVIEW_SOURCE_DIMENSION || height > MAX_PREVIEW_SOURCE_DIMENSION) return null
+    var sampleSize = 1
+    while (maxOf(width, height) / sampleSize > MAX_PREVIEW_EDGE) {
+        sampleSize = sampleSize shl 1
+    }
+    val bitmap = BitmapFactory.decodeFile(
+        file.absolutePath,
+        BitmapFactory.Options().apply { inSampleSize = sampleSize },
+    ) ?: return null
+    if (bitmap.width > MAX_PREVIEW_EDGE || bitmap.height > MAX_PREVIEW_EDGE) {
+        bitmap.recycle()
+        return null
+    }
+    return bitmap.asImageBitmap()
+}
+
+private fun loadVideoPreview(file: File): ImageBitmap? {
+    val bitmap = if (AndroidVersion.ATLEAST_API29_Q) {
+        val dataRetriever = MediaMetadataRetriever()
+        try {
+            dataRetriever.setDataSource(file.absolutePath)
+            val width = dataRetriever
+                .extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                ?.toLongOrNull()
+                ?.takeIf { it in 1..MAX_PREVIEW_SOURCE_DIMENSION.toLong() }
+                ?: return null
+            val height = dataRetriever
+                .extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+                ?.toLongOrNull()
+                ?.takeIf { it in 1..MAX_PREVIEW_SOURCE_DIMENSION.toLong() }
+                ?: return null
+            val scale = minOf(1.0, MAX_PREVIEW_EDGE.toDouble() / maxOf(width, height))
+            val target = Size(
+                (width * scale).roundToInt().coerceAtLeast(1),
+                (height * scale).roundToInt().coerceAtLeast(1),
+            )
+            ThumbnailUtils.createVideoThumbnail(file, target, null)
+        } finally {
+            dataRetriever.release()
+        }
+    } else {
+        @Suppress("DEPRECATION")
+        ThumbnailUtils.createVideoThumbnail(file.absolutePath, MediaStore.Video.Thumbnails.MINI_KIND)
+    }
+    return bitmap?.asImageBitmap()
+}
+
+private const val MAX_PREVIEW_EDGE = 512
+private const val MAX_PREVIEW_SOURCE_DIMENSION = 100_000
+private const val MAX_CONCURRENT_PREVIEW_DECODES = 2
+
+private fun AndroidKeyguardManager.isClipboardAccessLocked(): Boolean {
+    return try {
+        isDeviceLocked || isKeyguardLocked
+    } catch (_: Exception) {
+        true
+    }
+}
+
+@Composable
+internal fun rememberClipboardAccessLocked(
+    context: Context,
+    keyguardManager: AndroidKeyguardManager,
+): Boolean {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val appContext = remember(context) { context.applicationContext }
+    val locked = remember(keyguardManager, lifecycle) {
+        mutableStateOf(
+            if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                keyguardManager.isClipboardAccessLocked()
+            } else {
+                true
+            },
+        )
+    }
+
+    DisposableEffect(appContext, keyguardManager, lifecycle) {
+        fun refresh() {
+            locked.value = if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                keyguardManager.isClipboardAccessLocked()
+            } else {
+                true
+            }
+        }
+
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                when (intent?.action) {
+                    Intent.ACTION_SCREEN_OFF -> locked.value = true
+                    Intent.ACTION_SCREEN_ON,
+                    Intent.ACTION_USER_PRESENT,
+                    Intent.ACTION_USER_UNLOCKED,
+                    -> refresh()
+                }
+            }
+        }
+        val receiverRegistered = try {
+            ContextCompat.registerReceiver(
+                appContext,
+                receiver,
+                IntentFilter().apply {
+                    addAction(Intent.ACTION_SCREEN_OFF)
+                    addAction(Intent.ACTION_SCREEN_ON)
+                    addAction(Intent.ACTION_USER_PRESENT)
+                    addAction(Intent.ACTION_USER_UNLOCKED)
+                },
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+            true
+        } catch (_: Exception) {
+            locked.value = true
+            false
+        }
+        val lifecycleObserver = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    locked.value = if (receiverRegistered) {
+                        keyguardManager.isClipboardAccessLocked()
+                    } else {
+                        true
+                    }
+                }
+                Lifecycle.Event.ON_PAUSE,
+                Lifecycle.Event.ON_STOP,
+                Lifecycle.Event.ON_DESTROY,
+                -> locked.value = true
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(lifecycleObserver)
+        if (receiverRegistered) {
+            refresh()
+        }
+
+        onDispose {
+            lifecycle.removeObserver(lifecycleObserver)
+            if (receiverRegistered) {
+                try {
+                    appContext.unregisterReceiver(receiver)
+                } catch (_: Exception) {
+                    // Already unregistered or the context is shutting down.
+                }
+            }
+        }
+    }
+    return locked.value
+}
 
 private val ItemWidth = 200.dp
 private val DialogWidth = 240.dp
@@ -144,9 +365,11 @@ fun ClipboardInputLayout(
     val context = LocalContext.current
     val clipboardManager by context.clipboardManager()
     val keyboardManager by context.keyboardManager()
-    val androidKeyguardManager = remember { context.systemService(AndroidKeyguardManager::class) }
+    val androidKeyguardManager = remember(context) {
+        context.systemService(AndroidKeyguardManager::class)
+    }
 
-    val deviceLocked = androidKeyguardManager.let { it.isDeviceLocked || it.isKeyguardLocked }
+    val deviceLocked = rememberClipboardAccessLocked(context, androidKeyguardManager)
     val historyEnabled by prefs.clipboard.historyEnabled.collectAsState()
 
     var isFilterRowShown by remember { mutableStateOf(false) }
@@ -280,86 +503,64 @@ fun ClipboardInputLayout(
                 },
             ),
         ) {
-            if (item.type == ItemType.IMAGE) {
-                val id = ContentUris.parseId(item.uri!!)
-                val file = ClipboardFileStorage.getFileForId(context, id)
-                val bitmap = remember(id) {
-                    runCatching {
-                        check(file.exists()) { "Unable to resolve image at ${file.absolutePath}" }
-                        val rawBitmap = BitmapFactory.decodeFile(file.absolutePath)
-                        checkNotNull(rawBitmap) { "Unable to decode image at ${file.absolutePath}" }
-                        rawBitmap.asImageBitmap()
-                    }
-                }
-                if (bitmap.isSuccess) {
-                    Image(
-                        modifier = Modifier.fillMaxWidth(),
-                        bitmap = bitmap.getOrThrow(),
-                        contentDescription = null,
-                        contentScale = ContentScale.FillWidth,
-                    )
-                } else {
+            when {
+                item.isSensitive -> {
                     SnyggText(
                         modifier = Modifier.fillMaxWidth(),
-                        text = bitmap.exceptionOrNull()?.message ?: "Unknown error",
-                    )
-                }
-            } else if (item.type == ItemType.VIDEO) {
-                val id = ContentUris.parseId(item.uri!!)
-                val file = ClipboardFileStorage.getFileForId(context, id)
-                val bitmap = remember(id) {
-                    runCatching {
-                        check(file.exists()) { "Unable to resolve video at ${file.absolutePath}" }
-                        val rawBitmap = if (AndroidVersion.ATLEAST_API29_Q) {
-                            val dataRetriever = MediaMetadataRetriever()
-                            dataRetriever.setDataSource(file.absolutePath)
-                            val width = dataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
-                            val height = dataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
-                            ThumbnailUtils.createVideoThumbnail(file, Size(width!!.toInt(), height!!.toInt()), null)
-                        } else {
-                            @Suppress("DEPRECATION")
-                            ThumbnailUtils.createVideoThumbnail(file.absolutePath, MediaStore.Video.Thumbnails.MINI_KIND)
-                        }
-                        checkNotNull(rawBitmap) { "Unable to decode video at ${file.absolutePath}" }
-                        rawBitmap.asImageBitmap()
-                    }
-                }
-                if (bitmap.isSuccess) {
-                    Image(
-                        modifier = Modifier.fillMaxWidth(),
-                        bitmap = bitmap.getOrThrow(),
-                        contentDescription = null,
-                        contentScale = ContentScale.FillWidth,
-                    )
-                    Icon(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(start = 4.dp, bottom = 4.dp)
-                            .background(Color.White, CircleShape),
-                        imageVector = Icons.Default.Videocam,
-                        contentDescription = null,
-                        tint = Color.Black,
-                    )
-                } else {
-                    SnyggText(
-                        modifier = Modifier.fillMaxWidth(),
-                        text = bitmap.exceptionOrNull()?.message ?: "Unknown error",
-                    )
-                }
-            } else {
-                val text = item.stringRepresentation()
-                Column {
-                    ClipTextItemDescription(
-                        elementName = FlorisImeUi.ClipboardItemDescription.elementName,
-                        attributes = attributes,
-                        text = text,
-                    )
-                    SnyggText(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .run { if (contentScrollInsteadOfClip) this.florisVerticalScroll() else this },
                         text = item.displayText(),
                     )
+                }
+                item.type == ItemType.IMAGE || item.type == ItemType.VIDEO -> {
+                    when (val preview = rememberClipboardMediaPreview(context, item)) {
+                        ClipboardMediaPreview.Loading -> {
+                            SnyggText(
+                                modifier = Modifier.fillMaxWidth(),
+                                text = item.stringRepresentation(),
+                            )
+                        }
+                        ClipboardMediaPreview.Unavailable -> {
+                            SnyggText(
+                                modifier = Modifier.fillMaxWidth(),
+                                text = stringRes(R.string.send_to_clipboard__unknown_error),
+                            )
+                        }
+                        is ClipboardMediaPreview.Ready -> {
+                            Image(
+                                modifier = Modifier.fillMaxWidth(),
+                                bitmap = preview.bitmap,
+                                contentDescription = null,
+                                contentScale = ContentScale.FillWidth,
+                            )
+                            if (item.type == ItemType.VIDEO) {
+                                Icon(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomStart)
+                                        .padding(start = 4.dp, bottom = 4.dp)
+                                        .background(Color.White, CircleShape),
+                                    imageVector = Icons.Default.Videocam,
+                                    contentDescription = null,
+                                    tint = Color.Black,
+                                )
+                            }
+                        }
+                    }
+                }
+                else -> {
+                    val text = item.stringRepresentation()
+                    val previewText = text.toClipboardPreview()
+                    Column {
+                        ClipTextItemDescription(
+                            elementName = FlorisImeUi.ClipboardItemDescription.elementName,
+                            attributes = attributes,
+                            text = text,
+                        )
+                        SnyggText(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .run { if (contentScrollInsteadOfClip) this.florisVerticalScroll() else this },
+                            text = previewText,
+                        )
+                    }
                 }
             }
         }
@@ -389,7 +590,7 @@ fun ClipboardInputLayout(
                     item(key, span = StaggeredGridItemSpan.FullLine) {
                         ClipCategoryTitle(text = stringRes(title))
                     }
-                    items(items) { item ->
+                    items(items, key = { item -> "clipboard-item-${item.id}" }) { item ->
                         ClipItemView(
                             elementName = FlorisImeUi.ClipboardItem.elementName,
                             item = item,
@@ -709,16 +910,17 @@ private fun ClipTextItemDescription(
 ): Unit = with(LocalDensity.current) {
     val icon: ImageVector?
     val description: String?
+    val classifiableText = text.takeIf { it.length <= MAX_CLASSIFIED_TEXT_CHARS }
     when {
-        NetworkUtils.isEmailAddress(text) -> {
+        classifiableText != null && NetworkUtils.isEmailAddress(classifiableText) -> {
             icon = Icons.Outlined.Email
             description = stringRes(R.string.clipboard__item_description_email)
         }
-        NetworkUtils.isUrl(text) -> {
+        classifiableText != null && NetworkUtils.isUrl(classifiableText) -> {
             icon = Icons.Default.Link
             description = stringRes(R.string.clipboard__item_description_url)
         }
-        NetworkUtils.isPhoneNumber(text) -> {
+        classifiableText != null && NetworkUtils.isPhoneNumber(classifiableText) -> {
             icon = Icons.Default.Phone
             description = stringRes(R.string.clipboard__item_description_phone)
         }
@@ -744,6 +946,12 @@ private fun ClipTextItemDescription(
         }
     }
 }
+
+private fun String.toClipboardPreview(): String =
+    if (length <= MAX_PREVIEW_TEXT_CHARS) this else take(MAX_PREVIEW_TEXT_CHARS) + "…"
+
+private const val MAX_PREVIEW_TEXT_CHARS = 4_096
+private const val MAX_CLASSIFIED_TEXT_CHARS = 512
 
 @Composable
 private fun PopupAction(

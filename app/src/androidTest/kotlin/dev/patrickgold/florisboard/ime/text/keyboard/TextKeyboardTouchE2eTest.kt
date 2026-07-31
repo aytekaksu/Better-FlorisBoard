@@ -22,7 +22,6 @@ import android.content.Intent
 import android.graphics.PointF
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
-import android.util.Log
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.ViewConfiguration
@@ -50,7 +49,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.FileInputStream
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -184,7 +182,6 @@ class TextKeyboardTouchE2eTest {
             keyboardManager.activeState.keyboardMode = KeyboardMode.CHARACTERS
         }
         var previousLayoutSignature: String? = null
-        var previousReadinessDiagnostic: String? = null
         var stableLayoutPolls = 0
         waitUntil("harness text keyboard and IME window did not settle") {
             val evaluator = keyboardManager.activeEvaluator.value
@@ -233,17 +230,6 @@ class TextKeyboardTouchE2eTest {
                 0
             }
             previousLayoutSignature = layoutSignature
-            val readinessDiagnostic = buildString {
-                append("editor=").append(evaluator.editorInfo.packageName)
-                append(" requiredKeys=").append(requiredKeys.map { it.computedData.code })
-                append(" bounds=").append(bounds)
-                append(" keyboardHeight=").append(keyboardHeight)
-                append(" stablePolls=").append(stableLayoutPolls)
-            }
-            if (readinessDiagnostic != previousReadinessDiagnostic) {
-                Log.i(TAG, readinessDiagnostic)
-                previousReadinessDiagnostic = readinessDiagnostic
-            }
             if (stableLayoutPolls >= REQUIRED_STABLE_LAYOUT_POLLS) {
                 keyboard = candidate!!
                 windowBounds = bounds!!
@@ -253,7 +239,6 @@ class TextKeyboardTouchE2eTest {
             }
         }
         points = resolveKeyPoints()
-        Log.i(TAG, "windowBounds=$windowBounds points=$points")
 
         // Prove that production geometry was translated to display coordinates correctly before
         // running the regression stream.
@@ -363,10 +348,7 @@ class TextKeyboardTouchE2eTest {
                 durationMs = repeatObservationDuration(),
                 context = "after moving from outside all key touch bounds onto b",
             )
-        } ?: Log.i(
-            TAG,
-            "Active keyboard has no point outside all touch bounds; silent-gap cases are not applicable",
-        )
+        }
 
         for ((point, expected) in listOf(points.n to "n", points.v to "v", points.b to "b")) {
             clearEditor()
@@ -1042,7 +1024,9 @@ class TextKeyboardTouchE2eTest {
     private fun shell(command: String): String {
         val descriptor: ParcelFileDescriptor =
             instrumentation.uiAutomation.executeShellCommand(command)
-        return FileInputStream(descriptor.fileDescriptor).bufferedReader().use { it.readText() }
+        return ParcelFileDescriptor.AutoCloseInputStream(descriptor)
+            .bufferedReader()
+            .use { it.readText() }
     }
 
     private data class KeyPoint(
@@ -1078,7 +1062,6 @@ class TextKeyboardTouchE2eTest {
     )
 
     private companion object {
-        const val TAG = "TextKeyboardTouchE2eTest"
         const val DENSE_MOVE_COUNT = 96
         const val STATIONARY_MOVE_RADIUS_PX = 1f
         const val REUSED_POINTER_ID = 7

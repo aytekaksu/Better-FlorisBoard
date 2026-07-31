@@ -17,6 +17,7 @@
 package dev.patrickgold.florisboard.app.settings.advanced
 
 import android.annotation.SuppressLint
+import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -79,6 +80,7 @@ internal enum class BackupArchiveStagingFailure {
     ENTRY_DATA_INVALID,
     ENTRY_SIZE_MISMATCH,
     ENTRY_CHECKSUM_MISMATCH,
+    CLIPBOARD_PAYLOAD_INVALID,
     IO_FAILURE,
     ATOMIC_PUBLISH_UNAVAILABLE,
     CLEANUP_FAILURE,
@@ -87,7 +89,10 @@ internal enum class BackupArchiveStagingFailure {
 internal sealed interface BackupArchiveStagingResult {
     data class Valid(val stagedRestore: StagedRestore) : BackupArchiveStagingResult
 
-    data class Invalid(val failure: BackupArchiveStagingFailure) : BackupArchiveStagingResult
+    data class Invalid(
+        val failure: BackupArchiveStagingFailure,
+        val payloadFailure: ClipboardRestorePayloadFailure? = null,
+    ) : BackupArchiveStagingResult
 }
 
 private object StagedRestoreAuthority
@@ -131,7 +136,8 @@ internal class StagedRestore internal constructor(
 
 /**
  * Selectively materializes one session-owned restore plan before any live
- * state is changed.
+ * state is changed. A bounded scan of the copied clipboard indexes ensures
+ * only canonical media references consume staging space.
  */
 internal object BackupArchiveStager {
     suspend fun stage(
@@ -183,8 +189,6 @@ internal object BackupArchiveStager {
             is StageInputResult.Invalid -> return invalid(validated.failure)
             is StageInputResult.Valid -> validated
         }
-        val entries = input.entries
-        val declaredBytes = input.declaredBytes
 
         val locations = StageLocations(stagingParent, stageId)
         val activeCopy = AtomicReference<Closeable?>()
@@ -202,8 +206,11 @@ internal object BackupArchiveStager {
             val outcome = withContext(Dispatchers.IO) {
                 stageBlocking(
                     session = session,
-                    entries = entries,
-                    declaredBytes = declaredBytes,
+                    componentEntries = input.componentEntries,
+                    mediaCandidates = plan.clipboardMediaCandidatesToStage,
+                    selectedComponents = plan.componentsToStage,
+                    sourcePackageName = session.archive.metadata.packageName,
+                    declaredComponentBytes = input.declaredComponentBytes,
                     locations = locations,
                     budget = budget,
                     operationContext = operationContext,
@@ -212,14 +219,14 @@ internal object BackupArchiveStager {
                 )
             }
             result = when (outcome) {
-                is BlockingStageResult.Invalid -> invalid(outcome.failure)
+                is BlockingStageResult.Invalid -> invalid(outcome.failure, outcome.payloadFailure)
 
                 is BlockingStageResult.Valid -> {
                     val stagedRestore = StagedRestore(
                         authority = StagedRestoreAuthority,
                         root = outcome.root,
                         components = plan.componentsToStage.map { it.component },
-                        entryCount = entries.size,
+                        entryCount = outcome.entryCount,
                         stagedBytes = outcome.stagedBytes,
                         cleanupRoot = locations.container,
                     )
@@ -246,15 +253,15 @@ internal object BackupArchiveStager {
     }
 
     private fun validateStageInput(session: BackupArchiveSession, plan: RestorePlan): StageInputResult {
-        val entries = flattenEntries(plan)
+        val componentEntries = flattenComponentEntries(plan)
             ?: return StageInputResult.Invalid(BackupArchiveStagingFailure.PLAN_INCONSISTENT)
         if (!session.owns(plan)) {
             return StageInputResult.Invalid(BackupArchiveStagingFailure.PLAN_SESSION_MISMATCH)
         }
-        val declaredBytes = declaredSize(entries)
+        val declaredComponentBytes = declaredSize(componentEntries)
             ?: return StageInputResult.Invalid(BackupArchiveStagingFailure.PLAN_INCONSISTENT)
-        return if (declaredBytes == plan.declaredPayloadBytes) {
-            StageInputResult.Valid(entries, declaredBytes)
+        return if (declaredComponentBytes == plan.declaredComponentBytes) {
+            StageInputResult.Valid(componentEntries, declaredComponentBytes)
         } else {
             StageInputResult.Invalid(BackupArchiveStagingFailure.PLAN_INCONSISTENT)
         }
@@ -262,8 +269,11 @@ internal object BackupArchiveStager {
 
     private fun stageBlocking(
         session: BackupArchiveSession,
-        entries: List<ValidatedArchiveEntry>,
-        declaredBytes: Long,
+        componentEntries: List<ValidatedArchiveEntry>,
+        mediaCandidates: List<ValidatedArchiveEntry>,
+        selectedComponents: List<ValidatedComponent>,
+        sourcePackageName: String,
+        declaredComponentBytes: Long,
         locations: StageLocations,
         budget: RestoreStagingBudget,
         operationContext: CoroutineContext,
@@ -271,23 +281,68 @@ internal object BackupArchiveStager {
         onPartialRootCreated: (Path) -> Unit,
     ): BlockingStageResult = try {
         operationContext.ensureActive()
-        enforceRuntimeBudget(stagingParent = locations.parent, budget = budget, declaredBytes = declaredBytes)
+        enforceRuntimeBudget(
+            stagingParent = locations.parent,
+            budget = budget,
+            declaredBytes = declaredComponentBytes,
+        )
         val tree = SafeStageTree.create(locations)
         onPartialRootCreated(tree.root)
         operationContext.ensureActive()
         val counter = StageByteCounter(budget.maxBytes)
-        stageEntries(session, entries, tree, counter, operationContext, activeCopy)
-        if (counter.total != declaredBytes) {
+        stageEntries(session, componentEntries, tree, counter, operationContext, activeCopy)
+        if (counter.total != declaredComponentBytes) {
+            failStage(BackupArchiveStagingFailure.PLAN_INCONSISTENT)
+        }
+        val referencedMedia = when (
+            val result = referencedClipboardMediaEntries(
+                stagedRoot = tree.root,
+                selectedComponents = selectedComponents,
+                mediaCandidates = mediaCandidates,
+                sourcePackageName = sourcePackageName,
+                operationContext = operationContext,
+            )
+        ) {
+            is ReferencedMediaResult.Invalid -> {
+                failStage(BackupArchiveStagingFailure.CLIPBOARD_PAYLOAD_INVALID, result.failure)
+            }
+
+            is ReferencedMediaResult.Valid -> result.entries
+        }
+        val declaredMediaBytes = declaredSize(referencedMedia)
+            ?: failStage(BackupArchiveStagingFailure.PLAN_INCONSISTENT)
+        if (declaredMediaBytes > ClipboardRestorePayloadLimits.Default.maxTotalMediaBytes) {
+            failStage(
+                BackupArchiveStagingFailure.CLIPBOARD_PAYLOAD_INVALID,
+                ClipboardRestorePayloadFailure.LIMIT_EXCEEDED,
+            )
+        }
+        val declaredStageBytes = checkedAdd(declaredComponentBytes, declaredMediaBytes)
+            ?: failStage(BackupArchiveStagingFailure.PLAN_INCONSISTENT)
+        if (declaredStageBytes > budget.maxBytes) {
+            failStage(BackupArchiveStagingFailure.PAYLOAD_BUDGET_EXCEEDED)
+        }
+        enforceRuntimeBudget(
+            stagingParent = locations.parent,
+            budget = budget,
+            declaredBytes = declaredMediaBytes,
+        )
+        stageEntries(session, referencedMedia, tree, counter, operationContext, activeCopy)
+        if (counter.total != declaredStageBytes) {
             failStage(BackupArchiveStagingFailure.PLAN_INCONSISTENT)
         }
         tree.verifyComplete(operationContext)
         operationContext.ensureActive()
         publish(locations)
-        BlockingStageResult.Valid(locations.ready, counter.total)
+        BlockingStageResult.Valid(
+            root = locations.ready,
+            stagedBytes = counter.total,
+            entryCount = componentEntries.size + referencedMedia.size,
+        )
     } catch (error: CancellationException) {
         throw error
     } catch (error: StageFailureException) {
-        BlockingStageResult.Invalid(error.failure)
+        BlockingStageResult.Invalid(error.failure, error.payloadFailure)
     } catch (_: IOException) {
         operationContext.ensureActive()
         BlockingStageResult.Invalid(BackupArchiveStagingFailure.IO_FAILURE)
@@ -511,10 +566,9 @@ internal object BackupArchiveStager {
             }
         }
 
-    private fun flattenEntries(plan: RestorePlan): List<ValidatedArchiveEntry>? {
+    private fun flattenComponentEntries(plan: RestorePlan): List<ValidatedArchiveEntry>? {
         val entries = buildList {
             plan.componentsToStage.forEach { component -> addAll(component.entries) }
-            addAll(plan.clipboardMediaCandidatesToStage)
         }
         val paths = HashSet<String>(entries.size)
         return entries.takeIf { list -> list.all { paths.add(it.archivePath) } }
@@ -531,8 +585,64 @@ internal object BackupArchiveStager {
         return total
     }
 
-    private fun invalid(failure: BackupArchiveStagingFailure): BackupArchiveStagingResult.Invalid =
-        BackupArchiveStagingResult.Invalid(failure)
+    private fun checkedAdd(first: Long, second: Long): Long? =
+        first.takeIf { it >= 0L && second >= 0L && it <= Long.MAX_VALUE - second }?.plus(second)
+
+    private fun referencedClipboardMediaEntries(
+        stagedRoot: Path,
+        selectedComponents: List<ValidatedComponent>,
+        mediaCandidates: List<ValidatedArchiveEntry>,
+        sourcePackageName: String,
+        operationContext: CoroutineContext,
+    ): ReferencedMediaResult {
+        val selectedTypes = selectedComponents
+            .mapNotNullTo(linkedSetOf()) { it.component.clipboardMediaItemType() }
+        if (selectedTypes.isEmpty()) return ReferencedMediaResult.Valid(emptyList())
+
+        return when (
+            val inspection = ClipboardRestorePayload.inspectMediaReferences(
+                stagedRoot = stagedRoot,
+                sourcePackageName = sourcePackageName,
+                selectedTypes = selectedTypes,
+                checkActive = operationContext::ensureActive,
+            )
+        ) {
+            is ClipboardMediaReferenceInspectionResult.Invalid -> {
+                ReferencedMediaResult.Invalid(inspection.failure)
+            }
+
+            is ClipboardMediaReferenceInspectionResult.Valid -> {
+                val sourceIds = inspection.references.mapTo(linkedSetOf()) { it.sourceId }
+                if (sourceIds.size != inspection.references.size) {
+                    return ReferencedMediaResult.Invalid(
+                        ClipboardRestorePayloadFailure.CONFLICTING_MEDIA_REFERENCE,
+                    )
+                }
+                val entries = mediaCandidates.filter { candidate ->
+                    candidate.clipboardMediaId() in sourceIds
+                }
+                if (entries.size != sourceIds.size) {
+                    ReferencedMediaResult.Invalid(ClipboardRestorePayloadFailure.MEDIA_UNAVAILABLE)
+                } else {
+                    ReferencedMediaResult.Valid(entries)
+                }
+            }
+        }
+    }
+
+    private fun BackupComponent.clipboardMediaItemType(): ItemType? = when (this) {
+        BackupComponent.CLIPBOARD_IMAGES -> ItemType.IMAGE
+        BackupComponent.CLIPBOARD_VIDEOS -> ItemType.VIDEO
+        else -> null
+    }
+
+    private fun ValidatedArchiveEntry.clipboardMediaId(): Long? =
+        archivePath.removePrefix("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/").toLongOrNull()
+
+    private fun invalid(
+        failure: BackupArchiveStagingFailure,
+        payloadFailure: ClipboardRestorePayloadFailure? = null,
+    ): BackupArchiveStagingResult.Invalid = BackupArchiveStagingResult.Invalid(failure, payloadFailure)
 
     private const val COPY_BUFFER_BYTES = 64 * 1024
     private const val CLEANUP_ATTEMPTS = 2
@@ -729,20 +839,36 @@ private class StageLocations(parent: Path, stageId: UUID) {
 }
 
 private sealed interface BlockingStageResult {
-    data class Valid(val root: Path, val stagedBytes: Long) : BlockingStageResult
+    data class Valid(val root: Path, val stagedBytes: Long, val entryCount: Int) : BlockingStageResult
 
-    data class Invalid(val failure: BackupArchiveStagingFailure) : BlockingStageResult
+    data class Invalid(
+        val failure: BackupArchiveStagingFailure,
+        val payloadFailure: ClipboardRestorePayloadFailure? = null,
+    ) : BlockingStageResult
+}
+
+private sealed interface ReferencedMediaResult {
+    data class Valid(val entries: List<ValidatedArchiveEntry>) : ReferencedMediaResult
+
+    data class Invalid(val failure: ClipboardRestorePayloadFailure) : ReferencedMediaResult
 }
 
 private sealed interface StageInputResult {
-    data class Valid(val entries: List<ValidatedArchiveEntry>, val declaredBytes: Long) : StageInputResult
+    data class Valid(val componentEntries: List<ValidatedArchiveEntry>, val declaredComponentBytes: Long) :
+        StageInputResult
 
     data class Invalid(val failure: BackupArchiveStagingFailure) : StageInputResult
 }
 
-private class StageFailureException(val failure: BackupArchiveStagingFailure) : RuntimeException()
+private class StageFailureException(
+    val failure: BackupArchiveStagingFailure,
+    val payloadFailure: ClipboardRestorePayloadFailure? = null,
+) : RuntimeException()
 
-private fun failStage(failure: BackupArchiveStagingFailure): Nothing = throw StageFailureException(failure)
+private fun failStage(
+    failure: BackupArchiveStagingFailure,
+    payloadFailure: ClipboardRestorePayloadFailure? = null,
+): Nothing = throw StageFailureException(failure, payloadFailure)
 
 private class ActiveCopyResources(private val input: InputStream, private val output: FileChannel) : Closeable {
     override fun close() {
