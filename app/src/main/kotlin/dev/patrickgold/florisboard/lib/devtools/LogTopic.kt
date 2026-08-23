@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2025 The FlorisBoard Contributors
+ * Copyright (C) 2021-2026 The FlorisBoard Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ object LogTopic {
     const val KEY_EVENTS: FlogTopic =           2u
 
     const val LAYOUT_MANAGER: FlogTopic =       8u
-    const val TEXT_KEYBOARD_VIEW: FlogTopic =   16u
 
     const val CLIPBOARD: FlogTopic =            1024u
     const val CRASH_UTILITY: FlogTopic =        2048u

@@ -202,7 +202,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             if (mode != KeyboardMode.CHARACTERS) {
                 state.inputShiftState = InputShiftState.UNSHIFTED
             }
-            val computedKeyboard = keyboardCache.getOrElseAsync(mode, subtype) {
+            val computedKeyboard = keyboardCache.getOrPut(mode, subtype) {
                 layoutManager.computeKeyboardAsync(
                     keyboardMode = mode,
                     subtype = subtype,
