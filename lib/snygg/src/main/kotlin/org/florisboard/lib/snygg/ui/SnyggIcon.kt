@@ -16,19 +16,13 @@
 
 package org.florisboard.lib.snygg.ui
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.SnyggSelector
-import org.florisboard.lib.snygg.SnyggStylesheet
 
 /**
  * Simple Icon composable, which displays a given [imageVector] annotated by the [contentDescription].
@@ -103,27 +97,5 @@ fun SnyggIcon(
             contentDescription = contentDescription,
             tint = style.foreground(),
         )
-    }
-}
-
-@Preview
-@Composable
-private fun SimpleSnyggIcon() {
-    val stylesheet = SnyggStylesheet.v2 {
-        "preview-column" {
-            fontSize = fontSize(20.sp)
-            foreground = rgbaColor(0, 0, 255)
-        }
-        "preview-icon" {
-            padding = padding(6.dp)
-        }
-    }
-    val theme = rememberSnyggTheme(stylesheet)
-
-    ProvideSnyggTheme(theme) {
-        SnyggColumn("preview-column") {
-            SnyggText("preview-text", text = "blue text")
-            SnyggIcon("preview-icon", imageVector = Icons.Default.Search)
-        }
     }
 }

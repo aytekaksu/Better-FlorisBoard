@@ -266,10 +266,6 @@ class SnyggSinglePropertySetEditor(initProperties: Map<String, SnyggValue>? = nu
         return SnyggTextDecorationLineValue(textDecoration)
     }
 
-    fun textMaxLinesNone(): SnyggTextMaxLinesValue {
-        return SnyggTextMaxLinesValue.defaultValue()
-    }
-
     fun textMaxLines(maxLines: Int): SnyggTextMaxLinesValue {
         require(maxLines >= 1)
         return SnyggTextMaxLinesValue(maxLines)
