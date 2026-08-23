@@ -16,10 +16,13 @@
 
 package dev.patrickgold.florisboard.ime.keyboard
 
+import dev.patrickgold.florisboard.ime.popup.PopupMapping
 import dev.patrickgold.florisboard.lib.ext.ExtensionJsonConfig
 import dev.patrickgold.florisboard.lib.ext.validateForImport
+import dev.patrickgold.florisboard.lib.io.DefaultJsonConfig
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import kotlinx.serialization.decodeFromString
 import java.io.File
 
 class KeyboardMetadataContractTest :
@@ -58,5 +61,32 @@ class KeyboardMetadataContractTest :
                 .filter { it != "extension.json" }
                 .toList()
             packagedFiles.sorted() shouldBe declaredFiles.sorted()
+        }
+
+        test("bundled popup metadata exposes every packaged mapping") {
+            val assetRoot = sequenceOf("src/main/assets", "app/src/main/assets")
+                .map { File(it, "ime/keyboard/org.florisboard.localization") }.first { it.isDirectory }
+            val extension = ExtensionJsonConfig.decodeFromString(
+                KeyboardExtension.serializer(),
+                assetRoot.resolve("extension.json").readText(),
+            )
+            extension.validateForImport().isValid shouldBe true
+
+            val declaredFiles = extension.popupMappings.map { it.mappingFile() }
+            val packagedFiles = assetRoot.resolve("popupMappings").walkTopDown()
+                .filter(File::isFile)
+                .map { it.relativeTo(assetRoot).invariantSeparatorsPath }
+                .toList()
+            packagedFiles.sorted() shouldBe declaredFiles.sorted()
+            packagedFiles.forEach { path ->
+                DefaultJsonConfig.decodeFromString<PopupMapping>(assetRoot.resolve(path).readText())
+            }
+
+            val declaredIds = extension.popupMappings.mapTo(mutableSetOf()) { it.id }
+            extension.subtypePresets.filter {
+                it.popupMapping.extensionId == extension.meta.id
+            }.mapNotNull {
+                it.popupMapping.componentId.takeUnless(declaredIds::contains)
+            } shouldBe emptyList()
         }
     })

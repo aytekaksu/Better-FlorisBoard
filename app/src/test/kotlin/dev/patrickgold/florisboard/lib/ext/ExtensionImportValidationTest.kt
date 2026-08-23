@@ -396,14 +396,14 @@ class ExtensionImportValidationTest :
                 ExtensionImportValidationError.KEYBOARD_PUNCTUATION
         }
 
-        test("bounds popup mapping resource overrides") {
+        test("resolves and bounds popup mapping resource overrides") {
             val valid = KeyboardExtension(
                 meta = validMeta(),
                 popupMappings = listOf(
                     PopupMappingComponent(
                         id = "custom",
                         authors = listOf("maintainer"),
-                        mappingFile = "popupMappings/custom.json",
+                        mappingFile = "popupMappings/renamed.json",
                     ),
                 ),
             )
@@ -417,6 +417,9 @@ class ExtensionImportValidationTest :
                 ),
             )
 
+            valid.popupMappings.single().mappingFile() shouldBe "popupMappings/renamed.json"
+            PopupMappingComponent("default", authors = listOf("maintainer")).mappingFile() shouldBe
+                "popupMappings/default.json"
             valid.validateForImport().isValid shouldBe true
             invalid.validateForImport().errors shouldContain
                 ExtensionImportValidationError.KEYBOARD_POPUP_MAPPING

@@ -100,6 +100,7 @@ val formattedKotlinSources = files(
     file("app/src/main/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummary.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycle.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviders.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/popup/PopupMapping.kt"),
     file(
         "app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/" +
             "AutocorrectPerformanceSection.kt",
