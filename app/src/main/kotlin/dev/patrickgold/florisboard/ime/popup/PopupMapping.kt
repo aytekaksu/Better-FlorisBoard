@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2025 The FlorisBoard Contributors
+ * Copyright (C) 2021-2026 The FlorisBoard Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,5 +34,5 @@ data class PopupMappingComponent(
     override val authors: List<String>,
     val mappingFile: String? = null,
 ) : ExtensionComponent {
-    fun mappingFile() = "popupMappings/$id.json"
+    fun mappingFile() = mappingFile ?: "popupMappings/$id.json"
 }

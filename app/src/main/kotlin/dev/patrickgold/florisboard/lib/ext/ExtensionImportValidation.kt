@@ -551,12 +551,7 @@ private fun validatePunctuationRules(
 }
 
 private fun validatePopupMappings(extension: KeyboardExtension, errors: MutableSet<ExtensionImportValidationError>) {
-    if (
-        extension.popupMappings.any { component ->
-            SafeRelativePath.parse(component.mappingFile()).isFailure ||
-                component.mappingFile?.let { SafeRelativePath.parse(it).isFailure } == true
-        }
-    ) {
+    if (extension.popupMappings.any { SafeRelativePath.parse(it.mappingFile()).isFailure }) {
         errors += ExtensionImportValidationError.KEYBOARD_POPUP_MAPPING
     }
 }
