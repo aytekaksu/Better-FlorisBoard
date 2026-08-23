@@ -16,425 +16,236 @@
 
 package dev.patrickgold.florisboard.ime.theme
 
+import androidx.annotation.StringRes
 import dev.patrickgold.florisboard.R
 
-enum class FlorisImeUi(val elementName: String, val resId: Int?) {
-    Root(
-        elementName = "root",
-        resId = R.string.snygg__rule_element__root,
-    ),
-    Window(
-        elementName = "window",
-        resId = R.string.snygg__rule_element__window,
-    ),
-    WindowInner(
-        elementName = "window-inner",
-        resId = R.string.snygg__rule_element__window_inner,
-    ),
-    WindowMoveHandle(
-        elementName = "window-move-handle",
-        resId = R.string.snygg__rule_element__window_move_handle,
-    ),
-    WindowResizeAction(
-        elementName = "window-resize-action",
-        resId = R.string.snygg__rule_element__window_resize_action,
-    ),
-    WindowResizeHandle(
-        elementName = "window-resize-handle",
-        resId = R.string.snygg__rule_element__window_resize_handle,
-    ),
-    WindowResizeOverlayFixed(
-        elementName = "window-resize-overlay-fixed",
-        resId = R.string.snygg__rule_element__window_resize_overlay_fixed
-    ),
+/** Snygg element names are persisted in theme stylesheets and must remain stable. */
+@Suppress("ktlint:standard:property-naming")
+enum class FlorisImeUi(val elementName: String, @param:StringRes val resId: Int) {
+    Root("root", R.string.snygg__rule_element__root),
+    Window("window", R.string.snygg__rule_element__window),
+    WindowInner("window-inner", R.string.snygg__rule_element__window_inner),
+    WindowMoveHandle("window-move-handle", R.string.snygg__rule_element__window_move_handle),
+    WindowResizeAction("window-resize-action", R.string.snygg__rule_element__window_resize_action),
+    WindowResizeHandle("window-resize-handle", R.string.snygg__rule_element__window_resize_handle),
+    WindowResizeOverlayFixed("window-resize-overlay-fixed", R.string.snygg__rule_element__window_resize_overlay_fixed),
     FloatingDockToFixedIndicator(
-        elementName = "floating-dock-to-fixed-indicator",
-        resId = R.string.snygg__rule_element__floating_dock_to_fixed_indicator,
+        "floating-dock-to-fixed-indicator",
+        R.string.snygg__rule_element__floating_dock_to_fixed_indicator,
     ),
 
-    Key(
-        elementName = "key",
-        resId = R.string.snygg__rule_element__key,
-    ),
-    KeyIcon(
-        elementName = "key-icon",
-        resId = R.string.snygg__rule_element__key_icon,
-    ),
-    KeyHint(
-        elementName = "key-hint",
-        resId = R.string.snygg__rule_element__key_hint,
-    ),
-    KeyPopupBox(
-        elementName = "key-popup-box",
-        resId = R.string.snygg__rule_element__key_popup_box,
-    ),
-    KeyPopupElement(
-        elementName = "key-popup-element",
-        resId = R.string.snygg__rule_element__key_popup_element,
-    ),
+    Key("key", R.string.snygg__rule_element__key),
+    KeyIcon("key-icon", R.string.snygg__rule_element__key_icon),
+    KeyHint("key-hint", R.string.snygg__rule_element__key_hint),
+    KeyPopupBox("key-popup-box", R.string.snygg__rule_element__key_popup_box),
+    KeyPopupElement("key-popup-element", R.string.snygg__rule_element__key_popup_element),
     KeyPopupExtendedIndicator(
-        elementName = "key-popup-extended-indicator",
-        resId = R.string.snygg__rule_element__key_popup_extended_indicator,
+        "key-popup-extended-indicator",
+        R.string.snygg__rule_element__key_popup_extended_indicator,
     ),
 
-    ClipboardHeader(
-        elementName = "clipboard-header",
-        resId = R.string.snygg__rule_element__clipboard_header,
-    ),
-    ClipboardHeaderButton(
-        elementName = "clipboard-header-button",
-        resId = R.string.snygg__rule_element__clipboard_header_button,
-    ),
-    ClipboardHeaderText(
-        elementName = "clipboard-header-text",
-        resId = R.string.snygg__rule_element__clipboard_header_text,
-    ),
-    ClipboardSubheader(
-        elementName = "clipboard-subheader",
-        resId = R.string.snygg__rule_element__clipboard_subheader,
-    ),
-    ClipboardContent(
-        elementName = "clipboard-content",
-        resId = R.string.snygg__rule_element__clipboard_content,
-    ),
-    ClipboardFilterRow(
-        elementName = "clipboard-filter-row",
-        resId = R.string.snygg__rule_element__clipboard_filter_row,
-    ),
-    ClipboardFilterChip(
-        elementName = "clipboard-filter-chip",
-        resId = R.string.snygg__rule_element__clipboard_filter_chip,
-    ),
-    ClipboardFilterChipIcon(
-        elementName = "clipboard-filter-chip-icon",
-        resId = R.string.snygg__rule_element__clipboard_filter_chip_icon,
-    ),
-    ClipboardFilterChipText(
-        elementName = "clipboard-filter-chip-text",
-        resId = R.string.snygg__rule_element__clipboard_filter_chip_text,
-    ),
-    ClipboardGrid(
-        elementName = "clipboard-grid",
-        resId = R.string.snygg__rule_element__clipboard_grid,
-    ),
-    ClipboardItem(
-        elementName = "clipboard-item",
-        resId = R.string.snygg__rule_element__clipboard_item,
-    ),
-    ClipboardItemDescription(
-        elementName = "clipboard-item-description",
-        resId = R.string.snygg__rule_element__clipboard_item_description,
-    ),
-    ClipboardItemPopup(
-        elementName = "clipboard-item-popup",
-        resId = R.string.snygg__rule_element__clipboard_item_popup,
-    ),
-    ClipboardItemTimestamp(
-        elementName = "clipboard-item-timestamp",
-        resId = R.string.snygg__rule_element__clipboard_item_timestamp,
-    ),
-    ClipboardItemActions(
-        elementName = "clipboard-item-actions",
-        resId = R.string.snygg__rule_element__clipboard_item_actions,
-    ),
-    ClipboardItemAction(
-        elementName = "clipboard-item-action",
-        resId = R.string.snygg__rule_element__clipboard_item_action,
-    ),
-    ClipboardItemActionIcon(
-        elementName = "clipboard-item-action-icon",
-        resId = R.string.snygg__rule_element__clipboard_item_action_icon,
-    ),
-    ClipboardItemActionText(
-        elementName = "clipboard-item-action-text",
-        resId = R.string.snygg__rule_element__clipboard_item_action_text,
-    ),
-    ClipboardClearAllDialog(
-        elementName = "clipboard-clear-all-dialog",
-        resId = R.string.snygg__rule_element__clipboard_clear_all_dialog,
-    ),
+    ClipboardHeader("clipboard-header", R.string.snygg__rule_element__clipboard_header),
+    ClipboardHeaderButton("clipboard-header-button", R.string.snygg__rule_element__clipboard_header_button),
+    ClipboardHeaderText("clipboard-header-text", R.string.snygg__rule_element__clipboard_header_text),
+    ClipboardSubheader("clipboard-subheader", R.string.snygg__rule_element__clipboard_subheader),
+    ClipboardContent("clipboard-content", R.string.snygg__rule_element__clipboard_content),
+    ClipboardFilterRow("clipboard-filter-row", R.string.snygg__rule_element__clipboard_filter_row),
+    ClipboardFilterChip("clipboard-filter-chip", R.string.snygg__rule_element__clipboard_filter_chip),
+    ClipboardFilterChipIcon("clipboard-filter-chip-icon", R.string.snygg__rule_element__clipboard_filter_chip_icon),
+    ClipboardFilterChipText("clipboard-filter-chip-text", R.string.snygg__rule_element__clipboard_filter_chip_text),
+    ClipboardGrid("clipboard-grid", R.string.snygg__rule_element__clipboard_grid),
+    ClipboardItem("clipboard-item", R.string.snygg__rule_element__clipboard_item),
+    ClipboardItemDescription("clipboard-item-description", R.string.snygg__rule_element__clipboard_item_description),
+    ClipboardItemPopup("clipboard-item-popup", R.string.snygg__rule_element__clipboard_item_popup),
+    ClipboardItemTimestamp("clipboard-item-timestamp", R.string.snygg__rule_element__clipboard_item_timestamp),
+    ClipboardItemActions("clipboard-item-actions", R.string.snygg__rule_element__clipboard_item_actions),
+    ClipboardItemAction("clipboard-item-action", R.string.snygg__rule_element__clipboard_item_action),
+    ClipboardItemActionIcon("clipboard-item-action-icon", R.string.snygg__rule_element__clipboard_item_action_icon),
+    ClipboardItemActionText("clipboard-item-action-text", R.string.snygg__rule_element__clipboard_item_action_text),
+    ClipboardClearAllDialog("clipboard-clear-all-dialog", R.string.snygg__rule_element__clipboard_clear_all_dialog),
     ClipboardClearAllDialogMessage(
-        elementName = "clipboard-clear-all-dialog-message",
-        resId = R.string.snygg__rule_element__clipboard_clear_all_dialog_message,
+        "clipboard-clear-all-dialog-message",
+        R.string.snygg__rule_element__clipboard_clear_all_dialog_message,
     ),
     ClipboardClearAllDialogButtons(
-        elementName = "clipboard-clear-all-dialog-buttons",
-        resId = R.string.snygg__rule_element__clipboard_clear_all_dialog_buttons,
+        "clipboard-clear-all-dialog-buttons",
+        R.string.snygg__rule_element__clipboard_clear_all_dialog_buttons,
     ),
     ClipboardClearAllDialogButton(
-        elementName = "clipboard-clear-all-dialog-button",
-        resId = R.string.snygg__rule_element__clipboard_clear_all_dialog_button,
+        "clipboard-clear-all-dialog-button",
+        R.string.snygg__rule_element__clipboard_clear_all_dialog_button,
     ),
     ClipboardHistoryDisabledTitle(
-        elementName = "clipboard-history-disabled-title",
-        resId = R.string.snygg__rule_element__clipboard_history_disabled_title,
+        "clipboard-history-disabled-title",
+        R.string.snygg__rule_element__clipboard_history_disabled_title,
     ),
     ClipboardHistoryDisabledMessage(
-        elementName = "clipboard-history-disabled-message",
-        resId = R.string.snygg__rule_element__clipboard_history_disabled_message,
+        "clipboard-history-disabled-message",
+        R.string.snygg__rule_element__clipboard_history_disabled_message,
     ),
     ClipboardHistoryDisabledButton(
-        elementName = "clipboard-history-disabled-button",
-        resId = R.string.snygg__rule_element__clipboard_history_disabled_button,
+        "clipboard-history-disabled-button",
+        R.string.snygg__rule_element__clipboard_history_disabled_button,
     ),
     ClipboardHistoryLockedTitle(
-        elementName = "clipboard-history-locked-title",
-        resId = R.string.snygg__rule_element__clipboard_history_locked_title,
+        "clipboard-history-locked-title",
+        R.string.snygg__rule_element__clipboard_history_locked_title,
     ),
     ClipboardHistoryLockedMessage(
-        elementName = "clipboard-history-locked-message",
-        resId = R.string.snygg__rule_element__clipboard_history_locked_message,
+        "clipboard-history-locked-message",
+        R.string.snygg__rule_element__clipboard_history_locked_message,
     ),
 
     ExtractedLandscapeInputLayout(
-        elementName = "extracted-landscape-input-layout",
-        resId = R.string.snygg__rule_element__extracted_landscape_input_layout,
+        "extracted-landscape-input-layout",
+        R.string.snygg__rule_element__extracted_landscape_input_layout,
     ),
     ExtractedLandscapeInputField(
-        elementName = "extracted-landscape-input-field",
-        resId = R.string.snygg__rule_element__extracted_landscape_input_field,
+        "extracted-landscape-input-field",
+        R.string.snygg__rule_element__extracted_landscape_input_field,
     ),
     ExtractedLandscapeInputAction(
-        elementName = "extracted-landscape-input-action",
-        resId = R.string.snygg__rule_element__extracted_landscape_input_action,
+        "extracted-landscape-input-action",
+        R.string.snygg__rule_element__extracted_landscape_input_action,
     ),
 
-    GlideTrail(
-        elementName = "glide-trail",
-        resId = R.string.snygg__rule_element__glide_trail,
-    ),
+    GlideTrail("glide-trail", R.string.snygg__rule_element__glide_trail),
 
-    IncognitoModeIndicator(
-        elementName = "incognito-mode-indicator",
-        resId = R.string.snygg__rule_element__incognito_mode_indicator,
-    ),
+    IncognitoModeIndicator("incognito-mode-indicator", R.string.snygg__rule_element__incognito_mode_indicator),
 
-    InlineAutofillChip(
-        elementName = "inline-autofill-chip",
-        resId = R.string.snygg__rule_element__inline_autofill_chip,
-    ),
+    InlineAutofillChip("inline-autofill-chip", R.string.snygg__rule_element__inline_autofill_chip),
 
-    Media(
-        elementName = "media",
-        resId = R.string.snygg__rule_element__media,
-    ),
+    Media("media", R.string.snygg__rule_element__media),
 
-    MediaEmojiSubheader(
-        elementName = "media-emoji-subheader",
-        resId = R.string.snygg__rule_element__media_emoji_subheader,
-    ),
-    MediaEmojiKey(
-        elementName = "media-emoji-key",
-        resId = R.string.snygg__rule_element__media_emoji_key,
-    ),
-    MediaEmojiKeyPopupBox(
-        elementName = "media-emoji-key-popup-box",
-        resId = R.string.snygg__rule_element__media_emoji_key_popup_box,
-    ),
+    MediaEmojiSubheader("media-emoji-subheader", R.string.snygg__rule_element__media_emoji_subheader),
+    MediaEmojiKey("media-emoji-key", R.string.snygg__rule_element__media_emoji_key),
+    MediaEmojiKeyPopupBox("media-emoji-key-popup-box", R.string.snygg__rule_element__media_emoji_key_popup_box),
     MediaEmojiKeyPopupElement(
-        elementName = "media-emoji-key-popup-element",
-        resId = R.string.snygg__rule_element__media_emoji_key_popup_element,
+        "media-emoji-key-popup-element",
+        R.string.snygg__rule_element__media_emoji_key_popup_element,
     ),
     MediaEmojiKeyPopupExtendedIndicator(
-        elementName = "media-emoji-key-popup-extended-indicator",
-        resId = R.string.snygg__rule_element__media_emoji_key_popup_extended_indicator,
+        "media-emoji-key-popup-extended-indicator",
+        R.string.snygg__rule_element__media_emoji_key_popup_extended_indicator,
     ),
-    MediaEmojiTab(
-        elementName = "media-emoji-tab",
-        resId = R.string.snygg__rule_element__media_emoji_tab,
-    ),
+    MediaEmojiTab("media-emoji-tab", R.string.snygg__rule_element__media_emoji_tab),
 
-    MediaBottomRow(
-        elementName = "media-bottom-row",
-        resId = R.string.snygg__rule_element__media_bottom_row,
-    ),
-    MediaBottomRowButton(
-        elementName = "media-bottom-row-button",
-        resId = R.string.snygg__rule_element__media_bottom_row_button,
-    ),
+    MediaBottomRow("media-bottom-row", R.string.snygg__rule_element__media_bottom_row),
+    MediaBottomRowButton("media-bottom-row-button", R.string.snygg__rule_element__media_bottom_row_button),
 
-    OneHandedPanel(
-        elementName = "one-handed-panel",
-        resId = R.string.snygg__rule_element__one_handed_panel,
-    ),
-    OneHandedPanelButton(
-        elementName = "one-handed-panel-button",
-        resId = R.string.snygg__rule_element__one_handed_panel_button,
-    ),
+    OneHandedPanel("one-handed-panel", R.string.snygg__rule_element__one_handed_panel),
+    OneHandedPanelButton("one-handed-panel-button", R.string.snygg__rule_element__one_handed_panel_button),
 
-    Smartbar(
-        elementName = "smartbar",
-        resId = R.string.snygg__rule_element__smartbar,
-    ),
-    SmartbarSharedActionsRow(
-        elementName = "smartbar-shared-actions-row",
-        resId = R.string.snygg__rule_element__smartbar_shared_actions_row,
-    ),
+    Smartbar("smartbar", R.string.snygg__rule_element__smartbar),
+    SmartbarSharedActionsRow("smartbar-shared-actions-row", R.string.snygg__rule_element__smartbar_shared_actions_row),
     SmartbarSharedActionsToggle(
-        elementName = "smartbar-shared-actions-toggle",
-        resId = R.string.snygg__rule_element__smartbar_shared_actions_toggle,
+        "smartbar-shared-actions-toggle",
+        R.string.snygg__rule_element__smartbar_shared_actions_toggle,
     ),
     SmartbarSharedActionsToggleIcon(
-        elementName = "smartbar-shared-actions-toggle-icon",
-        resId = R.string.snygg__rule_element__smartbar_shared_actions_toggle_icon,
+        "smartbar-shared-actions-toggle-icon",
+        R.string.snygg__rule_element__smartbar_shared_actions_toggle_icon,
     ),
     SmartbarExtendedActionsRow(
-        elementName = "smartbar-extended-actions-row",
-        resId = R.string.snygg__rule_element__smartbar_extended_actions_row,
+        "smartbar-extended-actions-row",
+        R.string.snygg__rule_element__smartbar_extended_actions_row,
     ),
     SmartbarExtendedActionsToggle(
-        elementName = "smartbar-extended-actions-toggle",
-        resId = R.string.snygg__rule_element__smartbar_extended_actions_toggle,
+        "smartbar-extended-actions-toggle",
+        R.string.snygg__rule_element__smartbar_extended_actions_toggle,
     ),
     SmartbarExtendedActionsToggleIcon(
-        elementName = "smartbar-extended-actions-toggle-icon",
-        resId = R.string.snygg__rule_element__smartbar_extended_actions_toggle_icon,
+        "smartbar-extended-actions-toggle-icon",
+        R.string.snygg__rule_element__smartbar_extended_actions_toggle_icon,
     ),
-    SmartbarActionKey(
-        elementName = "smartbar-action-key",
-        resId = R.string.snygg__rule_element__smartbar_action_key,
-    ),
-    SmartbarActionKeyIcon(
-        elementName = "smartbar-action-key-icon",
-        resId = R.string.snygg__rule_element__smartbar_action_key_icon,
-    ),
-    SmartbarActionKeyText(
-        elementName = "smartbar-action-key-text",
-        resId = R.string.snygg__rule_element__smartbar_action_key_text,
-    ),
+    SmartbarActionKey("smartbar-action-key", R.string.snygg__rule_element__smartbar_action_key),
+    SmartbarActionKeyIcon("smartbar-action-key-icon", R.string.snygg__rule_element__smartbar_action_key_icon),
+    SmartbarActionKeyText("smartbar-action-key-text", R.string.snygg__rule_element__smartbar_action_key_text),
 
-    SmartbarActionTile(
-        elementName = "smartbar-action-tile",
-        resId = R.string.snygg__rule_element__smartbar_action_tile,
-    ),
-    SmartbarActionTileIcon(
-        elementName = "smartbar-action-tile-icon",
-        resId = R.string.snygg__rule_element__smartbar_action_tile_icon,
-    ),
-    SmartbarActionTileText(
-        elementName = "smartbar-action-tile-text",
-        resId = R.string.snygg__rule_element__smartbar_action_tile_text,
-    ),
-    SmartbarActionsOverflow(
-        elementName = "smartbar-actions-overflow",
-        resId = R.string.snygg__rule_element__smartbar_actions_overflow,
-    ),
+    SmartbarActionTile("smartbar-action-tile", R.string.snygg__rule_element__smartbar_action_tile),
+    SmartbarActionTileIcon("smartbar-action-tile-icon", R.string.snygg__rule_element__smartbar_action_tile_icon),
+    SmartbarActionTileText("smartbar-action-tile-text", R.string.snygg__rule_element__smartbar_action_tile_text),
+    SmartbarActionsOverflow("smartbar-actions-overflow", R.string.snygg__rule_element__smartbar_actions_overflow),
     SmartbarActionsOverflowCustomizeButton(
-        elementName = "smartbar-actions-overflow-customize-button",
-        resId = R.string.snygg__rule_element__smartbar_actions_overflow_customize_button,
+        "smartbar-actions-overflow-customize-button",
+        R.string.snygg__rule_element__smartbar_actions_overflow_customize_button,
     ),
 
-    SmartbarActionsEditor(
-        elementName = "smartbar-actions-editor",
-        resId = R.string.snygg__rule_element__smartbar_actions_editor,
-    ),
+    SmartbarActionsEditor("smartbar-actions-editor", R.string.snygg__rule_element__smartbar_actions_editor),
     SmartbarActionsEditorHeader(
-        elementName = "smartbar-actions-editor-header",
-        resId = R.string.snygg__rule_element__smartbar_actions_editor_header,
+        "smartbar-actions-editor-header",
+        R.string.snygg__rule_element__smartbar_actions_editor_header,
     ),
     SmartbarActionsEditorHeaderButton(
-        elementName = "smartbar-actions-editor-header-button",
-        resId = R.string.snygg__rule_element__smartbar_actions_editor_header_button,
+        "smartbar-actions-editor-header-button",
+        R.string.snygg__rule_element__smartbar_actions_editor_header_button,
     ),
     SmartbarActionsEditorSubheader(
-        elementName = "smartbar-actions-editor-subheader",
-        resId = R.string.snygg__rule_element__smartbar_actions_editor_subheader,
+        "smartbar-actions-editor-subheader",
+        R.string.snygg__rule_element__smartbar_actions_editor_subheader,
     ),
     SmartbarActionsEditorTileGrid(
-        elementName = "smartbar-actions-editor-tile-grid",
-        resId = R.string.snygg__rule_element__smartbar_actions_editor_tile_grid,
+        "smartbar-actions-editor-tile-grid",
+        R.string.snygg__rule_element__smartbar_actions_editor_tile_grid,
     ),
     SmartbarActionsEditorTile(
-        elementName = "smartbar-actions-editor-tile",
-        resId = R.string.snygg__rule_element__smartbar_actions_editor_tile,
+        "smartbar-actions-editor-tile",
+        R.string.snygg__rule_element__smartbar_actions_editor_tile,
     ),
     SmartbarActionsEditorTileIcon(
-        elementName = "smartbar-actions-editor-tile-icon",
-        resId = R.string.snygg__rule_element__smartbar_actions_editor_tile_icon,
+        "smartbar-actions-editor-tile-icon",
+        R.string.snygg__rule_element__smartbar_actions_editor_tile_icon,
     ),
     SmartbarActionsEditorTileText(
-        elementName = "smartbar-actions-editor-tile-text",
-        resId = R.string.snygg__rule_element__smartbar_actions_editor_tile_text,
+        "smartbar-actions-editor-tile-text",
+        R.string.snygg__rule_element__smartbar_actions_editor_tile_text,
     ),
 
-    SmartbarCandidatesRow(
-        elementName = "smartbar-candidates-row",
-        resId = R.string.snygg__rule_element__smartbar_candidates_row,
-    ),
-    SmartbarCandidateWord(
-        elementName = "smartbar-candidate-word",
-        resId = R.string.snygg__rule_element__smartbar_candidate_word,
-    ),
+    SmartbarCandidatesRow("smartbar-candidates-row", R.string.snygg__rule_element__smartbar_candidates_row),
+    SmartbarCandidateWord("smartbar-candidate-word", R.string.snygg__rule_element__smartbar_candidate_word),
     SmartbarCandidateWordText(
-        elementName = "smartbar-candidate-word-text",
-        resId = R.string.snygg__rule_element__smartbar_candidate_word_text,
+        "smartbar-candidate-word-text",
+        R.string.snygg__rule_element__smartbar_candidate_word_text,
     ),
     SmartbarCandidateWordSecondaryText(
-        elementName = "smartbar-candidate-word-secondary-text",
-        resId = R.string.snygg__rule_element__smartbar_candidate_word_secondary_text,
+        "smartbar-candidate-word-secondary-text",
+        R.string.snygg__rule_element__smartbar_candidate_word_secondary_text,
     ),
-    SmartbarCandidateClip(
-        elementName = "smartbar-candidate-clip",
-        resId = R.string.snygg__rule_element__smartbar_candidate_clip,
-    ),
+    SmartbarCandidateClip("smartbar-candidate-clip", R.string.snygg__rule_element__smartbar_candidate_clip),
     SmartbarCandidateClipIcon(
-        elementName = "smartbar-candidate-clip-icon",
-        resId = R.string.snygg__rule_element__smartbar_candidate_clip_icon,
+        "smartbar-candidate-clip-icon",
+        R.string.snygg__rule_element__smartbar_candidate_clip_icon,
     ),
     SmartbarCandidateClipText(
-        elementName = "smartbar-candidate-clip-text",
-        resId = R.string.snygg__rule_element__smartbar_candidate_clip_text,
+        "smartbar-candidate-clip-text",
+        R.string.snygg__rule_element__smartbar_candidate_clip_text,
     ),
-    SmartbarCandidateSpacer(
-        elementName = "smartbar-candidate-spacer",
-        resId = R.string.snygg__rule_element__smartbar_candidate_spacer,
-    ),
+    SmartbarCandidateSpacer("smartbar-candidate-spacer", R.string.snygg__rule_element__smartbar_candidate_spacer),
 
-    SubtypePanel(
-        elementName = "subtype-panel",
-        resId = R.string.snygg__rule_element__subtype_panel,
-    ),
-    SubtypePanelHeader(
-        elementName = "subtype-panel-header",
-        resId = R.string.snygg__rule_element__subtype_panel_header,
-    ),
-    SubtypePanelList(
-        elementName = "subtype-panel-list",
-        resId = R.string.snygg__rule_element__subtype_panel_list,
-    ),
-    SubtypePanelListItem(
-        elementName = "subtype-panel-list-item",
-        resId = R.string.snygg__rule_element__subtype_panel_list_item,
-    ),
+    SubtypePanel("subtype-panel", R.string.snygg__rule_element__subtype_panel),
+    SubtypePanelHeader("subtype-panel-header", R.string.snygg__rule_element__subtype_panel_header),
+    SubtypePanelList("subtype-panel-list", R.string.snygg__rule_element__subtype_panel_list),
+    SubtypePanelListItem("subtype-panel-list-item", R.string.snygg__rule_element__subtype_panel_list_item),
     SubtypePanelListItemIconLeading(
-        elementName = "subtype-panel-list-item-icon-leading",
-        resId = R.string.snygg__rule_element__subtype_panel_list_item_icon_leading,
+        "subtype-panel-list-item-icon-leading",
+        R.string.snygg__rule_element__subtype_panel_list_item_icon_leading,
     ),
     SubtypePanelListItemText(
-        elementName = "subtype-panel-list-item-text",
-        resId = R.string.snygg__rule_element__subtype_panel_list_item_text,
-    );
+        "subtype-panel-list-item-text",
+        R.string.snygg__rule_element__subtype_panel_list_item_text,
+    ),
+    ;
 
     companion object {
         val elementNames by lazy { entries.map { it.elementName } }
 
-        val elementNamesToOrdinals by lazy {
-            val enumEntries = entries
-            buildMap {
-                enumEntries.forEach { entry ->
-                    put(entry.elementName, entry.ordinal)
-                }
-            }
-        }
+        val elementNamesToOrdinals by lazy { entries.associate { it.elementName to it.ordinal } }
 
         val elementNamesToTranslation by lazy {
-            val enumEntries = entries
             buildMap {
                 put("defines", R.string.snygg__rule_annotation__defines)
                 put("font", R.string.snygg__rule_annotation__font)
-                enumEntries.forEach { entry ->
-                    put(entry.elementName, entry.resId)
-                }
+                FlorisImeUi.entries.associateTo(this) { it.elementName to it.resId }
             }
         }
     }
