@@ -126,7 +126,7 @@ fun SelectLocaleScreen() = FlorisScreen {
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .florisScrollbar(state, isVertical = true),
+                    .florisScrollbar(state),
                 state = state,
             ) {
                 items(filteredLocales) { locale ->

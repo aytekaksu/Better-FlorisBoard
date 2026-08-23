@@ -16,8 +16,12 @@
 
 package dev.patrickgold.florisboard.app.settings.about
 
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -31,8 +35,7 @@ import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.lib.io.FlorisRef
 import dev.patrickgold.florisboard.lib.io.loadTextAsset
-import org.florisboard.lib.compose.florisHorizontalScroll
-import org.florisboard.lib.compose.florisVerticalScroll
+import org.florisboard.lib.compose.florisScrollbar
 import org.florisboard.lib.compose.stringRes
 
 @Composable
@@ -47,11 +50,15 @@ fun ProjectLicenseScreen() = FlorisScreen {
         // is hard to read if rendered in RTL. Also it is in English so forcing
         // LTR here makes most sense.
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            val verticalScrollState = rememberScrollState()
+            val horizontalScrollState = rememberScrollState()
             SelectionContainer(
                 modifier = Modifier
                     .fillMaxSize()
-                    .florisVerticalScroll()
-                    .florisHorizontalScroll(),
+                    .florisScrollbar(verticalScrollState)
+                    .florisScrollbar(horizontalScrollState, orientation = Orientation.Horizontal)
+                    .verticalScroll(verticalScrollState)
+                    .horizontalScroll(horizontalScrollState),
             ) {
                 val licenseText = FlorisRef.assets("license/project_license.txt").loadTextAsset(
                     context

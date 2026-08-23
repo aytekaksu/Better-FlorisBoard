@@ -103,6 +103,7 @@ import org.florisboard.lib.color.MaterialYouFlagsSaver
 import org.florisboard.lib.compose.FlorisIconButton
 import org.florisboard.lib.compose.FlorisOutlinedBox
 import org.florisboard.lib.compose.defaultFlorisOutlinedBox
+import org.florisboard.lib.compose.florisScrollbar
 import org.florisboard.lib.compose.florisVerticalScroll
 import org.florisboard.lib.compose.rippleClickable
 import org.florisboard.lib.compose.stringRes
@@ -330,12 +331,9 @@ fun ThemeEditorScreen(
             }
         }
 
-        // TODO: (priority = low)
-        //  Floris scrollbar does not like lazy lists with non-constant item heights.
-        //  Consider building a custom scrollbar tailored for this list specifically.
         val lazyListState = rememberLazyListState()
         LazyColumn(
-            //modifier = Modifier.florisScrollbar(lazyListState, isVertical = true),
+            modifier = Modifier.florisScrollbar(lazyListState),
             state = lazyListState,
         ) {
             item {

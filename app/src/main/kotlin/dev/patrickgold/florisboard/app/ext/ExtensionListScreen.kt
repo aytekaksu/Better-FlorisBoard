@@ -105,7 +105,7 @@ fun ExtensionListScreen(type: ExtensionListScreenType, showUpdate: Boolean) = Fl
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .florisScrollbar(state = listState, isVertical = true),
+                .florisScrollbar(state = listState),
             state = listState,
             contentPadding = PaddingValues(bottom = fabHeightDp),
         ) {
