@@ -18,132 +18,134 @@ package dev.patrickgold.florisboard.ime.popup
 
 import dev.patrickgold.florisboard.ime.keyboard.AbstractKeyData
 import dev.patrickgold.florisboard.ime.keyboard.ComputingEvaluator
+import dev.patrickgold.florisboard.ime.keyboard.KeyData
 import dev.patrickgold.florisboard.ime.text.key.KeyHintConfiguration
 import dev.patrickgold.florisboard.ime.text.key.KeyHintMode
 import kotlinx.serialization.Serializable
 
 /**
- * A popup set for a single key. This set describes, if the key has a [main] character and other [relevant] popups.
- *
- * Note that a hint character cannot and should not be set in a json extended popup file, rather it
- * should only be dynamically set by the LayoutManager.
- *
- * The order in which these defined popups will be shown depends on the current [KeyHintConfiguration].
+ * Popup definitions for one key. [main] is normally shown before [relevant]; the active
+ * [KeyHintConfiguration] can change that order. Layout hints are added at runtime, not in popup JSON.
  */
 @Serializable
-open class PopupSet<T : AbstractKeyData>(
-    open val main: T? = null,
-    open val relevant: List<T> = listOf()
-) {
+open class PopupSet<T : AbstractKeyData>(open val main: T? = null, open val relevant: List<T> = listOf()) {
     private val popupKeys: PopupKeys<T> by lazy {
         PopupKeys(null, listOfNotNull(main), relevant)
     }
 
-    open fun getPopupKeys(keyHintConfiguration: KeyHintConfiguration): PopupKeys<T> {
-        return popupKeys
-    }
+    open fun getPopupKeys(keyHintConfiguration: KeyHintConfiguration): PopupKeys<T> = popupKeys
 }
 
-@Suppress("UNCHECKED_CAST")
-class MutablePopupSet<T : AbstractKeyData>(
-    override var main: T? = null,
-    override val relevant: ArrayList<T> = arrayListOf(),
-    var symbolHint: T? = null,
-    var numberHint: T? = null,
-    private val symbolPopups: ArrayList<T> = arrayListOf(),
-    private val numberPopups: ArrayList<T> = arrayListOf(),
-    private val configCache: MutableMap<KeyHintConfiguration, PopupKeys<T>> = mutableMapOf()
-) : PopupSet<T>(main, relevant) {
+class MutablePopupSet : PopupSet<KeyData>() {
+    private val mutableRelevant = arrayListOf<KeyData>()
+    private val symbolPopups = arrayListOf<KeyData>()
+    private val numberPopups = arrayListOf<KeyData>()
+    private val configCache = mutableMapOf<KeyHintConfiguration, PopupKeys<KeyData>>()
+
+    override var main: KeyData? = null
+        private set
+
+    override val relevant: List<KeyData>
+        get() = mutableRelevant
+
+    var symbolHint: KeyData? = null
+        set(value) {
+            field = value
+            configCache.clear()
+        }
+
+    var numberHint: KeyData? = null
+        set(value) {
+            field = value
+            configCache.clear()
+        }
 
     fun clear() {
         symbolHint = null
         numberHint = null
         main = null
-        relevant.clear()
+        mutableRelevant.clear()
         symbolPopups.clear()
         numberPopups.clear()
         configCache.clear()
     }
 
-    override fun getPopupKeys(keyHintConfiguration: KeyHintConfiguration): PopupKeys<T> {
-        return configCache.getOrPut(keyHintConfiguration) {
-            initPopupList(keyHintConfiguration)
+    override fun getPopupKeys(keyHintConfiguration: KeyHintConfiguration): PopupKeys<KeyData> =
+        configCache.getOrPut(keyHintConfiguration) {
+            resolvePopupKeys(keyHintConfiguration)
         }
-    }
 
-    private fun initPopupList(keyHintConfiguration: KeyHintConfiguration): PopupKeys<T> {
+    private fun resolvePopupKeys(keyHintConfiguration: KeyHintConfiguration): PopupKeys<KeyData> {
         val localMain = main
         val localRelevant = relevant
-        val localSymbolHint = symbolHint
-        val localNumberHint = numberHint
-        if (localSymbolHint != null && keyHintConfiguration.symbolHintMode != KeyHintMode.DISABLED) {
-            if (localNumberHint != null && keyHintConfiguration.numberHintMode != KeyHintMode.DISABLED) {
-                val hintPopups = if (keyHintConfiguration.mergeHintPopups) { symbolPopups + numberPopups } else { listOf() }
-                return when (keyHintConfiguration.symbolHintMode) {
-                    KeyHintMode.ACCENT_PRIORITY -> when (keyHintConfiguration.numberHintMode) {
-                        // when both hints are present in accent priority, always have a non-hint key first if possible
-                        KeyHintMode.ACCENT_PRIORITY -> when {
-                            localMain != null -> PopupKeys(localSymbolHint, listOf(localMain, localSymbolHint, localNumberHint), localRelevant + hintPopups)
-                            localRelevant.isNotEmpty() -> PopupKeys(localSymbolHint, listOf(localRelevant[0], localSymbolHint, localNumberHint), localRelevant.subList(1, localRelevant.size) + hintPopups)
-                            else -> PopupKeys(localSymbolHint, listOf(localSymbolHint, localNumberHint), hintPopups)
-                        }
-                        // hint priority of number hint wins and overrules accent priority of symbol hint
-                        KeyHintMode.HINT_PRIORITY -> PopupKeys(localSymbolHint, listOfNotNull(localNumberHint, localMain, localSymbolHint), localRelevant + hintPopups)
-                        // due to smart priority of number hint, main wins if it exists, otherwise number hint overrules accent priority of symbol hint
-                        else -> PopupKeys(localSymbolHint, listOfNotNull(localMain, localNumberHint, localSymbolHint), localRelevant + hintPopups)
-                    }
-                    KeyHintMode.HINT_PRIORITY -> when (keyHintConfiguration.symbolHintMode) {
-                        // when both hints are present in hint priority, symbol hint wins
-                        KeyHintMode.HINT_PRIORITY -> PopupKeys(localSymbolHint, listOfNotNull(localSymbolHint, localNumberHint, localMain), localRelevant + hintPopups)
-                        // hint priority of symbol hint wins, and overrules potential accent priority of number hint
-                        else -> PopupKeys(localSymbolHint, listOfNotNull(localSymbolHint, localMain, localNumberHint), localRelevant + hintPopups)
-                    }
-                    else -> when (keyHintConfiguration.numberHintMode) {
-                        // smart priority of symbol hint wins, and overrules accent priority of number hint
-                        KeyHintMode.ACCENT_PRIORITY -> PopupKeys(localSymbolHint, listOfNotNull(localMain, localSymbolHint, localNumberHint), localRelevant + hintPopups)
-                        // hint priority of number hint wins
-                        KeyHintMode.HINT_PRIORITY -> PopupKeys(localSymbolHint, listOfNotNull(localNumberHint, localMain, localSymbolHint), localRelevant + hintPopups)
-                        // when both hints are in smart priority, always have main first if possible
-                        else -> PopupKeys(localSymbolHint, listOfNotNull(localMain, localSymbolHint, localNumberHint), localRelevant + hintPopups)
-                    }
-                }
-            } else {
-                val hintPopups = if (keyHintConfiguration.mergeHintPopups) { symbolPopups } else { listOf() }
-                return when (keyHintConfiguration.symbolHintMode) {
-                    // in accent priority, always show a non-hint key first if possible
-                    KeyHintMode.ACCENT_PRIORITY -> when {
-                        localMain != null -> PopupKeys(localSymbolHint, listOf(localMain, localSymbolHint), localRelevant + hintPopups)
-                        localRelevant.isNotEmpty() -> PopupKeys(localSymbolHint, listOf(localRelevant[0], localSymbolHint), localRelevant.subList(1, localRelevant.size) + hintPopups)
-                        else -> PopupKeys(localSymbolHint, listOf(localSymbolHint), hintPopups)
-                    }
-                    // in hint priority, always show hint first
-                    KeyHintMode.HINT_PRIORITY -> PopupKeys(localSymbolHint, listOfNotNull(localSymbolHint, localMain), localRelevant + hintPopups)
-                    // in smart priority, show main first if possible
-                    else -> PopupKeys(localSymbolHint, listOfNotNull(localMain, localSymbolHint), localRelevant + hintPopups)
-                }
-            }
-        } else if (localNumberHint != null && keyHintConfiguration.numberHintMode != KeyHintMode.DISABLED) {
-            val hintPopups = if (keyHintConfiguration.mergeHintPopups) { numberPopups } else { listOf() }
-            return when (keyHintConfiguration.numberHintMode) {
-                // in accent priority, always show a non-hint key first if possible
-                KeyHintMode.ACCENT_PRIORITY -> when {
-                    localMain != null -> PopupKeys(localNumberHint, listOf(localMain, localNumberHint), localRelevant + hintPopups)
-                    localRelevant.isNotEmpty() -> PopupKeys(localNumberHint, listOf(localRelevant[0], localNumberHint), localRelevant.subList(1, localRelevant.size) + hintPopups)
-                    else -> PopupKeys(localNumberHint, listOf(localNumberHint), hintPopups)
-                }
-                // in hint priority, always show hint first
-                KeyHintMode.HINT_PRIORITY -> PopupKeys(localNumberHint, listOfNotNull(localNumberHint, localMain), localRelevant + hintPopups)
-                // in smart priority, show main first if possible
-                else -> PopupKeys(localNumberHint, listOfNotNull(localMain, localNumberHint), localRelevant + hintPopups)
-            }
-        } else {
-            // if no hints shall be shown, use main first if possible
-            return PopupKeys(null, listOfNotNull(localMain), localRelevant)
+        val symbol = symbolHint.takeUnless { keyHintConfiguration.symbolHintMode == KeyHintMode.DISABLED }
+        val number = numberHint.takeUnless { keyHintConfiguration.numberHintMode == KeyHintMode.DISABLED }
+        val promoteRelevant = localMain == null && localRelevant.isNotEmpty() &&
+            shouldPromoteRelevant(keyHintConfiguration, symbol, number)
+        val primary = localMain ?: localRelevant.firstOrNull().takeIf { promoteRelevant }
+        val prioritized = when {
+            symbol == null -> prioritizeSingle(number, keyHintConfiguration.numberHintMode, localMain, primary)
+            number == null -> prioritizeSingle(symbol, keyHintConfiguration.symbolHintMode, localMain, primary)
+            else -> prioritizeBoth(symbol, number, keyHintConfiguration, localMain, primary)
         }
+        val hintPopups = mergedHintPopups(keyHintConfiguration, symbol, number)
+        val remainingRelevant = if (promoteRelevant) localRelevant.drop(1) else localRelevant
+        return PopupKeys(symbol ?: number, prioritized, remainingRelevant + hintPopups)
     }
 
+    private fun shouldPromoteRelevant(config: KeyHintConfiguration, symbol: KeyData?, number: KeyData?) = when {
+        symbol != null && number != null ->
+            config.symbolHintMode == KeyHintMode.ACCENT_PRIORITY &&
+                config.numberHintMode == KeyHintMode.ACCENT_PRIORITY
+
+        symbol != null -> config.symbolHintMode == KeyHintMode.ACCENT_PRIORITY
+
+        number != null -> config.numberHintMode == KeyHintMode.ACCENT_PRIORITY
+
+        else -> false
+    }
+
+    private fun prioritizeSingle(hint: KeyData?, mode: KeyHintMode, main: KeyData?, primary: KeyData?) = when (mode) {
+        KeyHintMode.HINT_PRIORITY -> listOfNotNull(hint, main)
+        else -> listOfNotNull(primary, hint)
+    }
+
+    private fun prioritizeBoth(
+        symbol: KeyData,
+        number: KeyData,
+        config: KeyHintConfiguration,
+        main: KeyData?,
+        primary: KeyData?,
+    ) = when {
+        config.symbolHintMode == KeyHintMode.HINT_PRIORITY -> {
+            if (config.numberHintMode == KeyHintMode.HINT_PRIORITY) {
+                listOfNotNull(symbol, number, main)
+            } else {
+                listOfNotNull(symbol, main, number)
+            }
+        }
+
+        config.numberHintMode == KeyHintMode.HINT_PRIORITY -> listOfNotNull(number, main, symbol)
+
+        config.symbolHintMode == KeyHintMode.ACCENT_PRIORITY &&
+            config.numberHintMode == KeyHintMode.ACCENT_PRIORITY -> listOfNotNull(primary, symbol, number)
+
+        config.symbolHintMode == KeyHintMode.ACCENT_PRIORITY -> listOfNotNull(main, number, symbol)
+
+        else -> listOfNotNull(main, symbol, number)
+    }
+
+    private fun mergedHintPopups(config: KeyHintConfiguration, symbol: KeyData?, number: KeyData?): List<KeyData> =
+        when {
+            !config.mergeHintPopups -> emptyList()
+            symbol != null && number != null -> symbolPopups + numberPopups
+            symbol != null -> symbolPopups
+            number != null -> numberPopups
+            else -> emptyList()
+        }
+
     fun merge(other: PopupSet<AbstractKeyData>, evaluator: ComputingEvaluator) {
-        mergeInternal(other, evaluator, relevant, true)
+        mergeInternal(other, evaluator, mutableRelevant, useMain = true)
     }
 
     fun mergeSymbolHint(hintPopups: PopupSet<AbstractKeyData>, evaluator: ComputingEvaluator) {
@@ -154,88 +156,42 @@ class MutablePopupSet<T : AbstractKeyData>(
         mergeInternal(hintPopups, evaluator, numberPopups)
     }
 
-    private fun mergeInternal(other: PopupSet<AbstractKeyData>, evaluator: ComputingEvaluator, targetList: MutableList<T>, useMain: Boolean = false) {
-        other.relevant.forEach {
-            val data = it.compute(evaluator) as? T
-            if (data != null) {
+    private fun mergeInternal(
+        other: PopupSet<AbstractKeyData>,
+        evaluator: ComputingEvaluator,
+        targetList: MutableList<KeyData>,
+        useMain: Boolean = false,
+    ) {
+        configCache.clear()
+        other.relevant.mapNotNullTo(targetList) { it.compute(evaluator) }
+        other.main?.compute(evaluator)?.let { data ->
+            if (useMain && main == null) {
+                main = data
+            } else {
                 targetList.add(data)
-            }
-        }
-        other.main?.let {
-            val data = it.compute(evaluator) as? T
-            if (data != null) {
-                if (useMain && main == null) {
-                    main = data
-                } else {
-                    targetList.add(data)
-                }
             }
         }
     }
 }
 
 /**
- * A fully configured collection of popup keys. It contains a list of keys to be prioritized
- * during rendering (ordered by relevance descending) by showing those keys close to the
- * popup spawning point.
- *
- * The keys contain a separate [hint] key to ease rendering the hint label, but the hint, if
- * present, also occurs in the [prioritized] list.
- *
- * The popup keys can be accessed like an array with the addition that negative indexes defined
- * within this companion object are allowed (as long as the corresponding [prioritized] list
- * contains the corresponding amount of keys.
+ * Resolved popup keys. Negative indexes select prioritized keys (`-1` is first); nonnegative
+ * indexes select the remaining keys. [hint] is drawn on the base key and also occurs in the popup.
  */
-class PopupKeys<T>(
-    val hint: T?,
-    val prioritized: List<T>,
-    val other: List<T>
-) : Collection<T> {
+class PopupKeys<T>(val hint: T?, private val prioritized: List<T>, private val other: List<T>) {
     companion object {
         const val FIRST_PRIORITIZED = -1
         const val SECOND_PRIORITIZED = -2
         const val THIRD_PRIORITIZED = -3
     }
 
-    override val size: Int
+    val size: Int
         get() = prioritized.size + other.size
 
-    override fun contains(element: T): Boolean {
-        return prioritized.contains(element) || other.contains(element)
-    }
+    val prioritizedCount: Int
+        get() = prioritized.size
 
-    override fun containsAll(elements: Collection<T>): Boolean {
-        return (prioritized + other).containsAll(elements)
-    }
+    fun isNotEmpty() = prioritized.isNotEmpty() || other.isNotEmpty()
 
-    override fun isEmpty(): Boolean {
-        return prioritized.isEmpty() && other.isEmpty()
-    }
-
-    override fun iterator(): Iterator<T> {
-        return (prioritized + other).listIterator()
-    }
-
-    fun getOrNull(index: Int): T? {
-        if (index >= other.size || index < -prioritized.size) {
-            return null
-        }
-        return when (index) {
-            FIRST_PRIORITIZED -> prioritized[0]
-            SECOND_PRIORITIZED -> prioritized[1]
-            THIRD_PRIORITIZED -> prioritized[2]
-            else -> other.getOrNull(index)
-        }
-    }
-
-    operator fun get(index: Int): T {
-        val item = getOrNull(index)
-        if (item == null) {
-            throw IndexOutOfBoundsException(
-                "Specified index $index is not an valid entry in this PopupKeys!"
-            )
-        } else {
-            return item
-        }
-    }
+    operator fun get(index: Int) = if (index < 0) prioritized[-index - 1] else other[index]
 }

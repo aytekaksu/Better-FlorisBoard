@@ -38,7 +38,6 @@ import dev.patrickgold.florisboard.ime.keyboard.computeLabel
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyHintConfiguration
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKey
-import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.lib.FlorisRect
 import dev.patrickgold.florisboard.lib.toIntOffset
@@ -129,6 +128,7 @@ class PopupUiController(
     fun extend(key: Key, size: Size) {
         if (!isSuitableForExtendedPopup(key)) return
 
+        val popupKeys = (key as? TextKey)?.computedPopups?.getPopupKeys(keyHintConfiguration) ?: return
         val baseBounds = baseRenderInfo?.bounds ?: boundsProvider(key)
         val keyPopupDiffX = (key.visibleBounds.width - baseBounds.width) / 2.0f
 
@@ -137,10 +137,7 @@ class PopupUiController(
         val anchorRight = !anchorLeft
 
         // Determine key counts for each row
-        val n = when (key) {
-            is TextKey -> key.computedPopups.getPopupKeys(keyHintConfiguration).size
-            else -> 0
-        }
+        val n = popupKeys.size
         val row1count: Int
         val row0count: Int
         when {
@@ -191,54 +188,48 @@ class PopupUiController(
             anchorRight -> row0count - 1 - anchorOffset + row1count
             else -> 0
         }
-        val popupIndices: IntArray
+        val popupIndices = IntArray(n)
         val uiIndices = IntRange(0, (n - 1).coerceAtLeast(0))
-        if (key is TextKey) {
-            popupIndices = IntArray(n)
-            val popupKeys = key.computedPopups.getPopupKeys(keyHintConfiguration)
-            when (popupKeys.prioritized.size) {
-                // only one key: use initial position
-                1 -> {
-                    popupIndices[initUiIndex] = PopupKeys.FIRST_PRIORITIZED
+        when (popupKeys.prioritizedCount) {
+            // only one key: use initial position
+            1 -> {
+                popupIndices[initUiIndex] = PopupKeys.FIRST_PRIORITIZED
+            }
+            // two keys: use initial position and one to the right if available, otherwise one to the left
+            2 -> {
+                popupIndices[initUiIndex] = PopupKeys.FIRST_PRIORITIZED
+                when {
+                    initUiIndex + 1 < n -> popupIndices[initUiIndex + 1] = PopupKeys.SECOND_PRIORITIZED
+                    initUiIndex - 1 >= 0 -> popupIndices[initUiIndex - 1] = PopupKeys.SECOND_PRIORITIZED
                 }
-                // two keys: use initial position and one to the right if available, otherwise one to the left
-                2 -> {
-                    popupIndices[initUiIndex] = PopupKeys.FIRST_PRIORITIZED
-                    when {
-                        initUiIndex + 1 < n -> popupIndices[initUiIndex + 1] = PopupKeys.SECOND_PRIORITIZED
-                        initUiIndex - 1 >= 0 -> popupIndices[initUiIndex - 1] = PopupKeys.SECOND_PRIORITIZED
+            }
+            // three keys: use initial position and one to either sides if available
+            // otherwise two to the right or two to the left with decreasing priority
+            3 -> {
+                popupIndices[initUiIndex] = PopupKeys.FIRST_PRIORITIZED
+                when {
+                    initUiIndex + 1 < n && initUiIndex - 1 >= 0 -> {
+                        popupIndices[initUiIndex + 1] = PopupKeys.SECOND_PRIORITIZED
+                        popupIndices[initUiIndex - 1] = PopupKeys.THIRD_PRIORITIZED
                     }
-                }
-                // two keys: use initial position and one to either sides if available
-                // otherwise two to the right or two to the left with decreasing priority
-                3 -> {
-                    popupIndices[initUiIndex] = PopupKeys.FIRST_PRIORITIZED
-                    when {
-                        initUiIndex + 1 < n && initUiIndex - 1 >= 0 -> {
-                            popupIndices[initUiIndex + 1] = PopupKeys.SECOND_PRIORITIZED
-                            popupIndices[initUiIndex - 1] = PopupKeys.THIRD_PRIORITIZED
-                        }
-                        initUiIndex + 2 < n -> {
-                            popupIndices[initUiIndex + 1] = PopupKeys.SECOND_PRIORITIZED
-                            popupIndices[initUiIndex + 2] = PopupKeys.THIRD_PRIORITIZED
-                        }
-                        initUiIndex - 2 >= 0 -> {
-                            popupIndices[initUiIndex - 1] = PopupKeys.SECOND_PRIORITIZED
-                            popupIndices[initUiIndex - 2] = PopupKeys.THIRD_PRIORITIZED
-                        }
+                    initUiIndex + 2 < n -> {
+                        popupIndices[initUiIndex + 1] = PopupKeys.SECOND_PRIORITIZED
+                        popupIndices[initUiIndex + 2] = PopupKeys.THIRD_PRIORITIZED
+                    }
+                    initUiIndex - 2 >= 0 -> {
+                        popupIndices[initUiIndex - 1] = PopupKeys.SECOND_PRIORITIZED
+                        popupIndices[initUiIndex - 2] = PopupKeys.THIRD_PRIORITIZED
                     }
                 }
             }
-            var offset = 0
-            for (uiIndex in uiIndices) {
-                if (popupIndices[uiIndex] < 0) {
-                    offset++
-                } else {
-                    popupIndices[uiIndex] = uiIndex - offset
-                }
+        }
+        var offset = 0
+        for (uiIndex in uiIndices) {
+            if (popupIndices[uiIndex] < 0) {
+                offset++
+            } else {
+                popupIndices[uiIndex] = uiIndex - offset
             }
-        } else {
-            popupIndices = IntArray(n) { it }
         }
 
         val elements: List<MutableList<Element>> = if (row1count > 0) {
@@ -249,10 +240,7 @@ class PopupUiController(
         for (uiIndex in uiIndices) {
             val rowIndex = if (uiIndex < row1count && row1count > 0) { 1 } else { 0 }
             val adjustedIndex = popupIndices[uiIndex]
-            val keyData = when (key) {
-                is TextKey -> key.computedPopups.getPopupKeys(keyHintConfiguration)[adjustedIndex]
-                else -> TextKeyData.UNSPECIFIED
-            }
+            val keyData = popupKeys[adjustedIndex]
             elements[rowIndex].add(Element(
                 data = keyData,
                 label = evaluator.computeLabel(keyData),
@@ -373,12 +361,12 @@ class PopupUiController(
     }
 
     /**
-     * Gets the [TextKeyData] of the currently active key. May be either the key of the popup preview
+     * Gets the [KeyData] of the currently active key. May be either the key of the popup preview
      * or one of the keys in extended popup, if shown. Returns null if [key] is not a subclass of [TextKey].
      *
      * @param key Reference to the key currently controlling the popup.
      *
-     * @return The [TextKeyData] object of the currently active key or null.
+     * @return The [KeyData] object of the currently active key or null.
      */
     fun getActiveKeyData(key: Key): KeyData? {
         return if (key is TextKey) {
