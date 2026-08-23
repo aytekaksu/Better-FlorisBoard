@@ -31,7 +31,6 @@ object LogTopic {
 
     const val LAYOUT_MANAGER: FlogTopic =       8u
 
-    const val CLIPBOARD: FlogTopic =            1024u
     const val CRASH_UTILITY: FlogTopic =        2048u
 
     const val SPELL_EVENTS: FlogTopic =         4096u

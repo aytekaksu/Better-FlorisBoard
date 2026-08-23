@@ -35,7 +35,7 @@ import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.ime.core.DisplayLanguageNamesIn
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.jetpref.datastore.model.collectAsState
-import java.util.*
+import java.util.Locale
 import kotlinx.coroutines.launch
 import org.florisboard.lib.android.showLongToast
 import org.florisboard.lib.compose.FlorisIconButton
@@ -69,12 +69,14 @@ fun AndroidLocalesScreen() = FlorisScreen {
                             out.appendLine()
                         }
                     }
-                    scope.launch { context.showLongToast("Exported available system locales to \"${txtFile.path}\"") }
+                    scope.launch {
+                        context.showLongToast("Exported available system locales to private app storage: devtools/${txtFile.name}")
+                    }
                 } catch (e: Exception) {
                     scope.launch {
                         context.showLongToast(
                             R.string.error__snackbar_message_template,
-                            "error_message" to e.message.toString(),
+                            "error_message" to failureClassName(e),
                         )
                     }
                 }
