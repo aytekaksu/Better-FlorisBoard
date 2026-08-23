@@ -274,6 +274,8 @@ data class SnyggAttributes private constructor(private val attributes: Map<Strin
         private val INT_RANGE_PATTERN = """$INT_PATTERN[.]{2}$INT_PATTERN""".toRegex()
         private val STRING_PATTERN = """`[^`]+`""".toRegex()
         private val ATTR_VALUE_PATTERN = """(?:$STRING_PATTERN|$INT_RANGE_PATTERN|$INT_PATTERN)""".toRegex()
+
+        // Comparison controls theme cascade order, so only serialization sorts integers numerically.
         private val VALUE_COMPARATOR = compareBy<String>({ it.toIntOrNull() == null }, { it })
 
         internal val EMPTY = SnyggAttributes(emptyMap())
@@ -319,7 +321,7 @@ data class SnyggAttributes private constructor(private val attributes: Map<Strin
 
         private fun serializeValues(values: List<String>): String = buildList {
             val ranges = mutableListOf<IntRange>()
-            for (value in values.mapNotNull(String::toIntOrNull)) {
+            for (value in values.mapNotNull(String::toIntOrNull).sorted()) {
                 val last = ranges.lastOrNull()
                 if (last != null && last.last != Int.MAX_VALUE && last.last + 1 == value) {
                     ranges[ranges.lastIndex] = last.first..value
