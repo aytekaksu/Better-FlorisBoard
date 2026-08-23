@@ -85,6 +85,8 @@ val qualityKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacySmartbarPreferencePayloadTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/popup/PopupSet.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/popup/PopupSetTest.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickAction.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickActionPresentationTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardCache.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardCacheTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/theme/FlorisImeUi.kt"),
@@ -117,6 +119,7 @@ val formattedKotlinSources = files(
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/popup/PopupMapping.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/popup/PopupSet.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/popup/PopupSetTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickActionPresentationTest.kt"),
     file(
         "app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/" +
             "AutocorrectPerformanceSection.kt",
