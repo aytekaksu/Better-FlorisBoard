@@ -59,7 +59,7 @@ import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 enum class QuickActionBarType {
     INTERACTIVE_BUTTON,
     INTERACTIVE_TILE,
-    EDITOR_TILE;
+    EDITOR_TILE,
 }
 
 @Composable
@@ -178,7 +178,7 @@ fun QuickActionButton(
                             elementName = "$elementName-text",
                             attributes = attributes,
                             selector = selector,
-                            text = action.data.firstOrNull().toString().ifBlank { "?" },
+                            text = action.previewText(),
                         )
                     }
                 }
@@ -214,6 +214,4 @@ fun QuickActionButton(
     }
 }
 
-internal fun quickActionOverflowTileAspectRatio(fontScale: Float): Float {
-    return 0.85f / fontScale.coerceAtLeast(1f)
-}
+internal fun quickActionOverflowTileAspectRatio(fontScale: Float): Float = 0.85f / fontScale.coerceAtLeast(1f)
