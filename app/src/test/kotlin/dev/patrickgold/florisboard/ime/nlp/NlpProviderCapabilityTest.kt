@@ -48,6 +48,16 @@ class NlpProviderCapabilityTest :
             provider.destroy()
         }
 
+        test("active suggestion provider follows external selection changes") {
+            val external = object : SuggestionProvider by FallbackNlpProvider {
+                override val providerId = "org.florisboard.test.external"
+            }
+
+            selectActiveSuggestionProvider(FallbackNlpProvider, external, "") shouldBe FallbackNlpProvider
+            selectActiveSuggestionProvider(FallbackNlpProvider, external, external.providerId) shouldBe external
+            selectActiveSuggestionProvider(FallbackNlpProvider, external, "") shouldBe FallbackNlpProvider
+        }
+
         test("glide lexicon lookup distinguishes capable and incapable providers") {
             val subtype = Subtype.DEFAULT.copy(id = 42)
             FallbackNlpProvider.glideTypingWordsOrEmpty(subtype).shouldBeEmpty()

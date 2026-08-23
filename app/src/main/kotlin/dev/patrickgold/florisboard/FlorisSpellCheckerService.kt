@@ -17,7 +17,6 @@
 package dev.patrickgold.florisboard
 
 import android.service.textservice.SpellCheckerService
-import android.view.textservice.SentenceSuggestionsInfo
 import android.view.textservice.SuggestionsInfo
 import android.view.textservice.TextInfo
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
@@ -66,6 +65,7 @@ class FlorisSpellCheckerService : SpellCheckerService() {
                 SpellingLanguageMode.USE_KEYBOARD_SUBTYPES -> {
                     subtypeManager.activeSubtype
                 }
+
                 else -> {
                     Subtype.DEFAULT.copy(primaryLocale = FlorisLocale.default())
                 }
@@ -106,12 +106,10 @@ class FlorisSpellCheckerService : SpellCheckerService() {
             setupSpellingIfNecessary()
             val spellingSubtype = cachedSpellingSubtype ?: return SpellingResult.unspecified().suggestionsInfo
 
-            return runBlocking {
-                nlpManager
-                    .spell(spellingSubtype, textInfo.text, emptyList(), emptyList(), suggestionsLimit)
-                    .recordForDebugOverlayIfEnabled()
-                    .suggestionsInfo
-            }
+            return spellMultiple(spellingSubtype, arrayOf(textInfo), suggestionsLimit)
+                .single()
+                .recordForDebugOverlayIfEnabled()
+                .suggestionsInfo
         }
 
         override fun onGetSuggestionsMultiple(
@@ -128,16 +126,6 @@ class FlorisSpellCheckerService : SpellCheckerService() {
             return spellMultiple(spellingSubtype, textInfos, suggestionsLimit)
                 .recordForDebugOverlayIfEnabled()
                 .map { it.suggestionsInfo }
-        }
-
-        override fun onGetSentenceSuggestionsMultiple(
-            textInfos: Array<out TextInfo>?,
-            suggestionsLimit: Int,
-        ): Array<SentenceSuggestionsInfo> {
-            flogInfo(LogTopic.SPELL_EVENTS)
-
-            // TODO: implement custom solution here instead of calling the default implementation
-            return super.onGetSentenceSuggestionsMultiple(textInfos, suggestionsLimit)
         }
 
         override fun onCancel() {

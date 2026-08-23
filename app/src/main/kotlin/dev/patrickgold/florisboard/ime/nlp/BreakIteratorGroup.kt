@@ -18,44 +18,29 @@ package dev.patrickgold.florisboard.ime.nlp
 
 import android.icu.text.BreakIterator
 import dev.patrickgold.florisboard.lib.FlorisLocale
-import io.github.reactivecircus.cache4k.Cache
-import org.florisboard.lib.kotlin.GuardedByLock
-import org.florisboard.lib.kotlin.guardedByLock
+import java.util.concurrent.ConcurrentHashMap
 
-open class BreakIteratorGroup {
-    private val charInstances = Cache.Builder<FlorisLocale, GuardedByLock<BreakIterator>>().build()
+class BreakIteratorGroup {
+    private val charInstances = ConcurrentHashMap<FlorisLocale, BreakIterator>()
 
-    private val wordInstances = Cache.Builder<FlorisLocale, GuardedByLock<BreakIterator>>().build()
+    private val wordInstances = ConcurrentHashMap<FlorisLocale, BreakIterator>()
 
-    private val sentenceInstances = Cache.Builder<FlorisLocale, GuardedByLock<BreakIterator>>().build()
-
-    suspend fun <R> character(locale: FlorisLocale, action: (BreakIterator) -> R): R {
-        val instance = charInstances.get(locale) {
-            guardedByLock { BreakIterator.getCharacterInstance(locale.base) }
+    fun <R> character(locale: FlorisLocale, action: (BreakIterator) -> R): R {
+        val instance = charInstances.computeIfAbsent(locale) {
+            BreakIterator.getCharacterInstance(it.base)
         }
-        return instance.withLock(null, action)
+        return synchronized(instance) { action(instance) }
     }
 
-    suspend fun <R> word(locale: FlorisLocale, action: (BreakIterator) -> R): R {
-        val instance = wordInstances.get(locale) {
-            guardedByLock { BreakIterator.getWordInstance(locale.base) }
+    fun <R> word(locale: FlorisLocale, action: (BreakIterator) -> R): R {
+        val instance = wordInstances.computeIfAbsent(locale) {
+            BreakIterator.getWordInstance(it.base)
         }
-        return instance.withLock(null, action)
+        return synchronized(instance) { action(instance) }
     }
 
-    suspend fun <R> sentence(locale: FlorisLocale, action: (BreakIterator) -> R): R {
-        val instance = sentenceInstances.get(locale) {
-            guardedByLock { BreakIterator.getSentenceInstance(locale.base) }
-        }
-        return instance.withLock(null, action)
-    }
-
-    suspend fun measureUChars(
-        text: String,
-        numUnicodeChars: Int,
-        locale: FlorisLocale = FlorisLocale.default(),
-    ): Int {
-        return character(locale) {
+    fun measureUChars(text: String, numUnicodeChars: Int, locale: FlorisLocale = FlorisLocale.default()): Int =
+        character(locale) {
             it.setText(text)
             val start = it.first()
             var end: Int
@@ -65,14 +50,9 @@ open class BreakIteratorGroup {
             } while (end != BreakIterator.DONE && ++n < numUnicodeChars)
             (if (end == BreakIterator.DONE) text.length else end) - start
         }.coerceIn(0, text.length)
-    }
 
-    suspend fun measureLastUChars(
-        text: String,
-        numUnicodeChars: Int,
-        locale: FlorisLocale = FlorisLocale.default(),
-    ): Int {
-        return character(locale) {
+    fun measureLastUChars(text: String, numUnicodeChars: Int, locale: FlorisLocale = FlorisLocale.default()): Int =
+        character(locale) {
             it.setText(text)
             val end = it.last()
             var start: Int
@@ -82,14 +62,9 @@ open class BreakIteratorGroup {
             } while (start != BreakIterator.DONE && ++n < numUnicodeChars)
             end - (if (start == BreakIterator.DONE) 0 else start)
         }.coerceIn(0, text.length)
-    }
 
-    suspend fun measureUWords(
-        text: String,
-        numUnicodeWords: Int,
-        locale: FlorisLocale = FlorisLocale.default(),
-    ): Int {
-        return word(locale) {
+    fun measureUWords(text: String, numUnicodeWords: Int, locale: FlorisLocale = FlorisLocale.default()): Int =
+        word(locale) {
             it.setText(text)
             val start = it.first()
             var end: Int
@@ -100,14 +75,9 @@ open class BreakIteratorGroup {
             } while (end != BreakIterator.DONE && n < numUnicodeWords)
             (if (end == BreakIterator.DONE) text.length else end) - start
         }.coerceIn(0, text.length)
-    }
 
-    suspend fun measureLastUWords(
-        text: String,
-        numUnicodeWords: Int,
-        locale: FlorisLocale = FlorisLocale.default(),
-    ): Int {
-        return word(locale) {
+    fun measureLastUWords(text: String, numUnicodeWords: Int, locale: FlorisLocale = FlorisLocale.default()): Int =
+        word(locale) {
             it.setText(text)
             val end = it.last()
             var start: Int
@@ -118,5 +88,4 @@ open class BreakIteratorGroup {
             } while (start != BreakIterator.DONE && n < numUnicodeWords)
             end - (if (start == BreakIterator.DONE) 0 else start)
         }.coerceIn(0, text.length)
-    }
 }
