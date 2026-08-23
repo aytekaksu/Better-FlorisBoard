@@ -16,23 +16,14 @@
 
 package org.florisboard.lib.snygg.ui
 
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.SnyggSelector
-import org.florisboard.lib.snygg.SnyggStylesheet
 
 /**
  * Simple text composable, which displays the given [text].
@@ -98,51 +89,5 @@ fun SnyggText(
             overflow = overflow ?: style.textOverflow(),
             autoSize = autoSize,
         )
-    }
-}
-
-@Preview
-@Composable
-private fun SimpleSnyggText() {
-    val stylesheet = SnyggStylesheet.v2 {
-        "preview-column" {
-            fontSize = fontSize(20.sp)
-            foreground = rgbaColor(0, 0, 255)
-        }
-        "preview-text" {
-            background = rgbaColor(255, 255, 255)
-            foreground = inherit()
-            borderColor = rgbaColor(0, 0, 255)
-            borderWidth = size(1.dp)
-            shadowElevation = size(6.dp)
-            shadowColor = rgbaColor(0, 255, 0)
-            margin = padding(16.dp)
-            padding = padding(6.dp)
-        }
-        "preview-text"("attr" to listOf(1)) {
-            foreground = rgbaColor(255, 0, 0)
-            borderWidth = size(0.dp)
-            fontSize = fontSize(10.sp)
-            fontStyle = fontStyle(FontStyle.Italic)
-            fontWeight = fontWeight(FontWeight.Bold)
-            letterSpacing = fontSize(4.sp)
-            textDecorationLine = textDecorationLine(TextDecoration.LineThrough)
-        }
-        "preview-text"("long" to listOf(1)) {
-            fontFamily = genericFontFamily(FontFamily.Serif)
-            fontSize = fontSize(10.sp)
-            textMaxLines = textMaxLines(1)
-            textOverflow = textOverflow(TextOverflow.Ellipsis)
-        }
-    }
-    val theme = rememberSnyggTheme(stylesheet)
-
-    ProvideSnyggTheme(theme) {
-        SnyggColumn("preview-column", modifier = Modifier.widthIn(max = 150.dp)) {
-            SnyggText("preview-text", text = "black text")
-            SnyggText("preview-text", mapOf("attr" to 1), text = "red text")
-            SnyggText("preview-text", mapOf("long" to 1),
-                text = "this is a very long paragraph that will definitely not fit")
-        }
     }
 }

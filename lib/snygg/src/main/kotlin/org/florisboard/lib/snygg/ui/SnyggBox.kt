@@ -23,15 +23,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.SnyggSelector
-import org.florisboard.lib.snygg.SnyggStylesheet
 
 /**
  * Simple layout composable with [content]
@@ -106,33 +102,6 @@ fun SnyggBox(
                 )
             }
             content()
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun SimpleSnyggBox() {
-    val stylesheet = SnyggStylesheet.v2 {
-        "preview-surface" {
-            background = rgbaColor(255, 255, 255)
-            foreground = rgbaColor(255, 0, 0)
-            padding = padding(10.dp)
-            shape = roundedCornerShape(20)
-            clip = yes()
-        }
-        "preview-text" {
-            fontSize = fontSize(12.sp)
-        }
-    }
-    val theme = rememberSnyggTheme(stylesheet)
-
-    ProvideSnyggTheme(theme) {
-        SnyggBox("preview-surface") {
-            SnyggColumn("column") {
-                SnyggText("preview-text", text = "hello world")
-                SnyggText("preview-text", text = "second text")
-            }
         }
     }
 }

@@ -17,17 +17,10 @@
 package org.florisboard.lib.snygg.ui
 
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.SnyggSelector
-import org.florisboard.lib.snygg.SnyggStylesheet
 
 /**
  * Simple spacer composable.
@@ -59,34 +52,5 @@ fun SnyggSpacer(
                 .snyggBackground(style, default = style.foreground())
                 .snyggPadding(style),
         )
-    }
-}
-
-@Preview
-@Composable
-private fun SimpleSnyggSpacer() {
-    val stylesheet = SnyggStylesheet.v2 {
-        "preview-row" {
-            background = rgbaColor(255, 255, 255)
-            fontSize = fontSize(16.sp)
-            foreground = rgbaColor(0, 0, 0)
-            padding = padding(12.dp)
-        }
-        "preview-spacer" {
-            margin = padding(horizontal = 12.dp, vertical = 0.dp)
-        }
-    }
-    val theme = rememberSnyggTheme(stylesheet)
-
-    ProvideSnyggTheme(theme) {
-        SnyggRow("preview-row") {
-            SnyggText("preview-text", text = "hello")
-            SnyggSpacer("preview-spacer",
-                modifier = Modifier
-                    .width(1.dp)
-                    .height(12.dp)
-                    .align(Alignment.CenterVertically))
-            SnyggText("preview-text", text = "world")
-        }
     }
 }

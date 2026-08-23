@@ -20,8 +20,6 @@ import androidx.compose.foundation.Indication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -29,14 +27,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.SnyggSelector
-import org.florisboard.lib.snygg.SnyggStylesheet
 
 /**
  * Simple list item composable.
@@ -107,57 +99,6 @@ fun SnyggListItem(
             ) {
                 SnyggIcon(imageVector = trailingImageVector)
             }
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun SimpleSnyggListItem() {
-    val stylesheet = SnyggStylesheet.v2 {
-        "preview" {
-            background = rgbaColor(255, 255, 255)
-            fontSize = fontSize(16.sp)
-            foreground = rgbaColor(0, 0, 0)
-        }
-        "preview-list-item" {
-            background = rgbaColor(240, 220, 220)
-            foreground = rgbaColor(0, 0, 0)
-            padding = padding(all = 16.dp)
-        }
-        "preview-list-item-icon-leading" {
-            fontSize = fontSize(24.sp)
-            padding = padding(0.dp, 0.dp, 16.dp, 0.dp)
-        }
-        "preview-list-item"("layout" to listOf("center")) {
-            textAlign = textAlign(TextAlign.Center)
-        }
-        "preview-list-item"("layout" to listOf("long")) {
-            textMaxLines = textMaxLines(1)
-            textOverflow = textOverflow(TextOverflow.Ellipsis)
-        }
-    }
-    val theme = rememberSnyggTheme(stylesheet)
-
-    ProvideSnyggTheme(theme) {
-        SnyggColumn("preview") {
-            SnyggListItem("preview-list-item",
-                leadingImageVector = Icons.Default.Search,
-                onClick = {},
-                text = "hello",
-            )
-            SnyggListItem("preview-list-item",
-                mapOf("layout" to "center"),
-                leadingImageVector = Icons.Default.Search,
-                onClick = {},
-                text = "hello",
-            )
-            SnyggListItem("preview-list-item",
-                mapOf("layout" to "long"),
-                leadingImageVector = Icons.Default.Search,
-                onClick = {},
-                text = "hello world this is a very long list item text label",
-            )
         }
     }
 }

@@ -22,11 +22,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.SnyggSelector
-import org.florisboard.lib.snygg.SnyggStylesheet
 
 /**
  * Simple layout composable that places its children in a horizontal sequence.
@@ -113,33 +110,5 @@ internal fun SnyggChip(
     ) {
         icon?.invoke()
         text?.invoke()
-    }
-}
-
-@Preview
-@Composable
-private fun SimpleSnyggChip() {
-    val stylesheet = SnyggStylesheet.v2 {
-        "preview-row" {
-            background = rgbaColor(255, 255, 255)
-            foreground = rgbaColor(255, 0, 0)
-            padding = padding(10.dp)
-        }
-        "chip" {
-            background = rgbaColor(255, 0, 0)
-            foreground = rgbaColor(255, 255, 255)
-            shape = roundedCornerShape(20, 20, 20, 20)
-        }
-    }
-    val theme = rememberSnyggTheme(stylesheet)
-
-    ProvideSnyggTheme(theme) {
-        SnyggRow("preview-row") {
-            SnyggChip(
-                elementName = "chip",
-                onClick = {},
-                text = "Hello",
-            )
-        }
     }
 }

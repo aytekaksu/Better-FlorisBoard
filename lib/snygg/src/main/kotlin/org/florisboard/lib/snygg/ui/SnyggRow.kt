@@ -22,12 +22,8 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.SnyggSelector
-import org.florisboard.lib.snygg.SnyggStylesheet
 
 /**
  * Simple layout composable that places its children in a horizontal sequence.
@@ -72,32 +68,5 @@ fun SnyggRow(
             verticalAlignment = verticalAlignment,
             content = content,
         )
-    }
-}
-
-@Preview
-@Composable
-private fun SimpleSnyggRow() {
-    val stylesheet = SnyggStylesheet.v2 {
-        "preview-row" {
-            background = rgbaColor(255, 255, 255)
-            foreground = rgbaColor(255, 0, 0)
-            padding = padding(10.dp)
-        }
-        "preview-text" {
-            fontSize = fontSize(12.sp)
-        }
-        "preview-text"("second" to listOf(1)) {
-            fontSize = fontSize(6.sp)
-            margin = padding(4.dp, 0.dp, 0.dp, 0.dp)
-        }
-    }
-    val theme = rememberSnyggTheme(stylesheet)
-
-    ProvideSnyggTheme(theme) {
-        SnyggRow("preview-row") {
-            SnyggText("preview-text", text = "hello")
-            SnyggText("preview-text", mapOf("second" to 1), text = "world")
-        }
     }
 }
