@@ -99,3 +99,11 @@ as it completes successfully.
 separate, generated record of findings present when this gate was introduced.
 The baseline is a debt ratchet, not an assertion that each finding is harmless:
 fix entries incrementally and regenerate it only to remove resolved findings.
+
+## Dependency update checks
+
+Android lint's available-version findings are informational. Their messages
+contain the exact latest release, so baselining them makes a passing gate expire
+without any source change and block unrelated work. They remain visible in lint
+reports, while dependency, Gradle wrapper, and Android Gradle Plugin upgrades
+stay dedicated compatibility changes that must pass the full quality gate.

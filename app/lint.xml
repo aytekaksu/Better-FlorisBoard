@@ -17,4 +17,13 @@
     -->
     <issue id="IntentReset" severity="ignore" />
     <issue id="ShowToast" severity="ignore" />
+
+    <!--
+        Available-version messages change independently of this source tree and include the exact
+        latest version, so baselining them makes the merge gate expire over time. Keep the findings
+        visible as information while dependency and toolchain upgrades remain deliberate changes.
+    -->
+    <issue id="AndroidGradlePluginVersion" severity="informational" />
+    <issue id="GradleDependency" severity="informational" />
+    <issue id="NewerVersionAvailable" severity="informational" />
 </lint>
