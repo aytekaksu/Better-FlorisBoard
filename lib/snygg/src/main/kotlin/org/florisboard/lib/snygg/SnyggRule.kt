@@ -16,8 +16,6 @@
 
 package org.florisboard.lib.snygg
 
-import kotlin.math.min
-
 /**
  * Base interface for all Snygg stylesheet rules. A rule in a stylesheet is a core component, acting as the key for a
  * property set map. There are two main rule categories, annotation and element rules.
@@ -66,11 +64,9 @@ sealed interface SnyggRule : Comparable<SnyggRule> {
          * @return A `SnyggRule` instance if the string matches any supported rule type, or `null` if no match is found.
          * @since 0.5.0-alpha01
          */
-        fun fromOrNull(str: String): SnyggRule? {
-            return SnyggAnnotationRule.Defines.fromOrNull(str)
-                ?: SnyggAnnotationRule.Font.fromOrNull(str)
-                ?: SnyggElementRule.fromOrNull(str)
-        }
+        fun fromOrNull(str: String): SnyggRule? = SnyggAnnotationRule.Defines.fromOrNull(str)
+            ?: SnyggAnnotationRule.Font.fromOrNull(str)
+            ?: SnyggElementRule.fromOrNull(str)
     }
 }
 
@@ -90,17 +86,13 @@ sealed interface SnyggAnnotationRule : SnyggRule {
 
         override fun decl() = this
 
-        override fun compareTo(other: SnyggRule): Int {
-            return when (other) {
-                is Defines -> 0 // same
-                is SnyggAnnotationRule -> decl().name.compareTo(other.decl().name)
-                is SnyggElementRule -> -1 // annotations always come first
-            }
+        override fun compareTo(other: SnyggRule): Int = when (other) {
+            is Defines -> 0
+            is SnyggAnnotationRule -> decl().name.compareTo(other.decl().name)
+            is SnyggElementRule -> -1 // annotations always come first
         }
 
-        override fun toString(): String {
-            return "@defines"
-        }
+        override fun toString(): String = "@defines"
 
         /**
          * Attempts to parse the given string into a `defines` annotation rule instance, or `null` if the given string
@@ -120,17 +112,13 @@ sealed interface SnyggAnnotationRule : SnyggRule {
     data class Font(val fontName: String) : SnyggAnnotationRule {
         override fun decl() = Companion
 
-        override fun compareTo(other: SnyggRule): Int {
-            return when (other) {
-                is Font -> fontName.compareTo(other.fontName)
-                is SnyggAnnotationRule -> decl().name.compareTo(other.decl().name)
-                is SnyggElementRule -> -1 // annotations always come first
-            }
+        override fun compareTo(other: SnyggRule): Int = when (other) {
+            is Font -> fontName.compareTo(other.fontName)
+            is SnyggAnnotationRule -> decl().name.compareTo(other.decl().name)
+            is SnyggElementRule -> -1 // annotations always come first
         }
 
-        override fun toString(): String {
-            return "@font `$fontName`"
-        }
+        override fun toString(): String = "@font `$fontName`"
 
         companion object : SnyggSpecDecl.RuleDecl {
             override val name = "font"
@@ -165,7 +153,7 @@ sealed interface SnyggAnnotationRule : SnyggRule {
  */
 data class SnyggElementRule(
     val elementName: String,
-    val attributes: SnyggAttributes = SnyggAttributes(),
+    val attributes: SnyggAttributes = SnyggAttributes.EMPTY,
     val selector: SnyggSelector = SnyggSelector.NONE,
 ) : SnyggRule {
     init {
@@ -179,23 +167,14 @@ data class SnyggElementRule(
             return 1 // annotations always come first
         }
         val elemDiff = elementName.compareTo(other.elementName)
-        if (elemDiff != 0) {
-            return elemDiff
+        if (elemDiff != 0) return elemDiff
+        val selectorDiff = when {
+            selector == other.selector -> 0
+            selector == SnyggSelector.NONE -> -1
+            other.selector == SnyggSelector.NONE -> 1
+            else -> selector.compareTo(other.selector)
         }
-        if (selector != SnyggSelector.NONE || other.selector != SnyggSelector.NONE) {
-            if (selector == SnyggSelector.NONE) {
-                return -1
-            }
-            if (other.selector == SnyggSelector.NONE) {
-                return 1
-            }
-            val selectorDiff = selector.compareTo(other.selector)
-            if (selectorDiff != 0) {
-                return selectorDiff
-            }
-        }
-        val attrDiff = attributes.compareTo(other.attributes)
-        return attrDiff
+        return selectorDiff.takeIf { it != 0 } ?: attributes.compareTo(other.attributes)
     }
 
     override fun toString() = buildString {
@@ -229,231 +208,181 @@ data class SnyggElementRule(
 
             return SnyggElementRule(
                 elementName = elementName,
-                attributes = SnyggAttributes.from(attributesRaw ?: ""),
+                attributes = SnyggAttributes.fromOrNull(attributesRaw ?: "") ?: return null,
                 selector = SnyggSelector.from(selectorRaw ?: ""),
             )
         }
     }
 }
 
-data class SnyggAttributes internal constructor(
-    private val attributes: Map<String, List<String>> = emptyMap(),
-) : Map<String, List<String>> by attributes, Comparable<SnyggAttributes> {
+data class SnyggAttributes private constructor(private val attributes: Map<String, List<String>>) :
+    Map<String, List<String>> by attributes,
+    Comparable<SnyggAttributes> {
     override fun compareTo(other: SnyggAttributes): Int {
-        if (attributes.isEmpty() && other.attributes.isEmpty()) {
-            return 0
-        }
-        val sizeDiff = attributes.size.compareTo(other.attributes.size)
-        if (sizeDiff != 0) {
-            return sizeDiff
-        }
-        // both have attributes at this point and size matches
-        val attrs = attributes.entries.toList().sortedBy { it.key }
-        val otherAttrs = other.attributes.entries.toList().sortedBy { it.key }
-        for (attrIndex in 0..<min(attrs.size, otherAttrs.size)) {
-            val attr = attrs[attrIndex]
-            val otherAttr = otherAttrs[attrIndex]
-            val keyDiff = attr.key.compareTo(otherAttr.key)
-            if (keyDiff != 0) {
-                return keyDiff
-            }
-            for (valueIndex in 0..<min(attr.value.size, otherAttr.value.size)) {
-                val value = attr.value[valueIndex]
-                val otherValue = otherAttr.value[valueIndex]
-                val valueDiff = value.compareTo(otherValue)
-                if (valueDiff != 0) {
-                    return valueDiff
-                }
-            }
-            val valueSizeDiff = attr.value.size.compareTo(otherAttr.value.size)
-            if (valueSizeDiff != 0) {
-                return valueSizeDiff
-            }
+        attributes.size.compareTo(other.attributes.size).takeIf { it != 0 }?.let { return it }
+        val left = attributes.entries.iterator()
+        val right = other.attributes.entries.iterator()
+        while (left.hasNext()) {
+            val leftEntry = left.next()
+            val rightEntry = right.next()
+            leftEntry.key.compareTo(rightEntry.key).takeIf { it != 0 }?.let { return it }
+            compareValues(leftEntry.value, rightEntry.value).takeIf { it != 0 }?.let { return it }
         }
         return 0
     }
 
-    /**
-     * Serializes the attributes to a string.
-     *
-     * @return The serialized representation of the attributes.
-     *
-     * @since 0.5.0-alpha01
-     */
     override fun toString() = buildString {
-        for ((key, values) in attributes.entries.sortedBy { it.key }) {
-            if (values.isEmpty()) {
-                continue
-            }
-            append(ATTRIBUTE_OPEN)
-            append(key)
-            append(ATTRIBUTE_ASSIGN)
-            val (ints, strings) = values.partition { value ->
-                value.toIntOrNull() != null
-            }
-            val serializedValues = buildList {
-                ints.sorted().fold(mutableListOf()) { acc, valueStr ->
-                    val value = valueStr.toInt()
-                    if (acc.isEmpty()) {
-                        acc.add(value..value)
-                    } else {
-                        val lastRange = acc.last()
-                        if (lastRange.last + 1 == value) {
-                            acc[acc.size - 1] = lastRange.first..value
-                        } else {
-                            acc.add(value..value)
-                        }
-                    }
-                    acc
-                }.forEach { range ->
-                    when (range.first) {
-                        range.last -> {
-                            add(range.first.toString())
-                        }
-                        range.last - 1 -> {
-                            add(range.first.toString())
-                            add((range.first + 1).toString())
-                        }
-                        else -> {
-                            add(range.toString())
-                        }
-                    }
-                }
-                addAll(strings.map { string ->
-                    buildString {
-                        append('`')
-                        append(string)
-                        append('`')
-                    }
-                }.sorted())
-            }
-            append(serializedValues.joinToString(ATTRIBUTE_VALUES_SEPARATOR))
-            append(ATTRIBUTE_CLOSE)
+        for ((key, values) in attributes) {
+            append("[$key=")
+            append(serializeValues(values))
+            append(']')
         }
     }
 
-    /**
-     * Copies the attributes, including the given key-value pairs. Duplicate key-value pairs are ignored.
-     *
-     * @param pairs The list of key-value pairs to include in the copy.
-     * @return A new copy of the attribute mapping.
-     *
-     * @since 0.5.0-alpha01
-     */
+    /** Returns a canonical copy containing [pairs]. */
     fun including(vararg pairs: Pair<String, Any>): SnyggAttributes {
-        val copy = attributes.toMutableMap()
-        pairs.forEach { (key, anyValue) ->
-            val value = anyValue.toString()
-            copy[key] = buildSet {
-                addAll(copy[key].orEmpty())
-                add(value)
-            }.toList().sorted()
-        }
-        return SnyggAttributes(copy.toMap())
+        if (pairs.isEmpty()) return this
+        return create(flattenedEntries() + pairs.asSequence().map { (key, value) -> normalizeEntry(key, value) })
     }
 
-    /**
-     * Copies the attributes, excluding the given key-value pairs. Ignores non-present pairs.
-     *
-     * @param pairs The list of key-value pairs to exclude in the copy.
-     * @return A new copy of the attribute mapping.
-     *
-     * @since 0.5.0-alpha01
-     */
+    /** Returns a canonical copy without [pairs]. Missing pairs are ignored. */
     fun excluding(vararg pairs: Pair<String, Any>): SnyggAttributes {
-        val copy = attributes.toMutableMap()
-        pairs.forEach { (key, anyValue) ->
-            val value = anyValue.toString()
-            val list = buildSet {
-                addAll(copy[key].orEmpty())
-                remove(value)
-            }.toList().sorted()
-            if (list.isNotEmpty()) {
-                copy[key] = list
-            } else {
-                copy.remove(key)
-            }
-        }
-        return SnyggAttributes(copy.toMap())
+        if (pairs.isEmpty()) return this
+        val excluded = pairs.mapTo(mutableSetOf()) { (key, value) -> normalizeEntry(key, value) }
+        return create(flattenedEntries().filterNot(excluded::contains))
     }
 
-    /**
-     * Copies the attributes, toggling the given key-value pairs. Existing key-value pairs will be removed,
-     * non-existing will be added.
-     *
-     * @param pairs The list of key-value pairs to toggle in the copy.
-     * @return A new copy of the attribute mapping.
-     *
-     * @since 0.5.0-alpha01
-     */
-    fun toggling(vararg pairs: Pair<String, Any>): SnyggAttributes {
-        val copy = attributes.toMutableMap()
-        pairs.forEach { (key, anyValue) ->
-            val value = anyValue.toString()
-            val list = buildSet {
-                addAll(copy[key].orEmpty())
-                if (contains(value)) {
-                    remove(value)
-                } else {
-                    add(value)
-                }
-            }.toList().sorted()
-            if (list.isNotEmpty()) {
-                copy[key] = list
-            } else {
-                copy.remove(key)
-            }
+    internal fun matches(query: SnyggQueryAttributes): Boolean {
+        for ((key, values) in attributes) {
+            val queryValue = query[key]?.let(::normalizeValue) ?: return false
+            if (queryValue !in values) return false
         }
-        return SnyggAttributes(copy.toMap())
+        return true
+    }
+
+    private fun flattenedEntries() = attributes.asSequence().flatMap { (key, values) ->
+        values.asSequence().map { value -> key to value }
     }
 
     @Suppress("RegExpUnnecessaryNonCapturingGroup")
     companion object {
-        private const val ATTRIBUTE_OPEN = "["
-        private const val ATTRIBUTE_CLOSE = "]"
-        private const val ATTRIBUTE_ASSIGN = "="
-        private const val ATTRIBUTE_VALUES_SEPARATOR = ","
+        private const val MAX_VALUES_PER_RULE = 4_096
+        private const val ATTRIBUTE_KEY_PATTERN = "[a-zA-Z0-9-]+"
 
+        private val ATTRIBUTE_KEY_REGEX = ATTRIBUTE_KEY_PATTERN.toRegex()
         private val INT_PATTERN = """(?:0|-?[1-9][0-9]*)""".toRegex()
         private val INT_RANGE_PATTERN = """$INT_PATTERN[.]{2}$INT_PATTERN""".toRegex()
         private val STRING_PATTERN = """`[^`]+`""".toRegex()
         private val ATTR_VALUE_PATTERN = """(?:$STRING_PATTERN|$INT_RANGE_PATTERN|$INT_PATTERN)""".toRegex()
-        internal val ATTRIBUTE_REGEX = """\[(?<attrKey>[a-zA-Z0-9-]+)=(?<attrRawValues>$ATTR_VALUE_PATTERN(?:,$ATTR_VALUE_PATTERN)*)]""".toRegex()
+        private val VALUE_COMPARATOR = compareBy<String>({ it.toIntOrNull() == null }, { it })
 
-        internal fun from(str: String): SnyggAttributes {
-            val attributes = mutableMapOf<String, List<String>>()
-            for (attrMatch in ATTRIBUTE_REGEX.findAll(str)) {
-                val key = attrMatch.groups["attrKey"]!!.value
-                val rawValues = attrMatch.groups["attrRawValues"]!!.value
-                attributes[key] = buildList {
-                    attributes[key]?.let { addAll(it) }
-                    for (attrValueMatch in ATTR_VALUE_PATTERN.findAll(rawValues)) {
-                        val rawValue = attrValueMatch.value
-                        if (STRING_PATTERN.matches(rawValue)) {
-                            add(rawValue.substring(1, rawValue.length - 1))
-                            continue
-                        }
-                        if (INT_RANGE_PATTERN.matches(rawValue)) {
-                            val (start, end) = rawValue.split("..").map { it.toInt() }
-                            addAll((start..end).map { it.toString() })
-                            continue
-                        }
-                        if (INT_PATTERN.matches(rawValue)) {
-                            add(rawValue)
-                            continue
-                        }
-                    }
-                    sort()
-                }.distinct()
-            }
-            return SnyggAttributes(attributes.toMap())
+        internal val EMPTY = SnyggAttributes(emptyMap())
+        internal val ATTRIBUTE_REGEX =
+            """\[(?<attrKey>$ATTRIBUTE_KEY_PATTERN)=(?<attrRawValues>$ATTR_VALUE_PATTERN(?:,$ATTR_VALUE_PATTERN)*)]"""
+                .toRegex()
+
+        private fun normalizeValue(value: Any): String? {
+            val rawValue = value.toString()
+            return rawValue.toIntOrNull()?.toString()
+                ?: rawValue.takeIf { it.isNotEmpty() && '`' !in it }
         }
 
-        internal fun of(vararg pairs: Pair<String, List<Any>>) = SnyggAttributes(
-            mapOf(
-                *pairs.map { (key, values) -> key to values.map { it.toString() }.distinct() }.toTypedArray()
+        private fun normalizeEntry(key: String, value: Any): Pair<String, String> {
+            require(ATTRIBUTE_KEY_REGEX.matches(key)) { "attribute key is invalid" }
+            return key to requireNotNull(normalizeValue(value)) { "attribute value is invalid" }
+        }
+
+        private fun create(entries: Sequence<Pair<String, String>>): SnyggAttributes {
+            val grouped = sortedMapOf<String, MutableSet<String>>()
+            var valueCount = 0
+            for ((key, value) in entries) {
+                val values = grouped.getOrPut(key) { sortedSetOf(VALUE_COMPARATOR) }
+                if (values.add(value)) {
+                    valueCount++
+                    require(valueCount <= MAX_VALUES_PER_RULE) { "rule has too many attribute values" }
+                }
+            }
+            if (grouped.isEmpty()) return EMPTY
+            return SnyggAttributes(
+                buildMap {
+                    grouped.forEach { (key, values) -> put(key, buildList { addAll(values) }) }
+                },
             )
-        )
+        }
+
+        private fun compareValues(left: List<String>, right: List<String>): Int {
+            for (index in 0..<minOf(left.size, right.size)) {
+                VALUE_COMPARATOR.compare(left[index], right[index]).takeIf { it != 0 }?.let { return it }
+            }
+            return left.size.compareTo(right.size)
+        }
+
+        private fun serializeValues(values: List<String>): String = buildList {
+            val ranges = mutableListOf<IntRange>()
+            for (value in values.mapNotNull(String::toIntOrNull)) {
+                val last = ranges.lastOrNull()
+                if (last != null && last.last != Int.MAX_VALUE && last.last + 1 == value) {
+                    ranges[ranges.lastIndex] = last.first..value
+                } else {
+                    ranges.add(value..value)
+                }
+            }
+            for (range in ranges) {
+                when {
+                    range.first == range.last -> add(range.first.toString())
+
+                    range.first.toLong() + 1 == range.last.toLong() -> {
+                        add(range.first.toString())
+                        add(range.last.toString())
+                    }
+
+                    else -> add(range.toString())
+                }
+            }
+            values.filter { it.toIntOrNull() == null }.mapTo(this) { "`$it`" }
+        }.joinToString(",")
+
+        private fun parseRawValue(rawValue: String): List<String>? = when {
+            STRING_PATTERN.matches(rawValue) -> listOf(rawValue.substring(1, rawValue.lastIndex))
+            INT_RANGE_PATTERN.matches(rawValue) -> parseRange(rawValue)
+            else -> rawValue.toIntOrNull()?.let { listOf(it.toString()) }
+        }
+
+        private fun parseRange(rawValue: String): List<String>? {
+            val separator = rawValue.indexOf("..")
+            val start = rawValue.substring(0, separator).toIntOrNull() ?: return null
+            val end = rawValue.substring(separator + 2).toIntOrNull() ?: return null
+            val size = end.toLong() - start.toLong() + 1
+            if (size !in 1L..MAX_VALUES_PER_RULE.toLong()) return null
+            return (start..end).map { it.toString() }
+        }
+
+        private fun parseEntries(str: String): List<Pair<String, String>>? = buildList {
+            var parsedValueCount = 0
+            for (attributeMatch in ATTRIBUTE_REGEX.findAll(str)) {
+                val key = attributeMatch.groups["attrKey"]!!.value
+                val rawValues = attributeMatch.groups["attrRawValues"]!!.value
+                for (valueMatch in ATTR_VALUE_PATTERN.findAll(rawValues)) {
+                    val values = parseRawValue(valueMatch.value) ?: return null
+                    if (values.size > MAX_VALUES_PER_RULE - parsedValueCount) return null
+                    parsedValueCount += values.size
+                    values.mapTo(this) { value -> normalizeEntry(key, value) }
+                }
+            }
+        }
+
+        internal fun fromOrNull(str: String): SnyggAttributes? {
+            val entries = parseEntries(str) ?: return null
+            return runCatching { create(entries.asSequence()) }.getOrNull()
+        }
+
+        internal fun of(vararg pairs: Pair<String, List<Any>>): SnyggAttributes {
+            val entries = pairs.asSequence().flatMap { (key, values) ->
+                require(values.isNotEmpty()) { "attribute values cannot be empty" }
+                values.asSequence().map { value -> normalizeEntry(key, value) }
+            }
+            return create(entries)
+        }
     }
 }
 
@@ -500,7 +429,8 @@ enum class SnyggSelector(val id: String) {
      *
      * @since 0.5.0-alpha01
      */
-    DISABLED("disabled");
+    DISABLED("disabled"),
+    ;
 
     /**
      * Serializes the selector to a string. If [NONE], an empty string is returned.

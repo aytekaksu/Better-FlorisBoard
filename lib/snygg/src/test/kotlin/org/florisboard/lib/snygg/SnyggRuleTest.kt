@@ -79,8 +79,6 @@ class SnyggRuleTest {
             "elem[code=2,`str`,1]" to "elem[code=1,2,`str`]",
             "elem[code=1,2,3]" to "elem[code=1..3]",
             "elem[code=1..1]" to "elem[code=1]",
-            "elem[code=1..0]" to "elem",
-            "elem[code=6..2]" to "elem",
             "elem[code=`6`]" to "elem[code=6]",
             "elem[b=1][a=1]" to "elem[a=1][b=1]",
             "elem[a=1][a=2]" to "elem[a=1,2]",
@@ -108,6 +106,8 @@ class SnyggRuleTest {
             "smartbar:",
             "smartbar[code=]",
             "smartbar[code=,]",
+            "elem[code=1..0]",
+            "elem[code=6..2]",
             "smartbar[code='string']",
             "smartbar[code=\"string\"]",
             "smartbar[&=0..5]",
@@ -234,7 +234,7 @@ class SnyggRuleTest {
                 SnyggElementRule("smartbar") to
                     SnyggElementRule("smartbar"),
                 SnyggElementRule("smartbar") to
-                    SnyggElementRule("smartbar", SnyggAttributes(), SnyggSelector.NONE)
+                    SnyggElementRule("smartbar", SnyggAttributes.EMPTY, SnyggSelector.NONE)
             )
             assertAll(ruleList.map { (leftRule, rightRule) -> {
                 assertTrue { leftRule == rightRule }
@@ -277,19 +277,6 @@ class SnyggRuleTest {
                 of() to of("test" to listOf(1)).excluding("test" to 1),
                 of("test" to listOf(1)) to of("test" to listOf(1,44)).excluding("test" to 44),
                 of("test" to listOf(1)) to of("test" to listOf(1), "code" to listOf(2)).excluding("code" to 2),
-            )
-            assertAll(expectedToActual.map { (expected, actual) -> {
-                assertEquals(expected, actual)
-            }})
-        }
-
-        @Test
-        fun `copy toggling`() = with(SnyggAttributes.Companion) {
-            val expectedToActual = listOf(
-                of() to of().toggling(),
-                of() to of("test" to listOf(1)).toggling("test" to 1),
-                of("test" to listOf(1)) to of().toggling("test" to 1),
-                of("test" to listOf(1)) to of("test" to listOf(1), "code" to listOf(2)).toggling("code" to 2),
             )
             assertAll(expectedToActual.map { (expected, actual) -> {
                 assertEquals(expected, actual)
