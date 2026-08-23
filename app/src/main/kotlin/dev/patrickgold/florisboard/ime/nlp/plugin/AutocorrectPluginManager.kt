@@ -939,10 +939,6 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
         return AutocorrectInputTrace(traceInputLayout?.keys.orEmpty(), points)
     }
 
-    override suspend fun create() = Unit
-
-    override suspend fun preload(subtype: Subtype) = Unit
-
     @Synchronized
     private fun ensureSession(
         subtype: Subtype,
@@ -1546,10 +1542,6 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             }
         }
     }
-
-    override suspend fun getListOfWords(subtype: Subtype): List<String> = emptyList()
-
-    override suspend fun getFrequencyForWord(subtype: Subtype, word: String): Double = 0.0
 
     override suspend fun destroy() {
         synchronized(this) {

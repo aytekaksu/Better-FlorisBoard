@@ -32,14 +32,28 @@ class GlideTypingAlternativeCandidateTest : FunSpec({
     test("external alternatives replace the committed glide and keep provider callbacks") {
         val beforeCommit = content("alpha ", offset = 100, cursor = 6)
         val afterCommit = content("alpha beta", offset = 100, cursor = 10)
+        val subtype = Subtype.DEFAULT.copy(id = 42)
         var accepted: SuggestionCandidate? = null
+        var acceptedSubtype: Subtype? = null
+        var reverted: SuggestionCandidate? = null
+        var revertedSubtype: Subtype? = null
         var removed: SuggestionCandidate? = null
+        var removedSubtype: Subtype? = null
         val provider = object : SuggestionProvider by FallbackNlpProvider {
             override suspend fun notifySuggestionAccepted(
                 subtype: Subtype,
                 candidate: SuggestionCandidate,
             ) {
                 accepted = candidate
+                acceptedSubtype = subtype
+            }
+
+            override suspend fun notifySuggestionReverted(
+                subtype: Subtype,
+                candidate: SuggestionCandidate,
+            ) {
+                reverted = candidate
+                revertedSubtype = subtype
             }
 
             override suspend fun removeSuggestion(
@@ -47,6 +61,7 @@ class GlideTypingAlternativeCandidateTest : FunSpec({
                 candidate: SuggestionCandidate,
             ): Boolean {
                 removed = candidate
+                removedSubtype = subtype
                 return true
             }
         }
@@ -73,10 +88,15 @@ class GlideTypingAlternativeCandidateTest : FunSpec({
         )
         rebased.isEligibleForAutoCommit shouldBe false
 
-        rebased.sourceProvider!!.notifySuggestionAccepted(Subtype.DEFAULT, rebased)
-        rebased.sourceProvider!!.removeSuggestion(Subtype.DEFAULT, rebased) shouldBe true
+        rebased.sourceProvider!!.notifySuggestionAccepted(subtype, rebased)
+        rebased.sourceProvider!!.notifySuggestionReverted(subtype, rebased)
+        rebased.sourceProvider!!.removeSuggestion(subtype, rebased) shouldBe true
         (accepted === original) shouldBe true
+        acceptedSubtype shouldBe subtype
+        (reverted === original) shouldBe true
+        revertedSubtype shouldBe subtype
         (removed === original) shouldBe true
+        removedSubtype shouldBe subtype
 
         available = false
         rebased.replacement shouldBe null

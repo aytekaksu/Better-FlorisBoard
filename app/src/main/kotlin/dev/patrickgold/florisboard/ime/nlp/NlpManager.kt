@@ -309,7 +309,7 @@ class NlpManager(context: Context) {
     private val glideTypingWords = AsyncPreloadCache<GlideTypingLexiconKey, List<String>>(scope) { key ->
         val subtype = key.subtype
         preloadProviders(subtype)
-        getBuiltInSuggestionProvider(subtype).getListOfWords(subtype).toList()
+        getBuiltInSuggestionProvider(subtype).glideTypingWordsOrEmpty(subtype).toList()
     }
     private val suggestionJobGuard = Any()
     private val internalSuggestionsGuard = Any()
@@ -591,9 +591,8 @@ class NlpManager(context: Context) {
     internal suspend fun getGlideTypingWordData(subtype: Subtype) =
         glideTypingWords.await(GlideTypingLexiconKey(subtype))
 
-    fun getFrequencyForWord(subtype: Subtype, word: String): Double {
-        return runBlocking { getBuiltInSuggestionProvider(subtype).getFrequencyForWord(subtype, word) }
-    }
+    internal suspend fun getGlideTypingWordFrequency(subtype: Subtype, word: String) =
+        getBuiltInSuggestionProvider(subtype).glideTypingWordFrequencyOrZero(subtype, word)
 
     private suspend fun assembleCandidates() {
         val revision = candidateAssemblyRevision.next()
@@ -724,14 +723,6 @@ class NlpManager(context: Context) {
 
         override val providerId = "org.florisboard.nlp.providers.clipboard"
 
-        override suspend fun create() {
-            // Do nothing
-        }
-
-        override suspend fun preload(subtype: Subtype) {
-            // Do nothing
-        }
-
         override suspend fun suggest(
             subtype: Subtype,
             content: EditorContent,
@@ -761,28 +752,12 @@ class NlpManager(context: Context) {
             }
         }
 
-        override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {
-            // Do nothing
-        }
-
         override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
             if (candidate is ClipboardSuggestionCandidate) {
                 suppressedClipboardCopy = candidate.sourceClipboardItem
                 return true
             }
             return false
-        }
-
-        override suspend fun getListOfWords(subtype: Subtype): List<String> {
-            return emptyList()
-        }
-
-        override suspend fun getFrequencyForWord(subtype: Subtype, word: String): Double {
-            return 0.0
-        }
-
-        override suspend fun destroy() {
-            // Do nothing
         }
 
         private fun clipboardSuggestionCandidate(

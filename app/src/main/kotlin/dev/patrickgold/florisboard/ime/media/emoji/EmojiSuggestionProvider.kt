@@ -46,9 +46,6 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
 
     private val cachedEmojiMappings = Cache.Builder<FlorisLocale, EmojiDataBySkinTone>().build()
 
-    override suspend fun create() {
-    }
-
     override suspend fun preload(subtype: Subtype) {
         subtype.locales().forEach { locale ->
             cachedEmojiMappings.get(locale) {
@@ -99,16 +96,6 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
         }
         EmojiHistoryHelper.markEmojiUsed(prefs, candidate.emoji)
     }
-
-    override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {
-        // No-op
-    }
-
-    override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate) = false
-
-    override suspend fun getListOfWords(subtype: Subtype) = emptyList<String>()
-
-    override suspend fun getFrequencyForWord(subtype: Subtype, word: String) = 0.0
 
     override suspend fun destroy() {
         cachedEmojiMappings.invalidateAll()

@@ -394,7 +394,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                 val shapeProbability = calcGaussianProbability(shapeDistance, 0.0f, SHAPE_STD)
                 val locationProbability = calcGaussianProbability(locationDistance, 0.0f, LOCATION_STD * radius)
                 val frequency =
-                    255f * nlpManager.getFrequencyForWord(layoutSubtype!!, word).toFloat()
+                    255f * nlpManager.getGlideTypingWordFrequency(layoutSubtype!!, word).toFloat()
                 val confidence = 1.0f / (shapeProbability * locationProbability * frequency)
 
                 insertRankedCandidate(
