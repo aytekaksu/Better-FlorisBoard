@@ -19,8 +19,10 @@ package org.florisboard.lib.snygg.value
 import androidx.annotation.CallSuper
 import org.florisboard.lib.kotlin.curlyFormat
 
-private val AngledGroupNameRegex = """<[a-zA-Z0-9]+>""".toRegex()
-private val WhitespaceRegex = """\s*""".toRegex()
+private val ANGLED_GROUP_NAME_REGEX = """<[a-zA-Z0-9]+>""".toRegex()
+private val WHITESPACE_REGEX = """\s*""".toRegex()
+private val INTEGER_NUMBER_REGEX = """0|[+-]?[1-9][0-9]*""".toRegex()
+private val FLOAT_NUMBER_REGEX = """(?:0|[1-9][0-9]*)(?:[.][0-9]*)?""".toRegex()
 
 interface SnyggValueSpec {
     val id: String?
@@ -33,7 +35,7 @@ interface SnyggValueSpec {
     fun parse(str: String, dstMap: SnyggIdToValueMap) {
         val match = parsePattern.matchEntire(str)
         checkNotNull(match) { "$str does not match pattern $parsePattern" }
-        val groupNames = AngledGroupNameRegex.findAll(parsePattern.toString()).map { angleGroup ->
+        val groupNames = ANGLED_GROUP_NAME_REGEX.findAll(parsePattern.toString()).map { angleGroup ->
             angleGroup.value.substring(1, angleGroup.value.length - 1)
         }
         for (groupName in groupNames) {
@@ -53,16 +55,28 @@ interface SnyggValueSpec {
     }
 }
 
-fun SnyggValueSpec(block: SnyggValueSpecBuilder.() -> SnyggValueSpec): SnyggValueSpec {
-    return block(SnyggValueSpecBuilder.Instance)
-}
+fun SnyggValueSpec(block: SnyggValueSpecBuilder.() -> SnyggValueSpec): SnyggValueSpec =
+    block(SnyggValueSpecBuilder.Instance)
 
-private inline fun buildPattern(builderAction: StringBuilder.() -> Unit): Regex {
-    return buildString {
-        append(WhitespaceRegex)
-        builderAction()
-        append(WhitespaceRegex)
-    }.replace("$WhitespaceRegex$WhitespaceRegex", WhitespaceRegex.toString()).toRegex()
+private inline fun buildPattern(builderAction: StringBuilder.() -> Unit): Regex = buildString {
+    append(WHITESPACE_REGEX)
+    builderAction()
+    append(WHITESPACE_REGEX)
+}.replace("$WHITESPACE_REGEX$WHITESPACE_REGEX", WHITESPACE_REGEX.toString()).toRegex()
+
+private fun numberParsePattern(id: String, prefix: String?, suffix: String?, unit: String?, numberPattern: Regex) =
+    buildPattern {
+        prefix?.let(::append)
+        append("(?<$id>$numberPattern)")
+        suffix?.let(::append)
+        unit?.let(::append)
+    }
+
+private fun numberPackTemplate(id: String, prefix: String?, suffix: String?, unit: String?) = buildString {
+    prefix?.let(::append)
+    append("{$id}")
+    suffix?.let(::append)
+    unit?.let(::append)
 }
 
 data class SnyggIntValueSpec(
@@ -76,32 +90,9 @@ data class SnyggIntValueSpec(
         require(id.isNotBlank()) { "id cannot be blank" }
     }
 
-    override val parsePattern = buildPattern {
-        if (prefix != null) {
-            append(prefix)
-        }
-        val numberPatternStr = numberPattern?.toString() ?: "0|[+-]?[1-9][0-9]*"
-        append("(?<$id>$numberPatternStr)")
-        if (suffix != null) {
-            append(suffix)
-        }
-        if (unit != null) {
-            append(unit)
-        }
-    }
+    override val parsePattern = numberParsePattern(id, prefix, suffix, unit, numberPattern ?: INTEGER_NUMBER_REGEX)
 
-    override val packTemplate = buildString {
-        if (prefix != null) {
-            append(prefix)
-        }
-        append("{$id}")
-        if (suffix != null) {
-            append(suffix)
-        }
-        if (unit != null) {
-            append(unit)
-        }
-    }
+    override val packTemplate = numberPackTemplate(id, prefix, suffix, unit)
 }
 
 data class SnyggFloatValueSpec(
@@ -115,38 +106,12 @@ data class SnyggFloatValueSpec(
         require(id.isNotBlank()) { "id cannot be blank" }
     }
 
-    override val parsePattern = buildPattern {
-        if (prefix != null) {
-            append(prefix)
-        }
-        val numberPatternStr = numberPattern ?: "(?:0|[1-9][0-9]*)(?:[.][0-9]*)?"
-        append("(?<$id>$numberPatternStr)")
-        if (suffix != null) {
-            append(suffix)
-        }
-        if (unit != null) {
-            append(unit)
-        }
-    }
+    override val parsePattern = numberParsePattern(id, prefix, suffix, unit, numberPattern ?: FLOAT_NUMBER_REGEX)
 
-    override val packTemplate = buildString {
-        if (prefix != null) {
-            append(prefix)
-        }
-        append("{$id}")
-        if (suffix != null) {
-            append(suffix)
-        }
-        if (unit != null) {
-            append(unit)
-        }
-    }
+    override val packTemplate = numberPackTemplate(id, prefix, suffix, unit)
 }
 
-data class SnyggKeywordValueSpec(
-    override val id: String,
-    val keywords: List<String>,
-) : SnyggValueSpec {
+data class SnyggKeywordValueSpec(override val id: String, val keywords: List<String>) : SnyggValueSpec {
     init {
         require(id.isNotBlank()) { "id cannot be blank" }
     }
@@ -162,10 +127,7 @@ data class SnyggKeywordValueSpec(
     }
 }
 
-data class SnyggStringValueSpec(
-    override val id: String,
-    private val pattern: Regex,
-) : SnyggValueSpec {
+data class SnyggStringValueSpec(override val id: String, private val pattern: Regex) : SnyggValueSpec {
     init {
         require(id.isNotBlank()) { "id cannot be blank" }
     }
@@ -181,10 +143,7 @@ data class SnyggStringValueSpec(
     }
 }
 
-data class SnyggFunctionValueSpec(
-    val name: String,
-    val innerSpec: SnyggValueSpec,
-) : SnyggValueSpec {
+data class SnyggFunctionValueSpec(val name: String, val innerSpec: SnyggValueSpec) : SnyggValueSpec {
     override val id = null
 
     override val parsePattern = buildPattern {
@@ -202,10 +161,7 @@ data class SnyggFunctionValueSpec(
     }
 }
 
-data class SnyggListValueSpec(
-    val separator: String,
-    val valueSpecs: List<SnyggValueSpec>,
-) : SnyggValueSpec {
+data class SnyggListValueSpec(val separator: String, val valueSpecs: List<SnyggValueSpec>) : SnyggValueSpec {
     override val id = null
 
     override val parsePattern = buildPattern {
@@ -246,34 +202,28 @@ class SnyggValueSpecBuilder {
         val Instance = SnyggValueSpecBuilder()
     }
 
-    inline fun spacedList(
-        valueFormatsBlock: SnyggValueFormatListBuilder.() -> Unit,
-    ) = SnyggListValueSpec(
+    inline fun spacedList(valueFormatsBlock: SnyggValueFormatListBuilder.() -> Unit) = SnyggListValueSpec(
         separator = " ",
-        valueSpecs = SnyggValueFormatListBuilder().let { valueFormatsBlock(it); it.build() },
+        valueSpecs = SnyggValueFormatListBuilder().let {
+            valueFormatsBlock(it)
+            it.build()
+        },
     )
 
-    inline fun commaList(
-        valueFormatsBlock: SnyggValueFormatListBuilder.() -> Unit,
-    ) = SnyggListValueSpec(
+    inline fun commaList(valueFormatsBlock: SnyggValueFormatListBuilder.() -> Unit) = SnyggListValueSpec(
         separator = ",",
-        valueSpecs = SnyggValueFormatListBuilder().let { valueFormatsBlock(it); it.build() },
+        valueSpecs = SnyggValueFormatListBuilder().let {
+            valueFormatsBlock(it)
+            it.build()
+        },
     )
 
-    inline fun function(
-        name: String,
-        innerSpecBuilder: SnyggValueSpecBuilder.() -> SnyggValueSpec,
-    ) = SnyggFunctionValueSpec(name, innerSpecBuilder(Instance))
+    inline fun function(name: String, innerSpecBuilder: SnyggValueSpecBuilder.() -> SnyggValueSpec) =
+        SnyggFunctionValueSpec(name, innerSpecBuilder(Instance))
 
-    fun keywords(
-        id: String,
-        keywords: List<String>,
-    ) = SnyggKeywordValueSpec(id, keywords)
+    fun keywords(id: String, keywords: List<String>) = SnyggKeywordValueSpec(id, keywords)
 
-    fun string(
-        id: String,
-        regex: Regex,
-    ) = SnyggStringValueSpec(id, regex)
+    fun string(id: String, regex: Regex) = SnyggStringValueSpec(id, regex)
 
     fun int(
         id: String,
@@ -291,13 +241,10 @@ class SnyggValueSpecBuilder {
         numberPattern: Regex? = null,
     ) = SnyggFloatValueSpec(id, prefix, suffix, unit, numberPattern)
 
-    fun percentageInt(
-        id: String,
-    ) = int(id, unit = "%", numberPattern = """100|[1-9]?[0-9]""".toRegex())
+    fun percentageInt(id: String) = int(id, unit = "%", numberPattern = """100|[1-9]?[0-9]""".toRegex())
 
-    fun percentageFloat(
-        id: String,
-    ) = float(id, unit = "%", numberPattern = """100(?:[.]0*)?|[1-9]?[0-9](?:[.][0-9]*)?""".toRegex())
+    fun percentageFloat(id: String) =
+        float(id, unit = "%", numberPattern = """100(?:[.]0*)?|[1-9]?[0-9](?:[.][0-9]*)?""".toRegex())
 
     fun nothing() = SnyggNothingValueSpec
 }

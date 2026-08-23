@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 The FlorisBoard Contributors
+ * Copyright (C) 2025-2026 The FlorisBoard Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,252 +17,144 @@
 package org.florisboard.lib.snygg.value
 
 import androidx.compose.ui.unit.dp
-import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertAll
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
+
+private data class ShapeCodecCase(
+    val name: String,
+    val encoder: SnyggValueEncoder,
+    val defaultValue: SnyggValue,
+    val value: SnyggValue,
+    val serialized: String,
+)
+
+private val SHAPE_CODEC_CASES = listOf(
+    ShapeCodecCase(
+        "rectangle",
+        SnyggRectangleShapeValue,
+        SnyggRectangleShapeValue(),
+        SnyggRectangleShapeValue(),
+        "rectangle()",
+    ),
+    ShapeCodecCase("circle", SnyggCircleShapeValue, SnyggCircleShapeValue(), SnyggCircleShapeValue(), "circle()"),
+    ShapeCodecCase(
+        "cut corner dp",
+        SnyggCutCornerDpShapeValue,
+        SnyggCutCornerDpShapeValue(0.dp, 0.dp, 0.dp, 0.dp),
+        SnyggCutCornerDpShapeValue(0.dp, 0.5.dp, 12.dp, 4.25.dp),
+        "cut-corner(0dp,0.5dp,12dp,4.25dp)",
+    ),
+    ShapeCodecCase(
+        "cut corner percent",
+        SnyggCutCornerPercentShapeValue,
+        SnyggCutCornerPercentShapeValue(0, 0, 0, 0),
+        SnyggCutCornerPercentShapeValue(0, 1, 99, 100),
+        "cut-corner(0%,1%,99%,100%)",
+    ),
+    ShapeCodecCase(
+        "rounded corner dp",
+        SnyggRoundedCornerDpShapeValue,
+        SnyggRoundedCornerDpShapeValue(0.dp, 0.dp, 0.dp, 0.dp),
+        SnyggRoundedCornerDpShapeValue(4.25.dp, 12.dp, 0.5.dp, 0.dp),
+        "rounded-corner(4.25dp,12dp,0.5dp,0dp)",
+    ),
+    ShapeCodecCase(
+        "rounded corner percent",
+        SnyggRoundedCornerPercentShapeValue,
+        SnyggRoundedCornerPercentShapeValue(0, 0, 0, 0),
+        SnyggRoundedCornerPercentShapeValue(100, 99, 1, 0),
+        "rounded-corner(100%,99%,1%,0%)",
+    ),
+)
 
 class SnyggShapeValueTest {
-    @Nested
-    inner class SimpleShape {
-        private val circleEncoder = SnyggCircleShapeValue
-        private val rectangleEncoder = SnyggRectangleShapeValue
+    @Test
+    fun `number specs retain concrete types and custom syntax`() {
+        val intSpec: SnyggIntValueSpec = SnyggValueSpecBuilder.Instance.int(
+            id = "value",
+            prefix = "pre-",
+            suffix = "-post",
+            unit = "px",
+            numberPattern = """[0-9]{2}""".toRegex(),
+        )
+        val floatSpec: SnyggFloatValueSpec = SnyggValueSpecBuilder.Instance.float(
+            id = "value",
+            prefix = "pre-",
+            suffix = "-post",
+            unit = "dp",
+            numberPattern = """[0-9]+[.][0-9]{2}""".toRegex(),
+        )
 
-        @Test
-        fun `test default values`() {
-            val pairs = listOf(
-                SnyggRectangleShapeValue() to rectangleEncoder.defaultValue(),
-                SnyggCircleShapeValue() to circleEncoder.defaultValue(),
-                SnyggRectangleShapeValue().encoder() to rectangleEncoder,
-                SnyggCircleShapeValue().encoder() to circleEncoder,
-            )
-            assertAll(pairs.map { (expected, actual) ->
-                {
-                    assertEquals(expected, actual)
-                }
-            })
-        }
+        listOf(
+            Triple(intSpec, "pre-01-postpx", "01"),
+            Triple(floatSpec, "pre-01.25-postdp", "01.25"),
+        ).forEach { (spec, serialized, value) ->
+            val arguments = snyggIdToValueMapOf()
+            spec.parse(serialized, arguments)
 
-        @Test
-        fun `deserialize rectangle shape values`() {
-            val pairs = listOf(
-                //valid
-                "rectangle()" to SnyggRectangleShapeValue(),
-                //invalid
-                "lelek" to null
-            )
-            assertAll(pairs.map { (raw, expected) ->
-                {
-                    assertEquals(expected, rectangleEncoder.deserialize(raw).getOrNull())
-                }
-            })
-        }
-
-        @Test
-        fun `deserialize circle shape values`() {
-            val pairs = listOf(
-                //valid
-                "circle()" to SnyggCircleShapeValue(),
-                //invalid
-                "lelek" to null
-            )
-            assertAll(pairs.map { (raw, expected) ->
-                {
-                    assertEquals(expected, circleEncoder.deserialize(raw).getOrNull())
-                }
-            })
-        }
-
-        @Test
-        fun `serialize circle shape values`() {
-            val pairs = listOf(
-                //valid
-                SnyggCircleShapeValue() to "circle()",
-                //invalid
-                SnyggDefinedVarValue("shenanigans") to null
-            )
-            assertAll(pairs.map { (raw, expected) ->
-                {
-                    assertEquals(expected, circleEncoder.serialize(raw).getOrNull())
-                }
-            })
-        }
-
-        @Test
-        fun `serialize rectangle shape values`() {
-            val pairs = listOf(
-                //valid
-                SnyggRectangleShapeValue() to "rectangle()",
-                //invalid
-                SnyggDefinedVarValue("shenanigans") to null
-            )
-            assertAll(pairs.map { (raw, expected) ->
-                {
-                    assertEquals(expected, rectangleEncoder.serialize(raw).getOrNull())
-                }
-            })
+            assertEquals(value, arguments.getValue("value"))
+            assertEquals(serialized, spec.pack(arguments))
         }
     }
 
-    @Nested
-    inner class CutCornerShape {
-        val dpEncoder = SnyggCutCornerDpShapeValue
-        val percentageEncoder = SnyggCutCornerPercentShapeValue
-
-        @Test
-        fun `test default values`() {
-            val pairs = listOf(
-                SnyggCutCornerDpShapeValue(0.dp, 0.dp, 0.dp, 0.dp) to dpEncoder.defaultValue(),
-                SnyggCutCornerPercentShapeValue(0, 0, 0, 0) to percentageEncoder.defaultValue(),
-                SnyggCutCornerDpShapeValue(0.dp, 0.dp, 0.dp, 0.dp).encoder() to dpEncoder,
-                SnyggCutCornerPercentShapeValue(0, 0, 0, 0).encoder() to percentageEncoder,
+    @Test
+    fun `shape codecs retain defaults encoders and wire forms`() {
+        SHAPE_CODEC_CASES.forEach { case ->
+            assertEquals(case.defaultValue, case.encoder.defaultValue(), "${case.name} default")
+            assertSame(case.encoder, case.value.encoder(), "${case.name} encoder")
+            assertEquals(case.serialized, case.encoder.serialize(case.value).getOrThrow(), "${case.name} serialization")
+            assertEquals(
+                case.value,
+                case.encoder.deserialize(case.serialized).getOrThrow(),
+                "${case.name} deserialization",
             )
-            assertAll(pairs.map { (expected, actual) ->
-                {
-                    assertEquals(expected, actual)
-                }
-            })
-        }
-
-        @Test
-        fun `deserialize dp shape values`() {
-            val pairs = listOf(
-                //valid
-                "cut-corner(4dp,5dp,2dp,5dp)" to SnyggCutCornerDpShapeValue(4.dp, 5.dp, 2.dp, 5.dp),
-                //invalid
-                "lelek" to null
-            )
-            assertAll(pairs.map { (raw, expected) ->
-                {
-                    assertEquals(expected, dpEncoder.deserialize(raw).getOrNull())
-                }
-            })
-        }
-
-        @Test
-        fun `deserialize percentage shape values`() {
-            val pairs = listOf(
-                //valid
-                "cut-corner(4%,5%,2%,5%)" to SnyggCutCornerPercentShapeValue(4, 5, 2, 5),
-                //invalid
-                "lelek" to null
-            )
-            assertAll(pairs.map { (raw, expected) ->
-                {
-                    assertEquals(expected, percentageEncoder.deserialize(raw).getOrNull())
-                }
-            })
-        }
-
-        @Test
-        fun `serialize percentage shape values`() {
-            val pairs = listOf(
-                //valid
-                SnyggCutCornerPercentShapeValue(4, 5, 2, 5) to "cut-corner(4%,5%,2%,5%)",
-                //invalid
-                SnyggDefinedVarValue("shenanigans") to null
-            )
-            assertAll(pairs.map { (raw, expected) ->
-                {
-                    assertEquals(expected, percentageEncoder.serialize(raw).getOrNull())
-                }
-            })
-        }
-
-        @Test
-        fun `serialize dp shape values`() {
-            val pairs = listOf(
-                //valid
-                SnyggCutCornerDpShapeValue(4.dp, 5.dp, 2.dp, 5.dp) to "cut-corner(4dp,5dp,2dp,5dp)",
-                //invalid
-                SnyggDefinedVarValue("shenanigans") to null
-            )
-            assertAll(pairs.map { (raw, expected) ->
-                {
-                    assertEquals(expected, dpEncoder.serialize(raw).getOrNull())
-                }
-            })
         }
     }
 
-    @Nested
-    inner class RoundedCorner {
-        val dpEncoder = SnyggRoundedCornerDpShapeValue
-        val percentageEncoder = SnyggRoundedCornerPercentShapeValue
-
-        @Test
-        fun `test default values`() {
-            val pairs = listOf(
-                SnyggRoundedCornerDpShapeValue(0.dp, 0.dp, 0.dp, 0.dp) to dpEncoder.defaultValue(),
-                SnyggRoundedCornerPercentShapeValue(0, 0, 0, 0) to percentageEncoder.defaultValue(),
-                SnyggRoundedCornerDpShapeValue(0.dp, 0.dp, 0.dp, 0.dp).encoder() to dpEncoder,
-                SnyggRoundedCornerPercentShapeValue(0, 0, 0, 0).encoder() to percentageEncoder,
-            )
-            assertAll(pairs.map { (expected, actual) ->
-                {
-                    assertEquals(expected, actual)
-                }
-            })
+    @Test
+    fun `shape codecs reject sibling types and wire forms`() {
+        SHAPE_CODEC_CASES.forEach { target ->
+            SHAPE_CODEC_CASES.filterNot { it.encoder === target.encoder }.forEach { sibling ->
+                assertTrue(target.encoder.serialize(sibling.value).isFailure, "${target.name} accepted ${sibling.name}")
+                assertTrue(
+                    target.encoder.deserialize(sibling.serialized).isFailure,
+                    "${target.name} decoded ${sibling.name}",
+                )
+            }
         }
+    }
 
-        @Test
-        fun `deserialize dp shape values`() {
-            val pairs = listOf(
-                //valid
-                "rounded-corner(4dp,5dp,2dp,5dp)" to SnyggRoundedCornerDpShapeValue(4.dp, 5.dp, 2.dp, 5.dp),
-                //invalid
-                "lelek" to null
-            )
-            assertAll(pairs.map { (raw, expected) ->
-                {
-                    assertEquals(expected, dpEncoder.deserialize(raw).getOrNull())
-                }
-            })
-        }
+    @Test
+    fun `dp corners retain accepted whitespace and decimal forms`() {
+        val decoded = SnyggCutCornerDpShapeValue.deserialize(" cut-corner( 0.0dp , 1.dp , 2dp , 3dp ) ").getOrThrow()
 
-        @Test
-        fun `deserialize percentage shape values`() {
-            val pairs = listOf(
-                //valid
-                "rounded-corner(4%,5%,2%,5%)" to SnyggRoundedCornerPercentShapeValue(4, 5, 2, 5),
-                //invalid
-                "lelek" to null
-            )
-            assertAll(pairs.map { (raw, expected) ->
-                {
-                    assertEquals(expected, percentageEncoder.deserialize(raw).getOrNull())
-                }
-            })
-        }
+        assertEquals(SnyggCutCornerDpShapeValue(0.dp, 1.dp, 2.dp, 3.dp), decoded)
+    }
 
-        @Test
-        fun `serialize percentage shape values`() {
-            val pairs = listOf(
-                //valid
-                SnyggRoundedCornerPercentShapeValue(4, 5, 2, 5) to "rounded-corner(4%,5%,2%,5%)",
-                //invalid
-                SnyggDefinedVarValue("shenanigans") to null
-            )
-            assertAll(pairs.map { (raw, expected) ->
-                {
-                    assertEquals(expected, percentageEncoder.serialize(raw).getOrNull())
-                }
-            })
-        }
+    @Test
+    fun `corner serialization rejects values outside the grammar`() {
+        val invalidDp = SnyggCutCornerDpShapeValue(0.dp, 0.dp, 0.dp, 0.dp).copy(topStart = (-1).dp)
+        val invalidPercent = SnyggRoundedCornerPercentShapeValue(0, 0, 0, 0).copy(topStart = 101)
 
-        @Test
-        fun `serialize dp shape values`() {
-            val pairs = listOf(
-                //valid
-                SnyggRoundedCornerDpShapeValue(4.dp, 5.dp, 2.dp, 5.dp) to "rounded-corner(4dp,5dp,2dp,5dp)",
-                //invalid
-                SnyggDefinedVarValue("shenanigans") to null
-            )
-            assertAll(pairs.map { (raw, expected) ->
-                {
-                    assertEquals(expected, dpEncoder.serialize(raw).getOrNull())
-                }
-            })
+        assertTrue(
+            SnyggCutCornerDpShapeValue.serialize(invalidDp).isFailure,
+        )
+        assertTrue(
+            SnyggRoundedCornerPercentShapeValue.serialize(invalidPercent).isFailure,
+        )
+    }
+
+    @Test
+    fun `corner grammar retains dp and percentage bounds`() {
+        listOf(
+            SnyggCutCornerDpShapeValue to "cut-corner(-1dp,0dp,0dp,0dp)",
+            SnyggRoundedCornerDpShapeValue to "rounded-corner(.5dp,0dp,0dp,0dp)",
+            SnyggCutCornerPercentShapeValue to "cut-corner(101%,0%,0%,0%)",
+            SnyggRoundedCornerPercentShapeValue to "rounded-corner(1.5%,0%,0%,0%)",
+        ).forEach { (encoder, serialized) ->
+            assertTrue(encoder.deserialize(serialized).isFailure, serialized)
         }
     }
 }
