@@ -165,6 +165,18 @@ class SnyggThemeTest {
     }
 
     @Test
+    fun `numeric serialization leaves attribute cascade order unchanged`() {
+        val stylesheet = SnyggStylesheet.v2 {
+            "key"("code" to listOf(-204, -205)) { background = rgbaColor(255, 0, 0) }
+            "key"("code" to listOf(-205)) { background = rgbaColor(0, 0, 255) }
+        }
+
+        val key = SnyggTheme.compileFrom(stylesheet).helperQuery("key", attributes = mapOf("code" to -205))
+
+        assertEquals(Color.Blue, assertIs<SnyggStaticColorValue>(key.background).color)
+    }
+
+    @Test
     fun `theme with broken vars`() {
         val stylesheet = SnyggStylesheet.v2 {
             "key" {

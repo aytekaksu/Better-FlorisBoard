@@ -93,10 +93,10 @@
     "font-size": "12sp",
     "text-overflow": "ellipsis"
   },
-  "key[code=-201,-202,-203]": {
+  "key[code=-203..-201]": {
     "font-size": "18sp"
   },
-  "key[code=-204,-205]": {
+  "key[code=-205,-204]": {
     "font-size": "12sp"
   },
   "key[code=-205]": {

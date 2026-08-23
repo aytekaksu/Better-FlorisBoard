@@ -43,7 +43,7 @@ class SnyggAttributesTest {
         )
         source.add(99)
 
-        assertEquals("[code=1,10,2][mode=`x`]", expected.toString())
+        assertEquals("[code=1,2,10][mode=`x`]", expected.toString())
         assertEquals(listOf("code", "mode"), expected.keys.toList())
         assertEquals(listOf("1", "10", "2"), expected["code"])
         variants.forEach { actual ->
@@ -76,20 +76,28 @@ class SnyggAttributesTest {
     }
 
     @Test
-    fun `serialization keeps the established lexical value order`() {
+    fun `serialization orders integers numerically without changing identity`() {
         val cases = listOf(
-            "[code=2,10]" to "[code=10,2]",
+            "[code=2,10]" to "[code=2,10]",
             "[code=2,1]" to "[code=1,2]",
             "[code=3,1,2]" to "[code=1..3]",
-            "[code=-3,-1,-2]" to "[code=-1,-2,-3]",
-            "[code=-201,-202,-203]" to "[code=-201,-202,-203]",
-            "[code=-204,-205]" to "[code=-204,-205]",
-            "[code=`str`,2,10]" to "[code=10,2,`str`]",
+            "[code=-3,-1,-2]" to "[code=-3..-1]",
+            "[code=-201,-202,-203]" to "[code=-203..-201]",
+            "[code=-204,-205]" to "[code=-205,-204]",
+            "[code=`str`,2,10]" to "[code=2,10,`str`]",
             "[code=`01`]" to "[code=1]",
+            "[code=-2147483648..-2147483646]" to "[code=-2147483648..-2147483646]",
+            "[code=2147483645..2147483647]" to "[code=2147483645..2147483647]",
         )
         cases.forEach { (raw, expected) ->
             assertEquals("key$expected", SnyggRule.fromOrNull("key$raw").toString())
         }
+
+        val legacy = parseAttributes("[code=-201,-202,-203]")
+        val canonical = parseAttributes("[code=-203..-201]")
+        assertEquals(legacy, canonical)
+        assertEquals(legacy.hashCode(), canonical.hashCode())
+        assertEquals(0, legacy.compareTo(canonical))
     }
 
     @Test
@@ -114,6 +122,7 @@ class SnyggAttributesTest {
     fun `parser rejects unsafe ranges without rejecting valid boundaries`() {
         val full = parseAttributes("[code=0..4095]")
         assertEquals(4_096, full["code"]?.size)
+        assertEquals("[code=0..4095]", full.toString())
         assertEquals(full, full.including("code" to 0))
         assertFailsWith<IllegalArgumentException> { full.including("other" to 1) }
         assertNotNull(SnyggRule.fromOrNull("key[code=-2147483648..-2147483646]"))
