@@ -51,8 +51,6 @@ import kotlinx.coroutines.withContext
 
 class HanShapeBasedLanguageProvider(context: Context) : SpellingProvider, SuggestionProvider {
     companion object {
-        // Default user ID used for all subtypes, unless otherwise specified.
-        // See `ime/core/Subtype.kt` Line 210 and 211 for the default usage
         const val ProviderId = "org.florisboard.nlp.providers.han.shape"
 
         private const val DEFAULT_KEY_CODE_ID = "default"
@@ -111,8 +109,6 @@ class HanShapeBasedLanguageProvider(context: Context) : SpellingProvider, Sugges
             }
         }
     }
-
-    override suspend fun preload(subtype: Subtype) = Unit
 
     override suspend fun spell(
         subtype: Subtype,
@@ -193,36 +189,10 @@ class HanShapeBasedLanguageProvider(context: Context) : SpellingProvider, Sugges
         }
     }
 
-    override suspend fun notifySuggestionAccepted(
-        subtype: Subtype,
-        candidate: SuggestionCandidate,
-    ) {
-        flogDebug { "Suggestion accepted, kind=${candidate::class.simpleName}" }
-    }
-
-    override suspend fun notifySuggestionReverted(
-        subtype: Subtype,
-        candidate: SuggestionCandidate,
-    ) {
-        flogDebug { "Suggestion reverted, kind=${candidate::class.simpleName}" }
-    }
-
-    override suspend fun removeSuggestion(
-        subtype: Subtype,
-        candidate: SuggestionCandidate,
-    ): Boolean {
-        flogDebug { "Suggestion removal requested, kind=${candidate::class.simpleName}" }
-        return false
-    }
-
     fun getLanguagePack(subtype: Subtype): Pair<LanguagePackComponent, LanguagePackExtension>? {
         return languagePackState.bindings[subtype.primaryLocale.localeTag()]
             ?.let { binding -> binding.component to binding.extension }
     }
-
-    override suspend fun getListOfWords(subtype: Subtype): List<String> = emptyList()
-
-    override suspend fun getFrequencyForWord(subtype: Subtype, word: String): Double = 0.0
 
     override suspend fun destroy() {
         lifecycleGuard.withLock {

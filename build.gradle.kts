@@ -99,6 +99,7 @@ val formattedKotlinSources = files(
     },
     file("app/src/main/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummary.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycle.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviders.kt"),
     file(
         "app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/" +
             "AutocorrectPerformanceSection.kt",
@@ -141,6 +142,7 @@ val formattedKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyDataPrivacyTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyboardMetadataContractTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycleTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderCapabilityTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/SpellingDiagnosticsTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/composing/ComposerTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/theme/FlorisAssetResolverTest.kt"),
