@@ -26,7 +26,6 @@ import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.LocalNavController
 import dev.patrickgold.florisboard.app.Routes
 import dev.patrickgold.florisboard.dictionaryManager
-import dev.patrickgold.florisboard.extensionManager
 import dev.patrickgold.florisboard.ime.dictionary.FlorisUserDictionaryDatabase
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionArrangement
 import dev.patrickgold.florisboard.lib.compose.FlorisConfirmDeleteDialog
@@ -41,10 +40,6 @@ import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.android.showLongToast
 import org.florisboard.lib.compose.stringRes
 
-class DebugOnPurposeCrashException : Exception(
-    "Success! The app crashed purposely to display this beautiful screen we all love :)"
-)
-
 @Composable
 fun DevtoolsScreen() = FlorisScreen {
     title = stringRes(R.string.devtools__title)
@@ -53,7 +48,6 @@ fun DevtoolsScreen() = FlorisScreen {
     val context = LocalContext.current
     val navController = LocalNavController.current
     val dictionaryManager by context.dictionaryManager()
-    val extensionManager by context.extensionManager()
     val scope = rememberCoroutineScope()
 
     val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
@@ -129,20 +123,13 @@ fun DevtoolsScreen() = FlorisScreen {
             Preference(
                 title = stringRes(R.string.devtools__test_crash_report__label),
                 summary = stringRes(R.string.devtools__test_crash_report__summary),
-                onClick = { throw DebugOnPurposeCrashException() },
+                onClick = { error("Intentional developer crash") },
                 enabledIf = { prefs.devtools.enabled isEqualTo true },
             )
             Preference(
                 title = stringRes(R.string.devtools__debuglog__title),
                 summary = stringRes(R.string.devtools__debuglog__summary),
                 onClick = { navController.navigate(Routes.Devtools.ExportDebugLog) },
-                enabledIf = { prefs.devtools.enabled isEqualTo true },
-            )
-            SwitchPreference(
-                prefs.glide.enabled,
-                title = "prefs.glide.enabled (debug)",
-                summaryOn = "This impacts your performance and may trigger the all keys invisible bug!",
-                summaryOff = "Recommended to keep this off!",
                 enabledIf = { prefs.devtools.enabled isEqualTo true },
             )
         }
@@ -166,7 +153,7 @@ fun DevtoolsScreen() = FlorisScreen {
                             onFailure = { error ->
                                 context.showLongToast(
                                     R.string.devtools__reset_window_config__toast_failure,
-                                    "message" to "${error.localizedMessage}",
+                                    "message" to failureClassName(error),
                                 )
                             },
                         )
@@ -226,27 +213,6 @@ fun DevtoolsScreen() = FlorisScreen {
             Preference(
                 title = "prefs.internal.versionLastChangelog",
                 summary = versionLastChangelog,
-            )
-        }
-
-        PreferenceGroup(title = "ExtensionManager index paths") {
-            Preference(
-                title = "keyboardExtensions",
-                summary = extensionManager.keyboardExtensions.internalModuleDir.absolutePath,
-                onClick = {
-                    scope.launch {
-                        context.showLongToast(extensionManager.keyboardExtensions.internalModuleDir.absolutePath)
-                    }
-                },
-            )
-            Preference(
-                title = "themes",
-                summary = extensionManager.themes.internalModuleDir.absolutePath,
-                onClick = {
-                    scope.launch {
-                        context.showLongToast(extensionManager.themes.internalModuleDir.absolutePath)
-                    }
-                },
             )
         }
 
