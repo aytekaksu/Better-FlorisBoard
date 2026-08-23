@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 The FlorisBoard Contributors
+ * Copyright (C) 2025-2026 The FlorisBoard Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import dev.patrickgold.florisboard.lib.ValidationResult
 
+@Suppress("FunctionNaming")
 @Composable
-fun Validation(
-    showValidationErrors: Boolean,
-    validationResult: ValidationResult?,
-) {
+fun Validation(showValidationErrors: Boolean, validationResult: ValidationResult?) {
     if (showValidationErrors) {
         if (validationResult is ValidationResult.Valid && validationResult.hasHintMessage()) {
             Text(
@@ -34,7 +32,7 @@ fun Validation(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
             )
         }
-        if (validationResult is ValidationResult.Invalid && validationResult.hasErrorMessage()) {
+        if (validationResult is ValidationResult.Invalid) {
             Text(
                 text = validationResult.errorMessage(),
                 style = MaterialTheme.typography.bodyMedium,
