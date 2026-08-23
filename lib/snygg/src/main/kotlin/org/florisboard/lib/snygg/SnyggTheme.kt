@@ -23,14 +23,14 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import org.florisboard.lib.color.getColor
 import org.florisboard.lib.snygg.value.SnyggAssetResolver
+import org.florisboard.lib.snygg.value.SnyggDefaultAssetResolver
 import org.florisboard.lib.snygg.value.SnyggDefinedVarValue
 import org.florisboard.lib.snygg.value.SnyggDynamicDarkColorValue
 import org.florisboard.lib.snygg.value.SnyggDynamicLightColorValue
-import org.florisboard.lib.snygg.value.SnyggDefaultAssetResolver
 import org.florisboard.lib.snygg.value.SnyggFontStyleValue
 import org.florisboard.lib.snygg.value.SnyggFontWeightValue
-import org.florisboard.lib.snygg.value.SnyggUndefinedValue
 import org.florisboard.lib.snygg.value.SnyggStaticColorValue
+import org.florisboard.lib.snygg.value.SnyggUndefinedValue
 import org.florisboard.lib.snygg.value.SnyggUriValue
 import java.io.File
 
@@ -79,11 +79,11 @@ data class SnyggTheme internal constructor(
         for ((key, value) in editor.properties) {
             if (value is SnyggDynamicLightColorValue) {
                 editor.properties[key] = SnyggStaticColorValue(
-                    color = dynamicLightColorScheme.getColor(value.colorName)
+                    color = dynamicLightColorScheme.getColor(value.colorName),
                 )
             } else if (value is SnyggDynamicDarkColorValue) {
                 editor.properties[key] = SnyggStaticColorValue(
-                    color = dynamicDarkColorScheme.getColor(value.colorName)
+                    color = dynamicDarkColorScheme.getColor(value.colorName),
                 )
             }
         }
@@ -104,6 +104,7 @@ data class SnyggTheme internal constructor(
                         check(propertySet is SnyggSinglePropertySet)
                         variablesSet = propertySet
                     }
+
                     is SnyggAnnotationRule.Font -> {
                         check(propertySet is SnyggMultiplePropertySets)
                         val fontList = fonts.getOrDefault(rule.fontName, mutableListOf())
@@ -118,13 +119,14 @@ data class SnyggTheme internal constructor(
                                     file = File(fontPath),
                                     weight = fontWeight ?: FontWeight.Normal,
                                     style = fontStyle ?: FontStyle.Normal,
-                                )
+                                ),
                             )
                         }
                         if (fontList.isNotEmpty()) {
                             fonts.put(rule.fontName, fontList)
                         }
                     }
+
                     is SnyggElementRule -> {
                         check(propertySet is SnyggSinglePropertySet)
                         val list = elements.getOrDefault(rule.elementName, mutableListOf())
@@ -158,21 +160,7 @@ data class SnyggTheme internal constructor(
 private fun SnyggElementRule.isMatchForQuery(
     queryAttributes: SnyggQueryAttributes,
     querySelector: SnyggSelector,
-): Boolean {
-    return selector.isMatchForQuery(querySelector) &&
-        attributes.isMatchForQuery(queryAttributes)
-}
+): Boolean = selector.isMatchForQuery(querySelector) &&
+    attributes.matches(queryAttributes)
 
-private fun SnyggAttributes.isMatchForQuery(query: SnyggQueryAttributes): Boolean {
-    for ((attrKey, attrValues) in this) {
-        val queryValue = query[attrKey]?.toString() ?: return false
-        if (!attrValues.contains(queryValue)) {
-            return false
-        }
-    }
-    return true
-}
-
-private fun SnyggSelector.isMatchForQuery(query: SnyggSelector): Boolean {
-    return this == SnyggSelector.NONE || this == query
-}
+private fun SnyggSelector.isMatchForQuery(query: SnyggSelector): Boolean = this == SnyggSelector.NONE || this == query
