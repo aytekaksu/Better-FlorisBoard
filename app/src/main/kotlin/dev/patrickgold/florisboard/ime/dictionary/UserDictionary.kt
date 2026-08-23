@@ -16,8 +16,8 @@
 
 package dev.patrickgold.florisboard.ime.dictionary
 
-import android.content.ContentValues
 import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.net.Uri
@@ -123,10 +123,7 @@ internal fun storedUserDictionaryLocale(value: String): Locale? {
     }.getOrNull()
 }
 
-internal data class SystemUserDictionaryPage(
-    val entries: List<UserDictionaryEntry>,
-    val nextAfterId: Long?,
-)
+internal data class SystemUserDictionaryPage(val entries: List<UserDictionaryEntry>, val nextAfterId: Long?)
 
 @Entity(tableName = WORDS_TABLE)
 data class UserDictionaryEntry(
@@ -153,10 +150,14 @@ interface UserDictionaryDao {
     @Query(SELECT_ALL_FROM_WORDS)
     fun queryAll(): List<UserDictionaryEntry>
 
-    @Query("$SELECT_ALL_FROM_WORDS WHERE (${UserDictionary.Words.LOCALE} = :locale AND :locale IS NOT NULL) OR (${UserDictionary.Words.LOCALE} IS NULL AND :locale IS NULL)")
+    @Query(
+        "$SELECT_ALL_FROM_WORDS WHERE (${UserDictionary.Words.LOCALE} = :locale AND :locale IS NOT NULL) OR (${UserDictionary.Words.LOCALE} IS NULL AND :locale IS NULL)",
+    )
     fun queryAll(locale: FlorisLocale?): List<UserDictionaryEntry>
 
-    @Query("$SELECT_ALL_FROM_WORDS WHERE ${UserDictionary.Words.WORD} = :word AND (${UserDictionary.Words.LOCALE} = :locale OR (${UserDictionary.Words.LOCALE} IS NULL AND :locale IS NULL))")
+    @Query(
+        "$SELECT_ALL_FROM_WORDS WHERE ${UserDictionary.Words.WORD} = :word AND (${UserDictionary.Words.LOCALE} = :locale OR (${UserDictionary.Words.LOCALE} IS NULL AND :locale IS NULL))",
+    )
     fun queryExact(word: String, locale: FlorisLocale?): List<UserDictionaryEntry>
 
     @Query("SELECT DISTINCT ${UserDictionary.Words.LOCALE} FROM $WORDS_TABLE")
@@ -192,33 +193,43 @@ interface UserDictionaryDatabase {
                     var shortcut: String? = null
                     for (property in line.split(';')) {
                         val keyValuePair = property.split('=')
-                        check(keyValuePair.size == 2) { "Error at source line `$line`: Key-Value pair expected, but either only key or too many values provided" }
+                        check(keyValuePair.size == 2) {
+                            "Error at source line `$line`: Key-Value pair expected, but either only key or too many values provided"
+                        }
                         val key = keyValuePair[0].trim().lowercase()
                         val value = keyValuePair[1].trim()
                         when (key) {
                             "w", "word" -> word = value.ifBlank { null }
+
                             "f", "freq" -> {
                                 val number = value.toIntOrNull(10)
-                                checkNotNull(number) { "Error at source line `$line`: Freq is not a valid decimal number" }
+                                checkNotNull(number) {
+                                    "Error at source line `$line`: Freq is not a valid decimal number"
+                                }
                                 check(number in FREQUENCY_MIN..FREQUENCY_MAX) {
                                     "Error at source line `$line`: Freq not within range of $FREQUENCY_MIN and $FREQUENCY_MAX"
                                 }
                                 freq = number
                             }
+
                             "l", "locale" -> locale = when (value) {
                                 "all", "null", "" -> null
                                 else -> value.ifBlank { null }
                             }
+
                             "s", "shortcut" -> shortcut = value.ifBlank { null }
                         }
                     }
                     checkNotNull(word) { "Error at source line `$line`: Word cannot be empty or missing" }
                     checkNotNull(freq) { "Error at source line `$line`: Freq cannot be empty or missing" }
                     val alreadyExistingEntries = userDictionaryDao().queryExact(
-                        word, locale?.let { FlorisLocale.fromTag(it) },
+                        word,
+                        locale?.let { FlorisLocale.fromTag(it) },
                     )
                     if (alreadyExistingEntries.isNotEmpty()) {
-                        userDictionaryDao().update(UserDictionaryEntry(alreadyExistingEntries[0].id, word, freq, locale, shortcut))
+                        userDictionaryDao().update(
+                            UserDictionaryEntry(alreadyExistingEntries[0].id, word, freq, locale, shortcut),
+                        )
                     } else {
                         userDictionaryDao().insert(UserDictionaryEntry(0, word, freq, locale, shortcut))
                     }
@@ -262,7 +273,9 @@ interface UserDictionaryDatabase {
 
 @Database(entities = [UserDictionaryEntry::class], version = 1)
 @TypeConverters(FlorisUserDictionaryDatabase.Converters::class)
-abstract class FlorisUserDictionaryDatabase : RoomDatabase(), UserDictionaryDatabase {
+abstract class FlorisUserDictionaryDatabase :
+    RoomDatabase(),
+    UserDictionaryDatabase {
     companion object {
         const val DB_FILE_NAME = "floris_user_dictionary"
     }
@@ -271,19 +284,15 @@ abstract class FlorisUserDictionaryDatabase : RoomDatabase(), UserDictionaryData
 
     class Converters {
         @TypeConverter
-        fun localeToString(locale: FlorisLocale?): String? {
-            return when (locale) {
-                null -> null
-                else -> locale.localeTag()
-            }
+        fun localeToString(locale: FlorisLocale?): String? = when (locale) {
+            null -> null
+            else -> locale.localeTag()
         }
 
         @TypeConverter
-        fun stringToLocale(string: String?): FlorisLocale? {
-            return when (string) {
-                null, "all", "null", "" -> null
-                else -> FlorisLocale.fromTag(string)
-            }
+        fun stringToLocale(string: String?): FlorisLocale? = when (string) {
+            null, "all", "null", "" -> null
+            else -> FlorisLocale.fromTag(string)
         }
     }
 }
@@ -305,11 +314,7 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
             ?: false
     }.getOrDefault(false)
 
-    internal fun queryPage(
-        afterId: Long,
-        limit: Int,
-        allowedLocales: List<Locale>,
-    ): SystemUserDictionaryPage? {
+    internal fun queryPage(afterId: Long, limit: Int, allowedLocales: List<Locale>): SystemUserDictionaryPage? {
         if (!isAccessible()) return null
         val cursor = runCatching {
             applicationContext.contentResolver.query(
@@ -383,8 +388,7 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
         }
     }
 
-    private fun String.compatibleWith(other: String) =
-        isEmpty() || other.isEmpty() || equals(other, ignoreCase = true)
+    private fun String.compatibleWith(other: String) = isEmpty() || other.isEmpty() || equals(other, ignoreCase = true)
 
     private fun UserDictionaryEntry.toContentValues(includeAppId: Boolean) =
         ContentValues(if (includeAppId) 5 else 4).apply {
@@ -395,66 +399,57 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
             put(UserDictionary.Words.SHORTCUT, shortcut)
         }
 
-    private fun insertEntry(entry: UserDictionaryEntry): Long? =
-        applicationContext.contentResolver.insert(
-            UserDictionary.Words.CONTENT_URI,
-            entry.toContentValues(includeAppId = true),
-        )?.lastPathSegment?.toLongOrNull()?.takeIf { it > 0L }
+    private fun insertEntry(entry: UserDictionaryEntry): Long? = applicationContext.contentResolver.insert(
+        UserDictionary.Words.CONTENT_URI,
+        entry.toContentValues(includeAppId = true),
+    )?.lastPathSegment?.toLongOrNull()?.takeIf { it > 0L }
 
-    private fun updateEntry(entry: UserDictionaryEntry): Int =
-        applicationContext.contentResolver.update(
-            ContentUris.withAppendedId(UserDictionary.Words.CONTENT_URI, entry.id),
-            entry.toContentValues(includeAppId = false),
-            null,
-            null,
-        )
+    private fun updateEntry(entry: UserDictionaryEntry): Int = applicationContext.contentResolver.update(
+        ContentUris.withAppendedId(UserDictionary.Words.CONTENT_URI, entry.id),
+        entry.toContentValues(includeAppId = false),
+        null,
+        null,
+    )
 
-    private fun deleteEntry(id: Long): Int =
-        applicationContext.contentResolver.delete(
-            ContentUris.withAppendedId(UserDictionary.Words.CONTENT_URI, id),
-            null,
-            null,
-        )
+    private fun deleteEntry(id: Long): Int = applicationContext.contentResolver.delete(
+        ContentUris.withAppendedId(UserDictionary.Words.CONTENT_URI, id),
+        null,
+        null,
+    )
 
     private val dao = object : UserDictionaryDao {
-        override fun queryAll(): List<UserDictionaryEntry> {
-            return queryResolver(
-                selection = null,
+        override fun queryAll(): List<UserDictionaryEntry> = queryResolver(
+            selection = null,
+            selectionArgs = null,
+            sortOrder = SORT_BY_FREQ_DESC,
+        )
+
+        override fun queryAll(locale: FlorisLocale?): List<UserDictionaryEntry> = if (locale == null) {
+            queryResolver(
+                selection = "${UserDictionary.Words.LOCALE} IS NULL",
                 selectionArgs = null,
+                sortOrder = SORT_BY_FREQ_DESC,
+            )
+        } else {
+            queryResolver(
+                selection = "${UserDictionary.Words.LOCALE} = ?",
+                selectionArgs = arrayOf(locale.localeTag()),
                 sortOrder = SORT_BY_FREQ_DESC,
             )
         }
 
-        override fun queryAll(locale: FlorisLocale?): List<UserDictionaryEntry> {
-            return if (locale == null) {
-                queryResolver(
-                    selection = "${UserDictionary.Words.LOCALE} IS NULL",
-                    selectionArgs = null,
-                    sortOrder = SORT_BY_FREQ_DESC,
-                )
-            } else {
-                queryResolver(
-                    selection = "${UserDictionary.Words.LOCALE} = ?",
-                    selectionArgs = arrayOf(locale.localeTag()),
-                    sortOrder = SORT_BY_FREQ_DESC,
-                )
-            }
-        }
-
-        override fun queryExact(word: String, locale: FlorisLocale?): List<UserDictionaryEntry> {
-            return if (locale == null) {
-                queryResolver(
-                    selection = "${UserDictionary.Words.WORD} = ? AND ${UserDictionary.Words.LOCALE} IS NULL",
-                    selectionArgs = arrayOf(word),
-                    sortOrder = SORT_BY_FREQ_DESC,
-                )
-            } else {
-                queryResolver(
-                    selection = "${UserDictionary.Words.WORD} = ? AND ${UserDictionary.Words.LOCALE} = ?",
-                    selectionArgs = arrayOf(word, locale.localeTag()),
-                    sortOrder = SORT_BY_FREQ_DESC,
-                )
-            }
+        override fun queryExact(word: String, locale: FlorisLocale?): List<UserDictionaryEntry> = if (locale == null) {
+            queryResolver(
+                selection = "${UserDictionary.Words.WORD} = ? AND ${UserDictionary.Words.LOCALE} IS NULL",
+                selectionArgs = arrayOf(word),
+                sortOrder = SORT_BY_FREQ_DESC,
+            )
+        } else {
+            queryResolver(
+                selection = "${UserDictionary.Words.WORD} = ? AND ${UserDictionary.Words.LOCALE} = ?",
+                selectionArgs = arrayOf(word, locale.localeTag()),
+                sortOrder = SORT_BY_FREQ_DESC,
+            )
         }
 
         override fun queryLanguageList(): List<FlorisLocale?> {
@@ -464,7 +459,7 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
                 PROJECTIONS_LANGUAGE,
                 null,
                 null,
-                null
+                null,
             )?.use { cursor ->
                 if (cursor.count <= 0) {
                     return@use emptyList()
@@ -479,14 +474,18 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
             } ?: emptyList()
         }
 
-        private fun queryResolver(selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): List<UserDictionaryEntry> {
+        private fun queryResolver(
+            selection: String?,
+            selectionArgs: Array<out String>?,
+            sortOrder: String?,
+        ): List<UserDictionaryEntry> {
             val resolver = applicationContext.contentResolver
             return resolver.query(
                 UserDictionary.Words.CONTENT_URI,
                 PROJECTIONS,
                 selection,
                 selectionArgs,
-                sortOrder
+                sortOrder,
             )?.use(::parseEntries) ?: emptyList()
         }
 
@@ -507,88 +506,85 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
                         word = cursor.getString(wordIndex),
                         freq = cursor.getInt(freqIndex),
                         locale = cursor.getString(localeIndex),
-                        shortcut = cursor.getString(shortcutIndex)
-                    )
+                        shortcut = cursor.getString(shortcutIndex),
+                    ),
                 )
             }
             return retList
         }
 
-        override fun insert(entry: UserDictionaryEntry): Long {
-            return insertEntry(entry) ?: 0L
-        }
+        override fun insert(entry: UserDictionaryEntry): Long = insertEntry(entry) ?: 0L
 
-        override fun update(entry: UserDictionaryEntry): Int {
-            return updateEntry(entry)
-        }
+        override fun update(entry: UserDictionaryEntry): Int = updateEntry(entry)
 
-        override fun delete(entry: UserDictionaryEntry): Int {
-            return deleteEntry(entry.id)
-        }
+        override fun delete(entry: UserDictionaryEntry): Int = deleteEntry(entry.id)
 
         override fun deleteAll() {
             // Unsupported action
         }
     }
 
-    override fun userDictionaryDao(): UserDictionaryDao {
-        return dao
-    }
+    override fun userDictionaryDao(): UserDictionaryDao = dao
 }
 
 object UserDictionaryValidation {
     private val WordRegex = """^[^\s;,]+${'$'}""".toRegex()
 
-    val Word = ValidationRule<String> {
-        forKlass = UserDictionaryEntry::class
-        forProperty = "word"
-        validator { input ->
-            val str = input.trim()
-            when {
-                input.isBlank() -> resultInvalid(error = R.string.settings__udm__dialog__word_error_empty)
-                !str.matches(WordRegex) -> resultInvalid(error = R.string.settings__udm__dialog__word_error_invalid, "regex" to WordRegex)
-                else -> resultValid()
-            }
+    val Word = ValidationRule<String> { input ->
+        val str = input.trim()
+        when {
+            input.isBlank() -> resultInvalid(error = R.string.settings__udm__dialog__word_error_empty)
+
+            !str.matches(WordRegex) -> resultInvalid(
+                error = R.string.settings__udm__dialog__word_error_invalid,
+                "regex" to WordRegex,
+            )
+
+            else -> resultValid()
         }
     }
 
-    val Freq = ValidationRule<String> {
-        forKlass = UserDictionaryEntry::class
-        forProperty = "freq"
-        validator { input ->
-            val freq = input.trim().toIntOrNull(10)
-            when {
-                input.isBlank() -> resultInvalid(error = R.string.settings__udm__dialog__freq_error_empty)
-                freq == null -> resultInvalid(error = R.string.settings__udm__dialog__freq_error_empty)
-                freq < FREQUENCY_MIN || freq > FREQUENCY_MAX -> resultInvalid(error = R.string.settings__udm__dialog__freq_error_invalid)
-                else -> resultValid()
+    val Freq = ValidationRule<String> { input ->
+        val freq = input.trim().toIntOrNull(10)
+        when {
+            input.isBlank() -> resultInvalid(error = R.string.settings__udm__dialog__freq_error_empty)
+
+            freq == null -> resultInvalid(error = R.string.settings__udm__dialog__freq_error_empty)
+
+            freq !in FREQUENCY_MIN..FREQUENCY_MAX -> {
+                resultInvalid(error = R.string.settings__udm__dialog__freq_error_invalid)
             }
+
+            else -> resultValid()
         }
     }
 
-    val Shortcut = ValidationRule<String> {
-        forKlass = UserDictionaryEntry::class
-        forProperty = "shortcut"
-        validator { input ->
-            val str = input.trim()
-            when {
-                input.isBlank() -> resultValid() // Is optional
-                !str.matches(WordRegex) -> resultInvalid(error = R.string.settings__udm__dialog__shortcut_error_invalid, "regex" to WordRegex)
-                else -> resultValid()
-            }
+    val Shortcut = ValidationRule<String> { input ->
+        val str = input.trim()
+        when {
+            // Optional fields may be blank.
+            input.isBlank() -> resultValid()
+
+            !str.matches(WordRegex) -> resultInvalid(
+                error = R.string.settings__udm__dialog__shortcut_error_invalid,
+                "regex" to WordRegex,
+            )
+
+            else -> resultValid()
         }
     }
 
-    val Locale = ValidationRule<String> {
-        forKlass = UserDictionaryEntry::class
-        forProperty = "locale"
-        validator { input ->
-            val str = input.trim()
-            when {
-                input.isBlank() -> resultValid() // Is optional
-                tryOrNull { FlorisLocale.fromTag(str) } == null -> resultInvalid(error = R.string.settings__udm__dialog__locale_error_invalid)
-                else -> resultValid()
+    val Locale = ValidationRule<String> { input ->
+        val str = input.trim()
+        when {
+            // Optional fields may be blank.
+            input.isBlank() -> resultValid()
+
+            tryOrNull { FlorisLocale.fromTag(str) } == null -> {
+                resultInvalid(error = R.string.settings__udm__dialog__locale_error_invalid)
             }
+
+            else -> resultValid()
         }
     }
 }

@@ -85,6 +85,10 @@ val qualityKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacySmartbarPreferencePayloadTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardCache.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardCacheTest.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/Validation.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/compose/Validation.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/ext/ExtensionValidation.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/ValidationRuleTest.kt"),
     backupArchiveKotlinSources,
     extensionHardeningKotlinSources,
     fileTree("lib/autocorrect-api/src") {
@@ -100,6 +104,7 @@ val formattedKotlinSources = files(
         include("**/*.kt")
     },
     file("app/src/main/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummary.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/dictionary/UserDictionary.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycle.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviders.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/popup/PopupMapping.kt"),
@@ -126,6 +131,9 @@ val formattedKotlinSources = files(
             "TextKeyboardInteractionPolicy.kt",
     ),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardCache.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/Validation.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/compose/Validation.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/ext/ExtensionValidation.kt"),
     file("app/src/androidTest/kotlin/org/florisboard/lib/kotlin/CurlyFormatAndroidTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummaryTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceMigrationTest.kt"),
@@ -151,6 +159,7 @@ val formattedKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/composing/ComposerTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardCacheTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/theme/FlorisAssetResolverTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/ValidationRuleTest.kt"),
     file(
         "app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/" +
             "AutocorrectPluginDiagnosticsTest.kt",
