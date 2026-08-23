@@ -213,7 +213,7 @@ class HanShapeBasedLanguageProvider(context: Context) : SpellingProvider, Sugges
         }
     }
 
-    override suspend fun determineLocalComposing(
+    override fun determineLocalComposing(
         subtype: Subtype,
         textBeforeSelection: CharSequence,
         breakIterators: BreakIteratorGroup,

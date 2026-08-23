@@ -90,7 +90,7 @@ interface SuggestionProvider : NlpProvider {
      * Finds the composing range at the end of [textBeforeSelection]. Providers may override this
      * for scripts whose boundaries differ from the default word iterator.
      */
-    suspend fun determineLocalComposing(
+    fun determineLocalComposing(
         subtype: Subtype,
         textBeforeSelection: CharSequence,
         breakIterators: BreakIteratorGroup,
@@ -153,3 +153,15 @@ object FallbackNlpProvider : SpellingProvider, SuggestionProvider {
         isPrivateSession: Boolean,
     ) = emptyList<SuggestionCandidate>()
 }
+
+internal fun NlpProvider?.asSpellingProviderOrFallback(): SpellingProvider =
+    this as? SpellingProvider ?: FallbackNlpProvider
+
+internal fun NlpProvider?.asSuggestionProviderOrFallback(): SuggestionProvider =
+    this as? SuggestionProvider ?: FallbackNlpProvider
+
+internal fun selectActiveSuggestionProvider(
+    builtInProvider: SuggestionProvider,
+    externalProvider: SuggestionProvider,
+    externalProviderId: String,
+) = if (externalProviderId.isNotBlank()) externalProvider else builtInProvider

@@ -48,13 +48,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.florisboard.autocorrect.api.AutocorrectPluginContract
 import org.florisboard.lib.android.AndroidKeyguardManager
 import org.florisboard.lib.android.systemService
-import org.florisboard.lib.kotlin.guardedByLock
 import org.florisboard.lib.kotlin.collectLatestIn
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.properties.Delegates
@@ -293,14 +291,11 @@ class NlpManager(context: Context) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val clipboardSuggestionProvider = ClipboardSuggestionProvider(context)
     private val emojiSuggestionProvider = EmojiSuggestionProvider(context)
-    private val providers = guardedByLock {
-        mapOf(
-            LatinLanguageProvider.ProviderId to ProviderInstanceWrapper(LatinLanguageProvider(context)),
-            HanShapeBasedLanguageProvider.ProviderId to ProviderInstanceWrapper(HanShapeBasedLanguageProvider(context)),
-        )
-    }
-    // lock unnecessary because values constant
-    private val providersForceSuggestionOn = mutableMapOf<String, Boolean>()
+    private val providers = mapOf(
+        LatinLanguageProvider.ProviderId to ProviderInstanceWrapper(LatinLanguageProvider(context)),
+        HanShapeBasedLanguageProvider.ProviderId to ProviderInstanceWrapper(HanShapeBasedLanguageProvider(context)),
+    )
+    private val providerLifecycleGate = Mutex()
 
     private val candidateAssemblyRevision = CandidateRevision()
     private val candidateRequestRevision = CandidateRevision()
@@ -377,13 +372,28 @@ class NlpManager(context: Context) {
     }
 
     private suspend fun getSpellingProvider(subtype: Subtype): SpellingProvider {
-        return providers.withLock { it[subtype.nlpProviders.spelling] }?.provider as? SpellingProvider
-            ?: FallbackNlpProvider
+        return providerLifecycleGate.withLock {
+            providers[subtype.nlpProviders.spelling]?.provider.asSpellingProviderOrFallback()
+        }
+    }
+
+    private fun resolveBuiltInSuggestionProvider(subtype: Subtype): SuggestionProvider {
+        return providers[subtype.nlpProviders.suggestion]?.provider.asSuggestionProviderOrFallback()
+    }
+
+    private fun resolveSuggestionProvider(subtype: Subtype): SuggestionProvider {
+        // Editor metadata is synchronous; actual provider requests use the gated getter below.
+        return selectActiveSuggestionProvider(
+            builtInProvider = resolveBuiltInSuggestionProvider(subtype),
+            externalProvider = autocorrectPluginManager,
+            externalProviderId = prefs.suggestion.autocorrectPluginComponent.get(),
+        )
     }
 
     private suspend fun getBuiltInSuggestionProvider(subtype: Subtype): SuggestionProvider {
-        return providers.withLock { it[subtype.nlpProviders.suggestion] }?.provider as? SuggestionProvider
-            ?: FallbackNlpProvider
+        return providerLifecycleGate.withLock {
+            resolveBuiltInSuggestionProvider(subtype)
+        }
     }
 
     private suspend fun getSuggestionProvider(subtype: Subtype): SuggestionProvider {
@@ -409,7 +419,7 @@ class NlpManager(context: Context) {
 
     private suspend fun preloadProviders(subtype: Subtype) {
         emojiSuggestionProvider.preload(subtype)
-        providers.withLock { providers ->
+        providerLifecycleGate.withLock {
             subtype.nlpProviders.forEach { _, providerId ->
                 providers[providerId]?.let { provider ->
                     provider.createIfNecessary()
@@ -441,21 +451,17 @@ class NlpManager(context: Context) {
         )
     }
 
-    suspend fun determineLocalComposing(
+    fun determineLocalComposing(
         textBeforeSelection: CharSequence, breakIterators: BreakIteratorGroup, localLastCommitPosition: Int
     ): EditorRange {
-        return getSuggestionProvider(subtypeManager.activeSubtype).determineLocalComposing(
-            subtypeManager.activeSubtype, textBeforeSelection, breakIterators, localLastCommitPosition
+        val subtype = subtypeManager.activeSubtype
+        return resolveSuggestionProvider(subtype).determineLocalComposing(
+            subtype, textBeforeSelection, breakIterators, localLastCommitPosition
         )
     }
 
     fun providerForcesSuggestionOn(subtype: Subtype): Boolean {
-        // Using a cache because I have no idea how fast the runBlocking is
-        return providersForceSuggestionOn.getOrPut(subtype.nlpProviders.suggestion) {
-            runBlocking {
-                getSuggestionProvider(subtype).forcesSuggestionOn
-            }
-        }
+        return resolveSuggestionProvider(subtype).forcesSuggestionOn
     }
 
     fun isSuggestionOn(): Boolean =
@@ -710,10 +716,6 @@ class NlpManager(context: Context) {
 
         suspend fun preload(subtype: Subtype) {
             provider.preload(subtype)
-        }
-
-        suspend fun destroyIfNecessary() {
-            lifecycle.destroyIfNecessary(provider::destroy)
         }
     }
 

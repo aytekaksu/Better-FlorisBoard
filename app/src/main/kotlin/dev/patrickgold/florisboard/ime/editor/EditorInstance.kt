@@ -43,7 +43,6 @@ import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
 import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.subtypeManager
 import java.util.concurrent.atomic.AtomicInteger
-import kotlinx.coroutines.runBlocking
 import org.florisboard.lib.android.showShortToast
 
 internal inline fun dispatchMediaPasteContent(
@@ -307,20 +306,18 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         if (localEndpoint !in 0..content.text.length) return null
 
         val stepCount = kotlin.math.abs(steps)
-        val movement = runBlocking {
-            if (steps < 0) {
-                breakIterators.measureLastUChars(
-                    content.text.substring(0, localEndpoint),
-                    stepCount,
-                    subtypeManager.activeSubtype.primaryLocale,
-                )
-            } else {
-                breakIterators.measureUChars(
-                    content.text.substring(localEndpoint),
-                    stepCount,
-                    subtypeManager.activeSubtype.primaryLocale,
-                )
-            }
+        val movement = if (steps < 0) {
+            breakIterators.measureLastUChars(
+                content.text.substring(0, localEndpoint),
+                stepCount,
+                subtypeManager.activeSubtype.primaryLocale,
+            )
+        } else {
+            breakIterators.measureUChars(
+                content.text.substring(localEndpoint),
+                stepCount,
+                subtypeManager.activeSubtype.primaryLocale,
+            )
         }
         val next = state.movedBy(steps, movement)
         return next.takeIf { setSelection(it.selection.start, it.selection.end) }
@@ -596,9 +593,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         phantomSpace.setInactive()
         return if (content.selection.isSelectionMode) {
             commitText("")
-        } else runBlocking {
-            deleteAroundCursor(unit, OperationScope.BEFORE_CURSOR, n = 1)
-        }
+        } else deleteAroundCursor(unit, OperationScope.BEFORE_CURSOR, n = 1)
     }
 
     /**
@@ -614,9 +609,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         phantomSpace.setInactive()
         return if (content.selection.isSelectionMode) {
             commitText("")
-        } else runBlocking {
-            deleteAroundCursor(unit, OperationScope.AFTER_CURSOR, n = 1)
-        }
+        } else deleteAroundCursor(unit, OperationScope.AFTER_CURSOR, n = 1)
     }
 
     fun setSelectionSurrounding(n: Int, unit: OperationUnit, scope: OperationScope): Boolean {
@@ -632,11 +625,9 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
                     return setSelection(selection.end, selection.end)
                 }
                 val textToAnalyze = content.text.substring(0, content.localSelection.end)
-                val length = runBlocking {
-                    when (unit) {
-                        OperationUnit.CHARACTERS -> breakIterators.measureLastUChars(textToAnalyze, n)
-                        OperationUnit.WORDS -> breakIterators.measureLastUWords(textToAnalyze, n)
-                    }
+                val length = when (unit) {
+                    OperationUnit.CHARACTERS -> breakIterators.measureLastUChars(textToAnalyze, n)
+                    OperationUnit.WORDS -> breakIterators.measureLastUWords(textToAnalyze, n)
                 }
                 return setSelection((selection.end - length).coerceAtLeast(safeEditorBounds.start), selection.end)
             }
@@ -645,11 +636,9 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
                     return setSelection(selection.start, selection.start)
                 }
                 val textToAnalyze = content.text.substring(content.localSelection.start)
-                val length = runBlocking {
-                    when (unit) {
-                        OperationUnit.CHARACTERS -> breakIterators.measureUChars(textToAnalyze, n)
-                        OperationUnit.WORDS -> breakIterators.measureUWords(textToAnalyze, n)
-                    }
+                val length = when (unit) {
+                    OperationUnit.CHARACTERS -> breakIterators.measureUChars(textToAnalyze, n)
+                    OperationUnit.WORDS -> breakIterators.measureUWords(textToAnalyze, n)
                 }
                 return setSelection(selection.start, (selection.start + length).coerceAtMost(safeEditorBounds.end))
             }

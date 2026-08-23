@@ -74,6 +74,7 @@ val qualityKotlinSources = files(
     fileTree("app/src") {
         include("**/ime/nlp/plugin/**/*.kt")
     },
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/FlorisSpellCheckerService.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceMigrationTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceSchemaContractTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/app/FlorisPreferencePersistence.kt"),
@@ -85,6 +86,10 @@ val qualityKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacySmartbarPreferencePayloadTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/popup/PopupSet.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/popup/PopupSetTest.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/BreakIteratorGroup.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviders.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderCapabilityTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/editor/AutoCorrectionRevertTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickAction.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickActionPresentationTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardCache.kt"),
@@ -118,7 +123,9 @@ val formattedKotlinSources = files(
         include("**/*.kt")
     },
     file("app/src/main/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummary.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/FlorisSpellCheckerService.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/dictionary/UserDictionary.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/BreakIteratorGroup.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycle.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviders.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/popup/PopupMapping.kt"),
@@ -181,6 +188,7 @@ val formattedKotlinSources = files(
     ),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyDataPrivacyTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyboardMetadataContractTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/editor/AutoCorrectionRevertTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycleTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderCapabilityTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/SpellingDiagnosticsTest.kt"),
