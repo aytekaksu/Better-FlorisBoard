@@ -26,12 +26,13 @@ import dev.patrickgold.florisboard.ime.nlp.SpellingResult
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
 import dev.patrickgold.florisboard.ime.nlp.SuggestionProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import org.florisboard.lib.android.readText
-import org.florisboard.lib.kotlin.guardedByLock
 
 class LatinLanguageProvider(context: Context) :
     SpellingProvider,
@@ -43,13 +44,14 @@ class LatinLanguageProvider(context: Context) :
 
     private val appContext by context.appContext()
 
-    private val wordData = guardedByLock { mutableMapOf<String, Int>() }
+    private val wordDataLock = Mutex()
+    private val wordData = mutableMapOf<String, Int>()
     private val wordDataSerializer = MapSerializer(String.serializer(), Int.serializer())
 
     override val providerId = ProviderId
 
     override suspend fun preload(subtype: Subtype) = withContext(Dispatchers.IO) {
-        wordData.withLock { wordData ->
+        wordDataLock.withLock {
             if (wordData.isEmpty()) {
                 val rawData = appContext.assets.readText("ime/dict/data.json")
                 val jsonData = Json.decodeFromString(wordDataSerializer, rawData)
@@ -86,8 +88,8 @@ class LatinLanguageProvider(context: Context) :
         isPrivateSession: Boolean,
     ) = emptyList<SuggestionCandidate>()
 
-    override suspend fun getWords(subtype: Subtype) = wordData.withLock { it.keys.toList() }
+    override suspend fun getWords(subtype: Subtype) = wordDataLock.withLock { wordData.keys.toList() }
 
     override suspend fun getWordFrequency(subtype: Subtype, word: String) =
-        wordData.withLock { it.getOrDefault(word, 0) / 255.0 }
+        wordDataLock.withLock { wordData.getOrDefault(word, 0) / 255.0 }
 }
