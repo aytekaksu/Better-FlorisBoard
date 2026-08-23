@@ -46,7 +46,7 @@ fun ThirdPartyLicensesScreen() = FlorisScreen {
             libraries = libs,
             modifier = Modifier
                 .fillMaxSize()
-                .florisScrollbar(lazyListState, isVertical = true),
+                .florisScrollbar(lazyListState),
             colors = LibraryDefaults.libraryColors(
                 libraryBackgroundColor = MaterialTheme.colorScheme.background,
                 licenseChipColors = LibraryDefaults.chipColors(

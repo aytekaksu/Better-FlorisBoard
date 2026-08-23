@@ -70,6 +70,10 @@ configure<LibraryExtension> {
     }
 }
 
+tasks.withType<Test> {
+    useJUnitPlatform()
+}
+
 dependencies {
     implementation(projects.lib.android)
     implementation(projects.lib.kotlin)
@@ -85,4 +89,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.patrickgold.jetpref.material.ui)
+
+    testImplementation(libs.kotlin.test.junit5)
 }

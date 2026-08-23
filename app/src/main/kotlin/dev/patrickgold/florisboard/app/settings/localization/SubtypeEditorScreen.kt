@@ -492,7 +492,7 @@ fun SubtypeEditorScreen(id: Long?) = FlorisScreen {
                     val lazyListState = rememberLazyListState()
                     LazyColumn(
                         modifier = Modifier
-                            .florisScrollbar(lazyListState, isVertical = true).weight(1f),
+                            .florisScrollbar(lazyListState).weight(1f),
                         state = lazyListState,
                     ) {
                         items(subtypePresets) { subtypePreset ->

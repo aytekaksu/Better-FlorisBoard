@@ -101,7 +101,7 @@ fun ExportDebugLogScreen() = FlorisScreen {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .florisScrollbar(lazyListState, isVertical = true)
+                    .florisScrollbar(lazyListState)
                     .florisHorizontalScroll(),
                 state = lazyListState,
             ) {
