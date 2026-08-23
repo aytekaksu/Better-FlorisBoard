@@ -31,20 +31,7 @@ configure<LibraryExtension> {
         compose = true
     }
     buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-        create("beta") {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
+        create("beta")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -60,5 +47,4 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     implementation(projects.lib.android)
-    implementation(projects.lib.kotlin)
 }

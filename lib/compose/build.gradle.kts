@@ -41,28 +41,13 @@ configure<LibraryExtension> {
 
     defaultConfig {
         minSdk = projectMinSdk.toInt()
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildFeatures {
         compose = true
     }
     buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-        create("beta") {
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
+        create("beta")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -85,8 +70,6 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material.icons)
-    debugImplementation(libs.androidx.compose.ui.tooling)
-    implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.patrickgold.jetpref.material.ui)
 
