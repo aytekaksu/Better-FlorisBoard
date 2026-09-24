@@ -189,20 +189,8 @@ private fun KeyData.isWordSeparatorSpace(): Boolean {
 }
 
 /**
- * Allows to select an [AbstractKeyData] based on the current caps state. Note that this type of selector only really
- * makes sense in a text context, though technically speaking it can be used anywhere, so this implementation allows
- * for any [AbstractKeyData] to be used here. The JSON class identifier for this selector is `case_selector`.
- *
- * Example usage in a layout JSON file:
- * ```
- * { "$": "case_selector",
- *   "lower": { "code":   59, "label": ";" },
- *   "upper": { "code":   58, "label": ":" }
- * }
- * ```
- *
- * @property lower The key data to use if the current caps state is lowercase.
- * @property upper The key data to use if the current caps state is uppercase.
+ * Chooses [upper] in uppercase state, otherwise [lower]. Usually used for text keys, but both branches accept any
+ * [AbstractKeyData]. In layout JSON, use `"$": "case_selector"`.
  */
 @Serializable
 @SerialName("case_selector")
@@ -220,30 +208,11 @@ class CaseSelector(
 }
 
 /**
- * Allows to select an [AbstractKeyData] based on the current shift state. Note that this type of selector only really
- * makes sense in a text context, though technically speaking it can be used anywhere, so this implementation allows
- * for any [AbstractKeyData] to be used here. The JSON class identifier for this selector is `shift_state_selector`.
+ * Selects by [InputShiftState]. Usually used for text keys; every branch accepts any [AbstractKeyData].
+ * In layout JSON, use `"$": "shift_state_selector"`. All branches, including `default`, are optional.
  *
- * Example usage in a layout JSON file:
- * ```
- * { "$": "shift_state_selector",
- *   "shiftedManual": { "code":   59, "label": ";" },
- *   "default": { "code":   58, "label": ":" }
- * }
- * ```
- *
- * @property unshifted The key data to use if the current shift state is [InputShiftState.UNSHIFTED], falling back to
- *  [default] if unspecified.
- * @property shifted The key data to use if the current shift state is either [InputShiftState.SHIFTED_MANUAL] or
- *  [InputShiftState.SHIFTED_AUTOMATIC]. Is overridden if [shiftedManual] or [shiftedAutomatic] is specified.
- * @property shiftedManual The key data to use if the current shift state is [InputShiftState.SHIFTED_MANUAL],
- *  falling back to [shifted] or [default] if unspecified.
- * @property shiftedAutomatic The key data to use if the current shift state is [InputShiftState.SHIFTED_AUTOMATIC],
- *  falling back to [shifted] or [default] if unspecified.
- * @property capsLock The key data to use if the current shift state is [InputShiftState.CAPS_LOCK], falling back to
- *  [default] if unspecified.
- * @property default The key data to use if the current shift state is set to a value not specified by this selector.
- *  If a key data is provided for all shift states possible this key data will never be used.
+ * `unshifted` and `capsLock` fall back to `default`. `shiftedManual` and `shiftedAutomatic` fall back to
+ * `shifted`, then `default`. If the selected branch and its fallbacks are null, no key is shown.
  */
 @Serializable
 @SerialName("shift_state_selector")
@@ -270,30 +239,12 @@ class ShiftStateSelector(
 }
 
 /**
- * Allows to select an [AbstractKeyData] based on the current variation. Note that this type of selector only really
- * makes sense in a text context, though technically speaking it can be used anywhere, so this implementation allows
- * for any [AbstractKeyData] to be used here. The JSON class identifier for this selector is `variation_selector`.
+ * Selects by [KeyVariation]. Usually used for text keys; every branch accepts any [AbstractKeyData].
+ * In layout JSON, use `"$": "variation_selector"`. All branches are optional.
  *
- * Example usage in a layout JSON file:
- * ```
- * { "$": "variation_selector",
- *   "default":  { "code":   44, "label": "," },
- *   "email":    { "code":   64, "label": "@" },
- *   "uri":      { "code":   47, "label": "/" }
- * }
- * ```
- *
- * @property default The default key data which should be used in case no key variation is known or for the current
- *  key variation no override key is defined. Can be null, in this case this may mean the variation selector hides
- *  the key if no direct match is present.
- * @property email The key data to use if [KeyVariation.EMAIL_ADDRESS] is the active key variation. If this value is
- *  null, [default] will be used instead.
- * @property uri The key data to use if [KeyVariation.URI] is the active key variation. If this value is null,
- *  [default] will be used instead.
- * @property normal The key data to use if [KeyVariation.NORMAL] is the active key variation. If this value is null,
- *  [default] will be used instead.
- * @property password The key data to use if [KeyVariation.PASSWORD] is the active key variation. If this value is
- *  null, [default] will be used instead.
+ * `email` handles [KeyVariation.EMAIL_ADDRESS]; `uri`, `normal`, and `password` handle matching variations.
+ * [KeyVariation.ALL] uses only `default`. Other missing branches fall back to `default`; if both are null,
+ * no key is shown.
  */
 @Serializable
 @SerialName("variation_selector")
@@ -320,21 +271,8 @@ data class VariationSelector(
 }
 
 /**
- * Allows to select an [AbstractKeyData] based on the current layout direction. Note that this type of selector only
- * really makes sense in a text context, though technically speaking it can be used anywhere, so this implementation
- * allows for any [AbstractKeyData] to be used here. The JSON class identifier for this selector is
- * `layout_direction_selector`.
- *
- * Example usage in a layout JSON file:
- * ```
- * { "$": "layout_direction_selector",
- *   "ltr": { "code":   59, "label": ";" },
- *   "rtl": { "code":   58, "label": ":" }
- * }
- * ```
- *
- * @property ltr The key data to use if the current layout direction is LTR.
- * @property rtl The key data to use if the current layout direction is RTL.
+ * Chooses [rtl] for RTL layout direction, otherwise [ltr]. Usually used for text keys, but both branches accept
+ * any [AbstractKeyData]. In layout JSON, use `"$": "layout_direction_selector"`.
  */
 @Serializable
 @SerialName("layout_direction_selector")
@@ -353,20 +291,9 @@ class LayoutDirectionSelector(
 }
 
 /**
- * Allows to select an [AbstractKeyData] based on the character's width. Note that this type of selector only really
- * makes sense in a text context, though technically speaking it can be used anywhere, so this implementation allows
- * for any [AbstractKeyData] to be used here. The JSON class identifier for this selector is `char_width_selector`.
- *
- * Example usage in a layout JSON file:
- * ```
- * { "$": "char_width_selector",
- *   "full": { "code": 12450, "label": "ア" },
- *   "half": { "code": 65393, "label": "ｱ" }
- * }
- * ```
- *
- * @property full The key data to use if the current character width is full.
- * @property half The key data to use if the current character width is half.
+ * Chooses [half] in half-width mode, otherwise [full]. A null branch hides the key in that mode.
+ * Usually used for text keys; non-null branches accept any [AbstractKeyData]. In layout JSON, use
+ * `"$": "char_width_selector"`.
  */
 @Serializable
 @SerialName("char_width_selector")
@@ -385,20 +312,8 @@ class CharWidthSelector(
 }
 
 /**
- * Allows to select an [AbstractKeyData] based on the kana state. Note that this type of selector only really
- * makes sense in a text context, though technically speaking it can be used anywhere, so this implementation allows
- * for any [AbstractKeyData] to be used here. The JSON class identifier for this selector is `kana_selector`.
- *
- * Example usage in a layout JSON file:
- * ```
- * { "$": "kana_selector",
- *   "hira": { "code": 12354, "label": "あ" },
- *   "kata": { "code": 12450, "label": "ア" }
- * }
- * ```
- *
- * @property hira The key data to use if the current kana state is hiragana.
- * @property kata The key data to use if the current kana state is katakana.
+ * Chooses [kata] in katakana mode, otherwise [hira]. Usually used for text keys, but both branches accept any
+ * [AbstractKeyData]. In layout JSON, use `"$": "kana_selector"`.
  */
 @Serializable
 @SerialName("kana_selector")
