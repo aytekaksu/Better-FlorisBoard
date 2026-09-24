@@ -18,7 +18,6 @@ package dev.patrickgold.florisboard.ime.media.emoji
 
 import android.content.Context
 import dev.patrickgold.florisboard.lib.FlorisLocale
-import org.florisboard.lib.android.bufferedReader
 import io.github.reactivecircus.cache4k.Cache
 import java.util.*
 
@@ -78,7 +77,7 @@ data class EmojiData(
                 emojiEditorList = null
             }
 
-            context.assets.bufferedReader(path).useLines { lines ->
+            context.assets.open(path).bufferedReader(Charsets.UTF_8).useLines { lines ->
                 for (line in lines) {
                     if (line.startsWith("#")) {
                         // Comment line

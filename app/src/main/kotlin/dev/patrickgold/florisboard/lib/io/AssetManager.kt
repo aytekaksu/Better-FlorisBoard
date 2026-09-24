@@ -32,7 +32,6 @@ import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
-import org.florisboard.lib.android.reader
 import org.florisboard.lib.kotlin.resultErr
 import org.florisboard.lib.kotlin.resultErrStr
 import org.florisboard.lib.kotlin.resultOk
@@ -102,11 +101,11 @@ private fun FlorisRef.list(appContext: Context, directories: Boolean) = runCatch
 fun FlorisRef.loadTextAsset(context: Context): Result<String> {
     return when {
         isAssets -> runCatching {
-            context.assets.reader(relativePath).use { it.readText() }
+            context.assets.open(relativePath).reader(Charsets.UTF_8).use { it.readText() }
         }
         isCache || isInternal -> {
             val file = File(absolutePath(context))
-            val contents = readTextFile(file).getOrElse { return resultErr(it) }
+            val contents = runCatching { file.readText(Charsets.UTF_8) }.getOrElse { return resultErr(it) }
             if (contents.isBlank()) {
                 resultErrStr("File is blank!")
             } else {
@@ -115,14 +114,4 @@ fun FlorisRef.loadTextAsset(context: Context): Result<String> {
         }
         else -> resultErrStr("Unsupported asset ref!")
     }
-}
-
-/**
- * Reads a given [file] and returns its content.
- *
- * @param file The file object.
- * @return The contents of the file or an empty string, if the file does not exist.
- */
-private fun readTextFile(file: File) = runCatching {
-    file.readText(Charsets.UTF_8)
 }

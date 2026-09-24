@@ -18,7 +18,6 @@ package dev.patrickgold.florisboard.lib.io
 
 import android.content.Context
 import android.net.Uri
-import androidx.annotation.VisibleForTesting
 import dev.patrickgold.jetpref.datastore.model.PreferenceSerializer
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
@@ -47,83 +46,35 @@ import java.io.File
 @JvmInline
 value class FlorisRef private constructor(val uri: Uri) {
     companion object {
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal const val SCHEME_FLORIS = "florisboard"
+        private const val SCHEME_FLORIS = "florisboard"
 
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal const val AUTHORITY_APP_UI = "app-ui"
+        private const val AUTHORITY_APP_UI = "app-ui"
 
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal const val AUTHORITY_ASSETS = "assets"
+        private const val AUTHORITY_ASSETS = "assets"
 
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal const val AUTHORITY_CACHE = "cache"
+        private const val AUTHORITY_CACHE = "cache"
 
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal const val AUTHORITY_INTERNAL = "internal"
+        private const val AUTHORITY_INTERNAL = "internal"
 
         private const val URL_HTTP_PREFIX = "http://"
         private const val URL_HTTPS_PREFIX = "https://"
         private const val URL_MAILTO_PREFIX = "mailto:"
 
-        /**
-         * Constructs a new [FlorisRef] pointing to a UI screen within the app
-         * user interface.
-         *
-         * @param path The relative path of the UI screen this ref should point
-         *  too, including optional data arguments.
-         *
-         * @return The newly constructed reference.
-         */
-        fun app(path: String) = Uri.Builder().run {
-            scheme(SCHEME_FLORIS)
-            authority(AUTHORITY_APP_UI)
-            encodedPath(path)
-            FlorisRef(build())
-        }
+        /** Points to an app screen. [path] may include encoded route arguments. */
+        fun app(path: String) = local(AUTHORITY_APP_UI, path)
 
-        /**
-         * Constructs a new [FlorisRef] pointing to a resource within the
-         * FlorisBoard APK assets.
-         *
-         * @param path The relative path from the APK assets root the resource
-         *  is located.
-         *
-         * @return The newly constructed reference.
-         */
-        fun assets(path: String) = Uri.Builder().run {
-            scheme(SCHEME_FLORIS)
-            authority(AUTHORITY_ASSETS)
-            encodedPath(path)
-            FlorisRef(build())
-        }
+        /** Points to a resource in the APK assets directory. */
+        fun assets(path: String) = local(AUTHORITY_ASSETS, path)
 
-        /**
-         * Constructs a new [FlorisRef] pointing to a resource within the
-         * cache storage of FlorisBoard.
-         *
-         * @param path The relative path from the cache root directory.
-         *
-         * @return The newly constructed reference.
-         */
-        fun cache(path: String) = Uri.Builder().run {
-            scheme(SCHEME_FLORIS)
-            authority(AUTHORITY_CACHE)
-            encodedPath(path)
-            FlorisRef(build())
-        }
+        /** Points to a resource in the app cache. */
+        fun cache(path: String) = local(AUTHORITY_CACHE, path)
 
-        /**
-         * Constructs a new [FlorisRef] pointing to a resource within the
-         * internal storage of FlorisBoard.
-         *
-         * @param path The relative path from the internal storage root directory.
-         *
-         * @return The newly constructed reference.
-         */
-        fun internal(path: String) = Uri.Builder().run {
+        /** Points to a resource in the app's internal storage. */
+        fun internal(path: String) = local(AUTHORITY_INTERNAL, path)
+
+        private fun local(authority: String, path: String) = Uri.Builder().run {
             scheme(SCHEME_FLORIS)
-            authority(AUTHORITY_INTERNAL)
+            authority(authority)
             encodedPath(path)
             FlorisRef(build())
         }
@@ -170,21 +121,6 @@ value class FlorisRef private constructor(val uri: Uri) {
                 else -> Uri.parse("$URL_HTTPS_PREFIX$url").normalizeScheme()
             })
         }
-
-        /**
-         * Constructs a new reference from given [scheme] and [path], this can
-         * point to any destination, regardless of within FlorisBoard or not.
-         *
-         * @param scheme The scheme of this reference.
-         * @param path The relative path of this reference.
-         *
-         * @return The newly constructed reference.
-         */
-        fun from(scheme: String, path: String) = Uri.Builder().run {
-            scheme(scheme)
-            encodedPath(path)
-            FlorisRef(build())
-        }
     }
 
     /**
@@ -216,13 +152,6 @@ value class FlorisRef private constructor(val uri: Uri) {
         get() = uri.scheme == SCHEME_FLORIS && uri.authority == AUTHORITY_INTERNAL
 
     /**
-     * True if the scheme references any other external resource (URL, content
-     * resolver, etc.), false otherwise.
-     */
-    val isExternal: Boolean
-        get() = uri.scheme != SCHEME_FLORIS
-
-    /**
      * Returns the scheme of this URI, or an empty string if no scheme is
      * specified.
      */
@@ -242,18 +171,6 @@ value class FlorisRef private constructor(val uri: Uri) {
      */
     val relativePath: String
         get() = (uri.path ?: "").removePrefix("/")
-
-    /**
-     * Returns if this URI contains data for all valid parts of a FlorisRef.
-     */
-    val isValid: Boolean
-        get() = scheme.isNotBlank() && authority.isNotBlank()
-
-    /**
-     * Returns if this URI contains data for all valid parts of a FlorisRef.
-     */
-    val isInvalid: Boolean
-        get() = !isValid
 
     /**
      * Returns the absolute path on the device file storage for this reference,
