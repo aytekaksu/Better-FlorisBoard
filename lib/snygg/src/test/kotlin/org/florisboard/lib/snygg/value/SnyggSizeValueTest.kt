@@ -56,6 +56,32 @@ class SnyggSizeValueTest {
         assertIs<SnyggPercentageSizeValue>(SnyggPercentageSizeValue.defaultValue())
         assertIs<SnyggSpSizeValue>(SnyggSpSizeValue.defaultValue())
         assertIs<SnyggDpSizeValue>(SnyggDpSizeValue.defaultValue())
+        assertEquals(SnyggPercentageSizeValue(0f), SnyggPercentageSizeValue.defaultValue())
+        assertEquals(SnyggSpSizeValue(24.sp), SnyggSpSizeValue.defaultValue())
+        assertEquals(SnyggDpSizeValue(0.dp), SnyggDpSizeValue.defaultValue())
+    }
+
+    @Test
+    fun `size codecs retain exact wire forms`() {
+        val pairs = listOf(
+            SnyggDpSizeValue(0.dp) to "0dp",
+            SnyggDpSizeValue(12.5.dp) to "12.5dp",
+            SnyggSpSizeValue(24.sp) to "24sp",
+            SnyggSpSizeValue(12.5.sp) to "12.5sp",
+            SnyggPercentageSizeValue(0f) to "0%",
+            SnyggPercentageSizeValue(0.125f) to "12.5%",
+            SnyggPercentageSizeValue(1f) to "100%",
+        )
+        assertAll(pairs.map { (value, expected) -> {
+            assertEquals(expected, value.encoder().serialize(value).getOrThrow())
+            assertEquals(value, value.encoder().deserialize(expected).getOrThrow())
+        } })
+    }
+
+    @Test
+    fun `zero sp is rejected in both directions`() {
+        assertFalse(SnyggSpSizeValue.deserialize("0sp").isSuccess)
+        assertFalse(SnyggSpSizeValue.serialize(SnyggSpSizeValue(0.sp)).isSuccess)
     }
 
     @Test
