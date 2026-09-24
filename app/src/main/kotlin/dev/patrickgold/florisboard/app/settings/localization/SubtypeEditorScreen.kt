@@ -92,9 +92,6 @@ import org.florisboard.lib.compose.stringRes
 
 private val SelectComponentName = ExtensionComponentName("00", "00")
 private val SelectNlpProviderId = SelectComponentName.toString()
-private val SelectNlpProviders = SubtypeNlpProviderMap(
-    spelling = SelectNlpProviderId,
-)
 private val SelectLayoutMap = SubtypeLayoutMap(
     characters = SelectComponentName,
     symbols = SelectComponentName,
