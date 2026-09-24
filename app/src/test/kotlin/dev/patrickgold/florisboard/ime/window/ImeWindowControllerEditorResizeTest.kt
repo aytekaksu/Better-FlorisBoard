@@ -17,11 +17,9 @@
 package dev.patrickgold.florisboard.ime.window
 
 import androidx.compose.ui.unit.dp
-import dev.patrickgold.florisboard.app.FlorisPreferenceModel
 import dev.patrickgold.florisboard.plusOrMinus
 import dev.patrickgold.florisboard.shouldBeGreaterThanOrEqualTo
 import dev.patrickgold.florisboard.shouldBeLessThanOrEqualTo
-import dev.patrickgold.jetpref.datastore.jetprefDataStoreOf
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
@@ -31,7 +29,6 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.enum
 import io.kotest.property.checkAll
-import kotlinx.coroutines.flow.first
 
 class ImeWindowControllerEditorResizeTest : FunSpec({
     val tolerance = 1e-3f.dp
@@ -46,25 +43,9 @@ class ImeWindowControllerEditorResizeTest : FunSpec({
                 Arb.rootInsetsWithVerticalOffset(),
                 Arb.enum<ImeWindowMode.Fixed>(),
             ) { (rootInsets, offset), fixedMode ->
-                val prefs by jetprefDataStoreOf(FlorisPreferenceModel::class)
-                val windowController = ImeWindowController(prefs, backgroundScope)
-                windowController.updateRootInsets(rootInsets)
-                windowController.updateWindowConfig {
-                    ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = fixedMode)
-                }
-
-                windowController.editor.beginMoveGesture()
-                val specBefore = windowController.activeWindowSpec.first { it !== ImeWindowSpec.Fallback }
-                val specCalculated =
-                    specBefore.resizedBy(
-                        offset,
-                        ImeWindowResizeHandle.TOP,
-                        imeRowCount,
-                        smartBarRowCount,
-                    )
-                windowController.editor.onSpecUpdated(specCalculated)
-                val specAfter = windowController.activeWindowSpec.value
-                windowController.editor.endMoveGesture(specAfter)
+                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                    rootInsets, ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = fixedMode), backgroundScope,
+                ) { it.resizedBy(offset, ImeWindowResizeHandle.TOP, imeRowCount, smartBarRowCount) }
 
                 assertSoftly {
                     val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Fixed>()
@@ -112,25 +93,9 @@ class ImeWindowControllerEditorResizeTest : FunSpec({
                 Arb.rootInsetsWithVerticalOffset(),
                 Arb.enum<ImeWindowMode.Fixed>(),
             ) { (rootInsets, offset), fixedMode ->
-                val prefs by jetprefDataStoreOf(FlorisPreferenceModel::class)
-                val windowController = ImeWindowController(prefs, backgroundScope)
-                windowController.updateRootInsets(rootInsets)
-                windowController.updateWindowConfig {
-                    ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = fixedMode)
-                }
-
-                windowController.editor.beginMoveGesture()
-                val specBefore = windowController.activeWindowSpec.first { it !== ImeWindowSpec.Fallback }
-                val specCalculated =
-                    specBefore.resizedBy(
-                        offset,
-                        ImeWindowResizeHandle.BOTTOM,
-                        imeRowCount,
-                        smartBarRowCount,
-                    )
-                windowController.editor.onSpecUpdated(specCalculated)
-                val specAfter = windowController.activeWindowSpec.value
-                windowController.editor.endMoveGesture(specAfter)
+                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                    rootInsets, ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = fixedMode), backgroundScope,
+                ) { it.resizedBy(offset, ImeWindowResizeHandle.BOTTOM, imeRowCount, smartBarRowCount) }
 
                 assertSoftly {
                     val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Fixed>()
@@ -177,25 +142,9 @@ class ImeWindowControllerEditorResizeTest : FunSpec({
                 Arb.rootInsetsWithHorizontalOffset(),
                 Arb.enum<ImeWindowMode.Fixed>(),
             ) { (rootInsets, offset), fixedMode ->
-                val prefs by jetprefDataStoreOf(FlorisPreferenceModel::class)
-                val windowController = ImeWindowController(prefs, backgroundScope)
-                windowController.updateRootInsets(rootInsets)
-                windowController.updateWindowConfig {
-                    ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = fixedMode)
-                }
-
-                windowController.editor.beginMoveGesture()
-                val specBefore = windowController.activeWindowSpec.first { it !== ImeWindowSpec.Fallback }
-                val specCalculated =
-                    specBefore.resizedBy(
-                        offset,
-                        ImeWindowResizeHandle.LEFT,
-                        imeRowCount,
-                        smartBarRowCount,
-                    )
-                windowController.editor.onSpecUpdated(specCalculated)
-                val specAfter = windowController.activeWindowSpec.value
-                windowController.editor.endMoveGesture(specAfter)
+                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                    rootInsets, ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = fixedMode), backgroundScope,
+                ) { it.resizedBy(offset, ImeWindowResizeHandle.LEFT, imeRowCount, smartBarRowCount) }
 
                 assertSoftly {
                     val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Fixed>()
@@ -243,25 +192,9 @@ class ImeWindowControllerEditorResizeTest : FunSpec({
                 Arb.rootInsetsWithHorizontalOffset(),
                 Arb.enum<ImeWindowMode.Fixed>(),
             ) { (rootInsets, offset), fixedMode ->
-                val prefs by jetprefDataStoreOf(FlorisPreferenceModel::class)
-                val windowController = ImeWindowController(prefs, backgroundScope)
-                windowController.updateRootInsets(rootInsets)
-                windowController.updateWindowConfig {
-                    ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = fixedMode)
-                }
-
-                windowController.editor.beginMoveGesture()
-                val specBefore = windowController.activeWindowSpec.first { it !== ImeWindowSpec.Fallback }
-                val specCalculated =
-                    specBefore.resizedBy(
-                        offset,
-                        ImeWindowResizeHandle.RIGHT,
-                        imeRowCount,
-                        smartBarRowCount,
-                    )
-                windowController.editor.onSpecUpdated(specCalculated)
-                val specAfter = windowController.activeWindowSpec.value
-                windowController.editor.endMoveGesture(specAfter)
+                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                    rootInsets, ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = fixedMode), backgroundScope,
+                ) { it.resizedBy(offset, ImeWindowResizeHandle.RIGHT, imeRowCount, smartBarRowCount) }
 
                 assertSoftly {
                     val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Fixed>()
@@ -311,25 +244,9 @@ class ImeWindowControllerEditorResizeTest : FunSpec({
                 Arb.rootInsetsWithVerticalOffset(),
                 Arb.enum<ImeWindowMode.Floating>(),
             ) { (rootInsets, offset), floatingMode ->
-                val prefs by jetprefDataStoreOf(FlorisPreferenceModel::class)
-                val windowController = ImeWindowController(prefs, backgroundScope)
-                windowController.updateRootInsets(rootInsets)
-                windowController.updateWindowConfig {
-                    ImeWindowConfig(ImeWindowMode.FLOATING, floatingMode = floatingMode)
-                }
-
-                windowController.editor.beginMoveGesture()
-                val specBefore = windowController.activeWindowSpec.first { it !== ImeWindowSpec.Fallback }
-                val specCalculated =
-                    specBefore.resizedBy(
-                        offset,
-                        ImeWindowResizeHandle.TOP,
-                        imeRowCount,
-                        smartBarRowCount,
-                    )
-                windowController.editor.onSpecUpdated(specCalculated)
-                val specAfter = windowController.activeWindowSpec.value
-                windowController.editor.endMoveGesture(specAfter)
+                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                    rootInsets, ImeWindowConfig(ImeWindowMode.FLOATING, floatingMode = floatingMode), backgroundScope,
+                ) { it.resizedBy(offset, ImeWindowResizeHandle.TOP, imeRowCount, smartBarRowCount) }
 
                 assertSoftly {
                     val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Floating>()
@@ -374,25 +291,9 @@ class ImeWindowControllerEditorResizeTest : FunSpec({
                 Arb.rootInsetsWithVerticalOffset(),
                 Arb.enum<ImeWindowMode.Floating>(),
             ) { (rootInsets, offset), floatingMode ->
-                val prefs by jetprefDataStoreOf(FlorisPreferenceModel::class)
-                val windowController = ImeWindowController(prefs, backgroundScope)
-                windowController.updateRootInsets(rootInsets)
-                windowController.updateWindowConfig {
-                    ImeWindowConfig(ImeWindowMode.FLOATING, floatingMode = floatingMode)
-                }
-
-                windowController.editor.beginMoveGesture()
-                val specBefore = windowController.activeWindowSpec.first { it !== ImeWindowSpec.Fallback }
-                val specCalculated =
-                    specBefore.resizedBy(
-                        offset,
-                        ImeWindowResizeHandle.BOTTOM,
-                        imeRowCount,
-                        smartBarRowCount,
-                    )
-                windowController.editor.onSpecUpdated(specCalculated)
-                val specAfter = windowController.activeWindowSpec.value
-                windowController.editor.endMoveGesture(specAfter)
+                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                    rootInsets, ImeWindowConfig(ImeWindowMode.FLOATING, floatingMode = floatingMode), backgroundScope,
+                ) { it.resizedBy(offset, ImeWindowResizeHandle.BOTTOM, imeRowCount, smartBarRowCount) }
 
                 assertSoftly {
                     val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Floating>()
@@ -446,25 +347,9 @@ class ImeWindowControllerEditorResizeTest : FunSpec({
                 Arb.rootInsetsWithHorizontalOffset(),
                 Arb.enum<ImeWindowMode.Floating>(),
             ) { (rootInsets, offset), floatingMode ->
-                val prefs by jetprefDataStoreOf(FlorisPreferenceModel::class)
-                val windowController = ImeWindowController(prefs, backgroundScope)
-                windowController.updateRootInsets(rootInsets)
-                windowController.updateWindowConfig {
-                    ImeWindowConfig(ImeWindowMode.FLOATING, floatingMode = floatingMode)
-                }
-
-                windowController.editor.beginMoveGesture()
-                val specBefore = windowController.activeWindowSpec.first { it !== ImeWindowSpec.Fallback }
-                val specCalculated =
-                    specBefore.resizedBy(
-                        offset,
-                        ImeWindowResizeHandle.LEFT,
-                        imeRowCount,
-                        smartBarRowCount,
-                    )
-                windowController.editor.onSpecUpdated(specCalculated)
-                val specAfter = windowController.activeWindowSpec.value
-                windowController.editor.endMoveGesture(specAfter)
+                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                    rootInsets, ImeWindowConfig(ImeWindowMode.FLOATING, floatingMode = floatingMode), backgroundScope,
+                ) { it.resizedBy(offset, ImeWindowResizeHandle.LEFT, imeRowCount, smartBarRowCount) }
 
                 assertSoftly {
                     val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Floating>()
@@ -518,25 +403,9 @@ class ImeWindowControllerEditorResizeTest : FunSpec({
                 Arb.rootInsetsWithHorizontalOffset(),
                 Arb.enum<ImeWindowMode.Floating>(),
             ) { (rootInsets, offset), floatingMode ->
-                val prefs by jetprefDataStoreOf(FlorisPreferenceModel::class)
-                val windowController = ImeWindowController(prefs, backgroundScope)
-                windowController.updateRootInsets(rootInsets)
-                windowController.updateWindowConfig {
-                    ImeWindowConfig(ImeWindowMode.FLOATING, floatingMode = floatingMode)
-                }
-
-                windowController.editor.beginMoveGesture()
-                val specBefore = windowController.activeWindowSpec.first { it !== ImeWindowSpec.Fallback }
-                val specCalculated =
-                    specBefore.resizedBy(
-                        offset,
-                        ImeWindowResizeHandle.RIGHT,
-                        imeRowCount,
-                        smartBarRowCount,
-                    )
-                windowController.editor.onSpecUpdated(specCalculated)
-                val specAfter = windowController.activeWindowSpec.value
-                windowController.editor.endMoveGesture(specAfter)
+                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                    rootInsets, ImeWindowConfig(ImeWindowMode.FLOATING, floatingMode = floatingMode), backgroundScope,
+                ) { it.resizedBy(offset, ImeWindowResizeHandle.RIGHT, imeRowCount, smartBarRowCount) }
 
                 assertSoftly {
                     val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Floating>()
