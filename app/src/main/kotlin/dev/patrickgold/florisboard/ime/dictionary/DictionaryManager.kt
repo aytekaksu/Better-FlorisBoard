@@ -34,7 +34,7 @@ class DictionaryManager(context: Context) {
             applicationContext,
             FlorisUserDictionaryDatabase::class.java,
             FlorisUserDictionaryDatabase.DB_FILE_NAME,
-        ).allowMainThreadQueries().build()
+        ).build()
     }
 
     val systemUserDictionary: SystemUserDictionaryDatabase by lazy {

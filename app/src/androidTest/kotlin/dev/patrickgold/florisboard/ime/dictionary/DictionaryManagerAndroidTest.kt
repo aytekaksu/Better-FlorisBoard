@@ -17,15 +17,20 @@
 package dev.patrickgold.florisboard.ime.dictionary
 
 import android.content.ContextWrapper
+import android.net.Uri
+import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.patrickgold.florisboard.dictionaryManager
 import dev.patrickgold.florisboard.lib.FlorisLocale
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 import java.util.UUID
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
@@ -34,6 +39,56 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class DictionaryManagerAndroidTest {
+    @Test
+    fun florisDaoRejectsMainThreadQueries() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val dao = instrumentation.targetContext.dictionaryManager().value.florisUserDictionary.userDictionaryDao()
+
+        instrumentation.runOnMainSync {
+            assertThrows(IllegalStateException::class.java) {
+                dao.queryAll()
+            }
+        }
+    }
+
+    @Test
+    fun florisDictionaryImportExportRoundTrip() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val database = Room.inMemoryDatabaseBuilder(context, FlorisUserDictionaryDatabase::class.java).build()
+        val source = File.createTempFile("floris-dictionary-import-", ".txt", context.cacheDir)
+        val exported = File.createTempFile("floris-dictionary-export-", ".txt", context.cacheDir)
+        val word = "dictionary-roundtrip-${UUID.randomUUID()}"
+        val locale = FlorisLocale.fromTag("en-US")
+        val expectedLine = " w=$word;f=173;l=${locale.localeTag()};s=dr"
+
+        try {
+            source.writeText("dictionary=test;version=1\n$expectedLine\n")
+            database.importCombinedList(context, Uri.fromFile(source))
+
+            val imported = database.userDictionaryDao().queryExact(word, locale).single()
+            assertEquals(word, imported.word)
+            assertEquals(173, imported.freq)
+            assertEquals(locale.localeTag(), imported.locale)
+            assertEquals("dr", imported.shortcut)
+
+            database.exportCombinedList(context, Uri.fromFile(exported))
+            val exportedLines = exported.readLines()
+            assertEquals(2, exportedLines.size)
+            assertEquals(expectedLine, exportedLines[1])
+
+            assertEquals(1, database.userDictionaryDao().delete(imported))
+            database.importCombinedList(context, Uri.fromFile(exported))
+            val restored = database.userDictionaryDao().queryExact(word, locale).single()
+            assertEquals(imported.copy(id = restored.id), restored)
+        } finally {
+            database.close()
+            source.delete()
+            exported.delete()
+        }
+        assertFalse(source.exists())
+        assertFalse(exported.exists())
+    }
+
     @Test
     fun applicationContextsShareThreadSafeDictionaryStoresAndData() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
