@@ -62,21 +62,6 @@ private fun percentCornerShapeSpec(name: String) = SnyggValueSpec {
     }
 }
 
-private inline fun <reified T : SnyggValue> SnyggValueEncoder.encodeShape(
-    value: SnyggValue,
-    arguments: T.() -> SnyggIdToValueMap = { snyggIdToValueMapOf() },
-) = runCatching<String> {
-    require(value is T)
-    spec.pack(value.arguments())
-}
-
-private fun SnyggValueEncoder.decodeShape(value: String, construct: SnyggIdToValueMap.() -> SnyggValue) =
-    runCatching<SnyggValue> {
-        val arguments = snyggIdToValueMapOf()
-        spec.parse(value, arguments)
-        arguments.construct()
-    }
-
 sealed interface SnyggShapeValue : SnyggValue {
     val shape: Shape
 }
@@ -112,7 +97,7 @@ private fun SnyggPercentShapeValue.encodeArguments() = snyggIdToValueMapOf(
 )
 
 private fun SnyggValueEncoder.decodeDpShape(value: String, construct: (Dp, Dp, Dp, Dp) -> SnyggValue) =
-    decodeShape(value) {
+    decodeValue(value) {
         construct(
             getFloat(CORNER_SIZE_TOP_START).dp,
             getFloat(CORNER_SIZE_TOP_END).dp,
@@ -122,7 +107,7 @@ private fun SnyggValueEncoder.decodeDpShape(value: String, construct: (Dp, Dp, D
     }
 
 private fun SnyggValueEncoder.decodePercentShape(value: String, construct: (Int, Int, Int, Int) -> SnyggValue) =
-    decodeShape(value) {
+    decodeValue(value) {
         construct(
             getInt(CORNER_SIZE_TOP_START),
             getInt(CORNER_SIZE_TOP_END),
@@ -137,9 +122,9 @@ data class SnyggRectangleShapeValue(override val shape: Shape = RectangleShape) 
 
         override fun defaultValue() = SnyggRectangleShapeValue()
 
-        override fun serialize(v: SnyggValue) = encodeShape<SnyggRectangleShapeValue>(v)
+        override fun serialize(v: SnyggValue) = encodeValue<SnyggRectangleShapeValue>(v)
 
-        override fun deserialize(v: String) = decodeShape(v) { SnyggRectangleShapeValue() }
+        override fun deserialize(v: String) = decodeValue(v) { SnyggRectangleShapeValue() }
     }
 
     override fun encoder() = Companion
@@ -151,9 +136,9 @@ data class SnyggCircleShapeValue(override val shape: Shape = CircleShape) : Snyg
 
         override fun defaultValue() = SnyggCircleShapeValue()
 
-        override fun serialize(v: SnyggValue) = encodeShape<SnyggCircleShapeValue>(v)
+        override fun serialize(v: SnyggValue) = encodeValue<SnyggCircleShapeValue>(v)
 
-        override fun deserialize(v: String) = decodeShape(v) { SnyggCircleShapeValue() }
+        override fun deserialize(v: String) = decodeValue(v) { SnyggCircleShapeValue() }
     }
 
     override fun encoder() = Companion
@@ -171,7 +156,7 @@ data class SnyggCutCornerDpShapeValue(
 
         override fun defaultValue() = SnyggCutCornerDpShapeValue(0.dp, 0.dp, 0.dp, 0.dp)
 
-        override fun serialize(v: SnyggValue) = encodeShape<SnyggCutCornerDpShapeValue>(v) { encodeArguments() }
+        override fun serialize(v: SnyggValue) = encodeValue<SnyggCutCornerDpShapeValue>(v) { encodeArguments() }
 
         override fun deserialize(v: String) = decodeDpShape(v) { topStart, topEnd, bottomEnd, bottomStart ->
             SnyggCutCornerDpShapeValue(topStart, topEnd, bottomEnd, bottomStart)
@@ -193,7 +178,7 @@ data class SnyggCutCornerPercentShapeValue(
 
         override fun defaultValue() = SnyggCutCornerPercentShapeValue(0, 0, 0, 0)
 
-        override fun serialize(v: SnyggValue) = encodeShape<SnyggCutCornerPercentShapeValue>(v) { encodeArguments() }
+        override fun serialize(v: SnyggValue) = encodeValue<SnyggCutCornerPercentShapeValue>(v) { encodeArguments() }
 
         override fun deserialize(v: String) = decodePercentShape(v) { topStart, topEnd, bottomEnd, bottomStart ->
             SnyggCutCornerPercentShapeValue(topStart, topEnd, bottomEnd, bottomStart)
@@ -215,7 +200,7 @@ data class SnyggRoundedCornerDpShapeValue(
 
         override fun defaultValue() = SnyggRoundedCornerDpShapeValue(0.dp, 0.dp, 0.dp, 0.dp)
 
-        override fun serialize(v: SnyggValue) = encodeShape<SnyggRoundedCornerDpShapeValue>(v) { encodeArguments() }
+        override fun serialize(v: SnyggValue) = encodeValue<SnyggRoundedCornerDpShapeValue>(v) { encodeArguments() }
 
         override fun deserialize(v: String) = decodeDpShape(v) { topStart, topEnd, bottomEnd, bottomStart ->
             SnyggRoundedCornerDpShapeValue(topStart, topEnd, bottomEnd, bottomStart)
@@ -237,7 +222,7 @@ data class SnyggRoundedCornerPercentShapeValue(
 
         override fun defaultValue() = SnyggRoundedCornerPercentShapeValue(0, 0, 0, 0)
 
-        override fun serialize(v: SnyggValue) = encodeShape<SnyggRoundedCornerPercentShapeValue>(v) {
+        override fun serialize(v: SnyggValue) = encodeValue<SnyggRoundedCornerPercentShapeValue>(v) {
             encodeArguments()
         }
 
