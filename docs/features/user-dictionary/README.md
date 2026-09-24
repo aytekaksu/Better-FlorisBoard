@@ -13,6 +13,9 @@ then each `;`-separated row carries word, frequency, optional locale, and
 optional shortcut. Import updates the first matching word/locale or inserts a
 new row. A malformed later row can leave earlier rows imported; this format
 does not provide an all-or-nothing transaction.
+Floris imports canonicalize only locale tags that can be represented without
+losing subtags. Older simple hyphenated rows stay browsable and heal on reimport.
+System dictionary import is unchanged.
 
 Run the focused host and Android tests for state ordering, Room's Main-thread
 guard, and an import/export round trip, then run `./gradlew qualityGate`. Device
