@@ -24,15 +24,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.isSpecified
 import org.florisboard.lib.snygg.value.RgbaColor
 import org.florisboard.lib.snygg.value.SnyggCircleShapeValue
-import org.florisboard.lib.snygg.value.SnyggCutCornerDpShapeValue
-import org.florisboard.lib.snygg.value.SnyggCutCornerPercentShapeValue
 import org.florisboard.lib.snygg.value.SnyggDefinedVarValue
 import org.florisboard.lib.snygg.value.SnyggDpSizeValue
 import org.florisboard.lib.snygg.value.SnyggDynamicDarkColorValue
@@ -41,21 +38,17 @@ import org.florisboard.lib.snygg.value.SnyggFontStyleValue
 import org.florisboard.lib.snygg.value.SnyggFontWeightValue
 import org.florisboard.lib.snygg.value.SnyggGenericFontFamilyValue
 import org.florisboard.lib.snygg.value.SnyggInheritValue
-import org.florisboard.lib.snygg.value.SnyggNoValue
 import org.florisboard.lib.snygg.value.SnyggPaddingValue
-import org.florisboard.lib.snygg.value.SnyggPercentageSizeValue
 import org.florisboard.lib.snygg.value.SnyggRectangleShapeValue
 import org.florisboard.lib.snygg.value.SnyggRoundedCornerDpShapeValue
 import org.florisboard.lib.snygg.value.SnyggRoundedCornerPercentShapeValue
 import org.florisboard.lib.snygg.value.SnyggSpSizeValue
 import org.florisboard.lib.snygg.value.SnyggStaticColorValue
 import org.florisboard.lib.snygg.value.SnyggTextAlignValue
-import org.florisboard.lib.snygg.value.SnyggTextDecorationLineValue
 import org.florisboard.lib.snygg.value.SnyggTextMaxLinesValue
 import org.florisboard.lib.snygg.value.SnyggTextOverflowValue
 import org.florisboard.lib.snygg.value.SnyggUriValue
 import org.florisboard.lib.snygg.value.SnyggValue
-import org.florisboard.lib.snygg.value.SnyggYesValue
 import org.florisboard.lib.snygg.value.isInherit
 import org.florisboard.lib.snygg.value.isUndefined
 import java.util.UUID
@@ -143,19 +136,9 @@ class SnyggSinglePropertySetEditor(initProperties: Map<String, SnyggValue>? = nu
         get() =  getProperty(Snygg.Foreground)
         set(v) = setProperty(Snygg.Foreground, v)
 
-    var backgroundImage: SnyggValue?
-        get() =  getProperty(Snygg.BackgroundImage)
-        set(v) = setProperty(Snygg.BackgroundImage, v)
-    var contentScale: SnyggValue?
-        get() =  getProperty(Snygg.ContentScale)
-        set(v) = setProperty(Snygg.ContentScale, v)
-
     var borderColor: SnyggValue?
         get() =  getProperty(Snygg.BorderColor)
         set(v) = setProperty(Snygg.BorderColor, v)
-    var borderStyle: SnyggValue?
-        get() =  getProperty(Snygg.BorderStyle)
-        set(v) = setProperty(Snygg.BorderStyle, v)
     var borderWidth: SnyggValue?
         get() =  getProperty(Snygg.BorderWidth)
         set(v) = setProperty(Snygg.BorderWidth, v)
@@ -172,14 +155,6 @@ class SnyggSinglePropertySetEditor(initProperties: Map<String, SnyggValue>? = nu
     var fontWeight: SnyggValue?
         get() =  getProperty(Snygg.FontWeight)
         set(v) = setProperty(Snygg.FontWeight, v)
-    var letterSpacing: SnyggValue?
-        get() =  getProperty(Snygg.LetterSpacing)
-        set(v) = setProperty(Snygg.LetterSpacing, v)
-
-    var lineHeight: SnyggValue?
-        get() =  getProperty(Snygg.LineHeight)
-        set(v) = setProperty(Snygg.LineHeight, v)
-
     var margin: SnyggValue?
         get() =  getProperty(Snygg.Margin)
         set(v) = setProperty(Snygg.Margin, v)
@@ -197,10 +172,6 @@ class SnyggSinglePropertySetEditor(initProperties: Map<String, SnyggValue>? = nu
     var shape: SnyggValue?
         get() =  getProperty(Snygg.Shape)
         set(v) = setProperty(Snygg.Shape, v)
-    var clip: SnyggValue?
-        get() =  getProperty(Snygg.Clip)
-        set(v) = setProperty(Snygg.Clip, v)
-
     var src: SnyggValue?
         get() =  getProperty(Snygg.Src)
         set(v) = setProperty(Snygg.Src, v)
@@ -208,9 +179,6 @@ class SnyggSinglePropertySetEditor(initProperties: Map<String, SnyggValue>? = nu
     var textAlign: SnyggValue?
         get() =  getProperty(Snygg.TextAlign)
         set(v) = setProperty(Snygg.TextAlign, v)
-    var textDecorationLine: SnyggValue?
-        get() =  getProperty(Snygg.TextDecorationLine)
-        set(v) = setProperty(Snygg.TextDecorationLine, v)
     var textMaxLines: SnyggValue?
         get() =  getProperty(Snygg.TextMaxLines)
         set(v) = setProperty(Snygg.TextMaxLines, v)
@@ -262,10 +230,6 @@ class SnyggSinglePropertySetEditor(initProperties: Map<String, SnyggValue>? = nu
         return SnyggTextAlignValue(textAlign)
     }
 
-    fun textDecorationLine(textDecoration: TextDecoration): SnyggTextDecorationLineValue {
-        return SnyggTextDecorationLineValue(textDecoration)
-    }
-
     fun textMaxLines(maxLines: Int): SnyggTextMaxLinesValue {
         require(maxLines >= 1)
         return SnyggTextMaxLinesValue(maxLines)
@@ -283,32 +247,6 @@ class SnyggSinglePropertySetEditor(initProperties: Map<String, SnyggValue>? = nu
         return SnyggCircleShapeValue()
     }
 
-    fun cutCornerShape(cornerSize: Dp): SnyggCutCornerDpShapeValue {
-        return SnyggCutCornerDpShapeValue(cornerSize, cornerSize, cornerSize, cornerSize)
-    }
-
-    fun cutCornerShape(
-        topStart: Dp,
-        topEnd: Dp,
-        bottomEnd: Dp,
-        bottomStart: Dp,
-    ): SnyggCutCornerDpShapeValue {
-        return SnyggCutCornerDpShapeValue(topStart, topEnd, bottomEnd, bottomStart)
-    }
-
-    fun cutCornerShape(cornerSize: Int): SnyggCutCornerPercentShapeValue {
-        return SnyggCutCornerPercentShapeValue(cornerSize, cornerSize, cornerSize, cornerSize)
-    }
-
-    fun cutCornerShape(
-        topStart: Int,
-        topEnd: Int,
-        bottomEnd: Int,
-        bottomStart: Int,
-    ): SnyggCutCornerPercentShapeValue {
-        return SnyggCutCornerPercentShapeValue(topStart, topEnd, bottomEnd, bottomStart)
-    }
-
     fun roundedCornerShape(cornerSize: Dp): SnyggRoundedCornerDpShapeValue {
         return SnyggRoundedCornerDpShapeValue(cornerSize, cornerSize, cornerSize, cornerSize)
     }
@@ -324,15 +262,6 @@ class SnyggSinglePropertySetEditor(initProperties: Map<String, SnyggValue>? = nu
 
     fun roundedCornerShape(cornerSize: Int): SnyggRoundedCornerPercentShapeValue {
         return SnyggRoundedCornerPercentShapeValue(cornerSize, cornerSize, cornerSize, cornerSize)
-    }
-
-    fun roundedCornerShape(
-        topStart: Int,
-        topEnd: Int,
-        bottomEnd: Int,
-        bottomStart: Int,
-    ): SnyggRoundedCornerPercentShapeValue {
-        return SnyggRoundedCornerPercentShapeValue(topStart, topEnd, bottomEnd, bottomStart)
     }
 
     fun padding(
@@ -363,10 +292,6 @@ class SnyggSinglePropertySetEditor(initProperties: Map<String, SnyggValue>? = nu
         return SnyggSpSizeValue(sp)
     }
 
-    fun size(percentage: Float): SnyggPercentageSizeValue {
-        return SnyggPercentageSizeValue(percentage)
-    }
-
     fun uri(uri: String): SnyggUriValue {
         return SnyggUriValue(uri)
     }
@@ -377,14 +302,6 @@ class SnyggSinglePropertySetEditor(initProperties: Map<String, SnyggValue>? = nu
 
     fun inherit(): SnyggInheritValue {
         return SnyggInheritValue
-    }
-
-    fun yes(): SnyggYesValue {
-        return SnyggYesValue
-    }
-
-    fun no(): SnyggNoValue {
-        return SnyggNoValue
     }
 }
 
