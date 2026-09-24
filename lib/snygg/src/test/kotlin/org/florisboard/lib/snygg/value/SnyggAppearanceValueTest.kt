@@ -1,11 +1,13 @@
 package org.florisboard.lib.snygg.value
 
 import androidx.compose.ui.graphics.Color
+import org.florisboard.lib.color.ColorPalette
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class SnyggAppearanceValueTest {
     @Nested
@@ -157,6 +159,7 @@ class SnyggAppearanceValueTest {
             val pairs = listOf(
                 // valid
                 helperMakeColor(r = 0, g = 0, b = 0) to "rgba(0,0,0,1)",
+                helperMakeColor(r = 86, g = 54, b = 23, a = 0.5f) to "rgba(86,54,23,0.5019608)",
                 // invalid
                 SnyggDefinedVarValue("shenanigans") to null
             )
@@ -168,6 +171,7 @@ class SnyggAppearanceValueTest {
         @Test
         fun `check class of default value`() {
             assertIs<SnyggStaticColorValue>(encoder.defaultValue())
+            assertEquals(SnyggStaticColorValue(Color.Black), encoder.defaultValue())
         }
     }
 
@@ -196,6 +200,28 @@ class SnyggAppearanceValueTest {
         fun `check class of default value`() {
             assertIs<SnyggDynamicLightColorValue>(lightColorEncoder.defaultValue())
             assertIs<SnyggDynamicDarkColorValue>(darkColorEncoder.defaultValue())
+            assertEquals(helperLightColor(ColorPalette.Primary.id), lightColorEncoder.defaultValue())
+            assertEquals(helperDarkColor(ColorPalette.Primary.id), darkColorEncoder.defaultValue())
+        }
+
+        @Test
+        fun `all palette names retain both dynamic color wire forms`() {
+            assertAll(ColorPalette.colorNames.map { name -> {
+                val light = helperLightColor(name)
+                val dark = helperDarkColor(name)
+                assertEquals(light, lightColorEncoder.deserialize(helperLightColorString(name)).getOrThrow())
+                assertEquals(helperLightColorString(name), lightColorEncoder.serialize(light).getOrThrow())
+                assertEquals(dark, darkColorEncoder.deserialize(helperDarkColorString(name)).getOrThrow())
+                assertEquals(helperDarkColorString(name), darkColorEncoder.serialize(dark).getOrThrow())
+            } })
+        }
+
+        @Test
+        fun `dynamic color codecs reject the other scheme`() {
+            assertTrue(lightColorEncoder.deserialize(helperDarkColorString("primary")).isFailure)
+            assertTrue(darkColorEncoder.deserialize(helperLightColorString("primary")).isFailure)
+            assertTrue(lightColorEncoder.serialize(helperDarkColor("primary")).isFailure)
+            assertTrue(darkColorEncoder.serialize(helperLightColor("primary")).isFailure)
         }
 
         @Test
