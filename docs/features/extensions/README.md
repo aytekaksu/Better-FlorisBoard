@@ -49,6 +49,8 @@ destination unchanged and removes owned staging data.
 
 APK assets are trusted input, but their directory copy still uses staged,
 all-or-nothing publication.
+Bundled keyboard layout IDs may share one arrangement file through
+`arrangementFile`; their labels, modifiers, and subtype choices stay separate.
 
 ## Manifest rules
 

@@ -339,6 +339,7 @@
         "label": "Persian3",
         "authors": [ "SaeID-Rz" ],
         "direction": "rtl",
+        "arrangementFile": "layouts/characters/persian.json",
         "modifier": "org.florisboard.layouts:persian3"
       },
       {
@@ -417,7 +418,8 @@
         "id": "swiss_italian",
         "label": "Swiss Italian (QWERTZ)",
         "authors": [ "patrickgold" ],
-        "direction": "ltr"
+        "direction": "ltr",
+        "arrangementFile": "layouts/characters/swiss_german.json"
       },
       {
         "id": "tamil",
@@ -453,7 +455,8 @@
         "id": "udmurt_compact",
         "label": "Udmurt (3 чур)",
         "authors": [ "vorgoron" ],
-        "direction": "ltr"
+        "direction": "ltr",
+        "arrangementFile": "layouts/characters/jcuken_russian.json"
       },
       {
         "id": "udmurt_extended",
@@ -576,7 +579,8 @@
         "id": "persian3",
         "label": "Persian3",
         "authors": [ "SaeID-Rz" ],
-        "direction": "rtl"
+        "direction": "rtl",
+        "arrangementFile": "layouts/charactersMod/arabic.json"
       }
     ],
     "numeric": [
@@ -842,13 +846,15 @@
         "id": "persian",
         "label": "Persian",
         "authors": [ "patrickgold" ],
-        "direction": "ltr"
+        "direction": "ltr",
+        "arrangementFile": "layouts/symbols2/eastern.json"
       },
       {
         "id": "western",
         "label": "Western",
         "authors": [ "patrickgold" ],
-        "direction": "ltr"
+        "direction": "ltr",
+        "arrangementFile": "layouts/symbols2/eastern.json"
       },
       {
         "id": "western_samsung",
