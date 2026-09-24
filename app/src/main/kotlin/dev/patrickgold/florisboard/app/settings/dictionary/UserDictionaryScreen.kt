@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -45,6 +46,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.NavBackStackEntry
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.LocalNavController
 import dev.patrickgold.florisboard.app.settings.theme.DialogProperty
@@ -69,7 +73,6 @@ import org.florisboard.lib.compose.FlorisIconButton
 import org.florisboard.lib.compose.rippleClickable
 import org.florisboard.lib.compose.stringRes
 
-private val AllLanguagesLocale = FlorisLocale.from(language = "zz")
 private val UserDictionaryEntryToAdd = UserDictionaryEntry(id = 0, "", 255, null, null)
 private const val SystemUserDictionaryUiIntentAction = "android.settings.USER_DICTIONARY_SETTINGS"
 
@@ -79,7 +82,7 @@ enum class UserDictionaryType {
 }
 
 @Composable
-fun UserDictionaryScreen(type: UserDictionaryType) = FlorisScreen {
+fun UserDictionaryScreen(type: UserDictionaryType, routeEntry: NavBackStackEntry) = FlorisScreen {
     title = stringRes(when (type) {
         UserDictionaryType.FLORIS -> R.string.settings__udm__title_floris
         UserDictionaryType.SYSTEM -> R.string.settings__udm__title_system
@@ -90,16 +93,24 @@ fun UserDictionaryScreen(type: UserDictionaryType) = FlorisScreen {
     val navController = LocalNavController.current
     val context = LocalContext.current
     val dictionaryManager by context.dictionaryManager()
-    val database = when (type) {
-        UserDictionaryType.FLORIS -> dictionaryManager.florisUserDictionary
-        UserDictionaryType.SYSTEM -> dictionaryManager.systemUserDictionary
+    val model = remember(routeEntry) {
+        ViewModelProvider(routeEntry, object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = UserDictionaryScreenModel(
+                database = {
+                    when (type) {
+                        UserDictionaryType.FLORIS -> dictionaryManager.florisUserDictionary
+                        UserDictionaryType.SYSTEM -> dictionaryManager.systemUserDictionary
+                    }
+                },
+                context = context.applicationContext,
+            ) as T
+        })[UserDictionaryScreenModel::class.java]
     }
-    val userDictionaryDao = database.userDictionaryDao()
+    val state = model.state
+    val currentLocale = state.currentLocale
     val scope = rememberCoroutineScope()
 
-    var currentLocale by remember { mutableStateOf<FlorisLocale?>(null) }
-    var languageList by remember { mutableStateOf(emptyList<FlorisLocale>()) }
-    var wordList by remember { mutableStateOf(emptyList<UserDictionaryEntry>()) }
     var userDictionaryEntryForDialog by remember { mutableStateOf<UserDictionaryEntry?>(null) }
 
     fun getDisplayNameForLocale(locale: FlorisLocale): String {
@@ -110,62 +121,39 @@ fun UserDictionaryScreen(type: UserDictionaryType) = FlorisScreen {
         }
     }
 
-    fun buildUi() {
-        if (currentLocale != null) {
-            //subtitle = getDisplayNameForLocale(currentLocale)
-            val locale = if (currentLocale == AllLanguagesLocale) null else currentLocale
-            wordList = userDictionaryDao.queryAll(locale)
-            if (wordList.isEmpty()) {
-                currentLocale = null
-            }
-        }
-        if (currentLocale == null) {
-            //subtitle = null
-            languageList = userDictionaryDao.queryLanguageList()
-                .sortedBy { it?.displayLanguage() }
-                .map { it ?: AllLanguagesLocale }
-        }
-    }
-
     val importDictionary = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
-            // If uri is null it indicates that the selection activity was cancelled (mostly
-            // by pressing the back button), so we don't display an error message here.
-            if (uri == null) return@rememberLauncherForActivityResult
-            runCatching {
-                database.importCombinedList(context, uri)
-            }.onSuccess {
-                buildUi()
-                scope.launch { context.showLongToast(R.string.settings__udm__dictionary_import_success) }
-            }.onFailure { error ->
-                scope.launch { context.showLongToast("Error: ${error.localizedMessage}") }
-            }
+            if (uri != null) model.importFrom(uri)
         },
     )
 
     val exportDictionary = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(),
         onResult = { uri ->
-            // If uri is null it indicates that the selection activity was cancelled (mostly
-            // by pressing the back button), so we don't display an error message here.
-            if (uri == null) return@rememberLauncherForActivityResult
-            runCatching {
-                database.exportCombinedList(context, uri)
-            }.onSuccess {
-                scope.launch { context.showLongToast(R.string.settings__udm__dictionary_export_success) }
-            }.onFailure { error ->
-                scope.launch { context.showLongToast("Error: ${error.localizedMessage}") }
-            }
+            if (uri != null) model.exportTo(uri)
         },
     )
+
+    LaunchedEffect(state.notice) {
+        val notice = state.notice ?: return@LaunchedEffect
+        when (notice) {
+            UserDictionaryNotice.ImportSuccess ->
+                context.showLongToast(R.string.settings__udm__dictionary_import_success)
+            UserDictionaryNotice.ExportSuccess ->
+                context.showLongToast(R.string.settings__udm__dictionary_export_success)
+            is UserDictionaryNotice.Failure ->
+                context.showLongToast(notice.detail?.let { "Error: $it" }
+                    ?: context.stringRes(R.string.error__snackbar_message))
+        }
+        model.clearNotice(notice)
+    }
 
     navigationIcon {
         FlorisIconButton(
             onClick = {
                 if (currentLocale != null) {
-                    currentLocale = null
-                    buildUi()
+                    model.selectLocale(null)
                 } else {
                     navController.popBackStack()
                 }
@@ -193,6 +181,7 @@ fun UserDictionaryScreen(type: UserDictionaryType) = FlorisScreen {
                     importDictionary.launch("*/*")
                     expanded = false
                 },
+                enabled = !state.busy,
                 text = { Text(text = stringRes(R.string.action__import)) },
             )
             DropdownMenuItem(
@@ -200,6 +189,7 @@ fun UserDictionaryScreen(type: UserDictionaryType) = FlorisScreen {
                     exportDictionary.launch("my-personal-dictionary.clb")
                     expanded = false
                 },
+                enabled = !state.busy,
                 text = { Text(text = stringRes(R.string.action__export)) },
             )
             if (type == UserDictionaryType.SYSTEM) {
@@ -216,7 +206,9 @@ fun UserDictionaryScreen(type: UserDictionaryType) = FlorisScreen {
 
     floatingActionButton {
         ExtendedFloatingActionButton(
-            onClick = { userDictionaryEntryForDialog = UserDictionaryEntryToAdd },
+            onClick = {
+                if (!state.busy) userDictionaryEntryForDialog = UserDictionaryEntryToAdd
+            },
             icon = { Icon(imageVector = Icons.Default.Add, contentDescription = null) },
             text = { Text(text = stringRes(R.string.settings__udm__dialog__title_add)) },
         )
@@ -224,17 +216,13 @@ fun UserDictionaryScreen(type: UserDictionaryType) = FlorisScreen {
 
     content {
         BackHandler(currentLocale != null) {
-            currentLocale = null
-            buildUi()
-        }
-
-        LaunchedEffect(type) {
-            currentLocale = null
-            buildUi()
+            model.selectLocale(null)
         }
 
         LazyColumn {
-            if (languageList.isEmpty()) {
+            if (state.loading) {
+                item { CircularProgressIndicator(Modifier.padding(16.dp)) }
+            } else if (currentLocale == null && state.languages.isEmpty()) {
                 item {
                     Text(
                         modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
@@ -243,25 +231,24 @@ fun UserDictionaryScreen(type: UserDictionaryType) = FlorisScreen {
                     )
                 }
             }
-            if (currentLocale == null) {
-                items(languageList) { language ->
+            if (!state.loading && currentLocale == null) {
+                items(state.languages) { language ->
                     JetPrefListItem(
                         modifier = Modifier.rippleClickable {
                             scope.launch {
                                 // Delay makes UI ripple visible and experience better
                                 delay(150)
-                                currentLocale = language
-                                buildUi()
+                                model.selectLocale(language)
                             }
                         },
                         text = getDisplayNameForLocale(language),
                     )
                 }
-            } else {
-                items(wordList) { wordEntry ->
+            } else if (!state.loading) {
+                items(state.words) { wordEntry ->
                     JetPrefListItem(
                         modifier = Modifier.rippleClickable {
-                            userDictionaryEntryForDialog = wordEntry
+                            if (!state.busy) userDictionaryEntryForDialog = wordEntry
                         },
                         text = wordEntry.word,
                         secondaryText = stringRes(
@@ -320,13 +307,9 @@ fun UserDictionaryScreen(type: UserDictionaryType) = FlorisScreen {
                                 FlorisLocale.fromTag(it).localeTag()
                             },
                         )
-                        if (isAddWord) {
-                            userDictionaryDao.insert(entry)
-                        } else {
-                            userDictionaryDao.update(entry)
+                        if (model.save(entry, isAddWord)) {
+                            userDictionaryEntryForDialog = null
                         }
-                        userDictionaryEntryForDialog = null
-                        buildUi()
                     }
                 },
                 dismissLabel = stringRes(R.string.action__cancel),
@@ -339,9 +322,9 @@ fun UserDictionaryScreen(type: UserDictionaryType) = FlorisScreen {
                     stringRes(R.string.action__delete)
                 },
                 onNeutral = {
-                    userDictionaryDao.delete(wordEntry)
-                    userDictionaryEntryForDialog = null
-                    buildUi()
+                    if (model.delete(wordEntry)) {
+                        userDictionaryEntryForDialog = null
+                    }
                 },
             ) {
                 Column {

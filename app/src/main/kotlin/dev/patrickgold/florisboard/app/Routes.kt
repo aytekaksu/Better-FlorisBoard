@@ -317,7 +317,7 @@ object Routes {
             composableWithDeepLink(Settings.Dictionary::class) { DictionaryScreen() }
             composableWithDeepLink(Settings.UserDictionary::class) { navBackStack ->
                 val payload = navBackStack.toRoute<Settings.UserDictionary>()
-                UserDictionaryScreen(payload.type)
+                UserDictionaryScreen(payload.type, navBackStack)
             }
 
             composableWithDeepLink(Settings.Gestures::class) { GesturesScreen() }

@@ -34,7 +34,11 @@ import dev.patrickgold.jetpref.datastore.model.collectAsState
 import dev.patrickgold.jetpref.datastore.ui.Preference
 import dev.patrickgold.jetpref.datastore.ui.PreferenceGroup
 import dev.patrickgold.jetpref.datastore.ui.SwitchPreference
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.florisboard.lib.android.AndroidSettings
 import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.android.showLongToast
@@ -219,8 +223,12 @@ fun DevtoolsScreen() = FlorisScreen {
         if (showDialog) {
             FlorisConfirmDeleteDialog(
                 onConfirm = {
-                    dictionaryManager.florisUserDictionary.userDictionaryDao().deleteAll()
                     setShowDialog(false)
+                    scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                        withContext(NonCancellable + Dispatchers.IO) {
+                            dictionaryManager.florisUserDictionary.userDictionaryDao().deleteAll()
+                        }
+                    }
                 },
                 onDismiss = { setShowDialog(false) },
                 what = FlorisUserDictionaryDatabase.DB_FILE_NAME,
