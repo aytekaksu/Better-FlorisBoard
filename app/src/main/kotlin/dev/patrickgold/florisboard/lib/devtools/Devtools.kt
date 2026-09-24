@@ -202,68 +202,30 @@ object Devtools {
         }
     }
 
-    fun getSystemMemoryUsage(context: Context): String {
-        return buildString {
-            try {
-                //  Source: https://stackoverflow.com/a/19267315/6801193
-                val memoryInfo = ActivityManager.MemoryInfo()
-                context.systemService(ActivityManager::class).getMemoryInfo(memoryInfo)
-                val nativeHeapSize = memoryInfo.totalMem
-                val nativeHeapFreeSize = memoryInfo.availMem
-                val usedMemInBytes = nativeHeapSize - nativeHeapFreeSize
-                val usedMemInPercentage = usedMemInBytes * 100f / nativeHeapSize
-                append(UnitUtils.formatMemorySize(usedMemInBytes))
-                append(" (")
-                append(String.format(Locale.ROOT, "%.2f", usedMemInPercentage))
-                append("% used, ")
-                append(UnitUtils.formatMemorySize(nativeHeapSize))
-                append(" max)")
-            } catch (e: Exception) {
-                append("Failed to retrieve memory usage: ")
-                append(e.javaClass.simpleName)
-            }
-        }
+    fun getSystemMemoryUsage(context: Context) = formatMemoryUsage {
+        val memoryInfo = ActivityManager.MemoryInfo()
+        context.systemService(ActivityManager::class).getMemoryInfo(memoryInfo)
+        (memoryInfo.totalMem - memoryInfo.availMem) to memoryInfo.totalMem
     }
 
-    fun getAppJavaHeapMemoryUsage(): String {
-        return buildString {
-            try {
-                //  Source: https://stackoverflow.com/a/19267315/6801193
-                val runtime = Runtime.getRuntime()
-                val javaHeapSize = runtime.maxMemory()
-                val usedMemInBytes = runtime.totalMemory() - runtime.freeMemory()
-                val usedMemInPercentage = usedMemInBytes * 100f / javaHeapSize
-                append(UnitUtils.formatMemorySize(usedMemInBytes))
-                append(" (")
-                append(String.format(Locale.ROOT, "%.2f", usedMemInPercentage))
-                append("% used, ")
-                append(UnitUtils.formatMemorySize(javaHeapSize))
-                append(" max)")
-            } catch (e: Exception) {
-                append("Failed to retrieve memory usage: ")
-                append(e.javaClass.simpleName)
-            }
-        }
+    fun getAppJavaHeapMemoryUsage() = formatMemoryUsage {
+        val runtime = Runtime.getRuntime()
+        val max = runtime.maxMemory()
+        (runtime.totalMemory() - runtime.freeMemory()) to max
     }
 
-    fun getAppNativeHeapMemoryUsage(): String {
-        return buildString {
-            try {
-                //  Source: https://stackoverflow.com/a/19267315/6801193
-                val nativeHeapSize = Debug.getNativeHeapSize()
-                val nativeHeapFreeSize = Debug.getNativeHeapFreeSize()
-                val usedMemInBytes = nativeHeapSize - nativeHeapFreeSize
-                val usedMemInPercentage = usedMemInBytes * 100f / nativeHeapSize
-                append(UnitUtils.formatMemorySize(usedMemInBytes))
-                append(" (")
-                append(String.format(Locale.ROOT, "%.2f", usedMemInPercentage))
-                append("% used, ")
-                append(UnitUtils.formatMemorySize(nativeHeapSize))
-                append(" max)")
-            } catch (e: Exception) {
-                append("Failed to retrieve memory usage: ")
-                append(e.javaClass.simpleName)
-            }
+    fun getAppNativeHeapMemoryUsage() = formatMemoryUsage {
+        val max = Debug.getNativeHeapSize()
+        (max - Debug.getNativeHeapFreeSize()) to max
+    }
+
+    internal fun formatMemoryUsage(read: () -> Pair<Long, Long>): String {
+        return try {
+            val (used, max) = read()
+            val percentage = String.format(Locale.ROOT, "%.2f", used * 100f / max)
+            "${UnitUtils.formatMemorySize(used)} ($percentage% used, ${UnitUtils.formatMemorySize(max)} max)"
+        } catch (e: Exception) {
+            "Failed to retrieve memory usage: ${e.javaClass.simpleName}"
         }
     }
 }
