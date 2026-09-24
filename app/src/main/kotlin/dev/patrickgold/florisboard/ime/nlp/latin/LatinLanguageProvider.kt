@@ -32,7 +32,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
-import org.florisboard.lib.android.readText
 
 class LatinLanguageProvider(context: Context) :
     SpellingProvider,
@@ -53,7 +52,8 @@ class LatinLanguageProvider(context: Context) :
     override suspend fun preload(subtype: Subtype) = withContext(Dispatchers.IO) {
         wordDataLock.withLock {
             if (wordData.isEmpty()) {
-                val rawData = appContext.assets.readText("ime/dict/data.json")
+                val rawData = appContext.assets.open("ime/dict/data.json")
+                    .reader(Charsets.UTF_8).use { it.readText() }
                 val jsonData = Json.decodeFromString(wordDataSerializer, rawData)
                 wordData.putAll(jsonData)
             }
