@@ -59,7 +59,6 @@ import org.florisboard.lib.kotlin.collectIn
 import org.florisboard.lib.kotlin.io.FsDir
 import org.florisboard.lib.kotlin.io.subDir
 import org.florisboard.lib.snygg.SnyggStylesheet
-import org.florisboard.lib.snygg.value.SnyggStaticColorValue
 import java.time.LocalTime
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
@@ -380,17 +379,6 @@ class ThemeManager(context: Context) {
 
     class LoadFailure(val cause: Throwable) {
         override fun toString() = "LoadFailure(type=${cause.javaClass.simpleName})"
-    }
-
-    data class RemoteColors(
-        val packageName: String,
-        val colorPrimary: SnyggStaticColorValue?,
-        val colorPrimaryVariant: SnyggStaticColorValue?,
-        val colorSecondary: SnyggStaticColorValue?,
-    ) {
-        companion object {
-            val DEFAULT = RemoteColors("undefined", null, null, null)
-        }
     }
 
     private companion object {

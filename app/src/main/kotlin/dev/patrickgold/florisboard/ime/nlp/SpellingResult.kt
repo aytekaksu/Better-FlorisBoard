@@ -27,14 +27,6 @@ import org.florisboard.lib.android.AndroidVersion
 @JvmInline
 value class SpellingResult(val suggestionsInfo: SuggestionsInfo) {
     /**
-     * Returns true if this spelling result is unspecified - meaning there either way no spelling provider available at
-     * all or no provider could process and spell the original string. Visually in the target editor field this result
-     * is treated exactly like [isValidWord].
-     */
-    val isUnspecified: Boolean
-        get() = suggestionsInfo.suggestionsAttributes == UNSPECIFIED
-
-    /**
      * Returns true if the original string is a valid word. Visually in the target editor field this means that no
      * underlining is done, neither does a popup window appear once the user clicks on the word.
      */
@@ -70,7 +62,7 @@ value class SpellingResult(val suggestionsInfo: SuggestionsInfo) {
         private val EMPTY_STRING_ARRAY: Array<out String> = arrayOf()
 
         /**
-         * Constructs a new unspecified result. See [isUnspecified] for details.
+         * Constructs a result for when no spelling provider can process the input. The editor treats it as a valid word.
          *
          * @return A spelling result wrapping a [SuggestionsInfo] object, which can be returned to a spell checker
          *  caller in the service.

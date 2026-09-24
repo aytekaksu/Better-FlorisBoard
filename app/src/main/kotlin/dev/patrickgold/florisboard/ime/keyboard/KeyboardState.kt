@@ -52,7 +52,6 @@ import kotlin.properties.Delegates
  *          |    1     |          |          | Is composing enabled
  *          |   1      |          |          | Is character half-width enabled
  *          |  1       |          |          | Is Kana Kata enabled
- *          | 1        |          |          | Is Kana small
  *      111 |          |          |          | Ime Ui Mode
  *     1    |          |          |          | Layout Direction (0=LTR, 1=RTL)
  *
@@ -89,7 +88,6 @@ open class KeyboardState protected constructor(open var rawValue: ULong) {
 
         const val F_IS_CHAR_HALF_WIDTH: ULong =             0x00200000u
         const val F_IS_KANA_KATA: ULong =                   0x00400000u
-        const val F_IS_KANA_SMALL: ULong =                  0x00800000u
 
         const val F_IS_RTL_LAYOUT_DIRECTION: ULong =        0x08000000u
 
@@ -154,9 +152,6 @@ open class KeyboardState protected constructor(open var rawValue: ULong) {
         get() = if (getFlag(F_IS_RTL_LAYOUT_DIRECTION)) LayoutDirection.Rtl else LayoutDirection.Ltr
         set(v) { setFlag(F_IS_RTL_LAYOUT_DIRECTION, v == LayoutDirection.Rtl) }
 
-    val isLowercase: Boolean
-        get() = inputShiftState == InputShiftState.UNSHIFTED
-
     val isUppercase: Boolean
         get() = inputShiftState != InputShiftState.UNSHIFTED
 
@@ -175,10 +170,6 @@ open class KeyboardState protected constructor(open var rawValue: ULong) {
     var isManualSelectionModeEnd: Boolean
         get() = getFlag(F_IS_MANUAL_SELECTION_MODE_END)
         set(v) { setFlag(F_IS_MANUAL_SELECTION_MODE_END, v) }
-
-    var isCursorMode: Boolean
-        get() = !isSelectionMode
-        set(v) { isSelectionMode = !v }
 
     var isIncognitoMode: Boolean
         get() = getFlag(F_IS_INCOGNITO_MODE)
@@ -207,10 +198,6 @@ open class KeyboardState protected constructor(open var rawValue: ULong) {
     var isCharHalfWidth: Boolean
         get() = getFlag(F_IS_CHAR_HALF_WIDTH)
         set(v) { setFlag(F_IS_CHAR_HALF_WIDTH, v) }
-
-    var isKanaSmall: Boolean
-        get() = getFlag(F_IS_KANA_SMALL)
-        set(v) { setFlag(F_IS_KANA_SMALL, v) }
 
     var debugShowDragAndDropHelpers: Boolean
         get() = getFlag(F_DEBUG_SHOW_DRAG_AND_DROP_HELPERS)
