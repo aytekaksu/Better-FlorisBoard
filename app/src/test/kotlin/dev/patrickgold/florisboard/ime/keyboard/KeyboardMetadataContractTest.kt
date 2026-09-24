@@ -51,6 +51,30 @@ class KeyboardMetadataContractTest :
                 assetRoot.resolve("extension.json").readText(),
             )
             extension.validateForImport().isValid shouldBe true
+            extension.layouts.mapValues { (_, components) -> components.size } shouldBe mapOf(
+                "characters" to 76,
+                "charactersMod" to 15,
+                "numeric" to 2,
+                "numericAdvanced" to 3,
+                "numericRow" to 17,
+                "phone" to 1,
+                "phone2" to 1,
+                "symbols" to 9,
+                "symbolsMod" to 4,
+                "symbols2" to 6,
+                "symbols2Mod" to 2,
+            )
+            listOf(
+                Triple("characters", "swiss_italian", "layouts/characters/swiss_german.json"),
+                Triple("characters", "persian3", "layouts/characters/persian.json"),
+                Triple("characters", "udmurt_compact", "layouts/characters/jcuken_russian.json"),
+                Triple("charactersMod", "persian3", "layouts/charactersMod/arabic.json"),
+                Triple("symbols2", "persian", "layouts/symbols2/eastern.json"),
+                Triple("symbols2", "western", "layouts/symbols2/eastern.json"),
+            ).forEach { (typeId, id, path) ->
+                extension.layouts.getValue(typeId).single { it.id == id }
+                    .arrangementFile(requireNotNull(LayoutType.fromId(typeId))) shouldBe path
+            }
             val declaredFiles = extension.layouts.flatMap { (typeId, components) ->
                 val type = requireNotNull(LayoutType.fromId(typeId))
                 components.map { it.arrangementFile(type) }
@@ -60,7 +84,11 @@ class KeyboardMetadataContractTest :
                 .map { it.relativeTo(assetRoot).invariantSeparatorsPath }
                 .filter { it != "extension.json" }
                 .toList()
-            packagedFiles.sorted() shouldBe declaredFiles.sorted()
+            packagedFiles.size shouldBe packagedFiles.toSet().size
+            packagedFiles.toSet() shouldBe declaredFiles.toSet()
+            declaredFiles.distinct().forEach { path ->
+                DefaultJsonConfig.decodeFromString<LayoutArrangement>(assetRoot.resolve(path).readText())
+            }
         }
 
         test("bundled popup metadata exposes every packaged mapping") {
