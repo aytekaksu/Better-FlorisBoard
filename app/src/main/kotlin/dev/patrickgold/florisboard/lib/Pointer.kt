@@ -19,34 +19,15 @@ package dev.patrickgold.florisboard.lib
 import androidx.annotation.RestrictTo
 
 /**
- * A simple helper object managing touch pointer objects. This class is designed to hold
- * at max [capacity] at once. It tries to reduce the need to recreate objects and to resize
- * arrays by creating a fixed-size list and by reusing pointers. This map supports iterating
- * over all active pointers.
- *
- * @property capacity The capacity of this map, determining the maximum number of pointers this
- *  map can hold at once. This value must be greater than or equal to one. Should a smaller capacity
- *  be passed, automatically the minimum capacity `1` is assumed.
- * @param init The initializer for each pointer. Note that [Pointer.reset] is called before
- *  storing the new object, to ensure that this pointer is not initialized with some pointer data.
+ * Reuses a fixed pool of touch pointers. Each result from `init` is reset before use.
+ * The pool has one slot when [capacity] is zero or negative.
  */
 class PointerMap<P : Pointer>(val capacity: Int = 4, init: (Int) -> P) : Iterable<P> {
-    /**
-     * The internal list of pointers, is not intended for public access.
-     */
     private val pointers: List<P> = List(capacity.coerceAtLeast(1)) { i ->
         init(i).also { pointer -> pointer.reset() }
     }
 
-    /**
-     * Adds a new pointer with given [id] and [index] and returns it. If this map is already at max
-     * capacity, null is returned and the pointer could not be added.
-     *
-     * @param id The id of the pointer to add.
-     * @param index The index of the pointer to add.
-     *
-     * @return The newly added pointer or null if the map is already full.
-     */
+    /** Returns a reset slot for [id], or null if [id] is invalid, already active, or the pool is full. */
     fun add(id: Int, index: Int): P? {
         if (id < 0) return null
         if (findById(id) != null) return null
@@ -61,22 +42,13 @@ class PointerMap<P : Pointer>(val capacity: Int = 4, init: (Int) -> P) : Iterabl
         return null
     }
 
-    /**
-     * Clears this map and resets all pointers.
-     */
     fun clear() {
         for (pointer in pointers) {
             pointer.reset()
         }
     }
 
-    /**
-     * Finds a pointer by given [id].
-     *
-     * @param id The id of the pointer which should be found.
-     *
-     * @return The pointer with given [id] or null.
-     */
+    /** Returns the active pointer with [id], if present. */
     fun findById(id: Int): P? {
         if (id < 0) return null
         for (pointer in pointers) {
@@ -87,14 +59,7 @@ class PointerMap<P : Pointer>(val capacity: Int = 4, init: (Int) -> P) : Iterabl
         return null
     }
 
-    /**
-     * Gets a pointer from the internal array based on the internal array index. This method
-     * is intended to be used only by the [PointerIterator].
-     *
-     * @param index
-     *
-     * @return The pointer for given index or null, excluding unused pointers.
-     */
+    /** Returns an active pool slot at [index], or null. Used by [PointerIterator]. */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
     fun get(index: Int): P? {
         val pointer = pointers.getOrNull(index)
@@ -108,13 +73,7 @@ class PointerMap<P : Pointer>(val capacity: Int = 4, init: (Int) -> P) : Iterabl
         return PointerIterator(this)
     }
 
-    /**
-     * Removes a pointer with given [id] and returns a boolean result.
-     *
-     * @param id The id of the pointer to remove. If the id is not existent, noting happens.
-     *
-     * @return True if a pointer was removed, false otherwise.
-     */
+    /** Resets the pointer with [id]. Returns false if it was not active. */
     fun removeById(id: Int): Boolean {
         if (id < 0) return false
         for (pointer in pointers) {
@@ -126,10 +85,7 @@ class PointerMap<P : Pointer>(val capacity: Int = 4, init: (Int) -> P) : Iterabl
         return false
     }
 
-    /**
-     * Returns the size of this map (only counting active pointers). This value is anywhere
-     * between 0 and [capacity].
-     */
+    /** Number of active pointers. */
     val size: Int
         get() = pointers.count { it.isUsed }
 }
@@ -151,39 +107,24 @@ class PointerIterator<P : Pointer>(private val pointerMap: PointerMap<P>) : Iter
     }
 }
 
-/**
- * Abstract touch pointer definition.
- */
+/** Mutable slot for one touch pointer. [reset] makes it available for reuse. */
 abstract class Pointer {
     companion object {
         const val UNUSED_P: Int = -1
     }
 
-    /**
-     * The id of this pointer, corresponds to the motion event this pointer originated.
-     */
+    /** MotionEvent pointer ID, or [UNUSED_P] when free. */
     var id: Int = UNUSED_P
 
-    /**
-     * The index of this pointer, corresponds to the motion event this pointer originated.
-     */
+    /** Current MotionEvent pointer index, or [UNUSED_P] when free. */
     var index: Int = UNUSED_P
 
-    /**
-     * True if this pointer is used and active, false otherwise.
-     */
     val isUsed: Boolean
         get() = id >= 0
 
-    /**
-     * False if this pointer is used and active, true otherwise.
-     */
     val isNotUsed: Boolean
         get() = !isUsed
 
-    /**
-     * Resets this pointer to be used again.
-     */
     open fun reset() {
         id = UNUSED_P
         index = UNUSED_P
