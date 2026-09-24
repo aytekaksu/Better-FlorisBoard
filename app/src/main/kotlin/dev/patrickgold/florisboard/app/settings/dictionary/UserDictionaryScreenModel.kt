@@ -168,6 +168,7 @@ internal class UserDictionaryScreenModel(
             Snapshot(requestedLocale, emptyList(), words)
         } else {
             val languages = dao.queryLanguageList()
+                .distinct()
                 .sortedBy { it?.displayLanguage() }
                 .map { it ?: AllLanguagesLocale }
             Snapshot(null, languages, emptyList())

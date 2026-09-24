@@ -20,6 +20,21 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
 class UserDictionaryLocaleTest : FunSpec({
+    test("Floris imports canonicalize only locale tags they can represent") {
+        mapOf(
+            "en-US" to "en_US",
+            "en-us" to "en_US",
+            "de_DE" to "de_DE",
+            "de-419" to "de_419",
+            "sr-Latn-RS" to "sr-Latn-RS",
+            "en-US-u-ca-gregory" to "en-US-u-ca-gregory",
+            "en_US_#u-ca-gregory" to "en_US_#u-ca-gregory",
+        ).forEach { (input, expected) ->
+            canonicalImportedFlorisLocale(input) shouldBe expected
+        }
+        canonicalImportedFlorisLocale(null) shouldBe null
+    }
+
     test("Android storage locales retain scripts, extensions, and legacy variants") {
         mapOf(
             "zh_TW_#Hant" to "zh-Hant-TW",

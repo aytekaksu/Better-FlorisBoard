@@ -67,6 +67,28 @@ class UserDictionaryScreenModelTest : FunSpec({
         }
     }
 
+    test("legacy and canonical locale strings show one language choice") {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val io = QueuedIoDispatcher()
+                val dao = FakeDao(io).apply {
+                    entries += entry(1, "canonical", "en_US")
+                    entries += entry(2, "legacy", "en-US")
+                }
+                val model = model(io, dao)
+                drain(io)
+
+                model.state.languages shouldBe listOf(FlorisLocale.fromTag("en-US"))
+                model.selectLocale(FlorisLocale.fromTag("en-US"))
+                drain(io)
+                model.state.words.map { it.word } shouldBe listOf("canonical", "legacy")
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+    }
+
     test("a completed old read cannot replace a newer locale selection") {
         runTest {
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))
@@ -271,10 +293,15 @@ private class FakeDao(private val io: QueuedIoDispatcher) : UserDictionaryDao {
         return entries.filter { it.word == word && it.locale?.let { tag -> FlorisLocale.fromTag(tag) } == locale }
     }
 
+    override fun queryExactRaw(word: String, locale: String): List<UserDictionaryEntry> {
+        requireIo()
+        return entries.filter { it.word == word && it.locale == locale }
+    }
+
     override fun queryLanguageList(): List<FlorisLocale?> {
         requireIo()
         queryFailure?.let { throw it }
-        return entries.map { it.locale?.let { tag -> FlorisLocale.fromTag(tag) } }.distinct()
+        return entries.map { it.locale }.distinct().map { it?.let(FlorisLocale::fromTag) }
     }
 
     override fun insert(entry: UserDictionaryEntry): Long {

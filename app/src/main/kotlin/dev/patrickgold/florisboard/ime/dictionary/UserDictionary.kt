@@ -70,6 +70,14 @@ internal fun strictUserDictionaryLocale(languageTag: String): Locale? {
     }.getOrNull()?.takeIf { it.language.isNotEmpty() }
 }
 
+private fun isRepresentableFlorisLocale(value: String): Boolean =
+    strictUserDictionaryLocale(value.replace('_', '-')) == FlorisLocale.fromTag(value).base
+
+internal fun canonicalImportedFlorisLocale(value: String?): String? = value?.let { raw ->
+    // FlorisLocale does not represent script or extension subtags. Keep those strings intact.
+    if (isRepresentableFlorisLocale(raw)) FlorisLocale.fromTag(raw).localeTag() else raw
+}
+
 internal fun storedUserDictionaryLocale(value: String): Locale? {
     if ('_' !in value && '#' !in value) return strictUserDictionaryLocale(value)
     return runCatching {
@@ -145,20 +153,30 @@ interface UserDictionaryDao {
     companion object {
         private const val SELECT_ALL_FROM_WORDS =
             "SELECT * FROM $WORDS_TABLE"
+        private const val MATCH_LOCALE =
+            "(${UserDictionary.Words.LOCALE} = :locale COLLATE NOCASE OR " +
+                "${UserDictionary.Words.LOCALE} = REPLACE(:locale, '_', '-') COLLATE NOCASE OR " +
+                "(${UserDictionary.Words.LOCALE} IS NULL AND :locale IS NULL))"
     }
 
     @Query(SELECT_ALL_FROM_WORDS)
     fun queryAll(): List<UserDictionaryEntry>
 
     @Query(
-        "$SELECT_ALL_FROM_WORDS WHERE (${UserDictionary.Words.LOCALE} = :locale AND :locale IS NOT NULL) OR (${UserDictionary.Words.LOCALE} IS NULL AND :locale IS NULL)",
+        "$SELECT_ALL_FROM_WORDS WHERE $MATCH_LOCALE",
     )
     fun queryAll(locale: FlorisLocale?): List<UserDictionaryEntry>
 
     @Query(
-        "$SELECT_ALL_FROM_WORDS WHERE ${UserDictionary.Words.WORD} = :word AND (${UserDictionary.Words.LOCALE} = :locale OR (${UserDictionary.Words.LOCALE} IS NULL AND :locale IS NULL))",
+        "$SELECT_ALL_FROM_WORDS WHERE ${UserDictionary.Words.WORD} = :word AND $MATCH_LOCALE " +
+            "ORDER BY CASE WHEN ${UserDictionary.Words.LOCALE} = :locale THEN 0 ELSE 1 END, ${UserDictionary.Words._ID}",
     )
     fun queryExact(word: String, locale: FlorisLocale?): List<UserDictionaryEntry>
+
+    @Query(
+        "$SELECT_ALL_FROM_WORDS WHERE ${UserDictionary.Words.WORD} = :word AND ${UserDictionary.Words.LOCALE} = :locale ORDER BY ${UserDictionary.Words._ID}",
+    )
+    fun queryExactRaw(word: String, locale: String): List<UserDictionaryEntry>
 
     @Query("SELECT DISTINCT ${UserDictionary.Words.LOCALE} FROM $WORDS_TABLE")
     fun queryLanguageList(): List<FlorisLocale?>
@@ -178,6 +196,11 @@ interface UserDictionaryDao {
 
 interface UserDictionaryDatabase {
     fun userDictionaryDao(): UserDictionaryDao
+
+    fun importLocale(value: String?): String? = value
+
+    fun queryImportedEntries(word: String, locale: String?): List<UserDictionaryEntry> =
+        userDictionaryDao().queryExact(word, locale?.let(FlorisLocale::fromTag))
 
     fun importCombinedList(context: Context, uri: Uri) {
         context.contentResolver.readText(uri) { src ->
@@ -222,10 +245,8 @@ interface UserDictionaryDatabase {
                     }
                     checkNotNull(word) { "Error at source line `$line`: Word cannot be empty or missing" }
                     checkNotNull(freq) { "Error at source line `$line`: Freq cannot be empty or missing" }
-                    val alreadyExistingEntries = userDictionaryDao().queryExact(
-                        word,
-                        locale?.let { FlorisLocale.fromTag(it) },
-                    )
+                    locale = importLocale(locale)
+                    val alreadyExistingEntries = queryImportedEntries(word, locale)
                     if (alreadyExistingEntries.isNotEmpty()) {
                         userDictionaryDao().update(
                             UserDictionaryEntry(alreadyExistingEntries[0].id, word, freq, locale, shortcut),
@@ -281,6 +302,16 @@ abstract class FlorisUserDictionaryDatabase :
     }
 
     abstract override fun userDictionaryDao(): UserDictionaryDao
+
+    override fun importLocale(value: String?): String? = canonicalImportedFlorisLocale(value)
+
+    override fun queryImportedEntries(word: String, locale: String?): List<UserDictionaryEntry> =
+        if (locale != null && !isRepresentableFlorisLocale(locale)) {
+            // Parsing would discard subtags and could overwrite a different raw locale.
+            userDictionaryDao().queryExactRaw(word, locale)
+        } else {
+            userDictionaryDao().queryExact(word, locale?.let(FlorisLocale::fromTag))
+        }
 
     class Converters {
         @TypeConverter
@@ -451,6 +482,12 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
                 sortOrder = SORT_BY_FREQ_DESC,
             )
         }
+
+        override fun queryExactRaw(word: String, locale: String): List<UserDictionaryEntry> = queryResolver(
+            selection = "${UserDictionary.Words.WORD} = ? AND ${UserDictionary.Words.LOCALE} = ?",
+            selectionArgs = arrayOf(word, locale),
+            sortOrder = SORT_BY_FREQ_DESC,
+        )
 
         override fun queryLanguageList(): List<FlorisLocale?> {
             val resolver = applicationContext.contentResolver
