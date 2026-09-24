@@ -35,18 +35,11 @@ data class SnyggDpSizeValue(val dp: Dp) : SnyggSizeValue {
 
         override fun defaultValue() = SnyggDpSizeValue(0.dp)
 
-        override fun serialize(v: SnyggValue) = runCatching<String> {
-            require(v is SnyggDpSizeValue)
-            val map = snyggIdToValueMapOf(Size to v.dp.value)
-            return@runCatching spec.pack(map)
+        override fun serialize(v: SnyggValue) = encodeValue<SnyggDpSizeValue>(v) {
+            snyggIdToValueMapOf(Size to dp.value)
         }
 
-        override fun deserialize(v: String) = runCatching<SnyggValue> {
-            val map = snyggIdToValueMapOf()
-            spec.parse(v, map)
-            val size = map.getFloat(Size)
-            return@runCatching SnyggDpSizeValue(size.dp)
-        }
+        override fun deserialize(v: String) = decodeValue(v) { SnyggDpSizeValue(getFloat(Size).dp) }
     }
 
     override fun encoder() = Companion
@@ -60,18 +53,11 @@ data class SnyggSpSizeValue(val sp: TextUnit) : SnyggSizeValue {
 
         override fun defaultValue() = SnyggSpSizeValue(24.sp)
 
-        override fun serialize(v: SnyggValue) = runCatching<String> {
-            require(v is SnyggSpSizeValue)
-            val map = snyggIdToValueMapOf(Size to v.sp.value)
-            return@runCatching spec.pack(map)
+        override fun serialize(v: SnyggValue) = encodeValue<SnyggSpSizeValue>(v) {
+            snyggIdToValueMapOf(Size to sp.value)
         }
 
-        override fun deserialize(v: String) = runCatching<SnyggValue> {
-            val map = snyggIdToValueMapOf()
-            spec.parse(v, map)
-            val size = map.getFloat(Size)
-            return@runCatching SnyggSpSizeValue(size.sp)
-        }
+        override fun deserialize(v: String) = decodeValue(v) { SnyggSpSizeValue(getFloat(Size).sp) }
     }
 
     override fun encoder() = Companion
@@ -85,18 +71,11 @@ data class SnyggPercentageSizeValue(val percentage: Float) : SnyggSizeValue {
 
         override fun defaultValue() = SnyggPercentageSizeValue(0f)
 
-        override fun serialize(v: SnyggValue) = runCatching<String> {
-            require(v is SnyggPercentageSizeValue)
-            val map = snyggIdToValueMapOf(Size to v.percentage * 100.0f)
-            return@runCatching spec.pack(map)
+        override fun serialize(v: SnyggValue) = encodeValue<SnyggPercentageSizeValue>(v) {
+            snyggIdToValueMapOf(Size to percentage * 100.0f)
         }
 
-        override fun deserialize(v: String) = runCatching<SnyggValue> {
-            val map = snyggIdToValueMapOf()
-            spec.parse(v, map)
-            val size = map.getFloat(Size) / 100.0f
-            return@runCatching SnyggPercentageSizeValue(size)
-        }
+        override fun deserialize(v: String) = decodeValue(v) { SnyggPercentageSizeValue(getFloat(Size) / 100.0f) }
     }
 
     override fun encoder() = Companion

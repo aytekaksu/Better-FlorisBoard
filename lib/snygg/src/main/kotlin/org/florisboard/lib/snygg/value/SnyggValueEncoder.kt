@@ -60,6 +60,21 @@ interface SnyggValueEncoder {
     fun deserialize(v: String): Result<SnyggValue>
 }
 
+internal inline fun <reified T : SnyggValue> SnyggValueEncoder.encodeValue(
+    value: SnyggValue,
+    arguments: T.() -> SnyggIdToValueMap = { snyggIdToValueMapOf() },
+) = runCatching<String> {
+    require(value is T)
+    spec.pack(value.arguments())
+}
+
+internal fun SnyggValueEncoder.decodeValue(value: String, construct: SnyggIdToValueMap.() -> SnyggValue) =
+    runCatching<SnyggValue> {
+        val arguments = snyggIdToValueMapOf()
+        spec.parse(value, arguments)
+        arguments.construct()
+    }
+
 abstract class SnyggEnumLikeValueEncoder<V> internal constructor(
     val serializationId: String,
     val serializationMapping: Map<String, V>,

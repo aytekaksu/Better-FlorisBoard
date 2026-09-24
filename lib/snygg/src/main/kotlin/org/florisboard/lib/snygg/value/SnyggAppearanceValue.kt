@@ -46,29 +46,25 @@ object RgbaColor {
     val AlphaRangePattern = """1(?:[.]0)?|0(?:[.][0-9]*)?|[.][0-9]+""".toRegex()
 }
 
-data class SnyggStaticColorValue(val color: Color) : SnyggAppearanceValue {
-    companion object : SnyggValueEncoder {
-        override val spec = SnyggValueSpec {
-            function(name = "rgba") {
-                commaList {
-                    +int(id = RgbaColor.RedId, numberPattern = RgbaColor.ColorRangePattern)
-                    +int(id = RgbaColor.GreenId, numberPattern = RgbaColor.ColorRangePattern)
-                    +int(id = RgbaColor.BlueId, numberPattern = RgbaColor.ColorRangePattern)
-                    +float(id = RgbaColor.AlphaId, numberPattern = RgbaColor.AlphaRangePattern)
-                }
+private fun rgbColorSpec(withAlpha: Boolean) = SnyggValueSpec {
+    function(name = if (withAlpha) "rgba" else "rgb") {
+        commaList {
+            +int(id = RgbaColor.RedId, numberPattern = RgbaColor.ColorRangePattern)
+            +int(id = RgbaColor.GreenId, numberPattern = RgbaColor.ColorRangePattern)
+            +int(id = RgbaColor.BlueId, numberPattern = RgbaColor.ColorRangePattern)
+            if (withAlpha) {
+                +float(id = RgbaColor.AlphaId, numberPattern = RgbaColor.AlphaRangePattern)
             }
         }
+    }
+}
+
+data class SnyggStaticColorValue(val color: Color) : SnyggAppearanceValue {
+    companion object : SnyggValueEncoder {
+        override val spec = rgbColorSpec(withAlpha = true)
 
         override val alternativeSpecs = listOf(
-            SnyggValueSpec {
-                function(name = "rgb") {
-                    commaList {
-                        +int(id = RgbaColor.RedId, numberPattern = RgbaColor.ColorRangePattern)
-                        +int(id = RgbaColor.GreenId, numberPattern = RgbaColor.ColorRangePattern)
-                        +int(id = RgbaColor.BlueId, numberPattern = RgbaColor.ColorRangePattern)
-                    }
-                }
-            },
+            rgbColorSpec(withAlpha = false),
             SnyggValueSpec {
                 string(id = RgbaColor.TransparentId, regex = RgbaColor.TransparentMatcher)
             },
@@ -138,36 +134,29 @@ data class SnyggStaticColorValue(val color: Color) : SnyggAppearanceValue {
 private const val ColorNameId = "name"
 private val ColorName = ColorPalette.colorNames.joinToString("|").toRegex()
 
+private fun dynamicColorSpec(functionName: String) = SnyggValueSpec {
+    function(name = functionName) {
+        commaList {
+            +string(id = ColorNameId, regex = ColorName)
+        }
+    }
+}
+
 sealed interface SnyggDynamicColorValue : SnyggAppearanceValue {
     val colorName: String
 }
 
 data class SnyggDynamicLightColorValue(override val colorName: String) : SnyggDynamicColorValue {
     companion object : SnyggValueEncoder {
-        private const val FunctionName = "dynamic-light-color"
-
-        override val spec = SnyggValueSpec {
-            function(name = FunctionName) {
-                commaList {
-                    +string(id = ColorNameId, regex = ColorName)
-                }
-            }
-        }
+        override val spec = dynamicColorSpec("dynamic-light-color")
 
         override fun defaultValue() = SnyggDynamicLightColorValue(ColorPalette.Primary.id)
 
-        override fun serialize(v: SnyggValue) = runCatching<String> {
-            require(v is SnyggDynamicLightColorValue)
-            val map = snyggIdToValueMapOf(ColorNameId to v.colorName)
-            return@runCatching spec.pack(map)
+        override fun serialize(v: SnyggValue) = encodeValue<SnyggDynamicLightColorValue>(v) {
+            snyggIdToValueMapOf(ColorNameId to colorName)
         }
 
-        override fun deserialize(v: String) = runCatching<SnyggValue> {
-            val map = snyggIdToValueMapOf()
-            spec.parse(v, map)
-            val colorName = map.getString(ColorNameId)
-            return@runCatching SnyggDynamicLightColorValue(colorName)
-        }
+        override fun deserialize(v: String) = decodeValue(v) { SnyggDynamicLightColorValue(getString(ColorNameId)) }
     }
 
     override fun encoder() = Companion
@@ -175,40 +164,16 @@ data class SnyggDynamicLightColorValue(override val colorName: String) : SnyggDy
 
 data class SnyggDynamicDarkColorValue(override val colorName: String) : SnyggDynamicColorValue {
     companion object : SnyggValueEncoder {
-        private const val FunctionName = "dynamic-dark-color"
-
-        override val spec = SnyggValueSpec {
-            function(name = FunctionName) {
-                commaList {
-                    +string(id = ColorNameId, regex = ColorName)
-                }
-            }
-        }
+        override val spec = dynamicColorSpec("dynamic-dark-color")
 
         override fun defaultValue() = SnyggDynamicDarkColorValue(ColorPalette.Primary.id)
 
-        override fun serialize(v: SnyggValue) = runCatching<String> {
-            require(v is SnyggDynamicDarkColorValue)
-            val map = snyggIdToValueMapOf(ColorNameId to v.colorName)
-            return@runCatching spec.pack(map)
+        override fun serialize(v: SnyggValue) = encodeValue<SnyggDynamicDarkColorValue>(v) {
+            snyggIdToValueMapOf(ColorNameId to colorName)
         }
 
-        override fun deserialize(v: String) = runCatching<SnyggValue> {
-            val map = snyggIdToValueMapOf()
-            spec.parse(v, map)
-            val colorName = map.getString(ColorNameId)
-            return@runCatching SnyggDynamicDarkColorValue(colorName)
-        }
+        override fun deserialize(v: String) = decodeValue(v) { SnyggDynamicDarkColorValue(getString(ColorNameId)) }
     }
 
     override fun encoder() = Companion
 }
-
-//data class LinearGradient(
-//    val dummy: Int,
-//) : SnyggAppearanceValue()
-//
-//data class RadialGradient(
-//    val dummy: Int,
-//) : SnyggAppearanceValue()
-//
