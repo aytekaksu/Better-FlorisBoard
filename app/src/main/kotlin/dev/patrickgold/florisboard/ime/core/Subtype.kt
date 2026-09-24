@@ -125,9 +125,6 @@ data class SubtypeLayoutMap(
     val phone2: ExtensionComponentName = PHONE2_DEFAULT,
 ) {
     companion object {
-        private const val EQUALS =                      "="
-        private const val DELIMITER =                   ","
-
         private val CHARACTERS_DEFAULT =          extCoreLayout("qwerty")
         private val SYMBOLS_DEFAULT =             extCoreLayout("western")
         private val SYMBOLS2_DEFAULT =            extCoreLayout("western")
@@ -164,54 +161,6 @@ data class SubtypeLayoutMap(
             LayoutType.PHONE2 -> copy(phone2 = componentName)
             else -> null
         }
-    }
-
-    override fun toString() = buildString(128) {
-        append(LayoutTypeId.CHARACTERS)
-        append(EQUALS)
-        append(characters)
-
-        append(DELIMITER)
-
-        append(LayoutTypeId.SYMBOLS)
-        append(EQUALS)
-        append(symbols)
-
-        append(DELIMITER)
-
-        append(LayoutTypeId.SYMBOLS2)
-        append(EQUALS)
-        append(symbols2)
-
-        append(DELIMITER)
-
-        append(LayoutTypeId.NUMERIC_ROW)
-        append(EQUALS)
-        append(numericRow)
-
-        append(DELIMITER)
-
-        append(LayoutTypeId.NUMERIC)
-        append(EQUALS)
-        append(numeric)
-
-        append(DELIMITER)
-
-        append(LayoutTypeId.NUMERIC_ADVANCED)
-        append(EQUALS)
-        append(numericAdvanced)
-
-        append(DELIMITER)
-
-        append(LayoutTypeId.PHONE)
-        append(EQUALS)
-        append(phone)
-
-        append(DELIMITER)
-
-        append(LayoutTypeId.PHONE2)
-        append(EQUALS)
-        append(phone2)
     }
 }
 

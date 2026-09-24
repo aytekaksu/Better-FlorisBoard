@@ -35,6 +35,21 @@ val SubtypeJsonConfig = Json {
     isLenient = false
 }
 
+internal fun adjacentSubtypeInOrder(subtypeList: List<Subtype>, activeSubtype: Subtype): Subtype {
+    var selectNextSubtype = false
+    var selectedSubtype = Subtype.DEFAULT
+    for (subtype in subtypeList) {
+        if (selectNextSubtype) {
+            selectNextSubtype = false
+            selectedSubtype = subtype
+        } else if (subtype == activeSubtype) {
+            // A duplicate can trigger again unless it was consumed as the pending selection.
+            selectNextSubtype = true
+        }
+    }
+    return if (selectNextSubtype) subtypeList.first() else selectedSubtype
+}
+
 /**
  * Class which acts as a high level helper for the raw implementation of subtypes in the prefs. Additionally provides
  * helper methods for the in-keyboard language switch process.
@@ -187,21 +202,7 @@ class SubtypeManager(context: Context) {
      * Switch to the previous subtype in the subtype list if possible.
      */
     fun switchToPrevSubtype() = scope.launch {
-        val subtypeList = subtypes
-        val cachedActiveSubtype = activeSubtype
-        var triggerNextSubtype = false
-        var newActiveSubtype: Subtype = Subtype.DEFAULT
-        for (subtype in subtypeList.asReversed()) {
-            if (triggerNextSubtype) {
-                triggerNextSubtype = false
-                newActiveSubtype = subtype
-            } else if (subtype == cachedActiveSubtype) {
-                triggerNextSubtype = true
-            }
-        }
-        if (triggerNextSubtype) {
-            newActiveSubtype = subtypeList.last()
-        }
+        val newActiveSubtype = adjacentSubtypeInOrder(subtypes.asReversed(), activeSubtype)
         prefs.localization.activeSubtypeId.set(newActiveSubtype.id)
         activeSubtype = newActiveSubtype
     }
@@ -210,21 +211,7 @@ class SubtypeManager(context: Context) {
      * Switch to the next subtype in the subtype list if possible.
      */
     fun switchToNextSubtype() = scope.launch {
-        val subtypeList = subtypes
-        val cachedActiveSubtype = activeSubtype
-        var triggerNextSubtype = false
-        var newActiveSubtype: Subtype = Subtype.DEFAULT
-        for (subtype in subtypeList) {
-            if (triggerNextSubtype) {
-                triggerNextSubtype = false
-                newActiveSubtype = subtype
-            } else if (subtype == cachedActiveSubtype) {
-                triggerNextSubtype = true
-            }
-        }
-        if (triggerNextSubtype) {
-            newActiveSubtype = subtypeList.first()
-        }
+        val newActiveSubtype = adjacentSubtypeInOrder(subtypes, activeSubtype)
         prefs.localization.activeSubtypeId.set(newActiveSubtype.id)
         activeSubtype = newActiveSubtype
     }
