@@ -75,9 +75,7 @@ data class DebugLayoutComputationResult(
     }
 }
 
-/**
- * Class which manages layout loading and caching.
- */
+/** Loads and caches keyboard layouts and popup mappings. */
 class LayoutManager(context: Context) {
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
@@ -92,6 +90,21 @@ class LayoutManager(context: Context) {
 
     val debugLayoutComputationResultFlow = MutableStateFlow<DebugLayoutComputationResult?>(null)
 
+    private suspend fun <K, V> CoroutineScope.loadCached(
+        cache: MutableMap<K, DeferredResult<V>>,
+        guard: Mutex,
+        key: K,
+        description: String,
+        create: CoroutineScope.() -> DeferredResult<V>,
+    ): V = guard.withLock {
+        cache[key]?.also {
+            flogDebug(LogTopic.LAYOUT_MANAGER) { "Using cached $description" }
+        } ?: run {
+            flogDebug(LogTopic.LAYOUT_MANAGER) { "Loading $description" }
+            create().also { cache[key] = it }
+        }
+    }.await().getOrThrow()
+
     /**
      * Loads the layout for the specified type and name.
      *
@@ -104,61 +117,43 @@ class LayoutManager(context: Context) {
         if (ltn == null) {
             return@runCatchingAsync null
         }
-        layoutCacheGuard.withLock {
-            val cached = layoutCache[ltn]
-            if (cached != null) {
-                flogDebug(LogTopic.LAYOUT_MANAGER) { "Using cached layout: type=${ltn.type}" }
-                return@withLock cached
-            } else {
-                flogDebug(LogTopic.LAYOUT_MANAGER) { "Loading layout: type=${ltn.type}" }
-                val meta = keyboardExtensionRepository.snapshot.value.layouts[ltn.type]?.get(ltn.name)
-                    ?: error("No indexed entry found for ${ltn.type} - ${ltn.name}")
-                val ext = extensionManager.getExtensionById(ltn.name.extensionId)
-                    ?: error("Extension ${ltn.name.extensionId} not found")
-                val path = meta.arrangementFile(ltn.type)
-                val layout = async {
-                    runCatching {
-                        val jsonStr = ZipUtils.readFileFromArchive(appContext, ext.sourceRef!!, path).getOrThrow()
-                        val arrangement = DefaultJsonConfig.decodeFromString<LayoutArrangement>(jsonStr)
-                        CachedLayout(ltn.type, ltn.name, meta, arrangement)
-                    }
+        loadCached(layoutCache, layoutCacheGuard, ltn, "layout: type=${ltn.type}") {
+            val meta = keyboardExtensionRepository.snapshot.value.layouts[ltn.type]?.get(ltn.name)
+                ?: error("No indexed entry found for ${ltn.type} - ${ltn.name}")
+            val ext = extensionManager.getExtensionById(ltn.name.extensionId)
+                ?: error("Extension ${ltn.name.extensionId} not found")
+            val path = meta.arrangementFile(ltn.type)
+            async {
+                runCatching {
+                    val jsonStr = ZipUtils.readFileFromArchive(appContext, ext.sourceRef!!, path).getOrThrow()
+                    val arrangement = DefaultJsonConfig.decodeFromString<LayoutArrangement>(jsonStr)
+                    CachedLayout(ltn.type, ltn.name, meta, arrangement)
                 }
-                layoutCache[ltn] = layout
-                return@withLock layout
             }
-        }.await().getOrThrow()
+        }
     }
 
     private fun loadPopupMappingAsync(subtype: Subtype? = null) = ioScope.runCatchingAsync {
         val name = subtype?.popupMapping ?: extCorePopupMapping("default")
-        popupMappingCacheGuard.withLock {
-            val cached = popupMappingCache[name]
-            if (cached != null) {
-                flogDebug(LogTopic.LAYOUT_MANAGER) { "Using cached popup mapping" }
-                return@withLock cached
-            } else {
-                flogDebug(LogTopic.LAYOUT_MANAGER) { "Loading popup mapping" }
-                val meta = keyboardExtensionRepository.snapshot.value.popupMappings[name]
-                    ?: error("No indexed entry found for $name")
-                val ext = extensionManager.getExtensionById(name.extensionId)
-                    ?: error("Extension ${name.extensionId} not found")
-                val path = meta.mappingFile()
-                val popupMapping = async {
-                    runCatching {
-                        val jsonStr = ZipUtils.readFileFromArchive(appContext, ext.sourceRef!!, path).getOrThrow()
-                        val mapping = DefaultJsonConfig.decodeFromString<PopupMapping>(jsonStr)
-                        CachedPopupMapping(name, meta, mapping)
-                    }
+        loadCached(popupMappingCache, popupMappingCacheGuard, name, "popup mapping") {
+            val meta = keyboardExtensionRepository.snapshot.value.popupMappings[name]
+                ?: error("No indexed entry found for $name")
+            val ext = extensionManager.getExtensionById(name.extensionId)
+                ?: error("Extension ${name.extensionId} not found")
+            val path = meta.mappingFile()
+            async {
+                runCatching {
+                    val jsonStr = ZipUtils.readFileFromArchive(appContext, ext.sourceRef!!, path).getOrThrow()
+                    val mapping = DefaultJsonConfig.decodeFromString<PopupMapping>(jsonStr)
+                    CachedPopupMapping(name, meta, mapping)
                 }
-                popupMappingCache[name] = popupMapping
-                return@withLock popupMapping
             }
-        }.await().getOrThrow()
+        }
     }
 
     /**
      * Merges the specified layouts (LTNs) and returns the computed layout.
-     * The computed layout may looks like this:
+     * The computed layout may look like this:
      *   e e e e e e e e e e      e = extension
      *   c c c c c c c c c c      c = main
      *    c c c c c c c c c       m = mod
@@ -218,49 +213,34 @@ class LayoutManager(context: Context) {
         )
 
         val computedArrangement: ArrayList<Array<TextKey>> = arrayListOf()
-
-        if (extensionLayout != null) {
-            for (row in extensionLayout.arrangement) {
-                val rowArray = Array(row.size) { TextKey(row[it]) }
-                computedArrangement.add(rowArray)
-            }
+        fun addRow(row: List<AbstractKeyData>) {
+            computedArrangement.add(Array(row.size) { TextKey(row[it]) })
         }
 
-        if (mainLayout != null && modifierLayout != null) {
-            for (mainRowI in mainLayout.arrangement.indices) {
-                val mainRow = mainLayout.arrangement[mainRowI]
-                if (mainRowI + 1 < mainLayout.arrangement.size) {
-                    val rowArray = Array(mainRow.size) { TextKey(mainRow[it]) }
-                    computedArrangement.add(rowArray)
-                } else {
-                    // merge main and mod here
-                    val rowArray = arrayListOf<TextKey>()
-                    val firstModRow = modifierLayout.arrangement.firstOrNull()
-                    for (modKey in (firstModRow ?: listOf())) {
-                        if (modKey is TextKeyData && modKey.code == 0) {
-                            rowArray.addAll(mainRow.map { TextKey(it) })
-                        } else {
-                            rowArray.add(TextKey(modKey))
-                        }
+        for (row in extensionLayout?.arrangement.orEmpty()) {
+            addRow(row)
+        }
+
+        val mainRows = mainLayout?.arrangement.orEmpty()
+        for ((index, row) in mainRows.withIndex()) {
+            if (modifierLayout != null && index == mainRows.lastIndex) {
+                // The first modifier row places the last main row at its spacer key.
+                val merged = arrayListOf<TextKey>()
+                for (modKey in modifierLayout.arrangement.firstOrNull().orEmpty()) {
+                    if (modKey is TextKeyData && modKey.code == 0) {
+                        merged.addAll(row.map { TextKey(it) })
+                    } else {
+                        merged.add(TextKey(modKey))
                     }
-                    val temp = Array(rowArray.size) { rowArray[it] }
-                    computedArrangement.add(temp)
                 }
+                computedArrangement.add(merged.toTypedArray())
+            } else {
+                addRow(row)
             }
-            for (modRowI in 1 until modifierLayout.arrangement.size) {
-                val modRow = modifierLayout.arrangement[modRowI]
-                val rowArray = Array(modRow.size) { TextKey(modRow[it]) }
-                computedArrangement.add(rowArray)
-            }
-        } else if (mainLayout != null && modifierLayout == null) {
-            for (mainRow in mainLayout.arrangement) {
-                val rowArray = Array(mainRow.size) { TextKey(mainRow[it]) }
-                computedArrangement.add(rowArray)
-            }
-        } else if (mainLayout == null && modifierLayout != null) {
-            for (modRow in modifierLayout.arrangement) {
-                val rowArray = Array(modRow.size) { TextKey(modRow[it]) }
-                computedArrangement.add(rowArray)
+        }
+        for ((index, row) in modifierLayout?.arrangement.orEmpty().withIndex()) {
+            if (mainLayout == null || index > 0) {
+                addRow(row)
             }
         }
 
@@ -286,9 +266,8 @@ class LayoutManager(context: Context) {
             }
         }
 
-        val array = Array(computedArrangement.size) { computedArrangement[it] }
         return TextKeyboard(
-            arrangement = array,
+            arrangement = computedArrangement.toTypedArray(),
             mode = keyboardMode,
             extendedPopupMapping = extendedPopups.await().onFailure {
                 flogWarning(LogTopic.LAYOUT_MANAGER) { "Popup mapping failed: subtype (${it.javaClass.simpleName})" }
