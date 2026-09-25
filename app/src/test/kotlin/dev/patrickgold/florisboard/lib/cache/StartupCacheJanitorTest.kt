@@ -41,7 +41,7 @@ class StartupCacheJanitorTest : FunSpec({
                 .map { owner -> root.resolve(owner).resolve(workspaceId) }
             workspaces.forEach { workspace ->
                 Files.createDirectories(workspace.resolve("nested"))
-                Files.writeString(workspace.resolve("nested/data"), "stale")
+                Files.write(workspace.resolve("nested/data"), byteArrayOf(1))
             }
             val stages = listOf(
                 "clipboard-provider-imports",
@@ -52,12 +52,12 @@ class StartupCacheJanitorTest : FunSpec({
                 Files.createTempFile(directory, ".clipboard-provider-", ".partial")
             }
             val editorStage = Files.createDirectories(root.resolve("extension-editor-$workspaceId"))
-            Files.writeString(editorStage.resolve("stage"), "stale")
+            Files.write(editorStage.resolve("stage"), byteArrayOf(1))
             val exportStage = Files.createTempDirectory(root, "extension-export-")
-            Files.writeString(exportStage.resolve("archive.flex"), "stale")
+            Files.write(exportStage.resolve("archive.flex"), byteArrayOf(1))
 
             val unknownWorkspace = Files.createDirectories(root.resolve("importer/notes"))
-            val unknownStage = Files.writeString(root.resolve("clipboard-provider-imports/notes.partial"), "keep")
+            val unknownStage = Files.write(root.resolve("clipboard-provider-imports/notes.partial"), byteArrayOf(1))
             val unknownExport = Files.createDirectories(root.resolve("extension-export-not-a-temp-name"))
             val themeAssets = Files.createDirectories(root.resolve("theme-materializations/live"))
             val runtimeAssets = Files.createDirectories(root.resolve("extension-runtime/live"))
@@ -85,18 +85,18 @@ class StartupCacheJanitorTest : FunSpec({
         val linkedCacheRoot = root.resolve("linked-cache")
         var insideLink: Path? = null
         try {
-            val sentinel = Files.writeString(outside.resolve("sentinel"), "keep")
+            val sentinel = Files.write(outside.resolve("sentinel"), byteArrayOf(1))
             val foreignWorkspace = Files.createDirectories(
                 outside.resolve("importer").resolve(UUID.randomUUID().toString()),
             )
             val workspace = Files.createDirectories(
                 root.resolve("importer").resolve(UUID.randomUUID().toString()),
             )
-            Files.writeString(workspace.resolve("owned"), "stale")
+            Files.write(workspace.resolve("owned"), byteArrayOf(1))
             val independentWorkspace = Files.createDirectories(
                 root.resolve("backup-and-restore").resolve(UUID.randomUUID().toString()),
             )
-            Files.writeString(independentWorkspace.resolve("owned"), "stale")
+            Files.write(independentWorkspace.resolve("owned"), byteArrayOf(1))
             val link = workspace.resolve("outside-link")
             insideLink = link
             Files.createDirectories(stagedFileLink.parent)
