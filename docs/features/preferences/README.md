@@ -17,6 +17,12 @@ it to the current schema.
   Startup and backup restore share this path. A current compound key always
   wins over legacy inputs, while Merge keeps unrelated current fields.
 
+The old built-in spell-checker service had only sample typo responses, so its
+language mode and spelling overlay settings are retired. Android's selected
+spell checker is still visible in Typing settings. Saved keyboard subtypes keep
+their `spelling` provider ID for compatibility; runtime suggestions and glide
+typing use only the `suggestion` provider ID.
+
 Older window sizing and one-handed settings are reconstructed for the five
 phone/tablet form factors they described. Desktop and unrelated current window
 state are preserved.

@@ -22,8 +22,8 @@ state, duration buckets, and error categories. It is bounded and process-local.
 It must never accept arbitrary strings, protocol objects, text, candidates,
 dictionaries, touch data, editor packages, or exception messages.
 
-The clipboard, input-state, and spelling overlays follow the same rule: they
-show only content-free types, states, flags, and counts.
+The clipboard and input-state overlays follow the same rule: they show only
+content-free types, states, flags, and counts.
 
 ## Safe fault injection
 

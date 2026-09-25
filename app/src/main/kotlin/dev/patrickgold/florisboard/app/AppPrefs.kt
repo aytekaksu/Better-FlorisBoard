@@ -38,7 +38,6 @@ import dev.patrickgold.florisboard.ime.media.emoji.Emoji
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiHistory
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSkinTone
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSuggestionType
-import dev.patrickgold.florisboard.ime.nlp.SpellingLanguageMode
 import dev.patrickgold.florisboard.ime.smartbar.CandidatesDisplayMode
 import dev.patrickgold.florisboard.ime.smartbar.ExtendedActionsPlacement
 import dev.patrickgold.florisboard.ime.smartbar.IncognitoDisplayMode
@@ -195,10 +194,6 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         )
         val showInputStateOverlay = boolean(
             key = "devtools__show_input_state_overlay",
-            default = false,
-        )
-        val showSpellingOverlay = boolean(
-            key = "devtools__show_spelling_overlay",
             default = false,
         )
         val showInlineAutofillOverlay = boolean(
@@ -670,14 +665,6 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         )
     }
 
-    val spelling = Spelling()
-    inner class Spelling {
-        val languageMode = enum(
-            key = "spelling__language_mode",
-            default = SpellingLanguageMode.USE_KEYBOARD_SUBTYPES,
-        )
-    }
-
     val suggestion = Suggestion()
     inner class Suggestion {
         val api30InlineSuggestionsEnabled = boolean(
@@ -768,7 +755,7 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             "gestures__delete_key_swipe_left", "gestures__delete_key_long_press",
             "keyboard__hinted_number_row_mode", "keyboard__hinted_symbols_mode",
             "keyboard__utility_key_action", "keyboard__landscape_input_ui_mode",
-            "localization__display_language_names_in", "spelling__language_mode",
+            "localization__display_language_names_in",
             "suggestion__display_mode", "theme__mode", "theme__editor_display_kbd_after_dialogs",
             "theme__editor_level",
             -> entry.transform(rawValue = entry.rawValue.uppercase())

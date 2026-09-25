@@ -8,9 +8,8 @@
     <!-- Permission needed to create notifications on devices running Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
-    <!-- Android 11+ only: Define that FlorisBoard requests to see all apps that
-          ship with an IME or Spell Check service. This is used to guide the user
-          in the Settings Ui why FlorisBoard may not be working.
+    <!-- Android 11+ package visibility for the IME and system spell-checker settings,
+          plus separately installed autocorrect providers.
      -->
     <queries>
         <intent>
@@ -51,18 +50,6 @@
                 <action android:name="android.view.InputMethod"/>
             </intent-filter>
             <meta-data android:name="android.view.im" android:resource="@xml/method"/>
-        </service>
-
-        <!-- Spellchecker service -->
-        <service
-            android:name="dev.patrickgold.florisboard.FlorisSpellCheckerService"
-            android:label="@string/floris_app_name"
-            android:permission="android.permission.BIND_TEXT_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.service.textservice.SpellCheckerService"/>
-            </intent-filter>
-            <meta-data android:name="android.view.textservice.scs" android:resource="@xml/spellchecker"/>
         </service>
 
         <!-- Main App Activity -->

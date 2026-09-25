@@ -26,8 +26,6 @@ import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.nlp.BreakIteratorGroup
 import dev.patrickgold.florisboard.ime.nlp.LanguagePackComponent
 import dev.patrickgold.florisboard.ime.nlp.LanguagePackExtension
-import dev.patrickgold.florisboard.ime.nlp.SpellingProvider
-import dev.patrickgold.florisboard.ime.nlp.SpellingResult
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
 import dev.patrickgold.florisboard.ime.nlp.SuggestionProvider
 import dev.patrickgold.florisboard.ime.nlp.WordSuggestionCandidate
@@ -49,7 +47,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class HanShapeBasedLanguageProvider(context: Context) : SpellingProvider, SuggestionProvider {
+class HanShapeBasedLanguageProvider(context: Context) : SuggestionProvider {
     companion object {
         const val ProviderId = "org.florisboard.nlp.providers.han.shape"
 
@@ -107,26 +105,6 @@ class HanShapeBasedLanguageProvider(context: Context) : SpellingProvider, Sugges
             refreshCollector = CoroutineScope(Dispatchers.Default + owner).launch {
                 observeLanguagePackChanges()
             }
-        }
-    }
-
-    override suspend fun spell(
-        subtype: Subtype,
-        word: String,
-        precedingWords: List<String>,
-        followingWords: List<String>,
-        maxSuggestionCount: Int,
-        allowPossiblyOffensive: Boolean,
-        isPrivateSession: Boolean,
-    ): SpellingResult {
-        return when (word.lowercase()) {
-            // Use typo for typing errors
-            "typo" -> SpellingResult.typo(arrayOf("typo1", "typo2", "typo3"))
-            // Use grammar error if the algorithm can detect this. On Android 11 and lower grammar errors are visually
-            // marked as typos due to a lack of support
-            "gerror" -> SpellingResult.grammarError(arrayOf("grammar1", "grammar2", "grammar3"))
-            // Use valid word for valid input
-            else -> SpellingResult.validWord()
         }
     }
 

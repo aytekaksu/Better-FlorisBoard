@@ -27,7 +27,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -44,7 +43,7 @@ import org.florisboard.lib.compose.observeAsState
 import org.florisboard.lib.compose.stringRes
 
 @Composable
-fun SpellCheckerServiceSelector(florisSpellCheckerEnabled: MutableState<Boolean>) {
+fun SpellCheckerServiceSelector() {
     val context = LocalContext.current
 
     val systemSpellCheckerId by AndroidSettings.Secure.observeAsState(
@@ -70,10 +69,6 @@ fun SpellCheckerServiceSelector(florisSpellCheckerEnabled: MutableState<Boolean>
             it.component = componentToLaunch
         }
     }
-    florisSpellCheckerEnabled.value =
-        systemSpellCheckerEnabled == "1" &&
-        systemSpellCheckerPkgName == context.packageName
-
     Column(modifier = Modifier.padding(horizontal = 8.dp)) {
         if (systemSpellCheckerEnabled == "1") {
             if (systemSpellCheckerId == null) {

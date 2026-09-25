@@ -42,25 +42,6 @@ sealed interface NlpProvider {
     suspend fun destroy() = Unit
 }
 
-/** Provides spell checking for words in a subtype's languages. */
-interface SpellingProvider : NlpProvider {
-    /**
-     * Checks [word] and returns corrections when needed.
-     *
-     * Spell checks are read-only and must never train provider state. Implementations must respect
-     * [maxSuggestionCount] and [allowPossiblyOffensive].
-     */
-    suspend fun spell(
-        subtype: Subtype,
-        word: String,
-        precedingWords: List<String>,
-        followingWords: List<String>,
-        maxSuggestionCount: Int,
-        allowPossiblyOffensive: Boolean,
-        isPrivateSession: Boolean,
-    ): SpellingResult
-}
-
 /** Provides current-word, next-word, and autocorrect candidates. */
 interface SuggestionProvider : NlpProvider {
     /**
@@ -131,19 +112,9 @@ internal suspend fun NlpProvider.glideTypingWordsOrEmpty(subtype: Subtype) =
 internal suspend fun NlpProvider.glideTypingWordFrequencyOrZero(subtype: Subtype, word: String) =
     (this as? GlideTypingLexiconProvider)?.getWordFrequency(subtype, word) ?: 0.0
 
-/** Used when a subtype references an unavailable spelling or suggestion provider. */
-object FallbackNlpProvider : SpellingProvider, SuggestionProvider {
+/** Used when a subtype references an unavailable suggestion provider. */
+object FallbackNlpProvider : SuggestionProvider {
     override val providerId = "org.florisboard.nlp.providers.fallback"
-
-    override suspend fun spell(
-        subtype: Subtype,
-        word: String,
-        precedingWords: List<String>,
-        followingWords: List<String>,
-        maxSuggestionCount: Int,
-        allowPossiblyOffensive: Boolean,
-        isPrivateSession: Boolean,
-    ) = SpellingResult.unspecified()
 
     override suspend fun suggest(
         subtype: Subtype,
@@ -153,9 +124,6 @@ object FallbackNlpProvider : SpellingProvider, SuggestionProvider {
         isPrivateSession: Boolean,
     ) = emptyList<SuggestionCandidate>()
 }
-
-internal fun NlpProvider?.asSpellingProviderOrFallback(): SpellingProvider =
-    this as? SpellingProvider ?: FallbackNlpProvider
 
 internal fun NlpProvider?.asSuggestionProviderOrFallback(): SuggestionProvider =
     this as? SuggestionProvider ?: FallbackNlpProvider

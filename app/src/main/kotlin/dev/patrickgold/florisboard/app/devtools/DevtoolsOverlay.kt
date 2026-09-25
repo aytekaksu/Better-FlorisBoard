@@ -49,7 +49,6 @@ import dev.patrickgold.florisboard.ime.keyboard.DebugLayoutComputationResult
 import dev.patrickgold.florisboard.ime.nlp.NlpInlineAutofill
 import dev.patrickgold.florisboard.ime.theme.ThemeManager
 import dev.patrickgold.florisboard.keyboardManager
-import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.themeManager
 import dev.patrickgold.jetpref.datastore.model.collectAsState
 import org.florisboard.lib.android.AndroidVersion
@@ -68,7 +67,6 @@ fun DevtoolsOverlay(modifier: Modifier = Modifier) {
     val devtoolsEnabled by prefs.devtools.enabled.collectAsState()
     val showPrimaryClip by prefs.devtools.showPrimaryClip.collectAsState()
     val showInputStateOverlay by prefs.devtools.showInputStateOverlay.collectAsState()
-    val showSpellingOverlay by prefs.devtools.showSpellingOverlay.collectAsState()
     val showInlineAutofillOverlay by prefs.devtools.showInlineAutofillOverlay.collectAsState()
     val preferenceStoreInitializationState by
         appContext.preferenceStoreInitializationState.collectAsState()
@@ -88,9 +86,6 @@ fun DevtoolsOverlay(modifier: Modifier = Modifier) {
             }
             if (debugLayoutResult?.allLayoutsSuccess() == false) {
                 DevtoolsLastLayoutComputationOverlay(debugLayoutResult)
-            }
-            if (devtoolsEnabled && showSpellingOverlay) {
-                DevtoolsSpellingOverlay()
             }
             if (devtoolsEnabled && showInlineAutofillOverlay && AndroidVersion.ATLEAST_API30_R) {
                 DevtoolsInlineAutofillOverlay()
@@ -184,35 +179,6 @@ private fun DevtoolsLastLayoutComputationOverlay(debugLayoutResult: DebugLayoutC
         }
         DevtoolsSubGroup(title = "ext") {
             PrintResult(debugLayoutResult.ext)
-        }
-    }
-}
-
-@Composable
-private fun DevtoolsSpellingOverlay() {
-    val context = LocalContext.current
-    val nlpManager by context.nlpManager()
-
-    val diagnosticsVersion by nlpManager.spellingDiagnosticsVersion.collectAsState()
-    val snapshot = remember(diagnosticsVersion) { nlpManager.spellingDiagnosticsSnapshot() }
-    val records = snapshot.records.asReversed()
-
-    DevtoolsOverlayBox(title = "Spelling overlay (${records.size})") {
-        DevtoolsText(text = "Dropped records: ${snapshot.droppedRecordCount}")
-        for (record in records) {
-            Column(modifier = Modifier.padding(horizontal = 8.dp)) {
-                Text(
-                    text = "Request #${record.sequence}",
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                )
-                Text(
-                    text = "  State: ${record.state.name.lowercase()} | Suggestions: ${record.suggestionCount}",
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp,
-                )
-            }
         }
     }
 }

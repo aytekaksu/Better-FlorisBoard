@@ -91,6 +91,22 @@ class FlorisPreferenceMigrationTest :
             }
         }
 
+        test("retired spell checker preferences do not survive import") {
+            runTest {
+                val fixture = PreferenceFixture()
+                fixture.load(
+                    encodedPreferences(
+                        """s;spelling__language_mode;"use_keyboard_subtypes"""",
+                        """b;devtools__show_spelling_overlay;true""",
+                        """b;correction__auto_capitalization;false""",
+                    ),
+                )
+
+                fixture.prefs.correction.autoCapitalization.get() shouldBe false
+                fixture.exportedKeys() shouldBe setOf("correction__auto_capitalization")
+            }
+        }
+
         test("disabled legacy private mode does not override the current default") {
             runTest {
                 val fixture = PreferenceFixture()
@@ -373,7 +389,6 @@ private val legacyLowercaseEnums = listOf(
     "keyboard__utility_key_action" to "dynamic_switch_language_emojis",
     "keyboard__landscape_input_ui_mode" to "dynamically_show",
     "localization__display_language_names_in" to "system_locale",
-    "spelling__language_mode" to "use_keyboard_subtypes",
     "suggestion__display_mode" to "dynamic_scrollable",
     "theme__mode" to "follow_system",
     "theme__editor_display_kbd_after_dialogs" to "remember",

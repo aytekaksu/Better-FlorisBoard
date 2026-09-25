@@ -298,7 +298,7 @@ class FlorisApplication : Application() {
         } catch (_: Exception) {
             // Diagnostics must never decide bootstrap success.
         }
-        // IME and spellchecker need preferences promptly; only cache consumers wait.
+        // The IME needs preferences promptly; only cache consumers wait.
         val cleanup = startupCacheCleanup.await()
         if (cleanup.failures > 0) {
             try {
