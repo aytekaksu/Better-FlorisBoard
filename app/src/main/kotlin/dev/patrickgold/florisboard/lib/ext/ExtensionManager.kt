@@ -49,6 +49,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.decodeFromString
@@ -115,6 +116,19 @@ internal data class ExtensionIndexState<T : Extension>(
     val generation: Long,
     val extensions: List<T>,
 )
+
+/** Keeps temporary export files off Main until the destination write finishes. */
+internal suspend fun <T> withExtensionExportWorkspace(
+    cacheRoot: () -> Path,
+    block: suspend (FsDir) -> T,
+): T = withContext(Dispatchers.IO) {
+    val workspace = Files.createTempDirectory(cacheRoot(), "extension-export-").toFile()
+    try {
+        block(workspace)
+    } finally {
+        workspace.deleteRecursively()
+    }
+}
 
 private fun ByteArray.toHexString(): String = buildString(size * 2) {
     for (byte in this@toHexString) {
@@ -382,11 +396,7 @@ class ExtensionManager(context: Context) {
 
     suspend fun export(ext: Extension, uri: Uri) {
         val sourceRef = requireNotNull(ext.sourceRef) { "No source ref specified" }
-        val workspace = Files.createTempDirectory(
-            appContext.cacheDir.toPath(),
-            "extension-export-",
-        ).toFile()
-        try {
+        withExtensionExportWorkspace({ appContext.cacheDir.toPath() }) { workspace ->
             val snapshot = workspace.resolve("extension.${ExtensionDefaults.FILE_EXTENSION}")
             when {
                 sourceRef.isInternal -> {
@@ -408,8 +418,6 @@ class ExtensionManager(context: Context) {
                 }
                 else -> error("Unsupported extension source")
             }
-        } finally {
-            workspace.deleteRecursively()
         }
     }
 
