@@ -17,9 +17,10 @@ Floris imports canonicalize simple hyphenated tags without losing subtags.
 Older spellings stay browsable and heal on reimport. Java and Android disagree
 on a few language codes, so those codes use raw-string grouping: `iw` and `he`
 (likewise `in`/`id` and `ji`/`yi`) stay distinct, while each code's simple
-hyphen and underscore spellings share a choice. Script, extension, and malformed
-tags remain separate exact-tag choices. Editing an unchanged Floris locale keeps
-its stored spelling; system dictionary behavior is unchanged.
+hyphen and underscore spellings share a choice. Script, extension,
+mixed-separator, and malformed tags remain separate exact-tag choices and
+reimport only by exact stored spelling. Editing an unchanged Floris locale
+keeps its stored spelling; system dictionary behavior is unchanged.
 The format reserves `l=all` and `l=null` for no locale. Preexisting rows with
 those literal locale values can be browsed, but cannot round-trip as literal
 tags through this format.
