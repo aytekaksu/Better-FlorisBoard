@@ -153,7 +153,6 @@ private class SubtypeEditorState(init: Subtype?) {
 
     fun toSubtype() = runCatching {
         check(primaryLocale.value != SelectLocale)
-        check(nlpProviders.value.spelling != SelectNlpProviderId)
         check(nlpProviders.value.suggestion != SelectNlpProviderId)
         check(composer.value != SelectComponentName)
         check(currencySet.value != SelectComponentName)

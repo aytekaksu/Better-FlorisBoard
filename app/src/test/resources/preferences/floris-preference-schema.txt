@@ -48,7 +48,7 @@ active;b;devtools__show_inline_autofill_overlay
 active;b;devtools__show_input_state_overlay
 retired;b;devtools__show_last_layout_computation
 active;b;devtools__show_primary_clip
-active;b;devtools__show_spelling_overlay
+retired;b;devtools__show_spelling_overlay
 active;b;devtools__show_touch_boundaries
 active;b;devtools__show_window_resize_handle_boundaries
 active;s;emoji__history_data
@@ -191,7 +191,7 @@ retired;b;smartbar__shared_actions_auto_expand_collapse
 retired;b;smartbar__shared_actions_expand_with_animation
 active;b;smartbar__shared_actions_expanded
 active;s;smartbar__shared_actions_transition_mode
-active;s;spelling__language_mode
+retired;s;spelling__language_mode
 retired;b;spelling__use_contacts
 retired;b;spelling__use_udm_entries
 active;b;suggestion__api30_inline_suggestions_enabled

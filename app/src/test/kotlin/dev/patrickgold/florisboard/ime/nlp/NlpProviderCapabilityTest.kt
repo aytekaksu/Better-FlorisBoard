@@ -17,12 +17,14 @@
 package dev.patrickgold.florisboard.ime.nlp
 
 import dev.patrickgold.florisboard.ime.core.Subtype
+import dev.patrickgold.florisboard.ime.core.SubtypeNlpProviderMap
 import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.nlp.han.HanShapeBasedLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.latin.LatinLanguageProvider
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
+import kotlinx.serialization.json.Json
 
 class NlpProviderCapabilityTest :
     FunSpec({
@@ -95,5 +97,14 @@ class NlpProviderCapabilityTest :
             GlideTypingLexiconProvider::class.java.isAssignableFrom(
                 FallbackNlpProvider::class.java,
             ) shouldBe false
+        }
+
+        test("saved subtypes keep their legacy spelling provider field") {
+            val saved = """{"spelling":"legacy.provider","suggestion":"active.provider"}"""
+            val providers = Json.decodeFromString<SubtypeNlpProviderMap>(saved)
+
+            providers.spelling shouldBe "legacy.provider"
+            providers.suggestion shouldBe "active.provider"
+            Json.decodeFromString<SubtypeNlpProviderMap>(Json.encodeToString(providers)) shouldBe providers
         }
     })

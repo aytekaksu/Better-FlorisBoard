@@ -166,14 +166,10 @@ data class SubtypeLayoutMap(
 
 @Serializable
 data class SubtypeNlpProviderMap(
+    /** Retained in saved subtypes and extension manifests for compatibility; runtime uses [suggestion]. */
     val spelling: String = LatinLanguageProvider.ProviderId,
     val suggestion: String = LatinLanguageProvider.ProviderId,
-) {
-    inline fun forEach(action: (String, String) -> Unit) {
-        action("spelling", spelling)
-        action("suggestion", suggestion)
-    }
-}
+)
 
 /**
  * Data class which represents a predefined set of language and preferred layout.

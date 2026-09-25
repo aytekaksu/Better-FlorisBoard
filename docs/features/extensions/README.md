@@ -30,7 +30,7 @@ background job cleans abandoned, canonical workspace directories.
 
 That startup cleanup also retires known export and editor staging paths. It
 finishes before settings, sharing, or clipboard cache users start, but does not
-hold up the IME or spellchecker. Unknown entries and symbolic links stay put.
+hold up the IME. Unknown entries and symbolic links stay put.
 Theme materializations and loaded extension runtime files are not part of this
 sweep: their managers retire stale roots on first use, without deleting live
 assets during direct-boot unlock. A failed sweep leaves the app usable and is

@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.SpaceBar
 import androidx.compose.material3.Card
 import androidx.compose.material3.Text
@@ -29,8 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
@@ -42,7 +39,6 @@ import dev.patrickgold.florisboard.app.Routes
 import dev.patrickgold.florisboard.app.enumDisplayEntriesOf
 import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.ime.keyboard.IncognitoMode
-import dev.patrickgold.florisboard.ime.nlp.SpellingLanguageMode
 import dev.patrickgold.florisboard.lib.compose.FlorisHyperlinkText
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.jetpref.datastore.model.collectAsState
@@ -163,15 +159,7 @@ fun TypingScreen() = FlorisScreen {
         }
 
         PreferenceGroup(title = stringRes(R.string.pref__spelling__title)) {
-            val florisSpellCheckerEnabled = remember { mutableStateOf(false) }
-            SpellCheckerServiceSelector(florisSpellCheckerEnabled)
-            ListPreference(
-                prefs.spelling.languageMode,
-                icon = Icons.Default.Language,
-                title = stringRes(R.string.pref__spelling__language_mode__label),
-                entries = enumDisplayEntriesOf(SpellingLanguageMode::class),
-                enabledIf = { florisSpellCheckerEnabled.value },
-            )
+            SpellCheckerServiceSelector()
         }
 
         PreferenceGroup(title = stringRes(R.string.settings__dictionary__title)) {

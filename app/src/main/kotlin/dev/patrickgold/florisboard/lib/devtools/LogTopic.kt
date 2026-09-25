@@ -33,5 +33,4 @@ object LogTopic {
 
     const val CRASH_UTILITY: FlogTopic =        2048u
 
-    const val SPELL_EVENTS: FlogTopic =         4096u
 }

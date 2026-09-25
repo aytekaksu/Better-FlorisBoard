@@ -35,7 +35,6 @@ import dev.patrickgold.florisboard.ime.landscapeinput.LandscapeInputUiMode
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiHistory
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSkinTone
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSuggestionType
-import dev.patrickgold.florisboard.ime.nlp.SpellingLanguageMode
 import dev.patrickgold.florisboard.ime.smartbar.CandidatesDisplayMode
 import dev.patrickgold.florisboard.ime.smartbar.ExtendedActionsPlacement
 import dev.patrickgold.florisboard.ime.smartbar.IncognitoDisplayMode
@@ -455,10 +454,6 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
         SpaceBarLanguageLabelMode.LOCALE_NAME to R.string.enum__space_bar_language_label_mode__locale_name,
         SpaceBarLanguageLabelMode.LANGUAGE_NAME to R.string.enum__space_bar_language_label_mode__language_name,
         SpaceBarLanguageLabelMode.LANGUAGE_CODE to R.string.enum__space_bar_language_label_mode__language_code,
-    ),
-    SpellingLanguageMode::class to DEFAULT to resourceEntries(
-        SpellingLanguageMode.USE_SYSTEM_LANGUAGES to R.string.enum__spelling_language_mode__use_system_languages,
-        SpellingLanguageMode.USE_KEYBOARD_SUBTYPES to R.string.enum__spelling_language_mode__use_keyboard_subtypes,
     ),
     SwipeActivationArea::class to DEFAULT to resourceEntries(
         SwipeActivationArea.KEYS_ONLY to R.string.enum__swipe_activation_area__keys_only,

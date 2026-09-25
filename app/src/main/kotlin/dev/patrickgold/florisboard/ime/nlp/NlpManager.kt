@@ -47,7 +47,6 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -326,10 +325,6 @@ class NlpManager(context: Context) {
             _activeCandidatesFlow.value = v
         }
 
-    private val spellingDiagnostics = SpellingDiagnostics()
-    private val _spellingDiagnosticsVersion = MutableStateFlow(0L)
-    internal val spellingDiagnosticsVersion = _spellingDiagnosticsVersion.asStateFlow()
-
     init {
         clipboardManager.primaryClipFlow.collectLatestIn(scope) {
             assembleCandidates()
@@ -372,12 +367,6 @@ class NlpManager(context: Context) {
     fun getPunctuationRule(subtype: Subtype): PunctuationRule {
         return keyboardExtensionRepository.snapshot.value.punctuationRules[subtype.punctuationRule]
             ?: PunctuationRule.Fallback
-    }
-
-    private suspend fun getSpellingProvider(subtype: Subtype): SpellingProvider {
-        return providerLifecycleGate.withLock {
-            providers[subtype.nlpProviders.spelling]?.provider.asSpellingProviderOrFallback()
-        }
     }
 
     private fun resolveBuiltInSuggestionProvider(subtype: Subtype): SuggestionProvider {
@@ -423,35 +412,11 @@ class NlpManager(context: Context) {
     private suspend fun preloadProviders(subtype: Subtype) {
         emojiSuggestionProvider.preload(subtype)
         providerLifecycleGate.withLock {
-            subtype.nlpProviders.forEach { _, providerId ->
-                providers[providerId]?.let { provider ->
-                    provider.createIfNecessary()
-                    provider.preload(subtype)
-                }
+            providers[subtype.nlpProviders.suggestion]?.let { provider ->
+                provider.createIfNecessary()
+                provider.preload(subtype)
             }
         }
-    }
-
-    /**
-     * Spell wrapper helper which calls the spelling provider and returns the result. Coroutine management must be done
-     * by the source spell checker service.
-     */
-    suspend fun spell(
-        subtype: Subtype,
-        word: String,
-        precedingWords: List<String>,
-        followingWords: List<String>,
-        maxSuggestionCount: Int,
-    ): SpellingResult {
-        return getSpellingProvider(subtype).spell(
-            subtype = subtype,
-            word = word,
-            precedingWords = precedingWords,
-            followingWords = followingWords,
-            maxSuggestionCount = maxSuggestionCount,
-            allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-            isPrivateSession = keyboardManager.activeState.isIncognitoMode,
-        )
     }
 
     fun determineLocalComposing(
@@ -693,21 +658,6 @@ class NlpManager(context: Context) {
                 prefs.smartbar.sharedActionsExpanded.set(isExpanded)
             }
         }
-    }
-
-    internal fun recordSpellingDiagnostic(result: SpellingResult) {
-        spellingDiagnostics.record(
-            state = result.diagnosticState,
-            suggestionCount = result.suggestionsInfo.suggestionsCount,
-        )
-        _spellingDiagnosticsVersion.update { it + 1L }
-    }
-
-    internal fun spellingDiagnosticsSnapshot() = spellingDiagnostics.snapshot()
-
-    internal fun clearSpellingDiagnostics() {
-        spellingDiagnostics.clear()
-        _spellingDiagnosticsVersion.update { it + 1L }
     }
 
     private class ProviderInstanceWrapper(val provider: NlpProvider) {
