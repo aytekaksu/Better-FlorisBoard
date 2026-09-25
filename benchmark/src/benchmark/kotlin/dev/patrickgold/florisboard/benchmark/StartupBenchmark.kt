@@ -27,7 +27,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 private const val TargetPackage = "dev.patrickgold.florisboard.bench"
-private const val TargetImeService = "$TargetPackage/.FlorisImeService"
+private const val TargetImeService = "$TargetPackage/dev.patrickgold.florisboard.FlorisImeService"
 
 /**
  * Run this benchmark from Studio to see startup measurements, and captured system traces

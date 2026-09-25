@@ -53,6 +53,12 @@ android {
             signingConfig = getByName("debug").signingConfig
             matchingFallbacks += listOf("release")
         }
+
+        create("profile") {
+            isDebuggable = true
+            signingConfig = getByName("debug").signingConfig
+            matchingFallbacks += listOf("release")
+        }
     }
 
     targetProjectPath = ":app"
@@ -68,6 +74,6 @@ dependencies {
 
 androidComponents {
     beforeVariants(selector().all()) {
-        it.enable = it.buildType == "benchmark"
+        it.enable = it.buildType == "benchmark" || it.buildType == "profile"
     }
 }

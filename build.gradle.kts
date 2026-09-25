@@ -830,7 +830,9 @@ val ciPackage by tasks.registering {
     dependsOn(
         ":app:assembleDebug",
         ":app:assembleBeta",
+        ":app:assembleProfile",
         ":benchmark:assembleBenchmark",
+        ":benchmark:assembleProfile",
         ":lib:autocorrect-api:checkAutocorrectApi",
         verifyPackagedPrivacy,
     )
