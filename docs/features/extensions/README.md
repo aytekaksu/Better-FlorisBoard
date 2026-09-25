@@ -87,7 +87,9 @@ Installed-package writes and editor saves use a bounded ZIP writer and replace
 the internal archive atomically. Import never runs load or unload hooks on its
 staging directory. Exporting an installed extension copies its original
 archive; exporting a bundled extension uses an isolated temporary
-materialization.
+materialization. Export creates and removes its temporary workspace on I/O,
+including on failure or caller cancellation. The installed
+archive snapshot finishes under the storage guard before the destination write.
 
 The Storage Access Framework owns the final export document, so the app cannot
 promise an atomic rename at that external destination.
@@ -142,6 +144,8 @@ updates that value before the property can be saved.
 Run the full JVM suite and local gate:
 
 ```shell
+./gradlew :app:testDebugUnitTest \
+  --tests 'dev.patrickgold.florisboard.lib.ext.ExtensionExportWorkspaceTest'
 ./gradlew :app:testDebugUnitTest
 ./gradlew qualityGate
 ```
