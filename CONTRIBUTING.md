@@ -96,10 +96,22 @@ project. Do not contact upstream maintainers or use their Crowdin project for
 fork-specific text.
 
 During this development phase, change only the English source file at
-`app/src/main/res/values/strings.xml`. Do not edit generated/localized
-`values-*/strings.xml` files in ordinary pull requests. Open an issue before
-translation work; a fork-owned translation workflow will be documented when it
-is ready.
+`app/src/main/res/values/strings.xml`. Ordinary pull requests must not edit
+generated/localized `values-*/strings.xml` files. The one-time exception for
+[issue #131](https://github.com/aytekaksu/Better-FlorisBoard/issues/131) lets
+the maintainer delete its frozen set of lint-unused resources from source and
+localized XML in a single resource-only pull request while that issue is open.
+Link that pull request with `Refs #131`.
+The validator checks the full Git diff and parsed XML: no new or renamed keys,
+changed surviving values, reordered entries, or unrelated metadata. It never
+permits new translations. Run its local tests with
+`python3 .github/scripts/test_validate_translation_deletions.py`.
+Because a pull request can edit its own workflow file, this check does not
+replace maintainer review of workflow changes or current-head approval for
+outside contributions.
+
+Open an issue before any other translation work. This fork still needs its own
+translation source before accepting ongoing localized edits.
 
 ## Bug reports and proposals
 
