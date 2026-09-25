@@ -195,26 +195,14 @@ data class SnyggSinglePropertySet internal constructor(
         }
     }
 
-    fun background(default: Color = Color.Unspecified): Color {
-        return when (background) {
-            is SnyggStaticColorValue -> background.color
-            else -> default
-        }
-    }
+    fun background(default: Color = Color.Unspecified): Color =
+        (background as? SnyggStaticColorValue)?.color ?: default
 
-    fun foreground(default: Color = Color.Unspecified): Color {
-        return when (foreground) {
-            is SnyggStaticColorValue -> foreground.color
-            else -> default
-        }
-    }
+    fun foreground(default: Color = Color.Unspecified): Color =
+        (foreground as? SnyggStaticColorValue)?.color ?: default
 
-    fun contentScale(default: ContentScale = ContentScale.Crop): ContentScale {
-        return when (contentScale) {
-            is SnyggContentScaleValue -> contentScale.contentScale
-            else -> default
-        }
-    }
+    fun contentScale(default: ContentScale = ContentScale.Crop): ContentScale =
+        (contentScale as? SnyggContentScaleValue)?.contentScale ?: default
 
     fun fontFamily(preloadedFontFamilies: CompiledFontFamilyData, default: FontFamily? = null): FontFamily? {
         return when (val family = fontFamily) {
@@ -224,89 +212,40 @@ data class SnyggSinglePropertySet internal constructor(
         }
     }
 
-    fun fontSize(default: TextUnit = TextUnit.Unspecified): TextUnit {
-        return when (fontSize) {
-            is SnyggSpSizeValue -> fontSize.sp
-            else -> default
-        }
-    }
+    fun fontSize(default: TextUnit = TextUnit.Unspecified): TextUnit =
+        (fontSize as? SnyggSpSizeValue)?.sp ?: default
 
-    fun fontStyle(default: FontStyle? = null): FontStyle? {
-        return when (fontStyle) {
-            is SnyggFontStyleValue -> fontStyle.fontStyle
-            else -> default
-        }
-    }
+    fun fontStyle(default: FontStyle? = null): FontStyle? =
+        (fontStyle as? SnyggFontStyleValue)?.fontStyle ?: default
 
-    fun fontWeight(default: FontWeight? = null): FontWeight? {
-        return when (fontWeight) {
-            is SnyggFontWeightValue -> fontWeight.fontWeight
-            else -> default
-        }
-    }
+    fun fontWeight(default: FontWeight? = null): FontWeight? =
+        (fontWeight as? SnyggFontWeightValue)?.fontWeight ?: default
 
-    fun letterSpacing(default: TextUnit = TextUnit.Unspecified): TextUnit {
-        return when (letterSpacing) {
-            is SnyggSpSizeValue -> letterSpacing.sp
-            else -> default
-        }
-    }
+    fun letterSpacing(default: TextUnit = TextUnit.Unspecified): TextUnit =
+        (letterSpacing as? SnyggSpSizeValue)?.sp ?: default
 
-    fun lineHeight(default: TextUnit = TextUnit.Unspecified): TextUnit {
-        return when (lineHeight) {
-            is SnyggSpSizeValue -> lineHeight.sp
-            else -> default
-        }
-    }
+    fun lineHeight(default: TextUnit = TextUnit.Unspecified): TextUnit =
+        (lineHeight as? SnyggSpSizeValue)?.sp ?: default
 
-    fun shadowColor(default: Color = Color.Unspecified): Color {
-        return when (shadowColor) {
-            is SnyggStaticColorValue -> shadowColor.color
-            else -> default
-        }
-    }
+    fun shadowColor(default: Color = Color.Unspecified): Color =
+        (shadowColor as? SnyggStaticColorValue)?.color ?: default
 
-    fun shadowElevation(default: Dp = Dp.Unspecified): Dp {
-        return when (shadowElevation) {
-            is SnyggDpSizeValue -> shadowElevation.dp
-            else -> default
-        }
-    }
+    fun shadowElevation(default: Dp = Dp.Unspecified): Dp =
+        (shadowElevation as? SnyggDpSizeValue)?.dp ?: default
 
-    fun shape(): Shape {
-        return when (shape) {
-            is SnyggShapeValue -> shape.shape
-            else -> RectangleShape
-        }
-    }
+    fun shape(): Shape = (shape as? SnyggShapeValue)?.shape ?: RectangleShape
 
-    fun textAlign(default: TextAlign? = null): TextAlign? {
-        return when (textAlign) {
-            is SnyggTextAlignValue -> textAlign.textAlign
-            else -> default
-        }
-    }
+    fun textAlign(default: TextAlign? = null): TextAlign? =
+        (textAlign as? SnyggTextAlignValue)?.textAlign ?: default
 
-    fun textDecorationLine(default: TextDecoration? = null): TextDecoration? {
-        return when (textDecorationLine) {
-            is SnyggTextDecorationLineValue -> textDecorationLine.textDecoration
-            else -> default
-        }
-    }
+    fun textDecorationLine(default: TextDecoration? = null): TextDecoration? =
+        (textDecorationLine as? SnyggTextDecorationLineValue)?.textDecoration ?: default
 
-    fun textMaxLines(default: Int = Int.MAX_VALUE): Int {
-        return when (textMaxLines) {
-            is SnyggTextMaxLinesValue -> textMaxLines.maxLines
-            else -> default
-        }
-    }
+    fun textMaxLines(default: Int = Int.MAX_VALUE): Int =
+        (textMaxLines as? SnyggTextMaxLinesValue)?.maxLines ?: default
 
-    fun textOverflow(default: TextOverflow = TextOverflow.Clip): TextOverflow {
-        return when (textOverflow) {
-            is SnyggTextOverflowValue -> textOverflow.textOverflow
-            else -> default
-        }
-    }
+    fun textOverflow(default: TextOverflow = TextOverflow.Clip): TextOverflow =
+        (textOverflow as? SnyggTextOverflowValue)?.textOverflow ?: default
 }
 
 data class SnyggMultiplePropertySets internal constructor(
