@@ -328,7 +328,11 @@ class FlorisAppActivity : ComponentActivity() {
                             Routes.Ext.Import(ExtensionImportScreenType.EXT_ANY, workspace?.uuid),
                         )
                     } catch (error: Throwable) {
-                        workspace?.close()
+                        try {
+                            workspace?.retire()
+                        } catch (cleanupError: Exception) {
+                            error.addSuppressed(cleanupError)
+                        }
                         throw error
                     }
                 }

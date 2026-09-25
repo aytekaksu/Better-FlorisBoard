@@ -33,6 +33,7 @@ import dev.patrickgold.florisboard.lib.io.FileRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -46,6 +47,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class CacheManagerAndroidTest {
@@ -99,6 +101,76 @@ class CacheManagerAndroidTest {
 
         assertTrue(workspace.isClosed())
         assertNull(cacheManager.importer.getWorkspaceByUuid(workspace.uuid))
+    }
+
+    @Test
+    fun importerRetirementWaitsForInstallAndDoesNotDeleteAnotherWorkspace() = runBlocking {
+        val cacheManager = CacheManager(context)
+        val oldWorkspace = cacheManager.importer.new()
+        val marker = oldWorkspace.outputDir.resolve("synthetic-marker")
+        marker.writeText("test")
+        val lease = oldWorkspace.retainForImport()
+        val nextWorkspace = cacheManager.importer.new()
+
+        try {
+            oldWorkspace.requestRetirement()
+            oldWorkspace.requestRetirement()
+            assertTrue(marker.exists())
+            assertSame(oldWorkspace, cacheManager.importer.getWorkspaceByUuid(oldWorkspace.uuid))
+
+            lease.close()
+            lease.close()
+            withTimeout(5_000) {
+                while (oldWorkspace.isOpen()) delay(10)
+            }
+            oldWorkspace.retire()
+
+            assertFalse(marker.exists())
+            assertTrue(oldWorkspace.isClosed())
+            assertNull(cacheManager.importer.getWorkspaceByUuid(oldWorkspace.uuid))
+            assertSame(nextWorkspace, cacheManager.importer.getWorkspaceByUuid(nextWorkspace.uuid))
+            assertTrue(nextWorkspace.isOpen())
+        } finally {
+            lease.close()
+            oldWorkspace.close()
+            nextWorkspace.close()
+        }
+    }
+
+    @Test
+    fun importerJanitorDeletesOnlyQueuedInactiveWorkspaceDirectories() = runBlocking {
+        val cacheManager = CacheManager(context)
+        val oldWorkspace = cacheManager.importer.new()
+        val orphan = cacheManager.importer.new()
+        val unqueued = cacheManager.importer.dir.resolve(UUID.randomUUID().toString())
+        assertTrue(unqueued.mkdirs())
+        var activeReplacement: CacheManager.ImporterWorkspace? = null
+
+        try {
+            assertEquals(cacheManager.importer.dir, orphan.dir.parentFile)
+            synchronized(cacheManager.importer) {
+                cacheManager.importer.remove(oldWorkspace)
+                cacheManager.queueFailedImporterCleanup(oldWorkspace)
+                activeReplacement = cacheManager.importer.new(oldWorkspace.uuid)
+                cacheManager.queueFailedImporterCleanup(oldWorkspace)
+            }
+            val replacement = requireNotNull(activeReplacement)
+            cacheManager.importer.remove(orphan)
+            cacheManager.queueFailedImporterCleanup(orphan)
+
+            withTimeout(5_000) {
+                while (orphan.dir.exists()) delay(10)
+            }
+            assertSame(replacement, cacheManager.importer.getWorkspaceByUuid(oldWorkspace.uuid))
+            assertTrue(replacement.dir.exists())
+            assertTrue(unqueued.exists())
+        } finally {
+            activeReplacement?.close()
+            cacheManager.queueFailedImporterCleanup(oldWorkspace)
+            oldWorkspace.close()
+            orphan.close()
+            unqueued.deleteRecursively()
+        }
     }
 
     @Test
