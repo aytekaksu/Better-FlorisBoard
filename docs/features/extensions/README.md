@@ -68,9 +68,10 @@ APK assets are trusted input, but their directory copy still uses staged,
 all-or-nothing publication.
 Bundled keyboard layout IDs may share one arrangement file through
 `arrangementFile`; their labels, modifiers, and subtype choices stay separate.
-Both six-theme bundled families keep their manifest paths. In each family,
-five stylesheets are built from the day stylesheet and small palette/borderless
-overlays. Generated selectors replace whole rules; `@defines` merge by name.
+Both six-theme bundled families keep their manifest paths. The static day
+stylesheet is the shared base; a small day overlay supplies Material You colors.
+Night and borderless overlays build the remaining stylesheets. Generated
+selectors replace whole rules; `@defines` merge by name.
 
 ## Manifest rules
 

@@ -64,10 +64,6 @@ abstract class GenerateBuiltInThemeAssets : DefaultTask() {
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val baseStylesheet: RegularFileProperty
 
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val materialYouBaseStylesheet: RegularFileProperty
-
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val overlaysDirectory: DirectoryProperty
@@ -92,15 +88,16 @@ abstract class GenerateBuiltInThemeAssets : DefaultTask() {
             ),
         )
         generateFamily(
-            materialYouBaseStylesheet.get().asFile,
+            baseStylesheet.get().asFile,
             overlaysDirectory.get().asFile.resolve("material-you"),
             targetRoot.resolve("org.florisboard.themes.my/stylesheets"),
             mapOf(
-                "floris_night_my" to listOf("night"),
-                "floris_pure_night_my" to listOf("night", "pure-night"),
-                "floris_day_my_borderless" to listOf("borderless"),
-                "floris_night_my_borderless" to listOf("night", "borderless"),
-                "floris_pure_night_my_borderless" to listOf("night", "pure-night", "borderless"),
+                "floris_day_my" to listOf("day"),
+                "floris_night_my" to listOf("day", "night"),
+                "floris_pure_night_my" to listOf("day", "night", "pure-night"),
+                "floris_day_my_borderless" to listOf("day", "borderless"),
+                "floris_night_my_borderless" to listOf("day", "night", "borderless"),
+                "floris_pure_night_my_borderless" to listOf("day", "night", "pure-night", "borderless"),
             ),
         )
     }
@@ -295,11 +292,6 @@ androidComponents {
             baseStylesheet.set(
                 layout.projectDirectory.file(
                     "src/main/assets/ime/theme/org.florisboard.themes/stylesheets/floris_day.json",
-                ),
-            )
-            materialYouBaseStylesheet.set(
-                layout.projectDirectory.file(
-                    "src/main/assets/ime/theme/org.florisboard.themes.my/stylesheets/floris_day_my.json",
                 ),
             )
             overlaysDirectory.set(layout.projectDirectory.dir("theme-overlays"))

@@ -1,0 +1,50 @@
+{
+  "@defines": {
+    "--primary": "dynamic-light-color(inversePrimary)",
+    "--primary-variant": "dynamic-light-color(primary)",
+    "--secondary": "dynamic-light-color(secondaryContainer)",
+    "--secondary-variant": "dynamic-light-color(secondary)",
+    "--background": "dynamic-light-color(background)",
+    "--background-variant": "dynamic-light-color(background)",
+    "--surface": "dynamic-light-color(surfaceDim)",
+    "--surface-variant": "dynamic-light-color(surfaceVariant)",
+    "--popup-surface": "dynamic-light-color(surfaceContainerLow)",
+    "--focused-popup-surface": "dynamic-light-color(surfaceContainerHigh)",
+    "--spacer-color": "dynamic-light-color(scrim)",
+    "--one-hand-background": "dynamic-light-color(inversePrimary)",
+    "--one-hand-foreground": "dynamic-light-color(scrim)",
+    "--on-primary": "dynamic-light-color(onPrimary)",
+    "--on-background": "dynamic-light-color(onBackground)",
+    "--on-surface": "dynamic-light-color(onSurface)"
+  },
+  "key": {
+    "background": "var(--surface)",
+    "foreground": "var(--on-background)",
+    "font-size": "22sp",
+    "shape": "var(--shape)",
+    "shadow-elevation": "2dp",
+    "text-max-lines": "1"
+  },
+  "smartbar-shared-actions-toggle": {
+    "background": "var(--primary)",
+    "foreground": "var(--on-surface)",
+    "margin": "6dp",
+    "shape": "circle()",
+    "shadow-elevation": "2dp"
+  },
+  "smartbar-actions-editor-header": {
+    "background": "var(--primary)",
+    "foreground": "var(--on-primary)",
+    "font-size": "16sp",
+    "text-max-lines": "1",
+    "text-overflow": "ellipsis"
+  },
+  "smartbar-actions-editor-subheader": {
+    "foreground": "var(--primary)",
+    "font-size": "16sp",
+    "font-weight": "bold",
+    "padding": "12dp 16dp 12dp 8dp",
+    "text-max-lines": "1",
+    "text-overflow": "ellipsis"
+  }
+}
