@@ -1,0 +1,7 @@
+{
+  "@defines": {
+    "--surface": "#f0f0f0",
+    "--surface-variant": "#ffffff",
+    "--on-background-disabled": "#12121248"
+  }
+}
