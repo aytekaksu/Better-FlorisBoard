@@ -23,6 +23,7 @@ import dev.patrickgold.florisboard.ime.nlp.PunctuationRule
 import dev.patrickgold.florisboard.ime.popup.PopupMappingComponent
 import dev.patrickgold.florisboard.ime.text.composing.Composer
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
+import dev.patrickgold.florisboard.lib.ext.ExtensionIndexState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -43,11 +44,11 @@ data class KeyboardExtensionSnapshot(
 )
 
 class KeyboardExtensionRepository internal constructor(
-    keyboardExtensions: StateFlow<List<KeyboardExtension>>,
+    keyboardExtensions: StateFlow<ExtensionIndexState<KeyboardExtension>>,
     scope: CoroutineScope,
 ) {
     constructor(context: Context) : this(
-        context.extensionManager().value.keyboardExtensions,
+        context.extensionManager().value.keyboardExtensions.refreshed,
         CoroutineScope(Dispatchers.Default + SupervisorJob()),
     )
 
@@ -55,8 +56,8 @@ class KeyboardExtensionRepository internal constructor(
     val snapshot: StateFlow<KeyboardExtensionSnapshot> = indexedSnapshot.asStateFlow()
 
     init {
-        keyboardExtensions.collectIn(scope) { extensions ->
-            indexedSnapshot.value = indexKeyboardExtensions(extensions, indexedSnapshot.value.generation + 1)
+        keyboardExtensions.collectIn(scope) { state ->
+            indexedSnapshot.value = indexKeyboardExtensions(state.extensions, state.generation)
         }
     }
 }

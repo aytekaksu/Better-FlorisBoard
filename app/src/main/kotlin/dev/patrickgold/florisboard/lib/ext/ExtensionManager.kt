@@ -110,6 +110,12 @@ internal data class InstalledExtensionArchiveFingerprint(
     val sha256: String,
 )
 
+/** One completed index refresh, including archive-only changes to unchanged manifests. */
+internal data class ExtensionIndexState<T : Extension>(
+    val generation: Long,
+    val extensions: List<T>,
+)
+
 private fun ByteArray.toHexString(): String = buildString(size * 2) {
     for (byte in this@toHexString) {
         val value = byte.toInt() and 0xff
@@ -408,9 +414,9 @@ class ExtensionManager(context: Context) {
     }
 
     fun getExtensionById(id: String): Extension? {
-        return keyboardExtensions.value.find { it.meta.id == id }
-            ?: themes.value.find { it.meta.id == id }
-            ?: languagePacks.value.find { it.meta.id == id }
+        return keyboardExtensions.refreshed.value.extensions.find { it.meta.id == id }
+            ?: themes.refreshed.value.extensions.find { it.meta.id == id }
+            ?: languagePacks.refreshed.value.extensions.find { it.meta.id == id }
     }
 
     fun canDelete(ext: Extension): Boolean {
@@ -434,6 +440,8 @@ class ExtensionManager(context: Context) {
     ) : StateFlow<List<T>> by flow {
         private val assetsModuleRef = FlorisRef.assets(modulePath)
         private val internalModuleRef = FlorisRef.internal(modulePath)
+        private val refreshedFlow = MutableStateFlow(ExtensionIndexState<T>(0L, emptyList()))
+        internal val refreshed: StateFlow<ExtensionIndexState<T>> = refreshedFlow
         var internalModuleDir = internalModuleRef.absoluteFile(appContext)
 
         private var staticExtensions = listOf<T>()
@@ -477,7 +485,9 @@ class ExtensionManager(context: Context) {
         }
 
         private suspend fun refresh() = withStorageMutation {
-            flow.value = staticExtensions + indexInternalModule()
+            val extensions = staticExtensions + indexInternalModule()
+            flow.value = extensions
+            refreshedFlow.value = ExtensionIndexState(refreshedFlow.value.generation + 1, extensions)
         }
 
         private fun indexAssetsModule(): List<T> {

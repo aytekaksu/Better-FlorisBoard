@@ -95,11 +95,12 @@ messages. Normal import lists may show a bounded, sanitized provider label.
 
 ## Runtime and editor ownership
 
-The app-owned `KeyboardExtensionRepository` publishes one snapshot when loaded
-keyboard extensions change. Subtypes, layouts, editor, NLP, and settings read it
-directly; `KeyboardManager` clears its computed keyboard cache for each new
-generation. Later components with the same ID win, unknown layout types are
-skipped, and preset order and missing-component fallbacks stay unchanged.
+The app-owned `KeyboardExtensionRepository` publishes one snapshot per keyboard
+index refresh, including replacements whose manifest is unchanged. Subtypes,
+layouts, editor, NLP, and settings read it directly; `KeyboardManager` clears
+computed keyboards, and `LayoutManager` drops decoded layouts and popups from
+older generations. Later components with the same ID win, unknown layout types
+are skipped, and preset order and missing-component fallbacks stay unchanged.
 
 Each loaded extension gets a random directory below `extension-runtime`.
 `unload()` deletes that directory only when the extension instance created it;
@@ -150,6 +151,7 @@ device tests:
   -Pandroid.testInstrumentationRunnerArguments.class=\
 dev.patrickgold.florisboard.lib.cache.CacheManagerAndroidTest,\
 dev.patrickgold.florisboard.lib.ext.ExtensionLifecycleAndroidTest,\
+dev.patrickgold.florisboard.ime.keyboard.LayoutCacheRefreshAndroidTest,\
 dev.patrickgold.florisboard.ime.theme.ThemeFontCompilationAndroidTest,\
 dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaImporterAndroidTest
 
