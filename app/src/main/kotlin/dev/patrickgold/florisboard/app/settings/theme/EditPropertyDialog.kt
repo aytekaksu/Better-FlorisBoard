@@ -34,8 +34,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CutCornerShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -50,7 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -950,180 +948,57 @@ private fun ShapeValueEditor(
     onValueChange: (SnyggValue) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var selectedCorner by rememberSaveable(value.encoder()) {
+        mutableStateOf<ShapeCorner?>(null)
+    }
     when (value) {
         is SnyggDpShapeValue -> {
-            var showDialogInitDp by rememberSaveable(stateSaver = DpSizeSaver) {
-                mutableStateOf(0.dp)
-            }
-            var showDialogForCorner by rememberSaveable {
-                mutableStateOf<ShapeCorner?>(null)
-            }
-            var topStart by rememberSaveable(stateSaver = DpSizeSaver) {
-                mutableStateOf(value.topStart)
-            }
-            var topEnd by rememberSaveable(stateSaver = DpSizeSaver) {
-                mutableStateOf(value.topEnd)
-            }
-            var bottomEnd by rememberSaveable(stateSaver = DpSizeSaver) {
-                mutableStateOf(value.bottomEnd)
-            }
-            var bottomStart by rememberSaveable(stateSaver = DpSizeSaver) {
-                mutableStateOf(value.bottomStart)
-            }
-            val shape = remember(topStart, topEnd, bottomEnd, bottomStart) {
-                when (value) {
-                    is SnyggCutCornerDpShapeValue -> {
-                        CutCornerShape(topStart, topEnd, bottomEnd, bottomStart)
-                    }
-
-                    is SnyggRoundedCornerDpShapeValue -> {
-                        RoundedCornerShape(topStart, topEnd, bottomEnd, bottomStart)
-                    }
-                }
-            }
-            LaunchedEffect(shape) {
-                onValueChange(
-                    when (value) {
-                        is SnyggCutCornerDpShapeValue -> {
-                            SnyggCutCornerDpShapeValue(topStart, topEnd, bottomEnd, bottomStart)
-                        }
-
-                        is SnyggRoundedCornerDpShapeValue -> {
-                            SnyggRoundedCornerDpShapeValue(topStart, topEnd, bottomEnd, bottomStart)
-                        }
-                    }
-                )
-            }
             val unit = stringRes(R.string.unit__display_pixel__symbol)
             ShapeCornerPreview(
-                shape = shape,
-                topStart = unit.curlyFormat("v" to topStart.value.toStringWithoutDotZero()),
-                topEnd = unit.curlyFormat("v" to topEnd.value.toStringWithoutDotZero()),
-                bottomEnd = unit.curlyFormat("v" to bottomEnd.value.toStringWithoutDotZero()),
-                bottomStart = unit.curlyFormat("v" to bottomStart.value.toStringWithoutDotZero()),
+                shape = value.shape,
+                topStart = unit.curlyFormat("v" to value.topStart.value.toStringWithoutDotZero()),
+                topEnd = unit.curlyFormat("v" to value.topEnd.value.toStringWithoutDotZero()),
+                bottomEnd = unit.curlyFormat("v" to value.bottomEnd.value.toStringWithoutDotZero()),
+                bottomStart = unit.curlyFormat("v" to value.bottomStart.value.toStringWithoutDotZero()),
                 modifier = modifier,
-                onCornerClick = { corner ->
-                    showDialogInitDp = when (corner) {
-                        ShapeCorner.TOP_START -> topStart
-                        ShapeCorner.TOP_END -> topEnd
-                        ShapeCorner.BOTTOM_END -> bottomEnd
-                        ShapeCorner.BOTTOM_START -> bottomStart
-                    }
-                    showDialogForCorner = corner
-                },
+                onCornerClick = { selectedCorner = it },
             )
-            val dialogForCorner = showDialogForCorner
-            if (dialogForCorner != null) {
-                ShapeCornerDialog(
-                    corner = dialogForCorner,
-                    initialSize = showDialogInitDp.value.toStringWithoutDotZero(),
-                    validationRule = ExtensionValidation.SnyggDpShapeValue,
-                    onApply = { size ->
-                        val sizeDp = size.toFloat().dp
-                        when (dialogForCorner) {
-                            ShapeCorner.TOP_START -> topStart = sizeDp
-                            ShapeCorner.TOP_END -> topEnd = sizeDp
-                            ShapeCorner.BOTTOM_END -> bottomEnd = sizeDp
-                            ShapeCorner.BOTTOM_START -> bottomStart = sizeDp
-                        }
-                    },
-                    onApplyToAll = { size ->
-                        val sizeDp = size.toFloat().dp
-                        topStart = sizeDp
-                        topEnd = sizeDp
-                        bottomEnd = sizeDp
-                        bottomStart = sizeDp
-                    },
-                    onDismiss = { showDialogForCorner = null },
-                )
+            selectedCorner?.let { corner ->
+                key(value.encoder(), corner) {
+                    ShapeCornerDialog(
+                        corner = corner,
+                        initialSize = value.cornerSize(corner).value.toStringWithoutDotZero(),
+                        validationRule = ExtensionValidation.SnyggDpShapeValue,
+                        onApply = { onValueChange(value.withCornerSize(it.toFloat().dp, corner)) },
+                        onApplyToAll = { onValueChange(value.withCornerSize(it.toFloat().dp)) },
+                        onDismiss = { selectedCorner = null },
+                    )
+                }
             }
         }
 
         is SnyggPercentShapeValue -> {
-            var showDialogInitPercentage by rememberSaveable {
-                mutableIntStateOf(0)
-            }
-            var showDialogForCorner by rememberSaveable {
-                mutableStateOf<ShapeCorner?>(null)
-            }
-            var topStart by rememberSaveable {
-                mutableIntStateOf(value.topStart)
-            }
-            var topEnd by rememberSaveable {
-                mutableIntStateOf(value.topEnd)
-            }
-            var bottomEnd by rememberSaveable {
-                mutableIntStateOf(value.bottomEnd)
-            }
-            var bottomStart by rememberSaveable {
-                mutableIntStateOf(value.bottomStart)
-            }
-            val shape = remember(topStart, topEnd, bottomEnd, bottomStart) {
-                when (value) {
-                    is SnyggCutCornerPercentShapeValue -> {
-                        CutCornerShape(topStart, topEnd, bottomEnd, bottomStart)
-                    }
-
-                    is SnyggRoundedCornerPercentShapeValue -> {
-                        RoundedCornerShape(topStart, topEnd, bottomEnd, bottomStart)
-                    }
-                }
-            }
-            LaunchedEffect(shape) {
-                onValueChange(
-                    when (value) {
-                        is SnyggCutCornerPercentShapeValue -> {
-                            SnyggCutCornerPercentShapeValue(topStart, topEnd, bottomEnd, bottomStart)
-                        }
-
-                        is SnyggRoundedCornerPercentShapeValue -> {
-                            SnyggRoundedCornerPercentShapeValue(topStart, topEnd, bottomEnd, bottomStart)
-                        }
-                    }
-                )
-            }
             val unit = stringRes(R.string.unit__percent__symbol)
             ShapeCornerPreview(
-                shape = shape,
-                topStart = unit.curlyFormat("v" to topStart),
-                topEnd = unit.curlyFormat("v" to topEnd),
-                bottomEnd = unit.curlyFormat("v" to bottomEnd),
-                bottomStart = unit.curlyFormat("v" to bottomStart),
+                shape = value.shape,
+                topStart = unit.curlyFormat("v" to value.topStart),
+                topEnd = unit.curlyFormat("v" to value.topEnd),
+                bottomEnd = unit.curlyFormat("v" to value.bottomEnd),
+                bottomStart = unit.curlyFormat("v" to value.bottomStart),
                 modifier = modifier,
-                onCornerClick = { corner ->
-                    showDialogInitPercentage = when (corner) {
-                        ShapeCorner.TOP_START -> topStart
-                        ShapeCorner.TOP_END -> topEnd
-                        ShapeCorner.BOTTOM_END -> bottomEnd
-                        ShapeCorner.BOTTOM_START -> bottomStart
-                    }
-                    showDialogForCorner = corner
-                },
+                onCornerClick = { selectedCorner = it },
             )
-            val dialogForCorner = showDialogForCorner
-            if (dialogForCorner != null) {
-                ShapeCornerDialog(
-                    corner = dialogForCorner,
-                    initialSize = showDialogInitPercentage.toString(),
-                    validationRule = ExtensionValidation.SnyggPercentShapeValue,
-                    onApply = { size ->
-                        val sizePercentage = size.toInt()
-                        when (dialogForCorner) {
-                            ShapeCorner.TOP_START -> topStart = sizePercentage
-                            ShapeCorner.TOP_END -> topEnd = sizePercentage
-                            ShapeCorner.BOTTOM_END -> bottomEnd = sizePercentage
-                            ShapeCorner.BOTTOM_START -> bottomStart = sizePercentage
-                        }
-                    },
-                    onApplyToAll = { size ->
-                        val sizePercentage = size.toInt()
-                        topStart = sizePercentage
-                        topEnd = sizePercentage
-                        bottomEnd = sizePercentage
-                        bottomStart = sizePercentage
-                    },
-                    onDismiss = { showDialogForCorner = null },
-                )
+            selectedCorner?.let { corner ->
+                key(value.encoder(), corner) {
+                    ShapeCornerDialog(
+                        corner = corner,
+                        initialSize = value.cornerSize(corner).toString(),
+                        validationRule = ExtensionValidation.SnyggPercentShapeValue,
+                        onApply = { onValueChange(value.withCornerSize(it.toInt(), corner)) },
+                        onApplyToAll = { onValueChange(value.withCornerSize(it.toInt())) },
+                        onDismiss = { selectedCorner = null },
+                    )
+                }
             }
         }
 
@@ -1139,6 +1014,43 @@ private fun ShapeValueEditor(
                 )
             }
         }
+    }
+}
+
+private fun SnyggDpShapeValue.cornerSize(corner: ShapeCorner): Dp = when (corner) {
+    ShapeCorner.TOP_START -> topStart
+    ShapeCorner.TOP_END -> topEnd
+    ShapeCorner.BOTTOM_END -> bottomEnd
+    ShapeCorner.BOTTOM_START -> bottomStart
+}
+
+private fun SnyggPercentShapeValue.cornerSize(corner: ShapeCorner): Int = when (corner) {
+    ShapeCorner.TOP_START -> topStart
+    ShapeCorner.TOP_END -> topEnd
+    ShapeCorner.BOTTOM_END -> bottomEnd
+    ShapeCorner.BOTTOM_START -> bottomStart
+}
+
+// An omitted corner applies the size to all four corners.
+private fun SnyggDpShapeValue.withCornerSize(size: Dp, corner: ShapeCorner? = null): SnyggDpShapeValue {
+    val topStart = if (corner == null || corner == ShapeCorner.TOP_START) size else this.topStart
+    val topEnd = if (corner == null || corner == ShapeCorner.TOP_END) size else this.topEnd
+    val bottomEnd = if (corner == null || corner == ShapeCorner.BOTTOM_END) size else this.bottomEnd
+    val bottomStart = if (corner == null || corner == ShapeCorner.BOTTOM_START) size else this.bottomStart
+    return when (this) {
+        is SnyggCutCornerDpShapeValue -> SnyggCutCornerDpShapeValue(topStart, topEnd, bottomEnd, bottomStart)
+        is SnyggRoundedCornerDpShapeValue -> SnyggRoundedCornerDpShapeValue(topStart, topEnd, bottomEnd, bottomStart)
+    }
+}
+
+private fun SnyggPercentShapeValue.withCornerSize(size: Int, corner: ShapeCorner? = null): SnyggPercentShapeValue {
+    val topStart = if (corner == null || corner == ShapeCorner.TOP_START) size else this.topStart
+    val topEnd = if (corner == null || corner == ShapeCorner.TOP_END) size else this.topEnd
+    val bottomEnd = if (corner == null || corner == ShapeCorner.BOTTOM_END) size else this.bottomEnd
+    val bottomStart = if (corner == null || corner == ShapeCorner.BOTTOM_START) size else this.bottomStart
+    return when (this) {
+        is SnyggCutCornerPercentShapeValue -> SnyggCutCornerPercentShapeValue(topStart, topEnd, bottomEnd, bottomStart)
+        is SnyggRoundedCornerPercentShapeValue -> SnyggRoundedCornerPercentShapeValue(topStart, topEnd, bottomEnd, bottomStart)
     }
 }
 
