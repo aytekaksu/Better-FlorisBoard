@@ -69,7 +69,6 @@ import dev.patrickgold.florisboard.ime.core.SubtypeJsonConfig
 import dev.patrickgold.florisboard.ime.core.SubtypeLayoutMap
 import dev.patrickgold.florisboard.ime.core.SubtypeNlpProviderMap
 import dev.patrickgold.florisboard.ime.core.SubtypePreset
-import dev.patrickgold.florisboard.ime.keyboard.LayoutArrangementComponent
 import dev.patrickgold.florisboard.ime.keyboard.LayoutType
 import dev.patrickgold.florisboard.ime.keyboard.extCorePopupMapping
 import dev.patrickgold.florisboard.ime.nlp.han.HanShapeBasedLanguageProvider
@@ -103,7 +102,11 @@ private val SelectLayoutMap = SubtypeLayoutMap(
     phone2 = SelectComponentName,
 )
 private val SelectLocale = FlorisLocale.from("00", "00")
-private val SelectListKeys = listOf(SelectComponentName)
+// TODO: Source provider labels from extension metadata or string resources.
+private val SuggestionProviders = mapOf(
+    LatinLanguageProvider.ProviderId to "Latin",
+    HanShapeBasedLanguageProvider.ProviderId to "Chinese shape-based",
+)
 
 private class SubtypeEditorState(init: Subtype?) {
     companion object {
@@ -182,7 +185,6 @@ fun SubtypeEditorScreen(id: Long?) = FlorisScreen {
     })
 
     val selectValue = stringRes(R.string.settings__localization__subtype_select_placeholder)
-    val selectListValues = remember(selectValue) { listOf(selectValue) }
 
     val prefs by FlorisPreferenceStore
     val navController = LocalNavController.current
@@ -237,13 +239,14 @@ fun SubtypeEditorScreen(id: Long?) = FlorisScreen {
         layoutType: LayoutType,
     ) {
         SubtypeProperty(title) {
-            SubtypeLayoutDropdown(
-                layoutType = layoutType,
-                layouts = layoutExtensions[layoutType] ?: mapOf(),
+            SubtypeOptionDropdown(
+                options = layoutExtensions[layoutType].orEmpty(),
+                labelOf = { it.label },
+                placeholderId = SelectComponentName,
+                placeholderLabel = selectValue,
+                selectedId = layoutMap[layoutType],
                 showSelectAsError = showSelectAsError,
-                layoutMap = layoutMap,
-                onLayoutMapChanged = { layoutMap = it },
-                selectListValues = selectListValues,
+                onSelect = { layoutMap = layoutMap.copy(layoutType = layoutType, componentName = it)!! },
             )
         }
     }
@@ -369,21 +372,14 @@ fun SubtypeEditorScreen(id: Long?) = FlorisScreen {
                 )
             }
             SubtypeProperty(stringRes(R.string.settings__localization__subtype_popup_mapping)) {
-                val popupMappingIds = remember(popupMappings) {
-                    SelectListKeys + popupMappings.keys
-                }
-                val popupMappingLabels = remember(popupMappings) {
-                    selectListValues + popupMappings.values.map { it.label }
-                }
-                val expanded = remember { mutableStateOf(false) }
-                val selectedIndex = popupMappingIds.indexOf(popupMapping).coerceAtLeast(0)
-                JetPrefDropdown(
-                    options = popupMappingLabels,
-                    expanded = expanded,
-                    selectedOptionIndex = selectedIndex,
-                    isError = showSelectAsError && selectedIndex == 0,
-                    onSelectOption = { popupMapping = popupMappingIds[it] },
-                    appearance = JetPrefDropdownMenuDefaults.outlined(shape = ShapeDefaults.Small),
+                SubtypeOptionDropdown(
+                    options = popupMappings,
+                    labelOf = { it.label },
+                    placeholderId = SelectComponentName,
+                    placeholderLabel = selectValue,
+                    selectedId = popupMapping,
+                    showSelectAsError = showSelectAsError,
+                    onSelect = { popupMapping = it },
                 )
             }
             SubtypePropertyDropdown(stringRes(R.string.settings__localization__subtype_characters_layout), LayoutType.CHARACTERS)
@@ -391,31 +387,14 @@ fun SubtypeEditorScreen(id: Long?) = FlorisScreen {
             SubtypeGroupSpacer()
 
             SubtypeProperty(stringRes(R.string.settings__localization__subtype_suggestion_provider)) {
-                // TODO: Put this map somewhere more formal (another KeyboardExtension field?)
-                //  optionally use a string resource below
-                val nlpProviderMappings = mapOf(
-                    LatinLanguageProvider.ProviderId to "Latin",
-                    HanShapeBasedLanguageProvider.ProviderId to "Chinese shape-based"
-                )
-
-                val nlpProviderMappingIds = remember(nlpProviderMappings) {
-                    listOf(SelectNlpProviderId) + nlpProviderMappings.keys
-                }
-                val nlpProviderMappingLabels = remember(nlpProviderMappings) {
-                    selectListValues + nlpProviderMappings.values.map { it }
-                }
-                val expanded = remember { mutableStateOf(false) }
-                val selectedIndex = nlpProviderMappingIds.indexOf(nlpProviders.suggestion).coerceAtLeast(0)
-                JetPrefDropdown(
-                    options = nlpProviderMappingLabels,
-                    expanded = expanded,
-                    selectedOptionIndex = selectedIndex,
-                    isError = showSelectAsError && selectedIndex == 0,
-                    onSelectOption = { nlpProviders = SubtypeNlpProviderMap(
-                        suggestion = nlpProviderMappingIds[it],
-                        spelling = nlpProviderMappingIds[it]
-                    ) },
-                    appearance = JetPrefDropdownMenuDefaults.outlined(shape = ShapeDefaults.Small),
+                SubtypeOptionDropdown(
+                    options = SuggestionProviders,
+                    labelOf = { it },
+                    placeholderId = SelectNlpProviderId,
+                    placeholderLabel = selectValue,
+                    selectedId = nlpProviders.suggestion,
+                    showSelectAsError = showSelectAsError,
+                    onSelect = { nlpProviders = SubtypeNlpProviderMap(suggestion = it, spelling = it) },
                 )
             }
 
@@ -425,37 +404,27 @@ fun SubtypeEditorScreen(id: Long?) = FlorisScreen {
             SubtypePropertyDropdown(stringRes(R.string.settings__localization__subtype_symbols2_layout), LayoutType.SYMBOLS2)
 
             SubtypeProperty(stringRes(R.string.settings__localization__subtype_composer)) {
-                val composerIds = remember(composers) {
-                    SelectListKeys + composers.keys
-                }
-                val composerNames = remember(composers) {
-                    selectListValues + composers.values.map { it.label }
-                }
-                val expanded = remember { mutableStateOf(false) }
-                JetPrefDropdown(
-                    options = composerNames,
-                    expanded = expanded,
-                    selectedOptionIndex = composerIds.indexOf(composer).coerceAtLeast(0),
-                    isError = showSelectAsError && composer == SelectComponentName,
-                    onSelectOption = { composer = composerIds[it] },
-                    appearance = JetPrefDropdownMenuDefaults.outlined(shape = ShapeDefaults.Small),
+                SubtypeOptionDropdown(
+                    options = composers,
+                    labelOf = { it.label },
+                    placeholderId = SelectComponentName,
+                    placeholderLabel = selectValue,
+                    selectedId = composer,
+                    showSelectAsError = showSelectAsError,
+                    errorOnMissingSelection = false,
+                    onSelect = { composer = it },
                 )
             }
             SubtypeProperty(stringRes(R.string.settings__localization__subtype_currency_set)) {
-                val currencySetIds = remember(currencySets) {
-                    SelectListKeys + currencySets.keys
-                }
-                val currencySetNames = remember(currencySets) {
-                    selectListValues + currencySets.values.map { it.label }
-                }
-                val expanded = remember { mutableStateOf(false) }
-                JetPrefDropdown(
-                    options = currencySetNames,
-                    expanded = expanded,
-                    selectedOptionIndex = currencySetIds.indexOf(currencySet).coerceAtLeast(0),
-                    isError = showSelectAsError && currencySet == SelectComponentName,
-                    onSelectOption = { currencySet = currencySetIds[it] },
-                    appearance = JetPrefDropdownMenuDefaults.outlined(shape = ShapeDefaults.Small),
+                SubtypeOptionDropdown(
+                    options = currencySets,
+                    labelOf = { it.label },
+                    placeholderId = SelectComponentName,
+                    placeholderLabel = selectValue,
+                    selectedId = currencySet,
+                    showSelectAsError = showSelectAsError,
+                    errorOnMissingSelection = false,
+                    onSelect = { currencySet = it },
                 )
             }
 
@@ -542,25 +511,29 @@ private fun SubtypeProperty(text: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun SubtypeLayoutDropdown(
-    layoutType: LayoutType,
-    layouts: Map<ExtensionComponentName, LayoutArrangementComponent>,
+private fun <Id, Option> SubtypeOptionDropdown(
+    options: Map<Id, Option>,
+    labelOf: (Option) -> String,
+    placeholderId: Id,
+    placeholderLabel: String,
+    selectedId: Id?,
     showSelectAsError: Boolean,
-    layoutMap: SubtypeLayoutMap,
-    onLayoutMapChanged: (SubtypeLayoutMap) -> Unit,
-    selectListValues: List<String>,
+    errorOnMissingSelection: Boolean = true,
+    onSelect: (Id) -> Unit,
 ) {
-    val layoutIds = remember(layouts) { SelectListKeys + layouts.keys.toList() }
-    val layoutLabels = remember(layouts) { selectListValues + layouts.values.map { it.label } }
-    val layoutId = remember(layoutMap) { layoutMap[layoutType] }
+    val ids = remember(options, placeholderId) { listOf(placeholderId) + options.keys }
+    val labels = remember(options, placeholderLabel) {
+        listOf(placeholderLabel) + options.values.map(labelOf)
+    }
+    val selectedIndex = ids.indexOf(selectedId).coerceAtLeast(0)
     val expanded = remember { mutableStateOf(false) }
-    val selectedIndex = layoutIds.indexOf(layoutId).coerceAtLeast(0)
     JetPrefDropdown(
-        options = layoutLabels,
+        options = labels,
         expanded = expanded,
         selectedOptionIndex = selectedIndex,
-        isError = showSelectAsError && selectedIndex == 0,
-        onSelectOption = { onLayoutMapChanged(layoutMap.copy(layoutType = layoutType, componentName = layoutIds[it])!!) },
+        isError = showSelectAsError && selectedIndex == 0 &&
+            (errorOnMissingSelection || selectedId == placeholderId),
+        onSelectOption = { onSelect(ids[it]) },
         appearance = JetPrefDropdownMenuDefaults.outlined(shape = ShapeDefaults.Small),
     )
 }
