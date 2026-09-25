@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Pausér</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Vent</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Treprik-ikon. Hvis synligt, indikerer flere tilgængelige tegn ved langt tryk.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Luk enkelthåndstilstand.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Flyt tastatur til venstre.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Flyt tastatur til højre.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Emojier</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Emojier</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Humørikoner</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Teksttegn-emoji</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Foretrukken emoji-hudfarve</string>
     <string name="prefs__media__emoji_preferred_hair_style">Foretrukken emoji-frisure</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emoji-historik</string>
@@ -34,15 +27,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">Min. forespørgselslængde</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">Maks. mulighedsantal</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Smileyer og Humør</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Personer og Krop</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Dyr og Natur</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Mad og Drikke</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Rejse og Steder</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Aktiviteter</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Objekter</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Symboler</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Flag</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">Ingen nyligt brugte emojier fundet. Når der startes med at indtaste emojier, vil de dukke op her.</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">Oplås enheden for at tilgå emoji-historikken.</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">Tip: Brug langt tryk på emojier i emoji-historikken for at fastgøre/fjerne dem!</string>
@@ -83,7 +67,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Inkognito</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Slå inkognito-tilstand til/fra</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Stavekontrol</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">Slå stavekontrol til/fra</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Stemmeinput</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Åbn stemmeinput-udbyder</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">Enhåndet</string>
@@ -104,8 +87,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Indstillinger</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Afprøv opsætningen</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Hjælp</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Standard</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">Systemstandard</string>
     <string name="settings__home__title" comment="Title of the Home screen">Velkommen til {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">FlorisBoard er ikke slået til i systemet og er derfor utilgængelig som inputsmetode i inputvælgeren. Klik her for at løse problemet.</string>
@@ -143,8 +124,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Det ser ud til, at ingen undertyper er opsat. I dette tilfælde faldes der tilbage på undertypen Engelsk/QWERTY!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">Denne undertype findes allerede!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">Mindst ét obligatorisk felt har ingen værdi angivet. Vælg værdi(er) for felt(et/erne).</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (ikke installeret)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Layouts</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">Bekræft sletning</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">Sikker på, at denne undertype skal slettes?</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Tema</string>
@@ -155,10 +134,6 @@
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Nattema</string>
     <string name="pref__theme__theme_accent_color__label" comment="Label of accent color preference in Theme">        Fremhævelsesfarve (Material You-temaer)
     </string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Håndtér installerede temaer</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">FlorisBoard-app aktiver</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Intern lagerplads</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Fjernleverandør</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Vælg dagstema</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Vælg nattema</string>
     <string name="settings__theme_editor__fine_tune__title">Finjustér editor</string>
@@ -171,7 +146,6 @@
     <string name="settings__theme_editor__rule_already_exists">Denne stilartregel er allerede defineret.</string>
     <string name="settings__theme_editor__rule_name">Emne/Annotation</string>
     <string name="settings__theme_editor__rule_codes">Måltastkoder</string>
-    <string name="settings__theme_editor__rule_groups">Grupper</string>
     <string name="settings__theme_editor__rule_modes">Måltilstande (lag)</string>
     <string name="settings__theme_editor__rule_shift_states">Målskifttilstande</string>
     <string name="settings__theme_editor__rule_selectors">Selektorer</string>
@@ -194,11 +168,9 @@
     <string name="settings__theme_editor__property_name">Egenskabsnavn</string>
     <string name="settings__theme_editor__property_value">Egenskabsværdi</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">Anvend på alle hjørner</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">Redigér farvestreng</string>
     <string name="settings__theme_editor__file_selector_dialog_title">Vælg fil</string>
     <string name="settings__theme_editor__file_selector_no_files_text">Ingen filer er føjet til denne udvidelse endnu. Benyt handlingen \"{action_title}\" i den foregående skærm for at importere filer.</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">Er nattema</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">Er kantløs</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">Stilarksti</string>
     <string name="settings__theme_editor__component_meta_material_you__title">Material You</string>
     <string name="settings__theme_editor__stylesheet_error_title">Stilarkfejl</string>
@@ -393,10 +365,6 @@
     <string name="pref__other__settings_language__label" comment="Label of Settings language preference in Other">Sprogindstillinger</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">Omkring</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Open source licenser</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Privatlivspolitik</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Source kode</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Open source licenser</string>
     <string name="about__version__title" comment="Preference title">Version</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Version kopieret til udklipsholderen</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">Noget gik galt: {error_message}</string>
@@ -422,7 +390,6 @@
     <!-- Clipboard strings -->
     <string name="clipboard__header_title">Udklipsholder</string>
     <string name="clipboard__group_other">Andet</string>
-    <string name="clip__clear_history">Ryd historik</string>
     <string name="clip__delete_item">Slet</string>
     <string name="clip__paste_item">Indsæt</string>
     <string name="settings__clipboard__title">Udklipsholder</string>
@@ -442,7 +409,6 @@
     <!-- Screen orientation strings -->
     <!-- State strings -->
     <string name="state__disabled">Deaktivéret</string>
-    <string name="state__enabled">Aktivéret</string>
     <!-- Enum label and description strings -->
     <string name="enum__landscape_input_ui_mode__never_show" comment="Enum value label">Vis aldrig</string>
     <string name="enum__landscape_input_ui_mode__always_show" comment="Enum value label">Vis altid</string>
@@ -466,10 +432,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">Dynamisk: Skift til emojis / Skift sprog</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} time</item>
-        <item quantity="other">{v} timer</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} minut</item>
         <item quantity="other">{v} minutter</item>

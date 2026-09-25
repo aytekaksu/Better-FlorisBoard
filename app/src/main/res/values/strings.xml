@@ -3,18 +3,11 @@
 
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Pause</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Wait</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Three-dot icon. If visible, indicates that more letters can be used if longer pressed.</string>
 
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Close one-handed mode.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Move keyboard to the left.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Move keyboard to the right.</string>
 
     <!-- Media strings -->
     <string name="settings__media__title">Emojis</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Emojis</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Emoticons</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoji</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Preferred emoji skin tone</string>
     <string name="prefs__media__emoji_preferred_hair_style" tools:ignore="UnusedResources">Preferred emoji hair style</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emoji history</string>
@@ -37,15 +30,6 @@
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">Maximum candidate count</string>
 
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Smileys &amp; Emotions</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">People &amp; Body</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Animals &amp; Nature</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Food &amp; Drink</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Travel &amp; Places</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Activities</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Objects</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Symbols</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Flags</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">No recently used emojis found. Once you start typing emojis they will automatically appear here.</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">To access your emoji history, please first unlock your device.</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">Pro tip: Long press emojis in the emoji history to pin or remove them!</string>
@@ -121,8 +105,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Settings</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Try out your setup</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Help</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Default</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">System default</string>
 
     <string name="settings__home__title" comment="Title of the Home screen">Welcome to {app_name}</string>
@@ -162,8 +144,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">It seems that you haven\'t configured any subtypes. As a fallback the subtype English/QWERTY will be used!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">This subtype already exists!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">At least one field does not have a value selected. Please choose a value for the field(s).</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (not installed)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Layouts</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">Delete Confirmation</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">Are you sure you want to delete this subtype?</string>
 
@@ -176,10 +156,6 @@
     <string name="pref__theme__theme_accent_color__label" comment="Label of accent color preference in Theme">
         Accent color (Material You themes)
     </string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Manage installed themes</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">FlorisBoard App Assets</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Internal Storage</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">External Provider</string>
 
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Select day theme</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Select night theme</string>
@@ -194,7 +170,6 @@
     <string name="settings__theme_editor__rule_already_exists">This stylesheet rule is already defined.</string>
     <string name="settings__theme_editor__rule_name">Element / Annotation</string>
     <string name="settings__theme_editor__rule_codes">Target key codes</string>
-    <string name="settings__theme_editor__rule_groups">Groups</string>
     <string name="settings__theme_editor__rule_modes">Target modes (layers)</string>
     <string name="settings__theme_editor__rule_shift_states">Target shift states</string>
     <string name="settings__theme_editor__rule_selectors">Selectors</string>
@@ -217,11 +192,9 @@
     <string name="settings__theme_editor__property_name">Property name</string>
     <string name="settings__theme_editor__property_value">Property value</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">Apply for all corners</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">Edit color string</string>
     <string name="settings__theme_editor__file_selector_dialog_title">Select file</string>
     <string name="settings__theme_editor__file_selector_no_files_text">No files have been added to this extension yet. Please use the "{action_title}" action in the previous screen to import files.</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">Is night theme</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">Is borderless</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">Stylesheet path</string>
     <string name="settings__theme_editor__component_meta_material_you__title">Material You</string>
     <string name="settings__theme_editor__stylesheet_error_title">Stylesheet error</string>
@@ -607,12 +580,7 @@
 
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">About</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">App icon of FlorisBoard</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Open source licenses</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Privacy policy</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Source code</string>
 
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Open-source licenses</string>
 
     <string name="about__version__title" comment="Preference title">Version</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Version copied to clipboard</string>
@@ -626,7 +594,6 @@
     <string name="about__project_license__title" comment="Preference title">Project license</string>
     <string name="about__project_license__summary" comment="Preference summary">FlorisBoard is licensed under {license_name}</string>
     <string name="about__project_license__error_license_text_failed" comment="Error text for license text loading failure">Error: Failed to load license text.\n-&gt; Reason: {error_message}</string>
-    <string name="about__project_license__error_reason_asset_manager_null" comment="Error text if asset manager is null">Asset manager reference is null</string>
     <string name="about__third_party_licenses__title" comment="Preference title">Third-party licenses</string>
     <string name="about__third_party_licenses__summary" comment="Preference summary">Licenses of the third-party libraries included in this app</string>
 
@@ -674,7 +641,6 @@
     <string name="backup_and_restore__back_up__files">Select what to back up</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">Preferences</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">Keyboard extensions</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">Spelling extensions / dictionaries</string>
     <string name="backup_and_restore__back_up__files_ime_theme">Theme extensions</string>
     <string name="backup_and_restore__back_up__files_clipboard_history">Clipboard history</string>
     <string name="backup_and_restore__back_up__files_clipboard_history__clipboard_text_items">Text items</string>
@@ -726,16 +692,12 @@
     <string name="clipboard__item_description_email">Email</string>
     <string name="clipboard__item_description_url">URL</string>
     <string name="clipboard__item_description_phone">Phone</string>
-    <string name="clip__clear_history">Clear history</string>
     <string name="clip__unpin_item">Unpin item</string>
     <string name="clip__pin_item">Pin item</string>
     <string name="clip__delete_item">Delete</string>
     <string name="clip__paste_item">Paste</string>
-    <string name="clip__back_to_text_input">Back to text input</string>
-    <string name="clip__cant_paste">This app doesn\'t allow pasting this content.</string>
     <string name="clipboard__cleared_primary_clip">Cleared primary clip</string>
     <string name="clipboard__cleared_history">Cleared history</string>
-    <string name="clipboard__cleared_full_history">Cleared full history</string>
     <string name="clipboard__confirm_clear_unfiltered_history__message">Are you sure you want to clear your full clipboard history? This will affect all items, except pinned ones.</string>
     <string name="clipboard__confirm_clear_filtered_history__message">Are you sure you want to clear your clipboard history? This will affect all currently filtered items, except pinned ones.</string>
     <string name="settings__clipboard__title">Clipboard</string>
@@ -818,7 +780,6 @@
     <string name="ext__list__ext_keyboard">Keyboard extensions</string>
     <string name="ext__list__ext_languagepack">Language pack extensions</string>
     <string name="ext__meta__authors">Authors</string>
-    <string name="ext__meta__components">Bundled components</string>
     <string name="ext__meta__components_theme">Bundled themes</string>
     <string name="ext__meta__components_language_pack">Bundled language packs</string>
     <string name="ext__meta__components_none_found">This extension archive does not contain any bundled components.</string>
@@ -858,7 +819,6 @@
     <string name="ext__editor__create_component__from_empty">Empty</string>
     <string name="ext__editor__create_component__from_existing">From existing</string>
     <string name="ext__editor__create_component__from_empty_warning">Creating and configuring an empty component may be hard if you are new to {app_name} or if you are unfamiliar with the specifics. Consider copying an existing component and modifying it to your likings if that is the case.</string>
-    <string name="ext__editor__edit_component__title">Edit component</string>
     <string name="ext__editor__edit_component__title_theme">Edit theme component</string>
     <string name="ext__export__success">Successfully exported extension!</string>
     <string name="ext__export__failure">Failed to export extension: {error_message}</string>
@@ -872,9 +832,6 @@
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">Unsupported or unrecognized file type.</string>
     <string name="ext__import__file_skip_ext_core" comment="Reason string when ext has core extension ID">Unable to replace or update default extension packages provided with the app core assets. Consider updating the app itself if you intend to use a newer version of a core extension package.</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">File appears to be an extension archive but parsing of the archive data failed. Either the archive is corrupted or this file is not an extension at all.</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">Expected an extension archive of serial type \"{expected_serial_type}\" but was \"{actual_serial_type}\".</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">Expected a media file (image, audio, font, etc.) but found an extension archive.</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">Expected an extension archive but found a media file (image, audio, font, etc.).</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">An unexpected error occurred during import. The following details were provided:</string>
     <string name="ext__validation__enter_package_name">Please enter a package name</string>
     <string name="ext__validation__error_package_name">Package name does not match regex {id_regex}</string>
@@ -906,7 +863,6 @@
     <string name="ext__addon_management_box__go_to_page">Go to {ext_home_title}</string>
     <string name="ext__home__info">You can download and install extensions from the FlorisBoard Addons Store or import any extension file you have downloaded from the internet.</string>
     <string name="ext__home__visit_store">Visit Addons Store</string>
-    <string name="ext__home__manage_extensions">Manage installed extensions</string>
     <string name="ext__list__view_details">View details</string>
     <string name="ext__check_updates__title">Check for Updates</string>
 
@@ -930,27 +886,18 @@
     <string name="action__discard_confirm_message">Are you sure you want to discard your unsaved changes? This action can not be undone once executed.</string>
     <string name="action__edit">Edit</string>
     <string name="action__export">Export</string>
-    <string name="action__export_file">Import file</string>
-    <string name="action__export_files">Import files</string>
     <string name="action__import">Import</string>
     <string name="action__import_file">Import file</string>
-    <string name="action__import_files">Import files</string>
     <string name="action__no">No</string>
     <string name="action__ok">OK</string>
-    <string name="action__done">Done</string>
     <string name="action__restore">Restore</string>
     <string name="action__save">Save</string>
-    <string name="action__select">Select</string>
-    <string name="action__select_dir">Select directory</string>
-    <string name="action__select_dirs">Select directories</string>
     <string name="action__select_file">Select file</string>
     <string name="action__select_files">Select files</string>
     <string name="action__yes">Yes</string>
 
     <!-- Error strings (generic) -->
     <string name="error__title">Error</string>
-    <string name="error__details">Details</string>
-    <string name="error__invalid">Invalid</string>
     <string name="error__snackbar_message">Something went wrong</string>
     <string name="error__snackbar_message_template">Something went wrong: {error_message}</string>
     <string name="preference_store__load_failure_title">Settings unavailable</string>
@@ -973,9 +920,6 @@
 
     <!-- State strings -->
     <string name="state__disabled">Disabled</string>
-    <string name="state__enabled">Enabled</string>
-    <string name="state__no_dir_selected">No directory selected</string>
-    <string name="state__no_dirs_selected">No directories selected</string>
     <string name="state__no_file_selected">No file selected</string>
     <string name="state__no_files_selected">No files selected</string>
 
@@ -1029,11 +973,6 @@
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} Medium dark skin tone</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} Dark skin tone</string>
 
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} Default hair</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} Red hair</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} Curly hair</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} White hair</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} Bald</string>
 
     <string name="enum__emoji_suggestion_type__leading_colon">Leading colon</string>
     <string name="enum__emoji_suggestion_type__leading_colon__description" comment="Keep the :emoji_name while translating, this is a syntax guide">Suggest emojis using the :emoji_name syntax</string>
@@ -1191,10 +1130,6 @@
     <string name="unit__display_pixel_per_seconds__symbol" translatable="false">{v} dp/s</string>
 
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} hour</item>
-        <item quantity="other">{v} hours</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} minute</item>
         <item quantity="other">{v} minutes</item>

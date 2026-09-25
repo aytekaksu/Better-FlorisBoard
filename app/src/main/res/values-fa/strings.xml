@@ -3,28 +3,12 @@
     <string name="app_name">فلوریس بورد</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">مکث</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">صبر‌کنید</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">نماد سه نقطه. در صورت مشاهده ، نشان می دهد که در صورت فشار بیشتر می توان از حروف بیشتری استفاده کرد.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">بستن حالت یک دستی.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">جابه‌جایی صفحه کلید به سمت چپ.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">جابه‌جایی صفحه کلید به سمت راست.</string>
     <!-- Media strings -->
     <string name="settings__media__title">ایموجی ها</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">شکلک‌ها</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Emoticons</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoji</string>
     <string name="prefs__media__emoji_preferred_skin_tone">رنگ پوست پیشفرض برای ایموجی</string>
     <string name="prefs__media__emoji_preferred_hair_style">مدل مو پیشفرض برای ایموجی</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">لبخندی &amp; احساسات</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">مردم &amp; بدن</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">حیوانات &amp; طبیعت</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">غذا ها &amp; نوشیدنی ها</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">صفر &amp; مکان ها</string>
-    <string name="emoji__category__activities" comment="Emoji category name">فعالیت ها</string>
-    <string name="emoji__category__objects" comment="Emoji category name">اشیاء</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">نمادها</string>
-    <string name="emoji__category__flags" comment="Emoji category name">پرچم ها</string>
     <!-- Quick action strings -->
     <string name="quick_action__arrow_up" comment="Please mind the limited available space for the quick action strings">فلش بالا</string>
     <string name="quick_action__arrow_up__tooltip">فلش به سمت بالا</string>
@@ -50,7 +34,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">ناشناس</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">غیر فعال کردن حالت ناشناس</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">تصحیح خودکار</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">غیر فعال کردن تصحیح خودکار</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">ورودی صدا</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">یک دستی</string>
     <string name="quick_action__noop" comment="Noop=no operation; this action is only used as a placeholder in the actions editor drag and drop screen">هیچ کدام</string>
@@ -59,8 +42,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">تنظیمات</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">کیبوردتان را امتحان کنید</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">راهنمایی</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">پیشفرض</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">پیشفرض سیستم</string>
     <string name="settings__home__title" comment="Title of the Home screen">خوش آمدید به {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">فلوریس بورد در سیستم به عنوان روش ورودی فعلا نیست و به این علت به عنوان روش ورودی قابل انتخاب نیست. برای حل این مشکل اینجا کلیک کنید.</string>
@@ -95,18 +76,12 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">به نظر میرسد که هیچگونه زیرگروه دیگری را انتخاب نکرده اید. به همین علت زیرگروه English/QWERTY استفاده خواهد شد!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">این زیرنوع درحال حاضر وجود دارد!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">حداقل یکی از فیلد ها خالی است. لطفا یک گزینه برای فیلد(ها) انتخاب کنید.</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (نصب نشده)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">چیدمان ها</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">تم</string>
     <string name="pref__theme__mode__label" comment="Label of the theme mode preference">حالت طرح‌زمینه</string>
     <string name="pref__theme__sunrise_time__label" comment="Label of the sunrise time preference">زمان طلوع</string>
     <string name="pref__theme__sunset_time__label" comment="Label of the sunset time preference">زمان غروب</string>
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">طرح‌زمینه روز</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">طرح‌زمینه شب</string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">مدیریت تم های نصب شده</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">ابزار های برنامه فلوریس بورد</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">حافظه داخلی</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">ارائه دهنده خارجی</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">انتخاب تم روز</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">انتخاب تم شب</string>
     <string name="settings__theme_editor__fine_tune__title">ویرایشگر دقیق</string>
@@ -116,7 +91,6 @@
     <string name="settings__theme_editor__no_rules_defined">این شیوه نامه قانون تعریف شده ای ندارد. یک قانون اضافه کنید تا این شیوه نامه را شخصی سازی کنید.</string>
     <string name="settings__theme_editor__rule_already_exists">این قانون شیوه نامه از قبل تعریف شده است.</string>
     <string name="settings__theme_editor__rule_codes">کد کلیدهای مورد نظر</string>
-    <string name="settings__theme_editor__rule_groups">گروه ها</string>
     <string name="settings__theme_editor__rule_selectors">انتخابگرها</string>
     <string name="settings__theme_editor__add_code">افزودن کد کلید</string>
     <string name="settings__theme_editor__edit_code">ویرایش کد کلید</string>
@@ -136,7 +110,6 @@
     <string name="settings__theme_editor__property_name">نام ویژگی</string>
     <string name="settings__theme_editor__property_value">مقدار ویژگی</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">برای تمام گوشه ها اعمال کن</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">ویرایش متن رنگ</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">پس زمینه شب</string>
     <string name="snygg__rule_element__key">کلید</string>
     <string name="snygg__rule_element__key_hint">راهنما دکمه</string>
@@ -219,11 +192,6 @@
     <string name="pref__gestures__swipe_distance_threshold__label" comment="Preference title">آستانه مسافت کشیدن</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">درباره</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">آیکون برنامه فلوریس بورد</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">مجوزهای منبع باز</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">سیاست حفظ حریم خصوصی</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">کد منبع</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">مجوزهای متن باز</string>
     <string name="about__version__title" comment="Preference title">نسخه</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">نسخه در کلیپ‌بورد کپی شد</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">اوه! مشکلی پیش آمد: {error_message}</string>
@@ -261,13 +229,10 @@
     <string name="clipboard__header_title">کلیپ‌بورد</string>
     <string name="clipboard__disabled__enable_button">فعالسازی تاریخچه کلیپ‌بورد</string>
     <string name="clipboard__group_other">ديگر</string>
-    <string name="clip__clear_history">پاک‌سازی تاریخچه</string>
     <string name="clip__unpin_item">برداشتن نشانه</string>
     <string name="clip__pin_item">نشانه گذاری</string>
     <string name="clip__delete_item">حذف</string>
     <string name="clip__paste_item">چسباندن</string>
-    <string name="clip__back_to_text_input">بازگشت به ورودی متن</string>
-    <string name="clip__cant_paste">این برنامه اجازه چسباندن این محتوا را نمی دهد.</string>
     <string name="settings__clipboard__title">کلیپ‌بورد</string>
     <string name="pref__clipboard__use_internal_clipboard__label">استفاده از کلیپ‌بورد داخلی</string>
     <string name="pref__clipboard__use_internal_clipboard__summary">استفاده از کلیپ‌بورد داخل برنامه بجای کلیپ‌بورد سیستم</string>

@@ -3,31 +3,13 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Pauza</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Čekaj</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Ikonica sa tri tačke. Ako je prikazana, znači da se dodatna slova mogu upisati dugim pritiskom na dugme.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Odaberi mod za jednu ruku.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Pomjeri tastaturu lijevo.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Pomjeri tastaturu desno.</string>
     <!-- Media strings -->
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Emoji</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Emotikon</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoji</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Smajliji</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Ljudi &amp; Tijelo</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Životinje &amp; Priroda</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Hrana &amp; Piće</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Putovanje &amp; Mjesta</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Aktivnosti</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Objekti</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Simboli</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Zastave</string>
     <!-- Quick action strings -->
     <!-- Incognito mode strings -->
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Podešavanja</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Pomoć</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Standardno</string>
     <string name="settings__home__title" comment="Title of the Home screen">Dobrodošli u {app_name}</string>
     <string name="settings__localization__subtype_add_title" comment="Title of subtype dialog when adding a new subtype">Dodaj pod-tip</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Tema</string>
@@ -35,7 +17,6 @@
     <string name="pref__theme__sunset_time__label" comment="Label of the sunset time preference">Vrijeme zalaska sunca</string>
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">Dnevna tema</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Noćna tema</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Interna memorija</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Tastatura</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">Red sa brojevima</string>
     <string name="pref__keyboard__group_layout__label" comment="Preference group title">Raspored</string>
@@ -51,8 +32,6 @@
     <string name="pref__gestures__swipe_right__label" comment="Preference title">Prevuci desno</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">Informacije o...</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">Ikonica FlorisBoard aplikacije</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Izvorni kod</string>
     <!-- Setup UI strings -->
     <string name="setup__title" comment="Title of Setup">Dobrodošli!</string>
     <!-- Physical keyboard -->

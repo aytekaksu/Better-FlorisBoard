@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Duraklat</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Bekle</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Üç nokta simgesi. Görünürse, daha uzun basıldığında daha fazla harfin kullanılabileceğini gösterir.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Tek el modunu kapat.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Klavyeyi sola taşı.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Klavyeyi sağa taşı.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Emojiler</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Emojiler</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Emojiler</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoji</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Tercih edilen emoji ten rengi</string>
     <string name="prefs__media__emoji_preferred_hair_style">Tercih edilen emoji saç stili</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emoji geçmişi</string>
@@ -34,15 +27,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">Minimum sorgu uzunluğu</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">Maksimum aday sayısı</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Yüz İfadeleri ve Duygular</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">İnsanlar ve Vücut</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Hayvanlar ve Doğa</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Yiyecek ve İçecek</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Seyahat ve Mekanlar</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Aktiviteler</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Nesneler</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Semboller</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Bayraklar</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">Son kullanılan emoji bulunamadı. Emoji yazmaya başladığınızda otomatik olarak burada görüneceklerdir.</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">Emoji geçmişinize erişmek için lütfen önce cihazınızın kilidini açın.</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">Profesyonel ipucu: Emoji geçmişindeki emojilere uzun basarak onları sabitleyebilir veya kaldırabilirsiniz!</string>
@@ -87,7 +71,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Gizli Mod</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Gizli modu aç/kapat</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Oto düzeltme</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">Otomatik düzeltmeyi aç/kapat</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Sesli giriş</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Sesli giriş sağlayıcısını aç</string>
     <string name="quick_action__floating_window_mode" comment="Please mind the limited available space for the quick action strings">Yüzen</string>
@@ -110,8 +93,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Ayarlar</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Kurulumunuzu deneyin</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Yardım</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Varsayılan</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">Sistem varsayılanı</string>
     <string name="settings__home__title" comment="Title of the Home screen">{app_name} Uygulamasına Hoş Geldiniz</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">FlorisBoard sistemde etkin değil ve bu nedenle giriş yöntemi seçicisinde bir giriş yöntemi olarak kullanılamayacak. Bu sorunu çözmek için buraya tıklayın.</string>
@@ -149,8 +130,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Herhangi bir alt tür yapılandırmamışsınız gibi görünüyor. Yedek olarak İngilizce/QWERTY alt türü kullanılacaktır!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">Bu alt tür zaten mevcut!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">En az bir alan için değer seçilmemiş. Lütfen alan(lar) için bir değer seçin.</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (yüklü değil)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Düzenler</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">Silme Onayı</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">Bu alt türü silmek istediğinizden emin misiniz?</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Tema</string>
@@ -161,10 +140,6 @@
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Gece teması</string>
     <string name="pref__theme__theme_accent_color__label" comment="Label of accent color preference in Theme">        Vurgu rengi (Material You temaları)
     </string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Yüklü temaları yönet</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">FlorisBoard Uygulama Varlıkları</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Dahili Depolama</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Harici Sağlayıcı</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Gündüz temasını seç</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Gece temasını seç</string>
     <string name="settings__theme_editor__fine_tune__title">İnce ayar düzenleyici</string>
@@ -177,7 +152,6 @@
     <string name="settings__theme_editor__rule_already_exists">Bu stil sayfası kuralı zaten tanımlanmış.</string>
     <string name="settings__theme_editor__rule_name">Öğe / Ek Açıklama</string>
     <string name="settings__theme_editor__rule_codes">Hedef tuş kodları</string>
-    <string name="settings__theme_editor__rule_groups">Gruplar</string>
     <string name="settings__theme_editor__rule_modes">Hedef modlar (katmanlar)</string>
     <string name="settings__theme_editor__rule_shift_states">Hedef shift durumları</string>
     <string name="settings__theme_editor__rule_selectors">Seçiciler</string>
@@ -200,11 +174,9 @@
     <string name="settings__theme_editor__property_name">Özellik adı</string>
     <string name="settings__theme_editor__property_value">Özellik değeri</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">Tüm köşeler için uygula</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">Renk dizesini düzenle</string>
     <string name="settings__theme_editor__file_selector_dialog_title">Dosya seç</string>
     <string name="settings__theme_editor__file_selector_no_files_text">Bu eklentiye henüz dosya eklenmedi. Dosyaları içe aktarmak için lütfen önceki ekrandaki \"{action_title}\" eylemini kullanın.</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">Gece teması mı</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">Kenarlıksız mı</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">Stil sayfası yolu</string>
     <string name="settings__theme_editor__stylesheet_error_title">Stil sayfası hatası</string>
     <string name="settings__theme_editor__stylesheet_error_description">{app_name}, stil sayfasını esnek bir şekilde yüklemeyi deneyebilir ve eksik şemaları, kuralları ekleyebilir veya geçersiz kuralları, özellikleri veya değerleri kaldırabilir. {app_name}\'in bu değişiklikleri uygulamasını ister misiniz?</string>
@@ -523,11 +495,6 @@
     <string name="pref__other__show_app_icon__summary_atleast_q" comment="Summary of Show app icon preference in Other for Android 10+">Sistem kısıtlamaları nedeniyle Android 10+ üzerinde her zaman etkindir</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">Hakkında</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">FlorisBoard uygulama simgesi</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Açık kaynak lisansları</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Gizlilik politikası</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Kaynak kodu</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Açık kaynak lisansları</string>
     <string name="about__version__title" comment="Preference title">Sürüm</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Sürüm panoya kopyalandı</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">Bir şeyler ters gitti: {error_message}</string>
@@ -540,7 +507,6 @@
     <string name="about__project_license__title" comment="Preference title">Proje lisansı</string>
     <string name="about__project_license__summary" comment="Preference summary">FlorisBoard, {license_name} altında lisanslanmıştır</string>
     <string name="about__project_license__error_license_text_failed" comment="Error text for license text loading failure">Hata: Lisans metni yüklenemedi.\n-&gt; Neden: {error_message}</string>
-    <string name="about__project_license__error_reason_asset_manager_null" comment="Error text if asset manager is null">Varlık yöneticisi referansı boş</string>
     <string name="about__third_party_licenses__title" comment="Preference title">Üçüncü taraf lisansları</string>
     <string name="about__third_party_licenses__summary" comment="Preference summary">Bu uygulamada yer alan üçüncü taraf kütüphanelerin lisansları</string>
     <!-- Setup UI strings -->
@@ -578,7 +544,6 @@
     <string name="backup_and_restore__back_up__files">Nelerin yedekleneceğini seç</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">Tercihler</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">Klavye eklentileri</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">Yazım denetimi eklentileri / sözlükler</string>
     <string name="backup_and_restore__back_up__files_ime_theme">Tema eklentileri</string>
     <string name="backup_and_restore__back_up__files_clipboard_history">Pano geçmişi</string>
     <string name="backup_and_restore__back_up__files_clipboard_history__clipboard_text_items">Metin ögeleri</string>
@@ -626,16 +591,12 @@
     <string name="clipboard__item_description_email">E-posta</string>
     <string name="clipboard__item_description_url">URL</string>
     <string name="clipboard__item_description_phone">Telefon</string>
-    <string name="clip__clear_history">Geçmişi temizle</string>
     <string name="clip__unpin_item">Sabitlemeyi kaldır</string>
     <string name="clip__pin_item">Ögeyi sabitle</string>
     <string name="clip__delete_item">Sil</string>
     <string name="clip__paste_item">Yapıştır</string>
-    <string name="clip__back_to_text_input">Metin girişine geri dön</string>
-    <string name="clip__cant_paste">Bu uygulama bu içeriğin yapıştırılmasına izin vermiyor.</string>
     <string name="clipboard__cleared_primary_clip">Birincil klip temizlendi</string>
     <string name="clipboard__cleared_history">Geçmiş temizlendi</string>
-    <string name="clipboard__cleared_full_history">Tüm geçmiş temizlendi</string>
     <string name="clipboard__confirm_clear_unfiltered_history__message">Tüm pano geçmişinizi temizlemek istediğinizden emin misiniz? Bu işlem, sabitlenmiş olanlar hariç tüm öğeleri etkileyecektir.</string>
     <string name="clipboard__confirm_clear_filtered_history__message">Pano geçmişinizi temizlemek istediğinizden emin misiniz? Bu işlem, sabitlenmiş olanlar hariç, şu anda filtrelenmiş olan tüm öğeleri etkileyecektir.</string>
     <string name="settings__clipboard__title">Pano</string>
@@ -705,7 +666,6 @@
     <string name="ext__list__ext_keyboard">Klavye eklentileri</string>
     <string name="ext__list__ext_languagepack">Dil paketi eklentileri</string>
     <string name="ext__meta__authors">Yazarlar</string>
-    <string name="ext__meta__components">Paketlenmiş bileşenler</string>
     <string name="ext__meta__components_theme">Paketlenmiş temalar</string>
     <string name="ext__meta__components_language_pack">Paketlenmiş dil paketleri</string>
     <string name="ext__meta__components_none_found">Bu eklenti arşivi paketlenmiş bileşen içermiyor.</string>
@@ -740,7 +700,6 @@
     <string name="ext__editor__create_component__from_empty">Boş</string>
     <string name="ext__editor__create_component__from_existing">Mevcuttan</string>
     <string name="ext__editor__create_component__from_empty_warning">{app_name} uygulamasında yeniyseniz veya özelliklere aşina değilseniz boş bir bileşen oluşturmak ve yapılandırmak zor olabilir. Bu durumda, mevcut bir bileşeni kopyalayıp beğeninize göre değiştirmeyi düşünün.</string>
-    <string name="ext__editor__edit_component__title">Bileşeni düzenle</string>
     <string name="ext__editor__edit_component__title_theme">Tema bileşenini düzenle</string>
     <string name="ext__export__success">Eklenti başarıyla dışa aktarıldı!</string>
     <string name="ext__export__failure">Eklenti dışa aktarılamadı: {error_message}</string>
@@ -754,9 +713,6 @@
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">Desteklenmeyen veya tanınmayan dosya türü.</string>
     <string name="ext__import__file_skip_ext_core" comment="Reason string when ext has core extension ID">Uygulama çekirdek varlıklarıyla sağlanan varsayılan eklenti paketleri değiştirilemez veya güncellenemez. Bir çekirdek eklenti paketinin daha yeni bir sürümünü kullanmayı düşünüyorsanız uygulamayı güncellemeyi düşünün.</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">Dosya bir eklenti arşivi gibi görünüyor ancak arşiv verilerinin ayrıştırılması başarısız oldu. Ya arşiv bozuk ya da bu dosya hiç bir eklenti değil.</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">\"{expected_serial_type}\" seri türünde bir eklenti arşivi bekleniyordu ancak \"{actual_serial_type}\" geldi.</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">Bir medya dosyası (resim, ses, yazı tipi vb.) bekleniyordu ancak bir eklenti arşivi bulundu.</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">Bir eklenti arşivi bekleniyordu ancak bir medya dosyası (resim, ses, yazı tipi vb.) bulundu.</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">İçe aktarma sırasında beklenmedik bir hata oluştu. Aşağıdaki ayrıntılar sağlandı:</string>
     <string name="ext__validation__enter_package_name">Lütfen bir paket adı girin</string>
     <string name="ext__validation__error_package_name">Paket adı {id_regex} regex\'iyle eşleşmiyor</string>
@@ -788,7 +744,6 @@
     <string name="ext__addon_management_box__go_to_page">{ext_home_title} sayfasına git</string>
     <string name="ext__home__info">FlorisBoard Eklenti Mağazası\'ndan eklentiler indirebilir ve yükleyebilir veya internetten indirdiğiniz herhangi bir eklenti dosyasını içe aktarabilirsiniz.</string>
     <string name="ext__home__visit_store">Eklenti Mağazasını Ziyaret Et</string>
-    <string name="ext__home__manage_extensions">Yüklü eklentileri yönet</string>
     <string name="ext__list__view_details">Ayrıntıları görüntüle</string>
     <string name="ext__check_updates__title">Güncellemeleri Kontrol Et</string>
     <!-- Action strings -->
@@ -809,26 +764,17 @@
     <string name="action__discard_confirm_message">Kaydedilmemiş değişikliklerinizden vazgeçmek istediğinizden emin misiniz? Bu işlem bir kez yapıldıktan sonra geri alınamaz.</string>
     <string name="action__edit">Düzenle</string>
     <string name="action__export">Dışa Aktar</string>
-    <string name="action__export_file">Dosyayı içe aktar</string>
-    <string name="action__export_files">Dosyaları içe aktar</string>
     <string name="action__import">İçe Aktar</string>
     <string name="action__import_file">Dosyayı içe aktar</string>
-    <string name="action__import_files">Dosyaları içe aktar</string>
     <string name="action__no">Hayır</string>
     <string name="action__ok">Tamam</string>
-    <string name="action__done">Tamamlandı</string>
     <string name="action__restore">Geri Yükle</string>
     <string name="action__save">Kaydet</string>
-    <string name="action__select">Seç</string>
-    <string name="action__select_dir">Dizin seç</string>
-    <string name="action__select_dirs">Dizinleri seç</string>
     <string name="action__select_file">Dosya seç</string>
     <string name="action__select_files">Dosyaları seç</string>
     <string name="action__yes">Evet</string>
     <!-- Error strings (generic) -->
     <string name="error__title">Hata</string>
-    <string name="error__details">Ayrıntılar</string>
-    <string name="error__invalid">Geçersiz</string>
     <string name="error__snackbar_message">Bir şeyler ters gitti</string>
     <string name="error__snackbar_message_template">Bir şeyler ters gitti: {error_message}</string>
     <!-- General strings -->
@@ -846,9 +792,6 @@
     <string name="screen_orientation__horizontal">Yatay</string>
     <!-- State strings -->
     <string name="state__disabled">Devre dışı</string>
-    <string name="state__enabled">Etkin</string>
-    <string name="state__no_dir_selected">Dizin seçilmedi</string>
-    <string name="state__no_dirs_selected">Dizin seçilmedi</string>
     <string name="state__no_file_selected">Dosya seçilmedi</string>
     <string name="state__no_files_selected">Dosya seçilmedi</string>
     <!-- Enum label and description strings -->
@@ -887,11 +830,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} Orta ten rengi</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} Orta koyu ten rengi</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} Koyu ten rengi</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} Varsayılan saç</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} Kızıl saç</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} Kıvırcık saç</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} Beyaz saç</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} Kel</string>
     <string name="enum__emoji_suggestion_type__leading_colon">Başta iki nokta</string>
     <string name="enum__emoji_suggestion_type__leading_colon__description" comment="Keep the :emoji_name while translating, this is a syntax guide">:emoji_adı sözdizimini kullanarak emojiler öner</string>
     <string name="enum__emoji_suggestion_type__inline_text">Satır içi metin</string>
@@ -1002,10 +940,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">Dinamik: Emojilere geç / Dili değiştir</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} saat</item>
-        <item quantity="other">{v} saat</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} dakika</item>
         <item quantity="other">{v} dakika</item>

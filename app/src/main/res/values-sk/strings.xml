@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Pauza</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Počkajte</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Ikona s tromi bodkami. Ak je viditeľná, znamená, že po dlhšom stlačení je možné použiť viac písmen.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Zatvorí režim písania jednou rukou.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Presunie klávesnicu doľava.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Presunie klávesnicu doprava.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Emodži</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Emodži</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Emotikony</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomodži</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Preferovaný tón pleti emodži</string>
     <string name="prefs__media__emoji_preferred_hair_style">Preferované vlasy emodži</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">História emodži</string>
@@ -32,15 +25,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">Minimálna dĺžka vyhľadávacieho dopytu</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">Maximálny počet kandidátov</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Smajlíky a emócie</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Ľudia a telo</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Zvieratá &amp; Príroda</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Potraviny a nápoje</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Cestovanie &amp; Miesta</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Aktivity</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Predmety</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Symboly</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Vlajky</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">Nenašli sa žiadne nedávno použité emodži. Keď začneš písať, emodži sa automaticky zobrazia tu.</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">Ak si chceš pozrieť históriu emodži, najprv si odomkni zariadenie.</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">Profi tip: Ak chceš v histórii emodži nejaké emodži pripnúť alebo odstrániť, podrž na ňom prst.</string>
@@ -78,7 +62,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Inkognito</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Zapnúť inkognito režim</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Aut. opravy</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">Zapnúť automatické opravy</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Hlas. vstup</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Otvoriť poskytovateľa hlasového vstupu</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">Jednou rukou</string>
@@ -92,8 +75,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Nastavenia</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Vyskúšaj svoje nastavenie</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Pomoc</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Predvolené</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">Podľa systému</string>
     <string name="settings__home__title" comment="Title of the Home screen">Víta ťa {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">Klávesnica FlorisBoard nie je v systéme povolená, a preto sa pri výbere vstupu nebude dať nastaviť ako metóda zadávania. Kliknutím sem tento problém vyriešiš.</string>
@@ -126,8 +107,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Zdá sa, že nemáš nakonfigurované žiadne podtypy. Ako záložný podtyp sa použije Angličtina/QWERTY.</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">Tento podtyp už existuje.</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">Minimálne jedno pole nemá vybratú hodnotu. Vyberte ju pre každé takéto pole.</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (nie je nainštalované)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Rozloženia</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">Potvrdenie zmazania</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">Naozaj chceš zmazať tento podtyp?</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Motív</string>
@@ -136,17 +115,12 @@
     <string name="pref__theme__sunset_time__label" comment="Label of the sunset time preference">Čas západu slnka</string>
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">Denný motív</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Nočný motív</string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Spravovať nainštalované motívy</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">Zdroje aplikácie FlorisBoard</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Interné úložisko</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Externý poskytovateľ</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Vybrať denný motív</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Vybrať nočný motív</string>
     <string name="settings__theme_editor__fine_tune__title">Editor na doladenie</string>
     <string name="settings__theme_editor__fine_tune__level">Úroveň úprav</string>
     <string name="settings__theme_editor__add_rule">Pridať pravidlo</string>
     <string name="settings__theme_editor__edit_rule">Upraviť pravidlo</string>
-    <string name="settings__theme_editor__rule_groups">Skupiny</string>
     <string name="settings__theme_editor__add_property">Pridať vlastnosť</string>
     <string name="settings__theme_editor__edit_property">Upraviť vlastnosť</string>
     <string name="settings__theme_editor__property_already_exists">Vlastnosť s týmto názvom už v rámci aktuálneho pravidla existuje.</string>
@@ -246,11 +220,6 @@
     <string name="pref__gestures__swipe_right__label" comment="Preference title">Potiahnutie vpravo</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">O aplikácii</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">Ikona aplikácie FlorisBoard</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Open-source licencie</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Zásady ochrany osobných údajov</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Zdrojový kód</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Open-source licencie</string>
     <string name="about__version__title" comment="Preference title">Verzia</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Verzia bola skopírovaná do schránky</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">Vyskytla sa chyba: {error_message}</string>
@@ -284,7 +253,6 @@
     <string name="backup_and_restore__back_up__files">Vyber, čo sa má zálohovať</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">Predvoľby</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">Rozšírenia klávesnice</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">Pravopisné rozšírenia/slovníky</string>
     <string name="backup_and_restore__back_up__files_ime_theme">Rozšírenia motívov</string>
     <string name="backup_and_restore__back_up__files_clipboard_history">História schránky</string>
     <string name="backup_and_restore__back_up__files_clipboard_history__clipboard_text_items">Textové položky</string>

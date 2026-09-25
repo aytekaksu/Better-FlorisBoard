@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Пауза</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Изчакване</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Икона с многоточие. Ако е видима, означава, че при задържане могат да бъдат използвани повече букви.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Излизане от режима за работа с една ръка.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Преместване на клавиатурата отляво.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Преместване на клавиатурата отдясно.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Емоции</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Емоции</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Емоции</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Каомоджи</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Предпочитан цвят на кожата за емоции</string>
     <string name="prefs__media__emoji_preferred_hair_style">Предпочитана прическа за емоции</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">История на емоциите</string>
@@ -34,15 +27,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">Минимална дължина на заявка</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">Максимален брой кандидати</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Усмивки и емоции</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Хора и тяло</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Животни и природа</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Храни и напитки</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Пътуване и забележителности</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Дейности</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Предмети</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Символи</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Знамена</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">Скоро не сте използвали емоции. Започнете да използвате и ще бъдат показани тук.</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">За достъп до последно използваните емоции отключете устройството.</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">Подсказка: Задръжте върху емоция в историята, за да я закачите или премахнате!</string>
@@ -88,7 +72,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Инкогнито</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Превключва режим инкогнито</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Поправки</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">Превключва автоматичните поправки</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Въвежд. глас</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Отваря доставчика на гласово въеждане</string>
     <string name="quick_action__floating_window_mode" comment="Please mind the limited available space for the quick action strings">Плуващ</string>
@@ -113,8 +96,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Настройки</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Изпробвайте настройките тук</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Помощ</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">По подразбиране</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">По подразбиране от системата</string>
     <string name="settings__home__title" comment="Title of the Home screen">Добре дошли във {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">Клавиатурата FlorisBoard не е активна в системата и не е достъпна като метод за въвеждане. Докоснете тук, за да промените.</string>
@@ -152,8 +133,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Изглежда не сте настроили подредба. По подразбиране ще се използва English/QWERTY!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">Тази подредба вече съществува!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">Има поле е без стойност. Изберете стойност за всички полета.</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (не е инсталирано)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Подредби</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">Потвърждение при премахване</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">Желаете ли да премахнете този подвид?</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Тема</string>
@@ -163,10 +142,6 @@
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">Дневна тема</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Нощна тема</string>
     <string name="pref__theme__theme_accent_color__label" comment="Label of accent color preference in Theme">Допълнителен цвят (за теми на Material You)</string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Управление на теми</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">Активи на FlorisBoard</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Вътрешно хранилище</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Външен доставчик</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Избор на дневна тема</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Избор на нощна тема</string>
     <string name="settings__theme_editor__fine_tune__title">Настройки на редактора</string>
@@ -179,7 +154,6 @@
     <string name="settings__theme_editor__rule_already_exists">Вече има такова правило.</string>
     <string name="settings__theme_editor__rule_name">Елемент / бележка</string>
     <string name="settings__theme_editor__rule_codes">Целеви кодове</string>
-    <string name="settings__theme_editor__rule_groups">Групи</string>
     <string name="settings__theme_editor__rule_modes">Целеви режими (слоеве)</string>
     <string name="settings__theme_editor__rule_shift_states">Целеви режими при Shift</string>
     <string name="settings__theme_editor__rule_selectors">Селектор</string>
@@ -202,11 +176,9 @@
     <string name="settings__theme_editor__property_name">Име на свойство</string>
     <string name="settings__theme_editor__property_value">Стойност на свойство</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">Прилагане към всички ъгли</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">Промяна на низа на цвета</string>
     <string name="settings__theme_editor__file_selector_dialog_title">Избиране на файл</string>
     <string name="settings__theme_editor__file_selector_no_files_text">Към добавката все още няма файлове. За да внесете файлове използвайте действието „{action_title}“ на предния екран.</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">Нощна тема</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">Без кант</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">Път към стиловия лист</string>
     <string name="settings__theme_editor__component_meta_material_you__title">Material You</string>
     <string name="settings__theme_editor__stylesheet_error_title">Грешка в стила</string>
@@ -531,11 +503,6 @@
     <string name="pref__other__show_app_icon__summary_atleast_q" comment="Summary of Show app icon preference in Other for Android 10+">Винаги видима за Android 10+ поради ограничения на системата</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">Относно</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">Икона на приложението FlorisBoard</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Лицензи с отворен код</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Политика за поверителност</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Изходен код</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Лицензи с отворен код</string>
     <string name="about__version__title" comment="Preference title">Издание</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Номера на изданието е копирано в междинната памет</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">Нещо се обърка: {error_message}</string>
@@ -548,7 +515,6 @@
     <string name="about__project_license__title" comment="Preference title">Лиценз на проекта</string>
     <string name="about__project_license__summary" comment="Preference summary">FlorisBoard е лицензиран под {license_name}</string>
     <string name="about__project_license__error_license_text_failed" comment="Error text for license text loading failure">Грешка при зареждане на текста на лиценза.\n-&gt; Причина: {error_message}</string>
-    <string name="about__project_license__error_reason_asset_manager_null" comment="Error text if asset manager is null">Референцията към обекта за управление на активи е празна</string>
     <string name="about__third_party_licenses__title" comment="Preference title">Лицензи на трети страни</string>
     <string name="about__third_party_licenses__summary" comment="Preference summary">Лицензи на библиотеките от трети страни, използвани от приложението</string>
     <!-- Setup UI strings -->
@@ -587,7 +553,6 @@
     <string name="backup_and_restore__back_up__files">Изберете какво да бъде архивирано</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">Настройки</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">Добавки за клавиатури</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">Добавки за правопис / речници</string>
     <string name="backup_and_restore__back_up__files_ime_theme">Добавки за теми</string>
     <string name="backup_and_restore__back_up__files_clipboard_history">История на междинната памет</string>
     <string name="backup_and_restore__back_up__files_clipboard_history__clipboard_text_items">Текстови елементи</string>
@@ -635,16 +600,12 @@
     <string name="clipboard__item_description_email">Електронна поща</string>
     <string name="clipboard__item_description_url">Адрес</string>
     <string name="clipboard__item_description_phone">Телефон</string>
-    <string name="clip__clear_history">Изчистване на историята</string>
     <string name="clip__unpin_item">Освобождаване</string>
     <string name="clip__pin_item">Закачане</string>
     <string name="clip__delete_item">Изтриване</string>
     <string name="clip__paste_item">Поставяне</string>
-    <string name="clip__back_to_text_input">Към въвеждане на текст</string>
-    <string name="clip__cant_paste">Приложението не поддържа поставяне на такова съдържание.</string>
     <string name="clipboard__cleared_primary_clip">Текущото съдържание на междинната памет е изчистено</string>
     <string name="clipboard__cleared_history">Историята е изчистена</string>
-    <string name="clipboard__cleared_full_history">Цялата история е изчистена</string>
     <string name="clipboard__confirm_clear_unfiltered_history__message">Потвърждавате ли изчистване на междинната памет? Всички филтрирани елементи без закачените ще бъдат премахнати.</string>
     <string name="clipboard__confirm_clear_filtered_history__message">Потвърждавате ли изчистване на междинната памет? Всички елементи без закачените ще бъдат премахнати.</string>
     <string name="settings__clipboard__title">Междинна памет</string>
@@ -722,7 +683,6 @@
     <string name="ext__list__ext_keyboard">Добавки за клавиатури</string>
     <string name="ext__list__ext_languagepack">Езикови пакети</string>
     <string name="ext__meta__authors">Автори</string>
-    <string name="ext__meta__components">Придружаващи компоненти</string>
     <string name="ext__meta__components_theme">Придружаващи теми</string>
     <string name="ext__meta__components_language_pack">Вградени езикови пакети</string>
     <string name="ext__meta__components_none_found">Архивът на добавката не съдържа придружаващи компоненти.</string>
@@ -757,7 +717,6 @@
     <string name="ext__editor__create_component__from_empty">Празна</string>
     <string name="ext__editor__create_component__from_existing">От съществуваща</string>
     <string name="ext__editor__create_component__from_empty_warning">Създаването и настройката на празен компонент може да ви затрудни ако сте нов потребител на {app_name} и не сте запознати със спецификите. В такъв случай по-добре копирайте съществуващ компонент и го променете според нуждите си.</string>
-    <string name="ext__editor__edit_component__title">Редактиране на компонент</string>
     <string name="ext__editor__edit_component__title_theme">Редактиране на компонент-тема</string>
     <string name="ext__export__success">Темата е изнесена успешно!</string>
     <string name="ext__export__failure">Грешка при изнасяне на разширение: {error_message}</string>
@@ -771,9 +730,6 @@
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">Неподдържан или непознат вид на файла.</string>
     <string name="ext__import__file_skip_ext_core" comment="Reason string when ext has core extension ID">Не е възможно да замените или обновите основните разширения, предоставени с приложението. Ако искате да използвате по-нова версия на основните разширения, обновете приложението.</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">Файлът изглежда като архив с разширение, но възникна грешка при четенето на данните му. Файлът или е повреден, или не е разширение.</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">Очакваше се архив с разширение от сериен тип \"{expected_serial_type}\", но вместо това е \"{actual_serial_type}\".</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">Очакваше се медиен файл (изображение, аудио, шрифт, т.н.), но бе намерен архив с разширение.</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">Очакваше се архив с разширение, но бе намерен медиен файл (изображение, аудио, шрифт, т.н.).</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">Неочаквана грешка при внасяне. Предоставени са следните подробности:</string>
     <string name="ext__validation__enter_package_name">Въведете име на пакета</string>
     <string name="ext__validation__error_package_name">Името на пакетът не удовлетворява регулярния израз {id_regex}</string>
@@ -805,7 +761,6 @@
     <string name="ext__addon_management_box__go_to_page">Към {ext_home_title}</string>
     <string name="ext__home__info">Можете да изтегляте и инсталирате разширения от магазина за добавки на FlorisBoard или да внесете файл на разширение, който сте изтеглили от интернет.</string>
     <string name="ext__home__visit_store">Магазин за добавки</string>
-    <string name="ext__home__manage_extensions">Управление на инсталирани разширения</string>
     <string name="ext__list__view_details">Подробности</string>
     <string name="ext__check_updates__title">Проверка за обновяване</string>
     <!-- Action strings -->
@@ -826,26 +781,17 @@
     <string name="action__discard_confirm_message">Наистина ли искате да отхвърлите незапазените промени? Веднъж изпълнено действието не може да бъде отменено.</string>
     <string name="action__edit">Променяне</string>
     <string name="action__export">Изнасяне</string>
-    <string name="action__export_file">Внасяне на файл</string>
-    <string name="action__export_files">Внасяне на файлове</string>
     <string name="action__import">Внасяне</string>
     <string name="action__import_file">Внасяне на файл</string>
-    <string name="action__import_files">Внасяне на файлове</string>
     <string name="action__no">Не</string>
     <string name="action__ok">Добре</string>
-    <string name="action__done">Готово</string>
     <string name="action__restore">Възстановяване</string>
     <string name="action__save">Запазване</string>
-    <string name="action__select">Изберете</string>
-    <string name="action__select_dir">Избиране на папка</string>
-    <string name="action__select_dirs">Избиране на папки</string>
     <string name="action__select_file">Избиране на файл</string>
     <string name="action__select_files">Избиране на файлове</string>
     <string name="action__yes">Да</string>
     <!-- Error strings (generic) -->
     <string name="error__title">Грешка</string>
-    <string name="error__details">Подробности</string>
-    <string name="error__invalid">Невалидно</string>
     <string name="error__snackbar_message">Нещо се обърка</string>
     <string name="error__snackbar_message_template">Нещо се обърка: {error_message}</string>
     <!-- General strings -->
@@ -863,9 +809,6 @@
     <string name="screen_orientation__horizontal">Хоризонтално</string>
     <!-- State strings -->
     <string name="state__disabled">Изключено</string>
-    <string name="state__enabled">Включено</string>
-    <string name="state__no_dir_selected">Не е избрана папка</string>
-    <string name="state__no_dirs_selected">Не са избрани папки</string>
     <string name="state__no_file_selected">Не е избран файл</string>
     <string name="state__no_files_selected">Не са избрани файлове</string>
     <!-- Enum label and description strings -->
@@ -909,11 +852,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} Междинен цвят на кожата</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} Средно тъмен цвят на кожата</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} Тъмен цвят на кожата</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} Подразбирана коса</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} Червен цвят на косата</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} Къдрава коса</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} Бял цвят на косата</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} Без коса</string>
     <string name="enum__emoji_suggestion_type__leading_colon">Водещо двоеточие</string>
     <string name="enum__emoji_suggestion_type__leading_colon__description" comment="Keep the :emoji_name while translating, this is a syntax guide">Предлагане на емоции чрез синтаксиса :име_на_емоция</string>
     <string name="enum__emoji_suggestion_type__inline_text">Обикновен текст</string>
@@ -1024,10 +962,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">Динамично: превключва емоции или езици</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} час</item>
-        <item quantity="other">{v} часа</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} минута</item>
         <item quantity="other">{v} минути</item>

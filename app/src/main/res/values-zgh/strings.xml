@@ -3,14 +3,7 @@
     <string name="app_name">FlorisBoard</string>
     <!-- One-handed strings -->
     <!-- Media strings -->
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">ⵉⵎⵓⵊⵉⵜⵏ</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">ⵜⵉⵙⵢⴰⴼⴽⵓⵏⵉⵏ</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">ⴽⴰⵡⵎⵓⵊⵉ</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__food_drink" comment="Emoji category name">ⵓⵜⵛⵉ &amp; ⵜⵉⵙⵙⵉ</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">ⴰⵎⵓⴷⴷⵓ &amp; ⵉⴷⵖⴰⵔⵏ</string>
-    <string name="emoji__category__objects" comment="Emoji category name">ⵜⵉⵖⴰⵡⵙⵉⵡⵉⵏ</string>
-    <string name="emoji__category__flags" comment="Emoji category name">ⵉⵛⵏⵢⴰⵍⵏ</string>
     <!-- Quick action strings -->
     <!-- Incognito mode strings -->
     <!-- Settings UI strings -->

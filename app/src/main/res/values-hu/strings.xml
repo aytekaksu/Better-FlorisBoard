@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Szünet</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Várakozás</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Hárompontos ikon. Ha látható, azt jelzi, hogy több betű használható, ha hosszabb ideig megnyomja.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Egykezes mód bezárása.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Billentyűzet balra helyezése.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Billentyűzet jobbra helyezése.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Emodzsik</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Emodzsik</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Emotikonok</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomodzsi</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Emodzsik előnyben részesített bőrszíne</string>
     <string name="prefs__media__emoji_preferred_hair_style">Emodzsik előnyben részesített hajstílusa</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emodzsik előzményei</string>
@@ -34,15 +27,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">Legrövidebb keresés hossza</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">Jelöltek legnagyobb száma</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Mosolyok és érzelmek</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Emberek és test</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Állatok és természet</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Étel és ital</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Utazás és helyek</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Tevékenységek</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Tárgyak</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Szimbólumok</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Zászlók</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">Nem található mostanában használt emodzsi. Az emodzsik automatikusan megjelennek itt, amint elkezdi őket beírni.</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">Az emodzsielőzmények eléréséhez először oldja fel az eszközét.</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">Profi tipp: Nyomja meg hosszan az emodzsielőzmények egyikét, hogy kitűzze vagy eltávolítsa.</string>
@@ -88,7 +72,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Inkognitó</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Inkognitó mód bekapcsolása</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Auto-korrekt</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">Automatikus javítás be/ki</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Hangbevitel</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Hangbevitel szolgáltatójának megnyitása</string>
     <string name="quick_action__floating_window_mode" comment="Please mind the limited available space for the quick action strings">Lebegő</string>
@@ -113,8 +96,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Beállítások</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Próbálja ki a beállításait</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Súgó</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Alapértelmezett</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">Rendszer alapértelmezése</string>
     <string name="settings__home__title" comment="Title of the Home screen">Üdvözli a {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">A FlorisBoard nincs engedélyezve a rendszerben, így nem lesz elérhető beviteli módként a bevitelválasztóban. A probléma megoldásához kattintson ide.</string>
@@ -152,8 +133,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Úgy tűnik, hogy nem állított be altípusokat. Tartalékként az angol/QWERTY altípus lesz használva.</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">Ez az altípus már létezik!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">Legalább egy mezőnek nincs érték kiválasztva. Kérjük válasszon értéket az összes mezőnek.</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (nincs telepítve)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Kiosztások</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">Törlés megerősítése</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">Biztosan törli ezt az altípust?</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Téma</string>
@@ -164,10 +143,6 @@
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Éjszakai téma</string>
     <string name="pref__theme__theme_accent_color__label" comment="Label of accent color preference in Theme">        Kiemelőszín (Material You témák)
     </string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Telepített témák kezelése</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">FlorisBoard alkalmazásadatok</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Belső tárhely</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Külső szolgáltató</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Nappali téma kiválasztása</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Éjszakai téma kiválasztása</string>
     <string name="settings__theme_editor__fine_tune__title">Finomhangoló szerkesztő</string>
@@ -180,7 +155,6 @@
     <string name="settings__theme_editor__rule_already_exists">Ez a stíluslapszabály már korábban meg lett adva.</string>
     <string name="settings__theme_editor__rule_name">Elem / Magyarázat</string>
     <string name="settings__theme_editor__rule_codes">Célbillentyűkódok</string>
-    <string name="settings__theme_editor__rule_groups">Csoportok</string>
     <string name="settings__theme_editor__rule_modes">Célmódok (rétegek)</string>
     <string name="settings__theme_editor__rule_shift_states">Célváltási állapotok</string>
     <string name="settings__theme_editor__rule_selectors">Választók</string>
@@ -203,11 +177,9 @@
     <string name="settings__theme_editor__property_name">Tulajdonság neve</string>
     <string name="settings__theme_editor__property_value">Tulajdonság értéke</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">Alkalmazás az összes sarokra</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">Szín sor szerkesztése</string>
     <string name="settings__theme_editor__file_selector_dialog_title">Fájl kiválasztása</string>
     <string name="settings__theme_editor__file_selector_no_files_text">Ehhez a kiterjesztéshez még nem adtak hozzá fájlokat. Használja a(z) „{action_title}” műveletet az előző képernyőn a fájlok importálásához.</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">Éjszakai téma</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">Szegély nélküli</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">Stíluslap útvonala</string>
     <string name="settings__theme_editor__component_meta_material_you__title">Material You</string>
     <string name="settings__theme_editor__stylesheet_error_title">Stíluslaphiba</string>
@@ -531,11 +503,6 @@
     <string name="pref__other__show_app_icon__summary_atleast_q" comment="Summary of Show app icon preference in Other for Android 10+">A rendszer korlátozásai miatt Android 10+ rendszereken mindig engedélyezve van</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">Névjegy</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">A FlorisBoard alkalmazásikonja</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Nyílt forráskódú licencek</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Adatvédelmi irányelvek</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Forráskód</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Nyílt forráskódú licencek</string>
     <string name="about__version__title" comment="Preference title">Verzió</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Verzió a vágólapra másolva</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">Valami rosszul sült el: {error_message}</string>
@@ -548,7 +515,6 @@
     <string name="about__project_license__title" comment="Preference title">Projekt licence</string>
     <string name="about__project_license__summary" comment="Preference summary">A FlorisBoard {license_name} licenc alatt érhető el</string>
     <string name="about__project_license__error_license_text_failed" comment="Error text for license text loading failure">Hiba: A licenc szövegének betöltése sikertelen.\n-&gt; Ok: {error_message}</string>
-    <string name="about__project_license__error_reason_asset_manager_null" comment="Error text if asset manager is null">Az elemkezelő hivatkozás üres</string>
     <string name="about__third_party_licenses__title" comment="Preference title">Harmadik felek licencei</string>
     <string name="about__third_party_licenses__summary" comment="Preference summary">Az alkalmazásban szereplő harmadik felektől származó könyvtárak licencei</string>
     <!-- Setup UI strings -->
@@ -590,7 +556,6 @@
     <string name="backup_and_restore__back_up__files">Válassza ki, hogy miről készít biztonsági mentést</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">Beállítások</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">Billentyűzetkiterjesztések</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">Helyesírási kiterjesztések / szótárak</string>
     <string name="backup_and_restore__back_up__files_ime_theme">Témakiterjesztések</string>
     <string name="backup_and_restore__back_up__files_clipboard_history">Vágólapelőzmények</string>
     <string name="backup_and_restore__back_up__files_clipboard_history__clipboard_text_items">Szövegelemek</string>
@@ -638,16 +603,12 @@
     <string name="clipboard__item_description_email">E-mail-cím</string>
     <string name="clipboard__item_description_url">Webcím</string>
     <string name="clipboard__item_description_phone">Telefon</string>
-    <string name="clip__clear_history">Előzmények törlése</string>
     <string name="clip__unpin_item">Elem levétele</string>
     <string name="clip__pin_item">Elem kitűzése</string>
     <string name="clip__delete_item">Törlés</string>
     <string name="clip__paste_item">Beillesztés</string>
-    <string name="clip__back_to_text_input">Vissza a szöveges bevitelre</string>
-    <string name="clip__cant_paste">Ez az alkalmazás nem engedélyezi beilleszteni ezt a tartalmat.</string>
     <string name="clipboard__cleared_primary_clip">Elsődleges vágólap törölve</string>
     <string name="clipboard__cleared_history">Előzmények törölve</string>
-    <string name="clipboard__cleared_full_history">Az összes előzmény törölve</string>
     <string name="clipboard__confirm_clear_unfiltered_history__message">Biztos, hogy törli az összes vágólapelőzményt? Ez hatással lesz az összes elemre, kivéve a rögzítetteket.</string>
     <string name="clipboard__confirm_clear_filtered_history__message">Biztos, hogy törli a vágólapelőzményeket? Ez hatással lesz az összes jelenleg leszűrt elemre, kivéve a rögzítetteket.</string>
     <string name="settings__clipboard__title">Vágólap</string>
@@ -720,7 +681,6 @@
     <string name="ext__list__ext_keyboard">Billentyűzetkiterjesztések</string>
     <string name="ext__list__ext_languagepack">Nyelvicsomag-kiterjesztések</string>
     <string name="ext__meta__authors">Szerzők</string>
-    <string name="ext__meta__components">Csomagolt összetevők</string>
     <string name="ext__meta__components_theme">Csomagolt témák</string>
     <string name="ext__meta__components_language_pack">Csomagolt nyelvi csomagok</string>
     <string name="ext__meta__components_none_found">Ez a bővítményarchívum nem tartalmaz semmilyen csomagolt összetevőt.</string>
@@ -755,7 +715,6 @@
     <string name="ext__editor__create_component__from_empty">Üres</string>
     <string name="ext__editor__create_component__from_existing">Létezőből</string>
     <string name="ext__editor__create_component__from_empty_warning">Az üres összetevő létrehozása és konfigurálása lehet nehézséget okoz, ha még új a {app_name}, vagy nem ismeri a jellegzetességeket. Érdemes egy már meglevő összetevő tartalmát másolni, és ízlés szerint azt testreszabni.</string>
-    <string name="ext__editor__edit_component__title">Összetevő szerkesztése</string>
     <string name="ext__editor__edit_component__title_theme">Témaösszetevő szerkesztése</string>
     <string name="ext__export__success">A kiterjesztés sikeresen exportálva!</string>
     <string name="ext__export__failure">Nem sikerült exportálni a kiterjesztést: {error_message}</string>
@@ -769,9 +728,6 @@
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">Nem támogatott vagy ismeretlen fájltípus.</string>
     <string name="ext__import__file_skip_ext_core" comment="Reason string when ext has core extension ID">Az alkalmazás alapértelmezett kiterjesztéscsomagjainak cseréje vagy frissítése nem lehetséges. Fontolja meg magának az alkalmazásnak a frissítését, ha egy alap kiterjesztéscsomag újabb verzióját kívánja használni.</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">A fájl kiterjesztésarchívumnak tűnik, de az adatok feldolgozása sikertelen volt. A fájl vagy sérült, vagy nem egy bővítmény.</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">Az elvárt kiterjesztésarchívum sorozattípusa \"{expected_serial_type}\" kell legyen \"{actual_serial_type}\" helyett.</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">Egy médiafájlt várt (kép, hang, betűtípus, stb.), de egy kiterjesztésarchívumot kapott.</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">Egy kiterjesztésarchívumot várt, de egy médiafájlt (kép, hang, betűtípus, stb.) kapott.</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">Váratlan hiba történt az importálás során. A részletek a következőek:</string>
     <string name="ext__validation__enter_package_name">Adjon meg egy csomagnevet</string>
     <string name="ext__validation__error_package_name">A csomagnév nem egyezik a reguláris kifejezéssel: {id_regex}</string>
@@ -803,7 +759,6 @@
     <string name="ext__addon_management_box__go_to_page">Ugrás erre: {ext_home_title}</string>
     <string name="ext__home__info">Letöltheti és telepítheti a kiterjesztéseket a FlorisBoard kiegészítőboltból, vagy importálhat bármely, az internetről letöltött kiterjesztés fájlt.</string>
     <string name="ext__home__visit_store">Kiegészítőbolt meglátogatása</string>
-    <string name="ext__home__manage_extensions">Telepített kiterjesztések kezelése</string>
     <string name="ext__list__view_details">Részletek megtekintése</string>
     <string name="ext__check_updates__title">Frissítések keresése</string>
     <!-- Action strings -->
@@ -824,26 +779,17 @@
     <string name="action__discard_confirm_message">Biztosan el szeretné vetni a mentetlen változtatásokat? Ezt a műveletet nem lehet visszavonni.</string>
     <string name="action__edit">Szerkesztés</string>
     <string name="action__export">Exportálás</string>
-    <string name="action__export_file">Fájl importálása</string>
-    <string name="action__export_files">Fájlok importálása</string>
     <string name="action__import">Importálás</string>
     <string name="action__import_file">Fájl importálása</string>
-    <string name="action__import_files">Fájlok importálása</string>
     <string name="action__no">Nem</string>
     <string name="action__ok">OK</string>
-    <string name="action__done">Kész</string>
     <string name="action__restore">Helyreállítás</string>
     <string name="action__save">Mentés</string>
-    <string name="action__select">Kiválasztás</string>
-    <string name="action__select_dir">Könyvtár kiválasztása</string>
-    <string name="action__select_dirs">Könyvtárak kiválasztása</string>
     <string name="action__select_file">Fájl kiválasztása</string>
     <string name="action__select_files">Fájlok kiválasztása</string>
     <string name="action__yes">Igen</string>
     <!-- Error strings (generic) -->
     <string name="error__title">Hiba</string>
-    <string name="error__details">Részletek</string>
-    <string name="error__invalid">Érvénytelen</string>
     <string name="error__snackbar_message">Valami rosszul sült el</string>
     <string name="error__snackbar_message_template">Valami rosszul sült el: {error_message}</string>
     <!-- General strings -->
@@ -861,9 +807,6 @@
     <string name="screen_orientation__horizontal">Vízszintes</string>
     <!-- State strings -->
     <string name="state__disabled">Letiltva</string>
-    <string name="state__enabled">Engedélyezve</string>
-    <string name="state__no_dir_selected">Nincs könyvtár kiválasztva</string>
-    <string name="state__no_dirs_selected">Nincsenek könyvtárak kiválasztva</string>
     <string name="state__no_file_selected">Nincs fájl kiválasztva</string>
     <string name="state__no_files_selected">Nincsenek fájlok kiválasztva</string>
     <!-- Enum label and description strings -->
@@ -907,11 +850,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} Közepes bőrszín</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} Középsötét bőrszín</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} Sötét bőrszín</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} Alapértelmezett haj</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} Vörös haj</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} Göndör haj</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} Ősz haj</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} Kopasz</string>
     <string name="enum__emoji_suggestion_type__leading_colon">Nyitó kettőspont</string>
     <string name="enum__emoji_suggestion_type__leading_colon__description" comment="Keep the :emoji_name while translating, this is a syntax guide">Emodzsik javaslata a :emodzsi_neve szintaxis használatával</string>
     <string name="enum__emoji_suggestion_type__inline_text">Soron belüli szöveg</string>
@@ -1022,10 +960,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">Dinamikus: váltás emodzsikra/váltás nyelvre</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} óra</item>
-        <item quantity="other">{v} óra</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} perc</item>
         <item quantity="other">{v} perc</item>

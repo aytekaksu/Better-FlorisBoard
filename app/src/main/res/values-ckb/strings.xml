@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">ڕاگرتن</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">چاوەڕوانبە</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">ئایکۆنی سێ نوقتە، ئەگەر چالاک بێت پیت و هێما لاوەکیەکانی خانەی دووەم پیشان ئەدرێن لەکاتی دەست ڕاگرتن</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">داخستنی دۆخی بەکارهێنانی یەک دەست</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">بردنی تەختەکلیل بۆ لای چەپ</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">بردنی تەختەکلیل بۆ لای ڕاست</string>
     <!-- Media strings -->
     <string name="settings__media__title">خەندەکان</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">خەندەکان</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">هێمای دەربڕینی هەستەکان</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">کامۆجی</string>
     <string name="prefs__media__emoji_preferred_skin_tone">ڕەنگی بنەڕەتی خەندەکان</string>
     <string name="prefs__media__emoji_preferred_hair_style">ڕەنگی بنەڕەتی قژی خەندەکان</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">مێژووی ئیمۆجی</string>
@@ -29,15 +22,6 @@
     <string name="prefs__media__emoji_suggestion_type" comment="Preference title">شێوازی پێشنیاری خەندەکان</string>
     <string name="prefs__media__emoji_suggestion_candidate_show_name" comment="Preference title">پیشاندانی ناوی خەندەکان</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">خەندەکان </string>
-    <string name="emoji__category__people_body" comment="Emoji category name">خەڵک</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">ئاژەڵ</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">خواردن</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">گواستنەوە</string>
-    <string name="emoji__category__activities" comment="Emoji category name">چالاکی</string>
-    <string name="emoji__category__objects" comment="Emoji category name">ئامانجەکان</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">هێماکان</string>
-    <string name="emoji__category__flags" comment="Emoji category name">ئاڵاکان</string>
     <string name="emoji__history__pinned">جێگیرکراو</string>
     <string name="emoji__history__recent">دوایین</string>
     <!-- Quick action strings -->
@@ -76,7 +60,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">دۆخی نادیار</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">چالاککردنی دۆخی نادیار</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">ڕاستکردنەوە</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">چالاککردنی ڕاستکردنەوەی نووسین</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">گەڕانی دەنگی</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">کردنەوەی تایبەتمەندی گەڕانی دەنگی</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">دۆخی یەکدەست</string>
@@ -96,8 +79,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">ڕێکخستنەکان</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">پیشاندانی تەختەکلیل</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">یارمەتی</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">بنەڕەتی</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">بەپێی سیستەم</string>
     <string name="settings__home__title" comment="Title of the Home screen">بەخێربێی بۆ {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">تەختەکلیلی FlorisBoard هێشتا چالاک نەکراوە لە ڕێکخستنەکانی سیستەمدا، پێویستە چالاکی بکەیت بۆ بەکارهێنان پەنجەبنێ بێرەدا.</string>
@@ -134,18 +115,12 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">هیچ زمان و شێوازێک زیاد نەکراوە بۆ نووسین، لەبەر ئەوە زمانی ئینگلیزی و شێوازی قوەرتی بەشێوەی بنەڕەتی بەکاردێت بۆ تەختەکلیلەکە!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">ئەم زمانە پێشتر زیادکراوە لە لیستەکەدا هەیە!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">یەکێ لە خانەکان دیاری نەکراوە بۆ هەڵبژاردن، تکایە سەرجەمیان دیاریبکە.</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (دانەبەزێنراوە)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">شێوازەکان</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">ڕووکار</string>
     <string name="pref__theme__mode__label" comment="Label of the theme mode preference">دۆخی ڕووکار</string>
     <string name="pref__theme__sunrise_time__label" comment="Label of the sunrise time preference">کاتی خۆرهەڵاتن</string>
     <string name="pref__theme__sunset_time__label" comment="Label of the sunset time preference">کاتی خۆر ئاوابوون</string>
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">ڕووناک</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">تاریک</string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">ڕێکخستنی رووکارەکان</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">ڕەنگی بنەڕەتی بەرنامەکە</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">بیرگەی ناخۆیی</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">بیرگەی دەرەکی</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">ڕووکارەکانی دۆخی ڕووناک</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">ڕووکارەکانی دۆخی تاریک</string>
     <string name="settings__theme_editor__fine_tune__title">گۆڕینی ڕەنگ</string>
@@ -156,7 +131,6 @@
     <string name="settings__theme_editor__no_rules_defined">ئەم پەڕەیە هیچ یاسایەکی پێناسە نەکراوە، زیادکردنی یاسایەک بۆ دەستکردن بە سازکردنی ئەم پەڕەیە.</string>
     <string name="settings__theme_editor__rule_already_exists">ئەم یاسای پەڕەی ستایڵ پێشتر پێناسە کراوە.</string>
     <string name="settings__theme_editor__rule_codes">سەرچاوەی کۆدی مەبەست</string>
-    <string name="settings__theme_editor__rule_groups">گرووپ</string>
     <string name="settings__theme_editor__rule_selectors">هەڵبژاردن</string>
     <string name="settings__theme_editor__add_code">زیادکردنی کۆدی دوگمە</string>
     <string name="settings__theme_editor__edit_code">دەستکاریکردنی کۆد</string>
@@ -176,9 +150,7 @@
     <string name="settings__theme_editor__property_name">ناوی بەش</string>
     <string name="settings__theme_editor__property_value">بەهای بەش</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">هەمان قەبارە بۆ هەموو گۆشەکان</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">دەستکاریکردنی ڕەنگی نووسین</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">ڕووکاری تاریکە</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">بێ لێوار</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">شوێنی هەڵگرتن</string>
     <string name="snygg__rule_annotation__font">فۆنت</string>
     <string name="snygg__rule_annotation__font_name">ناوی فۆنت</string>
@@ -383,11 +355,6 @@
     <string name="pref__gestures__swipe_distance_threshold__label" comment="Preference title">ماوەی ڕاکێشان</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">دەربارە</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">پیشاندانی ئایکۆنی بەرنامەکە</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">مەرج و مۆڵەتی سەرچاوەکان</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">تایبەتمەندێتی ڕامیاری</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">کۆدی سەرچاوەکراوە</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">مەرج و مۆڵەتی سەرچاوەکان</string>
     <string name="about__version__title" comment="Preference title">وەشان</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">ژمارە و ناوی وەشان کۆپیکرا</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">ھەڵەیەک ڕوویدا: {error_message}</string>
@@ -400,7 +367,6 @@
     <string name="about__project_license__title" comment="Preference title">مۆڵەتی پڕۆژە</string>
     <string name="about__project_license__summary" comment="Preference summary">بەرنامەکە مۆڵەتی {license_name} هەیە</string>
     <string name="about__project_license__error_license_text_failed" comment="Error text for license text loading failure">هەڵە ڕوویدا: نەتوانرا زانیاری مۆڵەت بکرێتەوە.\n-&gt; هۆکار: {error_message}</string>
-    <string name="about__project_license__error_reason_asset_manager_null" comment="Error text if asset manager is null">بەڕێوەبەری فایلەکان پڕ بووە</string>
     <string name="about__third_party_licenses__title" comment="Preference title">مۆڵەتی سەرچاوە-دەرەکییەکان</string>
     <string name="about__third_party_licenses__summary" comment="Preference summary">مۆڵەتی ئەو سەرچاوە-دەرەکییانەی کە لە بەرنامەکەدا بەکارهاتووە</string>
     <!-- Setup UI strings -->
@@ -429,7 +395,6 @@
     <string name="backup_and_restore__back_up__files">ئەو بەشانە دیاریبکە کە دەتەوێ پاشەکەوتی بکەیت</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">ڕێکخستنەکان</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">زیادکراوەکانی تەختەکلیل</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">پێوەکراوی ڕێنووس / فەرهەنگ</string>
     <string name="backup_and_restore__back_up__files_ime_theme">ڕووکارەکان</string>
     <string name="backup_and_restore__back_up__success">فایلی پاشەکەوتکردن بەسەرکەوتوویی دروستکرا!</string>
     <string name="backup_and_restore__back_up__failure">هەڵگرتنی پاشەکەوتکردن سەرکەوتو نەبوو: {error_message}</string>
@@ -474,16 +439,12 @@
     <string name="clipboard__item_description_email">ئیمەیڵ</string>
     <string name="clipboard__item_description_url">URL بەستەر</string>
     <string name="clipboard__item_description_phone">تەلەفۆن</string>
-    <string name="clip__clear_history">سڕینەوەی مێژوو</string>
     <string name="clip__unpin_item">جێگیر نەکردن</string>
     <string name="clip__pin_item">جێگیر کردن</string>
     <string name="clip__delete_item">سڕینەوە</string>
     <string name="clip__paste_item">دانان</string>
-    <string name="clip__back_to_text_input">گەڕانەوە</string>
-    <string name="clip__cant_paste">ئەم بەرنامەیە پشتگیری دانانی شتەکان ناکات.</string>
     <string name="clipboard__cleared_primary_clip">سڕینەوەی گشتی</string>
     <string name="clipboard__cleared_history">سڕینەوەی مێژوو</string>
-    <string name="clipboard__cleared_full_history">سڕینەوەی هەموو شتێک</string>
     <string name="settings__clipboard__title">لەبەرگیراوەکان</string>
     <string name="pref__clipboard__use_internal_clipboard__label">بەشی لەبەرگیراوەکان</string>
     <string name="pref__clipboard__use_internal_clipboard__summary">بەکارهێنانی بەشی لەبەرگیراوەکان بۆ هەڵگرتنی شتەکان</string>
@@ -522,7 +483,6 @@
     <string name="devtools__android_locales__title" comment="Title of Android locales screen">زمانەکانی سیستەم</string>
     <!-- Extension strings -->
     <string name="ext__meta__authors">دیزاینەر</string>
-    <string name="ext__meta__components">زیادکراوەکان</string>
     <string name="ext__meta__components_theme">ڕووکارە دروستکراوەکان</string>
     <string name="ext__meta__components_language_pack">زمانە بەردەستەکان</string>
     <string name="ext__meta__components_none_found">ئەم فایلە ئەرشیفە هیچ پێکهاتەیەکی لەخۆ نەگرتووە.</string>
@@ -555,7 +515,6 @@
     <string name="ext__editor__create_component__from_empty">دروستکردن لە سەرەتاوە</string>
     <string name="ext__editor__create_component__from_existing">دروستکردن لە ڕووکارەکانەوە</string>
     <string name="ext__editor__create_component__from_empty_warning">دروستکردنی ڕووکارێکی بەتاڵ لەسەرەتاوە بۆ {app_name} لەوانەیە گران بێت و شارەزایی پێویستە ئەگەر بەکارهێنەرێکی نوێی بەرنامەکەیت یان شارەزایی کۆد و سەرچاوەکانی دیزاین نەبیت!</string>
-    <string name="ext__editor__edit_component__title">دەستکاریکردنی پێکهاتەکان</string>
     <string name="ext__editor__edit_component__title_theme">دەستکاریکردنی ڕووکارەکان</string>
     <string name="ext__export__success">زیادکراو بەسەرکەوتوویی هەڵگیرا!</string>
     <string name="ext__export__failure">هەڵگرتنی زیادکراو سەرکەوتو نەبوو: {error_message}</string>
@@ -569,9 +528,6 @@
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">جۆری فایل نەگونجاوە یان بەباشی ڕێکنەخراوە(تێکچووە).</string>
     <string name="ext__import__file_skip_ext_core" comment="Reason string when ext has core extension ID">ناتوانێت پاکێجەکانی پاشکۆی گریمانەیی جێگۆڕکێ بکات یان نوێ بکاتەوە کە لەگەڵ سەرمایەکانی ناوکی کاربەرنامە دابین کراوە. ڕەچاوکردنی نوێکردنەوەی کاربەرنامەی خۆی ئەگەر تۆ دەتەوێت وەشانێکی نوێتری پاکێجی درێژکراوەی ناوکی بەکاربهێنیت.</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">فایلەکە دەردەکەوێت کە ئەرشیفێکی درێژکراوە بێت بەڵام شیکردنەوەی داتای ئەرشیف سەرکەوتوو نەبوو. یان ئەرشیف تێکچووە یان ئەم فایلە بە هیچ شێوەیەک درێژکراوە نییە.</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">چاوەڕوانی ئەرشیفێکی درێژکراوەی جۆری زنجیرەی \"{expected_serial_type}\" بەڵام \"{actual_serial_type}\" بوو.</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">چاوەڕوانی فایلێکی میدیایی (وێنە، دەنگ، فۆنت، هتد) بەڵام ئەرشیفێکی درێژکراوەی دۆزیەوە.</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">ئەرشیفێکی درێژکراوە چاوەڕوانکراو بەڵام فایلێکی میدیایی دۆزیەوە (وێنە، دەنگ، فۆنت، هتد).</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">هەڵەیەکی نەزانراو ڕوویدا لەکاتی هێنانی فایلەکەدا، ئەم زانیاریانە پێشکەشکران:</string>
     <!-- Action strings -->
     <string name="action__add">زیادکردن</string>
@@ -593,16 +549,11 @@
     <string name="action__ok">باشە</string>
     <string name="action__restore">گێڕانەوە</string>
     <string name="action__save">پاراستن</string>
-    <string name="action__select">دیاریکردن</string>
-    <string name="action__select_dir">فۆڵدەر دیاریبکە</string>
-    <string name="action__select_dirs">فۆڵدەرەکان دیاریبکە</string>
     <string name="action__select_file">فایلێک دیاریبکە</string>
     <string name="action__select_files">فایلێک دیاریبکە</string>
     <string name="action__yes">بەڵێ</string>
     <!-- Error strings (generic) -->
     <string name="error__title">هەڵەیەک ڕوویدا</string>
-    <string name="error__details">زانیاری زیاتر</string>
-    <string name="error__invalid">نا درووستە</string>
     <string name="error__snackbar_message">هەڵەیەکی نەزانراو ڕوویدا</string>
     <string name="error__snackbar_message_template">ھەڵەیەک ڕوویدا: {error_message}</string>
     <!-- General strings -->
@@ -619,9 +570,6 @@
     <string name="screen_orientation__horizontal">ئاسۆیی</string>
     <!-- State strings -->
     <string name="state__disabled">نا چالاک</string>
-    <string name="state__enabled">چالاک</string>
-    <string name="state__no_dir_selected">هیچ فۆڵدەرێک دیاری نەکراوە</string>
-    <string name="state__no_dirs_selected">هیچ فۆڵدەرێک دیاری نەکراوە</string>
     <string name="state__no_file_selected">هیچ فایلێک دیاری نەکراوە</string>
     <string name="state__no_files_selected">هیچ فایلێک دیاری نەکراوە</string>
     <!-- Enum label and description strings -->
@@ -645,11 +593,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} بۆر</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} گەنمی</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} ڕەش</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} بنەڕەتی</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} سوور</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} لوول</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} سپی</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} کەچەڵ</string>
     <string name="enum__haptic_vibration_mode__use_vibrator_directly" comment="Enum value label">لەرینەوەی ڕاستەوخۆ</string>
     <string name="enum__haptic_vibration_mode__use_vibrator_directly__description" comment="Enum value description">{app_name} ڕاستەوخۆ هەستەوەری لەرینەوەی ئامێر بەکاردێت لەکاتی نووسین، بەڵام لەوانەیە لە هەندێ مۆبایلدا بەردەست نەبێت</string>
     <string name="enum__haptic_vibration_mode__use_haptic_feedback_interface" comment="Enum value label">لەرینەوەی ئاسایی</string>
@@ -726,10 +669,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">زیرەکانە: کردنەوەی خەندەکان/گۆڕینی زمان</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} کاتژمێر</item>
-        <item quantity="other">{v} کاتژمێر</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} خولەک</item>
         <item quantity="other">{v} خولەک</item>

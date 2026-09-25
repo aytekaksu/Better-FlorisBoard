@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Pausa</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Attendi</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Icona a tre puntini. Se visibile, indica che è possibile utilizzare più lettere se premuto a lungo.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Chiudi modalità ad una mano.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Muovi tastiera a sinistra.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Muovi tastiera a destra.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Emoji</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Emoji</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Emoticons</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoji</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Carnagione emoji preferita</string>
     <string name="prefs__media__emoji_preferred_hair_style">Acconciatura emoji preferita</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emoji usate</string>
@@ -34,15 +27,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">Lunghezza minima della query</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">Numero massimo di candidati</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Faccine &amp; Emoticons</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Persone &amp; Corpo</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Animali &amp; Natura</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Cibo &amp; Bevande</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Viaggi &amp; Luoghi</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Attività</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Oggetti</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Simboli</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Bandiere</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">Nessuna emoji usata recentemente è stata trovata. Quando inizierai a scrivere appariranno qui.</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">Per accedere allo storico emoji, prima sblocca il dispositivo.</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">Suggerimento: Tieni premuto a lungo sulle emoji nello storico per selezionarle o rimuoverle!</string>
@@ -85,7 +69,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Incognito</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Attiva o disattiva modalità in incognito</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Auto-correz.</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">Attiva o disattiva correzione automatica</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Input vocale</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Apri fornitore d\'immissione di voce</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">A una mano</string>
@@ -106,8 +89,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Impostazioni</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Prova la tua configurazione</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Aiuto</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Predefinito</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">Predefinito di sistema</string>
     <string name="settings__home__title" comment="Title of the Home screen">Benvenuto in {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">FlorisBoard non è abilitato nel sistema e quindi non sarà disponibile come metodo di immissione. Clicca qui per risolvere il problema.</string>
@@ -145,8 +126,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Sembra che tu non abbia configurato nessuno stile di input personalizzato. Come ripiego verrà utilizzato lo stile input English/QWERTY!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">Questo stile di input esiste già !</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">Almeno un campo non ha un valore selezionato. Scegli un valore per il campo(i campi).</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (non installato)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Layout</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">Conferma eliminazione</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">Sei sicuro di voler eliminare questo sottotipo?</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Tema</string>
@@ -156,10 +135,6 @@
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">Tema giorno</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Tema scuro</string>
     <string name="pref__theme__theme_accent_color__label" comment="Label of accent color preference in Theme">        Colore dell\'accentMateria</string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Gestisci temi installati</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">Risorse dell\'app FlorisBoard</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Memoria interna</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Provider esterno</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Seleziona tema chiaro</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Seleziona tema scuro</string>
     <string name="settings__theme_editor__fine_tune__title">Editor delle regolazioni</string>
@@ -171,7 +146,6 @@
     <string name="settings__theme_editor__no_rules_defined">Questo file di stile non ha regole definite. Aggiungi una regola per iniziare a personalizzare questo file di stile.</string>
     <string name="settings__theme_editor__rule_already_exists">Questa regola del file di stile è già definita.</string>
     <string name="settings__theme_editor__rule_codes">Codici tasto di destinazione</string>
-    <string name="settings__theme_editor__rule_groups">Gruppi</string>
     <string name="settings__theme_editor__rule_selectors">Selettori</string>
     <string name="settings__theme_editor__add_code">Aggiungi codice tasto</string>
     <string name="settings__theme_editor__edit_code">Modifica codice tasto</string>
@@ -191,11 +165,9 @@
     <string name="settings__theme_editor__property_name">Nome della proprietà</string>
     <string name="settings__theme_editor__property_value">Valore della proprietà</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">Applica per tutti gli angoli</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">Modifica stringa di colore</string>
     <string name="settings__theme_editor__file_selector_dialog_title">Seleziona file</string>
     <string name="settings__theme_editor__file_selector_no_files_text">Impostazioni / Modifica tema / seleziona file / nessun file di testo</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">È tema scuro</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">È senza bordi</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">Percorso del file di stile</string>
     <string name="settings__theme_editor__stylesheet_error_title">Errore foglio di stile</string>
     <string name="snygg__rule_annotation__defines">Variabili</string>
@@ -431,11 +403,6 @@
     <string name="pref__other__settings_theme__amoled_dark" comment="Possible value of Settings theme preference in Other">AMOLED Scuro</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">Informazioni su</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">Icona dell\'app FlorisBoard</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Licenze open source</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Norme sulla privacy</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Codice sorgente</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Licenze open source</string>
     <string name="about__version__title" comment="Preference title">Versione</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Versione copiata negli appunti</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">Qualcosa è andato storto: {error_message}</string>
@@ -448,7 +415,6 @@
     <string name="about__project_license__title" comment="Preference title">Licenza del progetto</string>
     <string name="about__project_license__summary" comment="Preference summary">FlorisBoard è concesso in licenza sotto {license_name}</string>
     <string name="about__project_license__error_license_text_failed" comment="Error text for license text loading failure">Errore: Impossibile caricare il testo della licenza.\n-&gt; Motivo: {error_message}</string>
-    <string name="about__project_license__error_reason_asset_manager_null" comment="Error text if asset manager is null">Il riferimento al Gestore risorse è nullo</string>
     <string name="about__third_party_licenses__title" comment="Preference title">Licenze di terze parti</string>
     <string name="about__third_party_licenses__summary" comment="Preference summary">Licenze delle librerie di terze parti incluse in questa app</string>
     <!-- Setup UI strings -->
@@ -477,7 +443,6 @@
     <string name="backup_and_restore__back_up__files">Scegli di cosa eseguire il backup</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">Impostazioni</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">Estensioni della tastiera</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">Estensioni ortografiche / dizionari</string>
     <string name="backup_and_restore__back_up__files_ime_theme">Estensioni del tema</string>
     <string name="backup_and_restore__back_up__success">Archivio di backup esportato con successo!</string>
     <string name="backup_and_restore__back_up__failure">Impossibile esportare l\'archivio di backup: {error_message}</string>
@@ -521,16 +486,12 @@
     <string name="clipboard__item_description_email">Email</string>
     <string name="clipboard__item_description_url">URL</string>
     <string name="clipboard__item_description_phone">Telefono</string>
-    <string name="clip__clear_history">Cancella la cronologia</string>
     <string name="clip__unpin_item">Sblocca oggetto</string>
     <string name="clip__pin_item">Blocca oggetto</string>
     <string name="clip__delete_item">Elimina</string>
     <string name="clip__paste_item">Incolla</string>
-    <string name="clip__back_to_text_input">Torna all\'immissione di testo</string>
-    <string name="clip__cant_paste">Questa app non permette di incollare questo contenuto.</string>
     <string name="clipboard__cleared_primary_clip">Clip principale cancellata</string>
     <string name="clipboard__cleared_history">Cronologia cancellata</string>
-    <string name="clipboard__cleared_full_history">Tutta la cronologia cancellata</string>
     <string name="clipboard__confirm_clear_unfiltered_history__message">Vuoi cancellare lo storico della clipboard? Questa azione cancellerà tutto lo storico tranne i messaggi con spunta.</string>
     <string name="settings__clipboard__title">Appunti</string>
     <string name="pref__clipboard__use_internal_clipboard__label">Usa gli appunti integrati</string>
@@ -578,7 +539,6 @@
     <string name="ext__list__ext_keyboard">Skins tastiera</string>
     <string name="ext__list__ext_languagepack">Lingue (addons)</string>
     <string name="ext__meta__authors">Autori</string>
-    <string name="ext__meta__components">Componenti integrati</string>
     <string name="ext__meta__components_theme">Temi integrati</string>
     <string name="ext__meta__components_language_pack">Pacchetti linguistici in dotazione</string>
     <string name="ext__meta__components_none_found">Questo archivio di estensione non contiene alcun componente integrato.</string>
@@ -611,7 +571,6 @@
     <string name="ext__editor__create_component__from_empty">Vuoto</string>
     <string name="ext__editor__create_component__from_existing">Da esistente</string>
     <string name="ext__editor__create_component__from_empty_warning">Creare e configurare un componente vuoto potrebbe essere difficile se sei nuovo su {app_name} o se non sei familiare con le specifiche. Se questo è il caso, considera la copia di un componente esistente e modificalo a tuo piacimento.</string>
-    <string name="ext__editor__edit_component__title">Modifica componente</string>
     <string name="ext__editor__edit_component__title_theme">Modifica componente tema</string>
     <string name="ext__export__success">Estensione esportata con successo!</string>
     <string name="ext__export__failure">Impossibile esportare l\'estensione: {error_message}</string>
@@ -625,9 +584,6 @@
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">File non supportato o riconosciuto.</string>
     <string name="ext__import__file_skip_ext_core" comment="Reason string when ext has core extension ID">Impossibile sostituire o aggiornare i pacchetti di estensione predefiniti forniti con le risorse principali dell\'app. Considera l\'aggiornamento dell\'app se intendi utilizzare una versione più recente di un pacchetto di estensione principale.</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">Il file sembra essere un archivio con estensione ma l\'analisi dei dati dell\'archivio è fallita. O l\'archivio è corrotto o questo file non è un\'estensione.</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">Previsto un archivio con estensione di tipo seriale \"{expected_serial_type}\" ma era \"{actual_serial_type}\".</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">Previsto un file multimediale (immagine, audio, font, ecc.) ma trovato un archivio con estensione.</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">Previsto un archivio con estensione ma trovato un file multimediale (immagine, audio, font, ecc.).</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">Si è verificato un errore inaspettato durante l\'importazione. Sono stati forniti i seguenti dettagli:</string>
     <string name="ext__validation__enter_package_name">Assegna un nome all\'addon</string>
     <string name="ext__validation__error_package_name">Il nome assegnato non è valido</string>
@@ -640,7 +596,6 @@
     <string name="ext__addon_management_box__addon_manager_info">Tutte le attività relative all\'importazione, all\'esportazione, alla creazione, alla personalizzazione e alla rimozione delle estensioni possono essere gestite tramite il gestore interno</string>
     <string name="ext__home__info">Puoi scaricare e installare estensioni dallo Store di FlorisBoard o importare qualsiasi addon</string>
     <string name="ext__home__visit_store">Vai allo Store degli addons</string>
-    <string name="ext__home__manage_extensions">Gestisci temi installati</string>
     <string name="ext__list__view_details">Visualizza dettagli</string>
     <!-- Action strings -->
     <string name="action__add">Aggiungi</string>
@@ -662,16 +617,11 @@
     <string name="action__ok">OK</string>
     <string name="action__restore">Ripristina</string>
     <string name="action__save">Salva</string>
-    <string name="action__select">Seleziona</string>
-    <string name="action__select_dir">Seleziona cartella</string>
-    <string name="action__select_dirs">Seleziona le cartelle</string>
     <string name="action__select_file">Seleziona file</string>
     <string name="action__select_files">Seleziona i file</string>
     <string name="action__yes">Sì</string>
     <!-- Error strings (generic) -->
     <string name="error__title">Errore</string>
-    <string name="error__details">Dettagli</string>
-    <string name="error__invalid">Non valido</string>
     <string name="error__snackbar_message">Qualcosa è andato storto</string>
     <string name="error__snackbar_message_template">Qualcosa è andato storto: {error_message}</string>
     <!-- General strings -->
@@ -686,9 +636,6 @@
     <string name="screen_orientation__horizontal">Orizontale</string>
     <!-- State strings -->
     <string name="state__disabled">Disabilitato</string>
-    <string name="state__enabled">Abilitato</string>
-    <string name="state__no_dir_selected">Nessuna cartella selezionata</string>
-    <string name="state__no_dirs_selected">Nessuna cartella selezionata</string>
     <string name="state__no_file_selected">Nessun file selezionato</string>
     <string name="state__no_files_selected">Nessun file selezionato</string>
     <!-- Enum label and description strings -->
@@ -721,11 +668,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} Carnagione media</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} Carnagione medio-scura</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} Carnagione scura</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} Capelli predefiniti</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} Capelli rossi</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} Capelli ricci</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} Capelli bianchi</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} Calvo</string>
     <string name="enum__extended_actions_placement__above_candidates" comment="Enum value label">Candidati di sopra</string>
     <string name="enum__extended_actions_placement__above_candidates__description" comment="Enum value description">Posiziona la riga estesa d\'azioni tra l\'UI dell\'app e la riga di candidati</string>
     <string name="enum__extended_actions_placement__below_candidates" comment="Enum value label">Candidati di sotto</string>
@@ -814,10 +756,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">Dinamico: Passa agli emoji / Cambia lingua</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} ora</item>
-        <item quantity="other">{v} ore</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} minuto</item>
         <item quantity="other">{v} minuti</item>

@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Pause</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Warten</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Drei-Punkte-Symbol. Zeigt an, dass durch langes Drücken mehr Zeichen verwendet werden können.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Einhandmodus schließen.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Tastatur nach links verschieben.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Tastatur nach rechts verschieben.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Emojis</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Emojis</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Emoticons</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoji</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Bevorzugte Emoji-Hautfarbe</string>
     <string name="prefs__media__emoji_preferred_hair_style">Bevorzugte Emoji-Haarfarbe</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emoji-Historie</string>
@@ -34,15 +27,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">Minimale Suchbegriff-Länge</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">Maximale Anzahl von Vorschlägen</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Smileys &amp; Emotionen</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Personen &amp; Körper</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Tiere &amp; Natur</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Essen &amp; Trinken</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Reisen &amp; Orte</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Aktivitäten</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Objekte</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Symbole</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Flaggen</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">Keine kürzlich benutzen Emojis gefunden. Sobald Emojis benutzt werden, erscheinen diese hier.</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">Um auf deinen Emoji-Historie zuzugreifen, entsperre das Gerät.</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">Tipp: Tippe lange auf Emojis in der Historie um sie anzupinnen oder zu entfernen!</string>
@@ -84,7 +68,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Inkognito</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Inkognitomodus umschalten</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Autokorrekt.</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">Autokorrektur umschalten</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Spracheinga.</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Öffne Anbieter für Spracheingabe</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">Einhändig</string>
@@ -105,8 +88,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Einstellungen</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Tastaturkonfiguration ausprobieren</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Hilfe</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Standard</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">Systemstandard</string>
     <string name="settings__home__title" comment="Title of the Home screen">Willkommen bei {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">FlorisBoard ist in deinem System nicht aktiviert und kann daher nicht als Eingabemethode ausgewählt werden. Hier klicken, um dieses Problem zu lösen.</string>
@@ -143,8 +124,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Es scheinen keine benutzerdefinierten Eingabestile konfiguriert zu sein. Als Ausweichlösung wird daher der Eingabestil English/QWERTY benutzt!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">Dieser Eingabestil ist bereits vorhanden!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">In mindestens einem Feld ist kein Wert ausgewählt. Bitte wähle einen Wert für das Feld / die Felder.</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (nicht installiert)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Layouts</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">Löschen bestätigen</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">Bist du sicher, dass du diesen Untertyp löschen willst?</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Design</string>
@@ -154,10 +133,6 @@
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">Helles Design</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Dunkles Design</string>
     <string name="pref__theme__theme_accent_color__label" comment="Label of accent color preference in Theme">Akzentfarbe (Material You Designs)</string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Installierte Designs verwalten</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">FlorisBoard App Ressourcen</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Interner Speicher</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Externer Anbieter</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Tages-Design auswählen</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Nacht-Design auswählen</string>
     <string name="settings__theme_editor__fine_tune__title">Editoreinstellungen</string>
@@ -170,7 +145,6 @@
     <string name="settings__theme_editor__rule_already_exists">Diese Stylesheetregel ist schon definiert.</string>
     <string name="settings__theme_editor__rule_name">Element / Anmerkung</string>
     <string name="settings__theme_editor__rule_codes">Ziel-Codes</string>
-    <string name="settings__theme_editor__rule_groups">Gruppen</string>
     <string name="settings__theme_editor__rule_selectors">Selektoren</string>
     <string name="settings__theme_editor__add_code">Key code hinzufügen</string>
     <string name="settings__theme_editor__edit_code">Key code bearbeiten</string>
@@ -191,11 +165,9 @@
     <string name="settings__theme_editor__property_name">Eigenschaftsname</string>
     <string name="settings__theme_editor__property_value">Eigenschaftswert</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">Auf alle Ecken anwenden</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">Farbzeichenkette bearbeiten</string>
     <string name="settings__theme_editor__file_selector_dialog_title">Datei auswählen</string>
     <string name="settings__theme_editor__file_selector_no_files_text">Es wurden noch keine Dateien zu der Erweiterung hinzugefügt. Bitte nutze {action_title} auf der vorherigen Seite um die Dateien zu importieren.</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">Ist Nachtthema</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">Ist randlos</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">Stylesheetpfad</string>
     <string name="settings__theme_editor__stylesheet_error_title">Stylesheet Fehler</string>
     <string name="snygg__rule_annotation__defines">Variablen</string>
@@ -441,11 +413,6 @@
     <string name="pref__other__show_app_icon__summary_atleast_q" comment="Summary of Show app icon preference in Other for Android 10+">Immer aktiviert in Android 10+ aufgrund von System-Beschränkungen</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">Über</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">App-Icon von FlorisBoard</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Open Source-Lizenzen</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Datenschutzrichtlinien</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Quellcode</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Open Source-Lizenzen</string>
     <string name="about__version__title" comment="Preference title">Version</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Version in die Zwischenablage kopiert</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">Etwas ist schief gelaufen: {error_message}</string>
@@ -458,7 +425,6 @@
     <string name="about__project_license__title" comment="Preference title">Projekt-Lizenz</string>
     <string name="about__project_license__summary" comment="Preference summary">FlorisBoard ist unter {license_name} lizenziert</string>
     <string name="about__project_license__error_license_text_failed" comment="Error text for license text loading failure">Fehler: Lizenztext konnte nicht geladen werden.\n-&gt; Grund: {error_message}</string>
-    <string name="about__project_license__error_reason_asset_manager_null" comment="Error text if asset manager is null">Assetmanager Referenz ist null</string>
     <string name="about__third_party_licenses__title" comment="Preference title">Drittanbieter-Lizenzen</string>
     <string name="about__third_party_licenses__summary" comment="Preference summary">Lizenzen der Drittanbieter-Bibliotheken, die FlorisBoard verwendet</string>
     <!-- Setup UI strings -->
@@ -490,7 +456,6 @@
     <string name="backup_and_restore__back_up__files">Auswählen, wovon eine Sicherung erstellt werden soll</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">Einstellungen</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">Tastaturerweiterungen</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">Rechtschreibeerweiterungen / Wörterbücher</string>
     <string name="backup_and_restore__back_up__files_ime_theme">Design-Erweiterungen</string>
     <string name="backup_and_restore__back_up__files_clipboard_history">Zwischenablageverlauf</string>
     <string name="backup_and_restore__back_up__files_clipboard_history__clipboard_text_items">Text Inhalte</string>
@@ -538,16 +503,12 @@
     <string name="clipboard__item_description_email">E-Mail</string>
     <string name="clipboard__item_description_url">URL</string>
     <string name="clipboard__item_description_phone">Telefon</string>
-    <string name="clip__clear_history">Verlauf leeren</string>
     <string name="clip__unpin_item">Element lösen</string>
     <string name="clip__pin_item">Element anheften</string>
     <string name="clip__delete_item">Löschen</string>
     <string name="clip__paste_item">Einfügen</string>
-    <string name="clip__back_to_text_input">Zurück zur Texteingabe</string>
-    <string name="clip__cant_paste">Diese App erlaubt kein Einfügen aus der Zwischenablage.</string>
     <string name="clipboard__cleared_primary_clip">Aktives Element gelöscht</string>
     <string name="clipboard__cleared_history">Verlauf gelöscht</string>
-    <string name="clipboard__cleared_full_history">Kompletten Verlauf gelöscht</string>
     <string name="settings__clipboard__title">Zwischenablage</string>
     <string name="pref__clipboard__use_internal_clipboard__label">Interne Zwischenablage nutzen</string>
     <string name="pref__clipboard__use_internal_clipboard__summary">Interne Zwischenablage anstatt der Systemzwischenablage verwenden</string>
@@ -611,7 +572,6 @@
     <string name="ext__list__ext_keyboard">Tastatur-Erweiterungen</string>
     <string name="ext__list__ext_languagepack">Sprachpaket-Erweiterungen</string>
     <string name="ext__meta__authors">Ersteller</string>
-    <string name="ext__meta__components">Gebündelte Komponenten</string>
     <string name="ext__meta__components_theme">Enthaltene Designs</string>
     <string name="ext__meta__components_language_pack">Gebündelte Sprachpakete</string>
     <string name="ext__meta__components_none_found">Dieses Erweiterungsarchiv enthält keine gebündelten Komponenten.</string>
@@ -646,7 +606,6 @@
     <string name="ext__editor__create_component__from_empty">Leer</string>
     <string name="ext__editor__create_component__from_existing">Aus bestehendem</string>
     <string name="ext__editor__create_component__from_empty_warning">Das Erstellen und Konfigurieren einer leeren Komponente kann schwer sein, wenn Sie mit {app_name} oder den Genauigkeiten unvertraut sind. Ziehen Sie es dann in Betracht eine existierende Komponente zu kopieren und diese zu modifizieren.</string>
-    <string name="ext__editor__edit_component__title">Komponente bearbeiten</string>
     <string name="ext__editor__edit_component__title_theme">Designkomponente bearbeiten</string>
     <string name="ext__export__success">Erweiterung erfolgreich exportiert!</string>
     <string name="ext__export__failure">Erweiterung exportieren fehlgeschlagen: {error_message}</string>
@@ -660,9 +619,6 @@
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">Nicht unterstützter oder nicht erkannter Datei-Typ.</string>
     <string name="ext__import__file_skip_ext_core" comment="Reason string when ext has core extension ID">Das Standarderweiterungspaket, das mit der App mitgeliefert wird, konnte nicht ersetzt oder aktualisiert werden. Aktualisiere die App, wenn du eine neuere Version des Standarderweiterungspakets nutzen möchtest.</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">Die Datei scheint ein Erweiterungsarchiv zu sein, aber das Parsen der Archivdaten ist fehlgeschlagen. Entweder ist das Archiv beschädigt oder diese Datei ist gar keine Erweiterung.</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">Ein Erweiterungsarchiv des seriellen Typs \"{expected_serial_type}\" wurde erwartet, aber \"{actual_serial_type}\" wurde gefunden.</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">Eine Mediendatei (Bild, Audio, Text, etc.) wurde erwartet, aber ein Erweiterungsarchiv wurde gefunden.</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">Ein Erweiterungsarchiv wurde erwartet, aber eine Mediendatei (Bild, Audio, Text, etc.) wurde gefunden.</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">Beim Import ist ein unerwarteter Fehler aufgetreten. Folgende Angaben wurden gemacht:</string>
     <string name="ext__validation__enter_package_name">Bitte gib einen Paketnamen ein</string>
     <string name="ext__validation__error_package_name">Paketname stimmt nicht mit Regex {id_regex} überein</string>
@@ -694,7 +650,6 @@
     <string name="ext__addon_management_box__go_to_page">Gehe zu {ext_home_title}</string>
     <string name="ext__home__info">Erweiterungen können über den FlorisBoard Add-on Store heruntergeladen und installiert werden oder importiere beliebige Erweiterungen aus dem Internet.</string>
     <string name="ext__home__visit_store">Besuche den Add-ons Store</string>
-    <string name="ext__home__manage_extensions">Installierte Erweiterungen verwalten</string>
     <string name="ext__list__view_details">Details anzeigen</string>
     <string name="ext__check_updates__title">Auf Updates prüfen</string>
     <!-- Action strings -->
@@ -714,25 +669,17 @@
     <string name="action__discard_confirm_message">Bist du sicher, dass du deine ungespeicherten Änderungen verwerfen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.</string>
     <string name="action__edit">Bearbeiten</string>
     <string name="action__export">Exportieren</string>
-    <string name="action__export_file">Datei importieren</string>
-    <string name="action__export_files">Dateien importieren</string>
     <string name="action__import">Importieren</string>
     <string name="action__import_file">Datei importieren</string>
-    <string name="action__import_files">Dateien importieren</string>
     <string name="action__no">Nein</string>
     <string name="action__ok">Okay</string>
     <string name="action__restore">Wiederherstellen</string>
     <string name="action__save">Speichern</string>
-    <string name="action__select">Auswählen</string>
-    <string name="action__select_dir">Verzeichnis auswählen</string>
-    <string name="action__select_dirs">Verzeichnisse auswählen</string>
     <string name="action__select_file">Datei auswählen</string>
     <string name="action__select_files">Dateien auswählen</string>
     <string name="action__yes">Ja</string>
     <!-- Error strings (generic) -->
     <string name="error__title">Fehler</string>
-    <string name="error__details">Details</string>
-    <string name="error__invalid">Ungültig</string>
     <string name="error__snackbar_message">Etwas ist schief gelaufen</string>
     <string name="error__snackbar_message_template">Etwas ist schief gelaufen: {error_message}</string>
     <!-- General strings -->
@@ -749,9 +696,6 @@
     <string name="screen_orientation__horizontal">Horizontal</string>
     <!-- State strings -->
     <string name="state__disabled">Deaktiviert</string>
-    <string name="state__enabled">Aktiviert</string>
-    <string name="state__no_dir_selected">Kein Verzeichnis ausgewählt</string>
-    <string name="state__no_dirs_selected">Keine Verzeichnisse ausgewählt</string>
     <string name="state__no_file_selected">Keine Datei ausgewählt</string>
     <string name="state__no_files_selected">Keine Dateien ausgewählt</string>
     <!-- Enum label and description strings -->
@@ -787,11 +731,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} Mittlere Hautfarbe</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} Mittel dunkle Hautfarbe</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} Dunkle Hautfarbe</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} Standard Frisur</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} Rote Haare</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} Lockige Haare</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} Weiße Haare</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} Glatze</string>
     <string name="enum__emoji_suggestion_type__leading_colon">Führender Doppelpunkt</string>
     <string name="enum__emoji_suggestion_type__leading_colon__description" comment="Keep the :emoji_name while translating, this is a syntax guide">Emojis mit der Syntax :emoji_name vorschlagen</string>
     <string name="enum__emoji_suggestion_type__inline_text">Eingebetteter Text</string>
@@ -892,10 +831,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">Dynamisch: Zu Emojis / Sprache wechseln</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} Stunde</item>
-        <item quantity="other">{v} Stunden</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} Minute</item>
         <item quantity="other">{v} Minuten</item>

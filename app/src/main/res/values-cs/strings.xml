@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Pauza</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Počkat</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Tří-tečková ikona. Pokud je viditelná, tak se po delším podržení nabídne více písmen.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Ukončit režim jedné ruky.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Posunout klávesnici doleva.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Posunout klávesnici doprava.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Emotikony</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Emotikony</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Emotikony</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoji</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Preferovaná barva pokožky emotikonů</string>
     <string name="prefs__media__emoji_preferred_hair_style">Preferovaný styl vlasů emotikonů</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Historie emotikonů</string>
@@ -34,15 +27,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">Minimální délka textu</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">Maximální počet kandidátů</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Smajlíky a emotikony</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Lidé a tělo</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Zvířata a příroda</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Jídlo a pití</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Cestování a místa</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Aktivity</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Předměty</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Symboly</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Vlajky</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">Nenalezeny žádné nedávno použité emotikony. Jakmile je začnete psát, objeví se automaticky zde.</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">Pro přístup k historii emotikonů nejprve prosím odemkněte své zařízení.</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">Tip: dlouze stiskněte emotikony v historii emotikonů pro jejich připnutí nebo odstranění!</string>
@@ -87,7 +71,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Anonymní</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Přepnout anonymní režim</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Auto-oprava</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">Přepnout automatickou opravu</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Hlas. vstup</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Otevřít poskytovatele hlasového zadávání</string>
     <string name="quick_action__floating_window_mode" comment="Please mind the limited available space for the quick action strings">Plovoucí</string>
@@ -112,8 +95,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Nastavení</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Vyzkoušejte své nastavení</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Nápověda</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Výchozí</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">Výchozí nastavení systému</string>
     <string name="settings__home__title" comment="Title of the Home screen">Vítejte ve {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">FlorisBoard není povolena v systému a proto nemůže být použita jako metoda zadávání. Klikněte sem pro vyřešení tohoto problému.</string>
@@ -151,8 +132,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Zdá se, že jste nenakonfigurovali žádné podtypy. Jako fallback bude použit podtyp angličtina/QWERTY!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">Tento podtyp již existuje!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">Minimálně jedno pole nemá vybranou hodnotu. Vyberte ji prosím.</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (nenainstalováno)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Rozložení</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">Potvrzení odstranění</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">Opravdu chcete odstranit tento podtyp?</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Motiv</string>
@@ -163,10 +142,6 @@
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Noční motiv</string>
     <string name="pref__theme__theme_accent_color__label" comment="Label of accent color preference in Theme">        Dynamická barva (motivy Material You)
     </string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Spravovat nainstalované motivy</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">Podklady aplikace FlorisBoard</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Interní úložiště</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Externí poskytovatel</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Vyberte denní motiv</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Vyberte noční motiv</string>
     <string name="settings__theme_editor__fine_tune__title">Jemné doladění editoru</string>
@@ -179,7 +154,6 @@
     <string name="settings__theme_editor__rule_already_exists">Pravidlo této tabulky stylů je již definováno.</string>
     <string name="settings__theme_editor__rule_name">Prvek / anotace</string>
     <string name="settings__theme_editor__rule_codes">Kódy cílových kláves</string>
-    <string name="settings__theme_editor__rule_groups">Skupiny</string>
     <string name="settings__theme_editor__rule_modes">Cílové režimy (vrstvy)</string>
     <string name="settings__theme_editor__rule_shift_states">Cílové stavy Shiftu</string>
     <string name="settings__theme_editor__rule_selectors">Selektory</string>
@@ -202,11 +176,9 @@
     <string name="settings__theme_editor__property_name">Název vlastnosti</string>
     <string name="settings__theme_editor__property_value">Hodnota vlastnosti</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">Použít pro všechny rohy</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">Upravit řetězec barvy</string>
     <string name="settings__theme_editor__file_selector_dialog_title">Vybrat soubor</string>
     <string name="settings__theme_editor__file_selector_no_files_text">Do tohoto rozšíření zatím nebyly vybrány žádné soubory. Pro importování souborů prosím použijte akci „{action_title}“ na předchozí obrazovce.</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">Noční motiv</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">Bez okrajů</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">Cesta tabulky stylů</string>
     <string name="settings__theme_editor__component_meta_material_you__title">Material You</string>
     <string name="settings__theme_editor__stylesheet_error_title">Chyba stylů</string>
@@ -532,11 +504,6 @@
     <string name="pref__other__show_app_icon__summary_atleast_q" comment="Summary of Show app icon preference in Other for Android 10+">Vždy povoleno v systému Android 10+ kvůli systémovým omezením</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">O aplikaci</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">Ikona aplikace FlorisBoard</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Open source licence</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Soukromí</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Zdrojový kód</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Open-source licence</string>
     <string name="about__version__title" comment="Preference title">Verze</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Verze zkopírována do schránky</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">Něco se pokazilo: {error_message}</string>
@@ -549,7 +516,6 @@
     <string name="about__project_license__title" comment="Preference title">Licence projektu</string>
     <string name="about__project_license__summary" comment="Preference summary">FlorisBoard je licencován pod {license_name}</string>
     <string name="about__project_license__error_license_text_failed" comment="Error text for license text loading failure">Chyba: Nepodařilo se načíst text licence.\n-&gt; Důvod: {error_message}</string>
-    <string name="about__project_license__error_reason_asset_manager_null" comment="Error text if asset manager is null">Reference správce podkladů je null</string>
     <string name="about__third_party_licenses__title" comment="Preference title">Licence třetích stran</string>
     <string name="about__third_party_licenses__summary" comment="Preference summary">Licence knihoven třetích stran zahrnutých v této aplikaci</string>
     <!-- Setup UI strings -->
@@ -590,7 +556,6 @@
     <string name="backup_and_restore__back_up__files">Vyberte, co chcete zálohovat</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">Předvolby</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">Rozšíření klávesnice</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">Rozšíření kontroly pravopisu / slovníky</string>
     <string name="backup_and_restore__back_up__files_ime_theme">Rozšíření témat</string>
     <string name="backup_and_restore__back_up__files_clipboard_history">Historie schránky</string>
     <string name="backup_and_restore__back_up__files_clipboard_history__clipboard_text_items">Textové položky</string>
@@ -638,16 +603,12 @@
     <string name="clipboard__item_description_email">E-mail</string>
     <string name="clipboard__item_description_url">URL</string>
     <string name="clipboard__item_description_phone">Telefon</string>
-    <string name="clip__clear_history">Smazat historii</string>
     <string name="clip__unpin_item">Odepnout položku</string>
     <string name="clip__pin_item">Připnout položku</string>
     <string name="clip__delete_item">Odstranit</string>
     <string name="clip__paste_item">Vložit</string>
-    <string name="clip__back_to_text_input">Zpět na zadávání textu</string>
-    <string name="clip__cant_paste">Tato aplikace neumožňuje vkládání daného obsahu.</string>
     <string name="clipboard__cleared_primary_clip">Primární zkopírovaná položka vymazána</string>
     <string name="clipboard__cleared_history">Historie vymazána</string>
-    <string name="clipboard__cleared_full_history">Celá historie vymazána</string>
     <string name="clipboard__confirm_clear_unfiltered_history__message">Opravdu chcete vymazat celou vaší historii schránky? Toto ovlivní všechny položky, kromě připnutých.</string>
     <string name="clipboard__confirm_clear_filtered_history__message">Opravdu chcete vymazat vaší historii schránky? Toto ovlivní všechny aktuálně vyfiltrované položky, kromě připnutých.</string>
     <string name="settings__clipboard__title">Schránka</string>
@@ -725,7 +686,6 @@
     <string name="ext__list__ext_keyboard">Rozšíření klávesnice</string>
     <string name="ext__list__ext_languagepack">Rozšíření jazykových balíčků</string>
     <string name="ext__meta__authors">Autoři</string>
-    <string name="ext__meta__components">Zabalené komponenty</string>
     <string name="ext__meta__components_theme">Zabalená témata</string>
     <string name="ext__meta__components_language_pack">Přibalené jazykové balíčky</string>
     <string name="ext__meta__components_none_found">Tento archiv rozšíření neobsahuje žádné zabalené komponenty.</string>
@@ -760,7 +720,6 @@
     <string name="ext__editor__create_component__from_empty">Prázdné</string>
     <string name="ext__editor__create_component__from_existing">Z existujících</string>
     <string name="ext__editor__create_component__from_empty_warning">Vytváření a konfigurace prázdné komponenty může být těžká, pokud jste novým uživatelem {app_name} nebo nejste obeznámeni se specifickými věcmi. Pokud tomu tak je, zkuste zkopírovat existující komponentu a upravit ji podle vašich představ.</string>
-    <string name="ext__editor__edit_component__title">Upravit komponentu</string>
     <string name="ext__editor__edit_component__title_theme">Upravit komponentu tématu</string>
     <string name="ext__export__success">Rozšíření úspěšně exportováno!</string>
     <string name="ext__export__failure">Nepodařilo se exportovat rozšíření: {error_message}</string>
@@ -774,9 +733,6 @@
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">Nepodporovaný nebo nerozeznaný typ souboru.</string>
     <string name="ext__import__file_skip_ext_core" comment="Reason string when ext has core extension ID">Nepodařilo se nahradit nebo aktualizovat výchozí balíčky rozšíření poskytované v základních zdrojích aplikace. Zvažte aktualizaci samotné aplikace, pokud chcete použít novější verzi základního balíčku rozšíření.</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">Vypadá to, že soubor je archiv rozšíření, ale zpracování dat z archivu se nezdařilo. Buď je archiv poškozen, nebo tento soubor vůbec není rozšíření.</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">Byl očekáván archiv rozšíření sériového typu \"{expected_serial_type}\", ale byl obdržen \"{actual_serial_type}\".</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">Byl očekáván soubor médií (obrázek, zvuk, písmo atd.), ale byl nalezen archiv rozšíření.</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">Byl očekáván archiv rozšíření, ale byl nalezen soubor médií (obrázek, zvuk, písmo atd.).</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">Při importování se vyskytla chyba. Byly poskytnuty následující podrobnosti:</string>
     <string name="ext__validation__enter_package_name">Zadejtze prosím název balíčku</string>
     <string name="ext__validation__error_package_name">Název balíčku neodpovídá regexu {id_regex}</string>
@@ -808,7 +764,6 @@
     <string name="ext__addon_management_box__go_to_page">Přejít na {ext_home_title}</string>
     <string name="ext__home__info">Rozšíření můžete stahovat a instalovat z Obchodu s doplňky FlorisBoard nebo importovat jakýkoli soubor rozšíření, který jste si stáhli z internetu.</string>
     <string name="ext__home__visit_store">Navštívit Obchod s doplňky</string>
-    <string name="ext__home__manage_extensions">Správa nainstalovaných doplňků</string>
     <string name="ext__list__view_details">Zobrazit podrobnosti</string>
     <string name="ext__check_updates__title">Zkontrolovat aktualizace</string>
     <!-- Action strings -->
@@ -829,26 +784,17 @@
     <string name="action__discard_confirm_message">Opravdu chcete zahodit všechny neuložené změny? Tuto operaci nelze po provedení vrátit zpět.</string>
     <string name="action__edit">Upravit</string>
     <string name="action__export">Exportovat</string>
-    <string name="action__export_file">Importovat soubor</string>
-    <string name="action__export_files">Importovat soubory</string>
     <string name="action__import">Importovat</string>
     <string name="action__import_file">Importovat soubor</string>
-    <string name="action__import_files">Importovat soubory</string>
     <string name="action__no">Ne</string>
     <string name="action__ok">OK</string>
-    <string name="action__done">Hotovo</string>
     <string name="action__restore">Obnovit</string>
     <string name="action__save">Uložit</string>
-    <string name="action__select">Vybrat</string>
-    <string name="action__select_dir">Vybrat složku</string>
-    <string name="action__select_dirs">Vybrat složky</string>
     <string name="action__select_file">Vybrat soubor</string>
     <string name="action__select_files">Vybrat soubory</string>
     <string name="action__yes">Ano</string>
     <!-- Error strings (generic) -->
     <string name="error__title">Chyba</string>
-    <string name="error__details">Podrobnosti</string>
-    <string name="error__invalid">Neplatné</string>
     <string name="error__snackbar_message">Něco se pokazilo</string>
     <string name="error__snackbar_message_template">Něco se pokazilo: {error_message}</string>
     <!-- General strings -->
@@ -866,9 +812,6 @@
     <string name="screen_orientation__horizontal">Horizontálně</string>
     <!-- State strings -->
     <string name="state__disabled">Vypnuto</string>
-    <string name="state__enabled">Povoleno</string>
-    <string name="state__no_dir_selected">Nebyla vybrána žádná složka</string>
-    <string name="state__no_dirs_selected">Nebyly vybrány žádné složky</string>
     <string name="state__no_file_selected">Nebyl vybrán žádný soubor</string>
     <string name="state__no_files_selected">Nebyly vybrány žádné soubory</string>
     <!-- Enum label and description strings -->
@@ -912,11 +855,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} Střední barva pleti</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} Středně tmavá barva pleti</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} Tmavá barva pleti</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} Výchozí vlasy</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} Červené vlasy</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} Kurdnaté vlasy</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} Bílé vlasy</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} Pleš</string>
     <string name="enum__emoji_suggestion_type__leading_colon">Počáteční dvojtečka</string>
     <string name="enum__emoji_suggestion_type__leading_colon__description" comment="Keep the :emoji_name while translating, this is a syntax guide">Navrhovat emotikony pomocí syntaxe :emoji_name</string>
     <string name="enum__emoji_suggestion_type__inline_text">Text v řádku</string>
@@ -1027,12 +965,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">Dynamicky: Přepnout na emoji / Přepnout jazyk</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} hodina</item>
-        <item quantity="few">{v} hodiny</item>
-        <item quantity="many">{v} hodin</item>
-        <item quantity="other">{v} hodin</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} minuta</item>
         <item quantity="few">{v} minuty</item>

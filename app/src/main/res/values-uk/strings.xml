@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Пауза</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Зачекайте</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Значок трикрапки. Якщо видно, означає, що при довшому натисканні можна використати більше літер.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Приховати режим для однієї руки.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Перемістити клавіатуру вліво.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Перемістити клавіатуру вправо.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Емоджі</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Емоджі</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Смайлики</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Каомоджі</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Бажаний відтінок шкіри емоджі</string>
     <string name="prefs__media__emoji_preferred_hair_style">Бажана зачіска емоджі</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Історія емоджі</string>
@@ -34,15 +27,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">Мінімальна довжина запиту</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">Максимальна кількість пропозицій</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Смайли &amp; Емоції</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Люди &amp; Тіло</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Тварини &amp; Природа</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Їжа &amp; Напої</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Подорож &amp; Місця</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Дії</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Об\'єкти</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Символи</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Прапори</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">Нещодавно використані емоджі не знайдено. Як тільки ви почнете вводити їх, вони автоматично з\'являться тут.</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">Щоб отримати доступ до історії емоджі, спочатку розблокуйте свій пристрій.</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">Порада: Натисніть і утримуйте емоджі в історії емоджі, щоб закріпити або видалити їх!</string>
@@ -84,7 +68,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Інкогніто</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Увімкнути режим інкогніто</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Автокорекція</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">Увімкнути автовиправлення</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Голос. Набір</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Відкрити постачальника голосового введення</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">Однією рукою</string>
@@ -105,8 +88,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Налаштування</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Випробуйте ваші налаштування</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Довідка</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">За замовчуванням</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">Системний за замовчуванням</string>
     <string name="settings__home__title" comment="Title of the Home screen">Ласкаво просимо до {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">FlorisBoard не ввімкнено в системі, тому він не буде доступним як метод вводу в меню вибору методу вводу. Натисніть сюди, щоб виправити це.</string>
@@ -143,8 +124,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Здається, ви не налаштували ні один підтип. Як запасний варіант буде використано підтип English/QWERTY!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">Цей підтип вже існує!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">Принаймні одне поле не має вибраного значення. Виберіть значення для поля або полів.</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (не встановлено)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Розкладки</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">Підтвердження видалення</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">Ви впевнені, що хочете видалити цей підтип?</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Тема</string>
@@ -153,10 +132,6 @@
     <string name="pref__theme__sunset_time__label" comment="Label of the sunset time preference">Час заходу</string>
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">Денна тема</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Нічна тема</string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Керування встановленими темами</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">Ресурси FlorisBoard</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Внутрішня пам\'ять</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Зовнішнє джерело</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Виберіть денну тему</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Виберіть нічну тему</string>
     <string name="settings__theme_editor__fine_tune__title">Налаштування редактора тем</string>
@@ -167,7 +142,6 @@
     <string name="settings__theme_editor__no_rules_defined">Ця таблиця стилів не має визначених правил. Додайте правило, щоб розпочати налаштування цієї таблиці стилів.</string>
     <string name="settings__theme_editor__rule_already_exists">Це правило таблиці стилів уже визначено.</string>
     <string name="settings__theme_editor__rule_codes">Цільові коди клавіш</string>
-    <string name="settings__theme_editor__rule_groups">Групи</string>
     <string name="settings__theme_editor__rule_selectors">Перемикачі</string>
     <string name="settings__theme_editor__add_code">Додати код клавіш</string>
     <string name="settings__theme_editor__edit_code">Змінити код клавіш</string>
@@ -187,9 +161,7 @@
     <string name="settings__theme_editor__property_name">Назва властивості</string>
     <string name="settings__theme_editor__property_value">Значення властивості</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">Застосувати для всіх</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">Редагувати колір рядка</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">Це Нічна тема</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">Без контуру</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">Шлях таблиці стилів</string>
     <string name="snygg__rule_element__key">Клавіша</string>
     <string name="snygg__rule_element__key_hint">Підказка клавіші</string>
@@ -416,11 +388,6 @@
     <string name="pref__other__show_app_icon__summary_atleast_q" comment="Summary of Show app icon preference in Other for Android 10+">Завжди ввімкнено на Android 10+ через обмеження системи</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">Про додаток</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">Значок програми FlorisBoard</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Ліцензії відкритого ПЗ</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Політика конфіденційності</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Вихідний код</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Ліцензії ПЗ з відкритим кодом</string>
     <string name="about__version__title" comment="Preference title">Версія</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Версію скопійовано до буфера обміну</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">Щось пішло не так: {error_message}</string>
@@ -433,7 +400,6 @@
     <string name="about__project_license__title" comment="Preference title">Ліцензія проєкту</string>
     <string name="about__project_license__summary" comment="Preference summary">FlorisBoard має ліцензію {license_name}</string>
     <string name="about__project_license__error_license_text_failed" comment="Error text for license text loading failure">Помилка: Не вдалося завантажити текст ліцензії.\n-&gt; Причина: {error_message}</string>
-    <string name="about__project_license__error_reason_asset_manager_null" comment="Error text if asset manager is null">Посилання на менеджера активами відсутнє</string>
     <string name="about__third_party_licenses__title" comment="Preference title">Ліцензії третіх сторін</string>
     <string name="about__third_party_licenses__summary" comment="Preference summary">Ліцензії сторонніх бібліотек, включених до цього застосунку</string>
     <!-- Setup UI strings -->
@@ -468,7 +434,6 @@
     <string name="backup_and_restore__back_up__files">Виберіть, що зберегти в резервну копію</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">Параметри</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">Розширення клавіатури</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">Орфографічні розширення / словники</string>
     <string name="backup_and_restore__back_up__files_ime_theme">Розширення тем</string>
     <string name="backup_and_restore__back_up__files_clipboard_history">Історія буфера обміну</string>
     <string name="backup_and_restore__back_up__files_clipboard_history__clipboard_text_items">Текстові елементи</string>
@@ -516,16 +481,12 @@
     <string name="clipboard__item_description_email">Пошта</string>
     <string name="clipboard__item_description_url">Посилання</string>
     <string name="clipboard__item_description_phone">Телефон</string>
-    <string name="clip__clear_history">Очистити історію</string>
     <string name="clip__unpin_item">Відкріпити</string>
     <string name="clip__pin_item">Закріпити</string>
     <string name="clip__delete_item">Видалити</string>
     <string name="clip__paste_item">Вставити</string>
-    <string name="clip__back_to_text_input">Повернутися до вводу тексту</string>
-    <string name="clip__cant_paste">Цей додаток не дозволяє вставляти такі дані.</string>
     <string name="clipboard__cleared_primary_clip">Основний запис очищено</string>
     <string name="clipboard__cleared_history">Очищена історія</string>
-    <string name="clipboard__cleared_full_history">Очищена повна історія</string>
     <string name="settings__clipboard__title">Буфер обміну</string>
     <string name="pref__clipboard__use_internal_clipboard__label">Використовувати внутрішній буфер обміну</string>
     <string name="pref__clipboard__use_internal_clipboard__summary">Використовувати внутрішній буфер обміну замість системного</string>
@@ -586,7 +547,6 @@
     <string name="ext__list__ext_keyboard">Розширення клавіатури</string>
     <string name="ext__list__ext_languagepack">Розширення мовних пакетів</string>
     <string name="ext__meta__authors">Автори</string>
-    <string name="ext__meta__components">Вбудовані компоненти</string>
     <string name="ext__meta__components_theme">Вбудовані теми</string>
     <string name="ext__meta__components_language_pack">Вбудовані мовні пакети</string>
     <string name="ext__meta__components_none_found">Цей архів розширення не містить жодних комплектних компонентів.</string>
@@ -619,7 +579,6 @@
     <string name="ext__editor__create_component__from_empty">Пусто</string>
     <string name="ext__editor__create_component__from_existing">З існуючих</string>
     <string name="ext__editor__create_component__from_empty_warning">Створення та налаштування порожнього компонента може бути складним, якщо ви новачок в {app_name} або якщо ви не знайомі з його специфікою. У такому випадку розгляньте можливість копіювання наявного компонента і зміни його на свій розсуд.</string>
-    <string name="ext__editor__edit_component__title">Редагувати компонент</string>
     <string name="ext__editor__edit_component__title_theme">Редагувати компонент теми</string>
     <string name="ext__export__success">Розширення успішно еспортовано!</string>
     <string name="ext__export__failure">Не вдалося експортувати розширення: {error_message}</string>
@@ -633,9 +592,6 @@
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">Непідтримуваний або нерозпізнаний тип файлу.</string>
     <string name="ext__import__file_skip_ext_core" comment="Reason string when ext has core extension ID">Неможливо замінити або оновити стандартні пакети розширень, що постачаються з основними ресурсами застосунку. Подумайте про оновлення самого застосунку, якщо ви маєте намір використовувати новішу версію базового пакета розширень.</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">Файл виглядає як архів з розширенням, але розбір даних архіву завершився невдачею. Або архів пошкоджено, або цей файл не має розширення.</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">Очікувався архів розширення з серійним типом «{expected_serial_type}», а отримано «{actual_serial_type}».</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">Очікувався медіафайл (зображення, аудіо, шрифт тощо), а знайдено архів з розширенням.</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">Очікувався архів з розширенням, а знайшовся медіафайл (зображення, аудіо, шрифт тощо).</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">Під час імпорту виникла неочікувана помилка. Були надані наступні дані:</string>
     <string name="ext__validation__enter_package_name">Введіть назву пакета</string>
     <string name="ext__validation__error_package_name">Назва пакунка не відповідає regex {id_regex}</string>
@@ -667,7 +623,6 @@
     <string name="ext__addon_management_box__go_to_page">Перейти до {ext_home_title}</string>
     <string name="ext__home__info">Ви можете завантажити і встановити розширення з магазину розширень FlorisBoard або імпортувати будь-який файл розширення, який ви завантажили з мережі.</string>
     <string name="ext__home__visit_store">Відвідати магазин розширень</string>
-    <string name="ext__home__manage_extensions">Керування встановленими розширеннями</string>
     <string name="ext__list__view_details">Докладніше</string>
     <string name="ext__check_updates__title">Перевірити оновлення</string>
     <!-- Action strings -->
@@ -692,16 +647,11 @@
     <string name="action__ok">ГАРАЗД</string>
     <string name="action__restore">Відновити</string>
     <string name="action__save">Зберегти</string>
-    <string name="action__select">Вибрати</string>
-    <string name="action__select_dir">Вибрати теку</string>
-    <string name="action__select_dirs">Вибрати теки</string>
     <string name="action__select_file">Вибрати файл</string>
     <string name="action__select_files">Вибрати файли</string>
     <string name="action__yes">Так</string>
     <!-- Error strings (generic) -->
     <string name="error__title">Помилка</string>
-    <string name="error__details">Подробиці</string>
-    <string name="error__invalid">Недійсний</string>
     <string name="error__snackbar_message">Щось пішло не так</string>
     <string name="error__snackbar_message_template">Щось пішло не так: {error_message}</string>
     <!-- General strings -->
@@ -716,9 +666,6 @@
     <string name="screen_orientation__horizontal">Горизонтальна</string>
     <!-- State strings -->
     <string name="state__disabled">Вимкнено</string>
-    <string name="state__enabled">Ввімкнено</string>
-    <string name="state__no_dir_selected">Теку не вибрано</string>
-    <string name="state__no_dirs_selected">Теки не вибрано</string>
     <string name="state__no_file_selected">Файл не вибрано</string>
     <string name="state__no_files_selected">Файлів не вибрано</string>
     <!-- Enum label and description strings -->
@@ -751,11 +698,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} Середній тон шкіри</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} Середній темний тон шкіри</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} Темний тон шкіри</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">Стандартне волосся {emoji}</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">Червоне волосся {emoji}</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} Кучеряве волосся</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">Біле волосся {emoji}</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">Лисий {emoji}</string>
     <string name="enum__emoji_suggestion_type__leading_colon">Початкова двокрапка</string>
     <string name="enum__emoji_suggestion_type__leading_colon__description" comment="Keep the :emoji_name while translating, this is a syntax guide">Пропозиція емоджі за допомогою синтаксису «:назва_емоджі»</string>
     <string name="enum__emoji_suggestion_type__inline_text">Вбудований текст</string>
@@ -856,12 +798,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">Динамічне: Перемикнутись на емоджі / Змінити мову</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} година</item>
-        <item quantity="few">{v} години</item>
-        <item quantity="many">{v} годин</item>
-        <item quantity="other">{v} годин</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} хвилина</item>
         <item quantity="few">{v} хвилини</item>
