@@ -354,7 +354,7 @@ private suspend fun closeThemeEditorWorkspaceLocked(
             themeManager.previewThemeInfo.value = null
         }
     }
-    val nextActiveThemeInfo = themeManager.activeThemeInfo.value
+    val nextActiveThemeInfo = themeManager.activeTheme.value.info
     check(
         nextActiveThemeInfo.loadedDir != workspace.extDir &&
             nextActiveThemeInfo.materialization !== workspace.previewMaterialization,

@@ -38,14 +38,11 @@ import androidx.compose.ui.graphics.DefaultShadowColor
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFontFamilyResolver
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.takeOrElse
 import com.materialkolor.dynamicColorScheme
-import kotlinx.coroutines.runBlocking
 import org.florisboard.lib.color.MaterialYouFlags
 import org.florisboard.lib.color.systemAccentOrDefault
 import org.florisboard.lib.snygg.CompiledFontFamilyData
@@ -109,6 +106,7 @@ internal val LocalSnyggParentSelector: ProvidableCompositionLocal<SnyggSelector>
  * Creates a [SnyggTheme] that is remembered across compositions.
  *
  * When the stylesheet changes the [SnyggTheme] is recompiled.
+ * This is synchronous; file-font themes should be compiled and preloaded before composition.
  *
  * @param stylesheet [SnyggStylesheet] the [SnyggTheme] is compiled from
  * @param assetResolver The [SnyggAssetResolver] used to resolve [an asset Uri][org.florisboard.lib.snygg.value.SnyggUriValue]
@@ -169,18 +167,6 @@ fun ProvideSnyggTheme(
         specVersion = specVersion
     )
 
-    val resolver = LocalFontFamilyResolver.current
-    val customFontFamilies = remember(snyggTheme) {
-        runBlocking {
-            snyggTheme.fontFamilies.mapValues { (_, fontFamily) ->
-                runCatching { resolver.preload(fontFamily) }.fold(
-                    onSuccess = { fontFamily },
-                    onFailure = { FontFamily.Default },
-                )
-            }
-        }
-    }
-
     val initFontSize = MaterialTheme.typography.bodyMedium.fontSize
     val initParentStyle = remember(initFontSize) {
         SnyggSinglePropertySetEditor().run {
@@ -195,7 +181,7 @@ fun ProvideSnyggTheme(
         LocalSnyggDynamicDarkColorScheme provides darkScheme,
         LocalSnyggFontSizeMultiplier provides fontSizeMultiplier,
         LocalSnyggAssetResolver provides assetResolver,
-        LocalSnyggPreloadedCustomFontFamilies provides customFontFamilies,
+        LocalSnyggPreloadedCustomFontFamilies provides snyggTheme.fontFamilies,
         LocalSnyggParentStyle provides initParentStyle,
     ) {
         ProvideSnyggStyle("root", rootAttributes, SnyggSelector.NONE) {

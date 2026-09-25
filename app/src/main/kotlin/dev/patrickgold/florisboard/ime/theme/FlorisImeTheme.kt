@@ -33,7 +33,6 @@ import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.themeManager
 import dev.patrickgold.jetpref.datastore.model.collectAsState
 import org.florisboard.lib.snygg.ui.ProvideSnyggTheme
-import org.florisboard.lib.snygg.ui.rememberSnyggTheme
 
 internal class ThemeMaterializationLeaseHolder(
     materialization: ThemeMaterialization?,
@@ -63,7 +62,8 @@ fun FlorisImeTheme(content: @Composable () -> Unit) {
     val prefs by FlorisPreferenceStore
     val accentColor by prefs.theme.accentColor.collectAsState()
 
-    val activeThemeInfo by themeManager.activeThemeInfo.collectAsState()
+    val activeTheme by themeManager.activeTheme.collectAsState()
+    val activeThemeInfo = activeTheme.info
 
     val materializationLeaseHolder = remember(activeThemeInfo.materialization) {
         ThemeMaterializationLeaseHolder(activeThemeInfo.materialization)
@@ -76,7 +76,6 @@ fun FlorisImeTheme(content: @Composable () -> Unit) {
     val assetResolver = remember(loadedDir) {
         FlorisAssetResolver(loadedDir)
     }
-    val snyggTheme = rememberSnyggTheme(activeThemeInfo.stylesheet, assetResolver)
     val windowSpec by windowController.activeWindowSpec.collectAsState()
     val fontScale by remember { derivedStateOf { windowSpec.fontScale } }
 
@@ -91,7 +90,7 @@ fun FlorisImeTheme(content: @Composable () -> Unit) {
             LocalTextStyle provides TextStyle.Default,
         ) {
             ProvideSnyggTheme(
-                snyggTheme = snyggTheme,
+                snyggTheme = activeTheme.snyggTheme,
                 dynamicAccentColor = accentColor,
                 fontSizeMultiplier = fontScale,
                 assetResolver = assetResolver,

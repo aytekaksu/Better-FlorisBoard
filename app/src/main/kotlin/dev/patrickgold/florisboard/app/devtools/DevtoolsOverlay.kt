@@ -74,7 +74,7 @@ fun DevtoolsOverlay(modifier: Modifier = Modifier) {
         appContext.preferenceStoreInitializationState.collectAsState()
 
     val debugLayoutResult by keyboardManager.layoutManager.debugLayoutComputationResultFlow.collectAsState()
-    val themeInfo by themeManager.activeThemeInfo.collectAsState()
+    val activeTheme by themeManager.activeTheme.collectAsState()
 
     CompositionLocalProvider(
         LocalContentColor provides Color.White,
@@ -95,7 +95,7 @@ fun DevtoolsOverlay(modifier: Modifier = Modifier) {
             if (devtoolsEnabled && showInlineAutofillOverlay && AndroidVersion.ATLEAST_API30_R) {
                 DevtoolsInlineAutofillOverlay()
             }
-            val loadFailure = themeInfo.loadFailure
+            val loadFailure = activeTheme.info.loadFailure
             if (
                 loadFailure != null &&
                 preferenceStoreInitializationState == PreferenceStoreInitializationState.READY

@@ -110,6 +110,11 @@ Theme assets use a two-entry materialization cache. The manager and every
 Compose consumer hold explicit leases, including editor previews. Retirement
 waits for the last consumer before deleting assets, and abandoned compositions
 release their lease.
+Theme styles and file fonts compile off the Compose thread before an installed
+theme is published. Editor previews hold a separate asset lease while compiling;
+obsolete work is cancelled or discarded, and the current theme stays visible
+until its replacement is ready. A damaged font falls back without breaking
+the rest of the theme.
 
 The Han language provider serializes refresh, query, and teardown work. It
 publishes only packs whose read-only database opened successfully, unloads
@@ -145,5 +150,10 @@ device tests:
   -Pandroid.testInstrumentationRunnerArguments.class=\
 dev.patrickgold.florisboard.lib.cache.CacheManagerAndroidTest,\
 dev.patrickgold.florisboard.lib.ext.ExtensionLifecycleAndroidTest,\
+dev.patrickgold.florisboard.ime.theme.ThemeFontCompilationAndroidTest,\
 dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaImporterAndroidTest
+
+./gradlew :lib:snygg:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=\
+org.florisboard.lib.snygg.SnyggFileFontAndroidTest
 ```

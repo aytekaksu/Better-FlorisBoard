@@ -16,11 +16,16 @@
 
 package org.florisboard.lib.snygg
 
+import android.graphics.Typeface
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 import org.florisboard.lib.color.getColor
 import org.florisboard.lib.snygg.value.SnyggAssetResolver
 import org.florisboard.lib.snygg.value.SnyggDefaultAssetResolver
@@ -33,6 +38,7 @@ import org.florisboard.lib.snygg.value.SnyggStaticColorValue
 import org.florisboard.lib.snygg.value.SnyggUndefinedValue
 import org.florisboard.lib.snygg.value.SnyggUriValue
 import java.io.File
+import java.util.concurrent.CancellationException
 
 /**
  * Pre-compiled style data for a SnyggTheme.
@@ -60,6 +66,25 @@ data class SnyggTheme internal constructor(
     internal val style: CompiledStyleData,
     internal val fontFamilies: CompiledFontFamilyData,
 ) {
+    /** Loads file fonts before text renders; failed families use the system font. */
+    suspend fun preloadFonts(resolver: FontFamily.Resolver): SnyggTheme = withContext(Dispatchers.IO) {
+        val loaded = mutableMapOf<String, FontFamily>()
+        for ((name, family) in fontFamilies) {
+            currentCoroutineContext().ensureActive()
+            loaded[name] = try {
+                resolver.preload(family)
+                family
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: InterruptedException) {
+                throw error
+            } catch (_: Exception) {
+                FontFamily.Default
+            }
+        }
+        copy(fontFamilies = loaded)
+    }
+
     internal fun query(
         elementName: String,
         attributes: SnyggQueryAttributes,
@@ -91,7 +116,8 @@ data class SnyggTheme internal constructor(
     }
 
     companion object {
-        internal fun compileFrom(
+        /** Compiles styles and resolves font paths. File fonts still need [preloadFonts] before display. */
+        fun compileFrom(
             stylesheet: SnyggStylesheet,
             assetResolver: SnyggAssetResolver = SnyggDefaultAssetResolver,
         ): SnyggTheme {
@@ -114,13 +140,24 @@ data class SnyggTheme internal constructor(
                             if (fontPath == null) return@forEach
                             val fontStyle = (fontSet.fontStyle as? SnyggFontStyleValue)?.fontStyle
                             val fontWeight = (fontSet.fontWeight as? SnyggFontWeightValue)?.fontWeight
-                            fontList.add(
-                                Font(
-                                    file = File(fontPath),
-                                    weight = fontWeight ?: FontWeight.Normal,
-                                    style = fontStyle ?: FontStyle.Normal,
-                                ),
-                            )
+                            try {
+                                val file = File(fontPath)
+                                // Compose can silently use a fallback for a damaged file.
+                                if (Typeface.Builder(file).build() == null) return@forEach
+                                fontList.add(
+                                    Font(
+                                        file = file,
+                                        weight = fontWeight ?: FontWeight.Normal,
+                                        style = fontStyle ?: FontStyle.Normal,
+                                    ),
+                                )
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: InterruptedException) {
+                                throw error
+                            } catch (_: Exception) {
+                                // One damaged face must not break the keyboard theme.
+                            }
                         }
                         if (fontList.isNotEmpty()) {
                             fonts.put(rule.fontName, fontList)

@@ -107,6 +107,7 @@ configure<ApplicationExtension> {
         sourceSets {
             maybeCreate("androidTest").apply {
                 assets.directories += "$projectDir/schemas"
+                assets.directories += "$projectDir/../fastlane/staging/fonts"
             }
         }
     }
