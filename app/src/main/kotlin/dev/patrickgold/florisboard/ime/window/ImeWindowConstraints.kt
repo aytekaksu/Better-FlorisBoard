@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.width
  * class overrides a property used in the calculation.
  *
  * All constraints for a specific property and mode + sub-mode should be designed in a way that the
- * condition `0dp >= min >= def >= max` always holds. Any potential floating point rounding errors must
+ * condition `0dp <= min <= def <= max` always holds. Any potential floating point rounding errors must
  * be handled by the calculation, e.g. by using proper coerce{AtLeast,AtMost,In} rules.
  *
  * Additionally, all of the above must be valid for all non-negative root bounds, including zero bounds.
@@ -155,10 +155,7 @@ sealed class ImeWindowConstraints(rootInsets: ImeInsets.Root) {
             when (formFactor.typeGuess) {
                 ImeFormFactor.Type.DESKTOP,
                 ImeFormFactor.Type.LARGE_TABLET -> 6.dp
-                ImeFormFactor.Type.TABLET_LANDSCAPE -> 5.dp
-                ImeFormFactor.Type.TABLET_PORTRAIT -> 5.dp
-                ImeFormFactor.Type.PHONE_LANDSCAPE -> 5.dp
-                ImeFormFactor.Type.PHONE_PORTRAIT -> 5.dp
+                else -> 5.dp
             }
         }
 
@@ -173,44 +170,24 @@ sealed class ImeWindowConstraints(rootInsets: ImeInsets.Root) {
             }
         }
 
-        abstract override val defaultProps: ImeWindowProps.Fixed
-
-        class Normal(rootInsets: ImeInsets.Root) : Fixed(rootInsets) {
-            override val defaultProps by calculation {
-                ImeWindowProps.Fixed(
-                    keyboardHeight = defKeyboardHeight,
-                    paddingLeft = 0.dp,
-                    paddingRight = 0.dp,
-                    paddingBottom = 0.dp,
-                )
-            }
+        override val defaultProps by calculation {
+            ImeWindowProps.Fixed(
+                keyboardHeight = defKeyboardHeight,
+                paddingLeft = 0.dp,
+                paddingRight = 0.dp,
+                paddingBottom = 0.dp,
+            )
         }
+
+        class Normal(rootInsets: ImeInsets.Root) : Fixed(rootInsets)
 
         class Compact(rootInsets: ImeInsets.Root) : Fixed(rootInsets) {
             override val defKeyboardHeight by calculation {
                 (super.defKeyboardHeight * 0.8f).coerceAtLeast(minKeyboardHeight)
             }
 
-            override val desiredMinPaddingHorizontal by calculation {
-                when (formFactor.typeGuess) {
-                    ImeFormFactor.Type.DESKTOP,
-                    ImeFormFactor.Type.LARGE_TABLET,
-                    ImeFormFactor.Type.TABLET_LANDSCAPE,
-                    ImeFormFactor.Type.TABLET_PORTRAIT,
-                    ImeFormFactor.Type.PHONE_LANDSCAPE,
-                    ImeFormFactor.Type.PHONE_PORTRAIT -> 50.dp
-                }
-            }
-            override val desiredDefPaddingHorizontal by calculation {
-                when (formFactor.typeGuess) {
-                    ImeFormFactor.Type.DESKTOP,
-                    ImeFormFactor.Type.LARGE_TABLET,
-                    ImeFormFactor.Type.TABLET_LANDSCAPE,
-                    ImeFormFactor.Type.TABLET_PORTRAIT,
-                    ImeFormFactor.Type.PHONE_LANDSCAPE,
-                    ImeFormFactor.Type.PHONE_PORTRAIT -> 70.dp
-                }
-            }
+            override val desiredMinPaddingHorizontal = 50.dp
+            override val desiredDefPaddingHorizontal = 70.dp
 
             override val defaultProps by calculation {
                 ImeWindowProps.Fixed(
@@ -222,16 +199,7 @@ sealed class ImeWindowConstraints(rootInsets: ImeInsets.Root) {
             }
         }
 
-        class Thumbs(rootInsets: ImeInsets.Root) : Fixed(rootInsets) {
-            override val defaultProps by calculation {
-                ImeWindowProps.Fixed(
-                    keyboardHeight = defKeyboardHeight,
-                    paddingLeft = 0.dp,
-                    paddingRight = 0.dp,
-                    paddingBottom = 0.dp,
-                )
-            }
-        }
+        class Thumbs(rootInsets: ImeInsets.Root) : Fixed(rootInsets)
     }
 
     sealed class Floating(rootInsets: ImeInsets.Root) : ImeWindowConstraints(rootInsets) {
@@ -305,22 +273,14 @@ sealed class ImeWindowConstraints(rootInsets: ImeInsets.Root) {
 
         override val defKeyMarginH by calculation {
             when (formFactor.typeGuess) {
-                ImeFormFactor.Type.DESKTOP,
-                ImeFormFactor.Type.LARGE_TABLET,
-                ImeFormFactor.Type.TABLET_LANDSCAPE -> 2.dp
-                ImeFormFactor.Type.TABLET_PORTRAIT -> 2.dp
                 ImeFormFactor.Type.PHONE_LANDSCAPE -> 1.5.dp
-                ImeFormFactor.Type.PHONE_PORTRAIT -> 2.dp
+                else -> 2.dp
             }
         }
         override val defKeyMarginV by calculation {
             when (formFactor.typeGuess) {
-                ImeFormFactor.Type.DESKTOP,
-                ImeFormFactor.Type.LARGE_TABLET,
-                ImeFormFactor.Type.TABLET_LANDSCAPE -> 5.dp
-                ImeFormFactor.Type.TABLET_PORTRAIT -> 5.dp
                 ImeFormFactor.Type.PHONE_LANDSCAPE -> 3.dp
-                ImeFormFactor.Type.PHONE_PORTRAIT -> 5.dp
+                else -> 5.dp
             }
         }
 
