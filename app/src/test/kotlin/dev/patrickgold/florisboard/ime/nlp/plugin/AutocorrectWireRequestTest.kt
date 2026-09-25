@@ -20,6 +20,7 @@ import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.editor.EditorRange
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import org.florisboard.autocorrect.api.AutocorrectCapsMode
 import org.florisboard.autocorrect.api.AutocorrectPluginContract
 
 class AutocorrectWireRequestTest : FunSpec({
@@ -98,6 +99,21 @@ class AutocorrectWireRequestTest : FunSpec({
             maxCandidateCount = 3,
             allowPossiblyOffensive = false,
         ) shouldBe null
+    }
+
+    test("wire requests retain the caps mode sampled for that request") {
+        val content = editorContent(text = "word", offset = 0, cursor = 4)
+        val wire = requireNotNull(
+            content.buildAutocorrectWireRequest(
+                sessionId = 1,
+                requestId = 2,
+                maxCandidateCount = 3,
+                allowPossiblyOffensive = false,
+                capsMode = AutocorrectCapsMode.CAPS_LOCK,
+            ),
+        )
+
+        wire.request.capsMode shouldBe AutocorrectCapsMode.CAPS_LOCK
     }
 })
 

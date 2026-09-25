@@ -67,6 +67,11 @@ field. The session records normalized language, input, caps, learning, editor,
 and emoji traits. A provider UI lease can keep the service bound without a
 typing session.
 
+The host samples immutable keyboard traits when leasing prediction hints and
+building each suggestion or final request. It does not freeze privacy or shift
+at session start: incognito changes must deny new hints, and request caps must
+reflect the current shift state.
+
 The host binds but never starts a provider service. Session starts, admitted
 callbacks, and finish work stay in wire order. Binding demand ends only after
 typing, UI/document leases, and pending finish acknowledgements have ended.

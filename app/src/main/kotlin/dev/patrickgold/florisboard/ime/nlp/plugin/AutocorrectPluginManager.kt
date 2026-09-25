@@ -56,13 +56,11 @@ import dev.patrickgold.florisboard.ime.nlp.SuggestionProvider
 import dev.patrickgold.florisboard.ime.nlp.SuggestionReplacement
 import dev.patrickgold.florisboard.ime.nlp.SuggestionSeparatorBehavior
 import dev.patrickgold.florisboard.ime.nlp.WordSuggestionCandidate
-import dev.patrickgold.florisboard.ime.input.InputShiftState
 import dev.patrickgold.florisboard.ime.keyboard.KeyData
 import dev.patrickgold.florisboard.ime.keyboard.codePointCaseAndBaseVariants
 import dev.patrickgold.florisboard.ime.keyboard.isAutocorrectTraceInput
 import dev.patrickgold.florisboard.ime.text.keyboard.AutocorrectInputLayoutSnapshot
 import dev.patrickgold.florisboard.ime.text.keyboard.isTraceCompatibleWith
-import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.lib.lowercase
 import dev.patrickgold.florisboard.lib.uppercase
 import dev.patrickgold.florisboard.subtypeManager
@@ -308,7 +306,10 @@ internal fun EditorContent.buildAutocorrectWireRequest(
  * This manager never starts a service. It binds while typing, provider UI, or ordered
  * session-finalization work needs the service and releases the binding when that demand ends.
  */
-class AutocorrectPluginManager(context: Context) : SuggestionProvider {
+class AutocorrectPluginManager internal constructor(
+    context: Context,
+    private val keyboardTraits: () -> AutocorrectKeyboardTraits,
+) : SuggestionProvider {
     companion object {
         const val ProviderId = "org.florisboard.nlp.providers.external-autocorrect"
     }
@@ -316,7 +317,6 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
     private val appContext by context.appContext()
     private val dictionaryManager by context.dictionaryManager()
     private val editorInstance by context.editorInstance()
-    private val keyboardManager by context.keyboardManager()
     private val subtypeManager by context.subtypeManager()
     private val prefs by FlorisPreferenceStore
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -639,7 +639,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
             accessibility?.isTouchExplorationEnabled != true &&
                 prefs.suggestion.enabled.get() &&
                 editorInfo.inputAttributes.allowsAutocorrectPluginSession(
-                    isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                    isPrivateSession = keyboardTraits().isPrivateSession,
                     isRawInputEditor = editorInfo.isRawInputEditor,
                 ) &&
                 session != null &&
@@ -1168,7 +1168,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                 requestId = nextId.getAndIncrement(),
                 maxCandidateCount = 1,
                 allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                capsMode = keyboardManager.activeState.inputShiftState.toAutocorrectCapsMode(),
+                capsMode = keyboardTraits().capsMode,
             ),
         ).request
     }
@@ -1335,7 +1335,7 @@ class AutocorrectPluginManager(context: Context) : SuggestionProvider {
                 maxCandidateCount = maxCandidateCount,
                 allowPossiblyOffensive = allowPossiblyOffensive,
                 inputTrace = inputTrace,
-                capsMode = keyboardManager.activeState.inputShiftState.toAutocorrectCapsMode(),
+                capsMode = keyboardTraits().capsMode,
             ) ?: run {
                 suggestionRequestCoordinator.cancelRequest(requestId)
                 return null
@@ -2723,13 +2723,6 @@ internal fun autocorrectReplacementForWireContent(
         originalText = wireContent.text.substring(range.start, range.end),
         expectedSelection = originContent.selection,
     )
-}
-
-private fun InputShiftState.toAutocorrectCapsMode() = when (this) {
-    InputShiftState.UNSHIFTED -> AutocorrectCapsMode.UNSHIFTED
-    InputShiftState.SHIFTED_MANUAL -> AutocorrectCapsMode.SHIFTED_MANUAL
-    InputShiftState.SHIFTED_AUTOMATIC -> AutocorrectCapsMode.SHIFTED_AUTOMATIC
-    InputShiftState.CAPS_LOCK -> AutocorrectCapsMode.CAPS_LOCK
 }
 
 private fun FlorisEditorInfo.autocorrectEditorFlags(): Int {
