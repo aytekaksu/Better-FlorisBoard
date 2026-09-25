@@ -17,6 +17,7 @@
 import com.diffplug.gradle.spotless.SpotlessExtension
 import dev.detekt.gradle.Detekt
 import dev.detekt.gradle.DetektCreateBaselineTask
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.agp.application) apply false
@@ -788,14 +789,48 @@ val ciStaticAnalysis by tasks.registering {
     )
 }
 
+val testPackagedPrivacyPolicy by tasks.registering(Exec::class) {
+    group = "verification"
+    description = "Tests the APK privacy check with safe and unsafe manifest fixtures."
+    inputs.files(
+        "config/quality/verify-packaged-privacy.sh",
+        "config/quality/test-verify-packaged-privacy.sh",
+    )
+    commandLine("bash", file("config/quality/test-verify-packaged-privacy.sh").absolutePath)
+}
+
+val verifyPackagedPrivacy by tasks.registering(Exec::class) {
+    group = "verification"
+    description = "Checks the minified beta APK for forbidden package capabilities."
+    dependsOn(":app:assembleBeta", testPackagedPrivacyPolicy)
+
+    val apk = layout.projectDirectory.file("app/build/outputs/apk/beta/app-beta-unsigned.apk")
+    val policy = layout.projectDirectory.file("config/quality/verify-packaged-privacy.sh")
+    inputs.file(apk)
+    inputs.file(policy)
+
+    doFirst {
+        val sdkDir = providers.environmentVariable("ANDROID_HOME")
+            .orElse(providers.environmentVariable("ANDROID_SDK_ROOT"))
+            .orNull
+            ?: file("local.properties").takeIf { it.isFile }?.inputStream()?.use { input ->
+                Properties().apply { load(input) }.getProperty("sdk.dir")
+            }
+            ?: throw GradleException("Set ANDROID_HOME or sdk.dir in local.properties to inspect the beta APK.")
+        val aapt = file("$sdkDir/build-tools/${tools.versions.buildTools.get()}/aapt")
+        commandLine("bash", policy.asFile.absolutePath, apk.asFile.absolutePath, aapt.absolutePath)
+    }
+}
+
 val ciPackage by tasks.registering {
     group = "verification"
-    description = "Builds debug, minified beta, benchmark, and autocorrect API artifacts."
+    description = "Builds artifacts and checks the beta APK's privacy invariants."
     dependsOn(
         ":app:assembleDebug",
         ":app:assembleBeta",
         ":benchmark:assembleBenchmark",
         ":lib:autocorrect-api:checkAutocorrectApi",
+        verifyPackagedPrivacy,
     )
 }
 

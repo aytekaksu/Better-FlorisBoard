@@ -7,7 +7,9 @@ Run the complete local merge gate with:
 ```
 
 The fast package lane compiles the debug app, minified beta app, benchmark APK,
-and the release autocorrect API AAR. It does not start an emulator.
+and the release autocorrect API AAR. It also checks the beta APK for INTERNET
+permission, debuggable mode, and the debug-only editor harness. These are the
+same package checks in local `qualityGate` and CI. It does not start an emulator.
 The unit-test lane also enforces the host-core Kover floors and generates XML
 and HTML coverage reports.
 
