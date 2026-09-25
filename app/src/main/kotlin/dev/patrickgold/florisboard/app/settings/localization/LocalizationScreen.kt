@@ -43,7 +43,7 @@ import dev.patrickgold.florisboard.app.enumDisplayEntriesOf
 import dev.patrickgold.florisboard.ime.core.DisplayLanguageNamesIn
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.keyboard.LayoutType
-import dev.patrickgold.florisboard.keyboardManager
+import dev.patrickgold.florisboard.keyboardExtensionRepository
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.subtypeManager
 import dev.patrickgold.jetpref.datastore.model.collectAsState
@@ -74,7 +74,7 @@ fun LocalizationScreen() = FlorisScreen {
 
     val navController = LocalNavController.current
     val context = LocalContext.current
-    val keyboardManager by context.keyboardManager()
+    val keyboardExtensionRepository by context.keyboardExtensionRepository()
     val subtypeManager by context.subtypeManager()
     var chosenSubtypeToDelete: Subtype? by rememberSaveable(saver = SubtypeSaver) { mutableStateOf(null) }
 
@@ -121,8 +121,9 @@ fun LocalizationScreen() = FlorisScreen {
                     text = stringRes(R.string.settings__localization__subtype_no_subtypes_configured_warning),
                 )
             } else {
-                val currencySets by keyboardManager.resources.currencySets.collectAsState()
-                val layouts by keyboardManager.resources.layouts.collectAsState()
+                val keyboardExtensions by keyboardExtensionRepository.snapshot.collectAsState()
+                val currencySets = keyboardExtensions.currencySets
+                val layouts = keyboardExtensions.layouts
                 val displayLanguageNamesIn by prefs.localization.displayLanguageNamesIn.collectAsState()
                 for (subtype in subtypes) {
                     val cMeta = layouts[LayoutType.CHARACTERS]?.get(subtype.layoutMap.characters)

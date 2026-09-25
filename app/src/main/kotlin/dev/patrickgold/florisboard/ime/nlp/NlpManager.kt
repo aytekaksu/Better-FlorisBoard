@@ -32,6 +32,7 @@ import dev.patrickgold.florisboard.ime.nlp.latin.LatinLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginSuggestionBatch
 import dev.patrickgold.florisboard.keyboardManager
+import dev.patrickgold.florisboard.keyboardExtensionRepository
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
 import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.CancellationException
@@ -284,6 +285,7 @@ class NlpManager(context: Context) {
     private val clipboardManager by context.clipboardManager()
     private val editorInstance by context.editorInstance()
     private val keyboardManager by context.keyboardManager()
+    private val keyboardExtensionRepository by context.keyboardExtensionRepository()
     private val autocorrectPluginManager by context.autocorrectPluginManager()
     private val subtypeManager by context.subtypeManager()
     private val keyguardManager = context.systemService(AndroidKeyguardManager::class)
@@ -368,7 +370,8 @@ class NlpManager(context: Context) {
      * @return The punctuation rule or a fallback.
      */
     fun getPunctuationRule(subtype: Subtype): PunctuationRule {
-        return keyboardManager.resources.punctuationRules.value[subtype.punctuationRule] ?: PunctuationRule.Fallback
+        return keyboardExtensionRepository.snapshot.value.punctuationRules[subtype.punctuationRule]
+            ?: PunctuationRule.Fallback
     }
 
     private suspend fun getSpellingProvider(subtype: Subtype): SpellingProvider {

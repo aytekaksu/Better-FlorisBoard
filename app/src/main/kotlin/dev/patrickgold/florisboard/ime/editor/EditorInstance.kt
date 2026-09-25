@@ -39,6 +39,7 @@ import dev.patrickgold.florisboard.ime.text.composing.Appender
 import dev.patrickgold.florisboard.ime.text.composing.Composer
 import dev.patrickgold.florisboard.ime.text.key.KeyVariation
 import dev.patrickgold.florisboard.keyboardManager
+import dev.patrickgold.florisboard.keyboardExtensionRepository
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
 import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.subtypeManager
@@ -151,6 +152,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     private val appContext by context.appContext()
     private val clipboardManager by context.clipboardManager()
     private val keyboardManager by context.keyboardManager()
+    private val keyboardExtensionRepository by context.keyboardExtensionRepository()
     private val subtypeManager by context.subtypeManager()
     private val nlpManager by context.nlpManager()
 
@@ -246,7 +248,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     }
 
     override fun determineComposer(composerName: ExtensionComponentName): Composer {
-        return keyboardManager.resources.composers.value[composerName] ?: Appender
+        return keyboardExtensionRepository.snapshot.value.composers[composerName] ?: Appender
     }
 
     override fun shouldDetermineComposingRegion(editorInfo: FlorisEditorInfo): Boolean {

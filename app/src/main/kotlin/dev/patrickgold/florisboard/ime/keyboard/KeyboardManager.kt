@@ -29,11 +29,10 @@ import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.editorInstance
-import dev.patrickgold.florisboard.extensionManager
+import dev.patrickgold.florisboard.keyboardExtensionRepository
 import dev.patrickgold.florisboard.ime.ImeUiMode
 import dev.patrickgold.florisboard.ime.core.DisplayLanguageNamesIn
 import dev.patrickgold.florisboard.ime.core.Subtype
-import dev.patrickgold.florisboard.ime.core.SubtypePreset
 import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.editor.EditorEditResult
 import dev.patrickgold.florisboard.ime.editor.FlorisEditorInfo
@@ -47,11 +46,8 @@ import dev.patrickgold.florisboard.ime.input.InputKeyEventReceiver
 import dev.patrickgold.florisboard.ime.input.InputShiftState
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.nlp.ClipboardSuggestionCandidate
-import dev.patrickgold.florisboard.ime.nlp.PunctuationRule
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
 import dev.patrickgold.florisboard.ime.nlp.SuggestionSeparatorBehavior
-import dev.patrickgold.florisboard.ime.popup.PopupMappingComponent
-import dev.patrickgold.florisboard.ime.text.composing.Composer
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyType
@@ -60,7 +56,6 @@ import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboardCache
 import dev.patrickgold.florisboard.lib.devtools.LogTopic
 import dev.patrickgold.florisboard.lib.devtools.flogError
-import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
 import dev.patrickgold.florisboard.lib.titlecase
 import dev.patrickgold.florisboard.lib.uppercase
 import dev.patrickgold.florisboard.lib.util.InputMethodUtils
@@ -73,7 +68,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -116,7 +110,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     private val autocorrectPluginManager by context.autocorrectPluginManager()
     private val clipboardManager by context.clipboardManager()
     private val editorInstance by context.editorInstance()
-    private val extensionManager by context.extensionManager()
+    private val keyboardExtensionRepository by context.keyboardExtensionRepository()
     private val nlpManager by context.nlpManager()
     private val subtypeManager by context.subtypeManager()
     private val keyguardManager = appContext.systemService(AndroidKeyguardManager::class)
@@ -125,7 +119,6 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     val layoutManager = LayoutManager(context)
     private val keyboardCache = TextKeyboardCache()
 
-    val resources = KeyboardManagerResources()
     val activeState = ObservableKeyboardState.new()
     var smartbarVisibleDynamicActionsCount by mutableIntStateOf(0)
     private var lastToastReference = WeakReference<Toast>(null)
@@ -159,7 +152,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
 
     init {
         scope.launch(Dispatchers.Main.immediate) {
-            resources.anyChangedVersion.collectIn(scope) {
+            keyboardExtensionRepository.snapshot.collectIn(scope) {
                 updateActiveEvaluators {
                     keyboardCache.clear()
                 }
@@ -1007,70 +1000,6 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 return true
             }
             else -> return false
-        }
-    }
-
-    inner class KeyboardManagerResources {
-        val composers = MutableStateFlow<Map<ExtensionComponentName, Composer>>(emptyMap())
-        val currencySets = MutableStateFlow<Map<ExtensionComponentName, CurrencySet>>(emptyMap())
-        val layouts = MutableStateFlow<Map<LayoutType, Map<ExtensionComponentName, LayoutArrangementComponent>>>(emptyMap())
-        val popupMappings = MutableStateFlow<Map<ExtensionComponentName, PopupMappingComponent>>(emptyMap())
-        val punctuationRules = MutableStateFlow<Map<ExtensionComponentName, PunctuationRule>>(emptyMap())
-        val subtypePresets = MutableStateFlow<List<SubtypePreset>>(emptyList())
-
-        val anyChangedVersion = MutableStateFlow(0)
-
-        init {
-            extensionManager.keyboardExtensions.collectIn(scope) { keyboardExtensions ->
-                parseKeyboardExtensions(keyboardExtensions)
-            }
-        }
-
-        private fun parseKeyboardExtensions(keyboardExtensions: List<KeyboardExtension>) {
-            val localComposers = mutableMapOf<ExtensionComponentName, Composer>()
-            val localCurrencySets = mutableMapOf<ExtensionComponentName, CurrencySet>()
-            val localLayouts = mutableMapOf<LayoutType, MutableMap<ExtensionComponentName, LayoutArrangementComponent>>()
-            val localPopupMappings = mutableMapOf<ExtensionComponentName, PopupMappingComponent>()
-            val localPunctuationRules = mutableMapOf<ExtensionComponentName, PunctuationRule>()
-            val localSubtypePresets = mutableListOf<SubtypePreset>()
-            for (layoutType in LayoutType.entries) {
-                localLayouts[layoutType] = mutableMapOf()
-            }
-            for (keyboardExtension in keyboardExtensions) {
-                keyboardExtension.composers.forEach { composer ->
-                    localComposers[ExtensionComponentName(keyboardExtension.meta.id, composer.id)] = composer
-                }
-                keyboardExtension.currencySets.forEach { currencySet ->
-                    localCurrencySets[ExtensionComponentName(keyboardExtension.meta.id, currencySet.id)] = currencySet
-                }
-                for ((type, layoutComponents) in keyboardExtension.layouts) {
-                    val layoutsForType = localLayouts[LayoutType.fromId(type)] ?: continue
-                    for (layoutComponent in layoutComponents) {
-                        layoutsForType[ExtensionComponentName(keyboardExtension.meta.id, layoutComponent.id)] = layoutComponent
-                    }
-                }
-                keyboardExtension.popupMappings.forEach { popupMapping ->
-                    localPopupMappings[ExtensionComponentName(keyboardExtension.meta.id, popupMapping.id)] = popupMapping
-                }
-                keyboardExtension.punctuationRules.forEach { punctuationRule ->
-                    localPunctuationRules[ExtensionComponentName(keyboardExtension.meta.id, punctuationRule.id)] = punctuationRule
-                }
-                localSubtypePresets.addAll(keyboardExtension.subtypePresets)
-            }
-            localSubtypePresets.sortBy { it.locale.displayName() }
-            for (languageCode in listOf("en-CA", "en-AU", "en-UK", "en-US")) {
-                val index: Int = localSubtypePresets.indexOfFirst { it.locale.languageTag() == languageCode }
-                if (index > 0) {
-                    localSubtypePresets.add(0, localSubtypePresets.removeAt(index))
-                }
-            }
-            subtypePresets.value = localSubtypePresets
-            composers.value = localComposers
-            currencySets.value = localCurrencySets
-            layouts.value = localLayouts
-            popupMappings.value = localPopupMappings
-            punctuationRules.value = localPunctuationRules
-            anyChangedVersion.update { it + 1 }
         }
     }
 
