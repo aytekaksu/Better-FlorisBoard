@@ -3,34 +3,16 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Παύση</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Αναμονή</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Εικονίδιο με τρεις τελείες. Εάν εμφανιστεί, υποδεικνύει πως περισσότερα γράμματα μπορούν να χρησιμοποιηθούν εάν πατηθεί παρατεταμένα.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Κλείσιμο λειτουργίας ενός χεριού.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Μεταφορά πληκτρολογίου στα αριστερά.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Μεταφορά πληκτρολογίου στα δεξιά.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Εικονίδια Emoji</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Εικονίδια Emoji</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Εικονίδια emoticon</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoji</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Προτιμώμενος τόνος επιδερμίδας εικονιδίων emoji</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Φατσούλες &amp; Συναισθήματα</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Άνθρωποι &amp; Σώμα</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Ζώα &amp; Φύση</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Φαγητό &amp; Ποτό</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Ταξίδι &amp; Μέρη</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Δραστηριότητες</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Αντικείμενα</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Σύμβολα</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Σημαίες</string>
     <!-- Quick action strings -->
     <!-- Incognito mode strings -->
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Ρυθμίσεις</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Δοκιμάστε τις ρυθμίσεις σας</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Βοήθεια</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Προεπιλογή</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">Προεπιλογή συστήματος</string>
     <string name="settings__home__title" comment="Title of the Home screen">Καλώς ήλθατε στο {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">Το FlorisBoard δεν είναι ενεργοποιημένο στο σύστημα και συνεπώς δε θα είναι διαθέσιμο ως μέθοδος εισαγωγής στον επιλογέα εισαγωγής. Πατήστε εδώ για να επιλύσετε αυτό το πρόβλημα.</string>
@@ -63,18 +45,12 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Φαίνεται πως δεν έχετε ορίσει κανέναν υποτύπο. Ως εναλλακτική ο υποτύπος English/QWERTY θα χρησιμοποιηθεί!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">Αυτός ο υποτύπος υπάρχει ήδη!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">Τουλάχιστον ένα πεδίο δεν έχει επιλεγμένη τιμή. Παρακαλώ επιλέξτε μία τιμή για το/τα πεδίο/α.</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (δεν είναι εγκατεστημένο)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Διατάξεις</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Θέμα</string>
     <string name="pref__theme__mode__label" comment="Label of the theme mode preference">Λειτουργία θέματος</string>
     <string name="pref__theme__sunrise_time__label" comment="Label of the sunrise time preference">Ώρα ανατολής</string>
     <string name="pref__theme__sunset_time__label" comment="Label of the sunset time preference">Ώρα δύσης</string>
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">Θέμα ημέρας</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Θέμα νύχτας</string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Διαχείριση εγκατεστημένων θεμάτων</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">Πηγές της Εφαρμογής FlorisBoard</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Εσωτερικός αποθηκευτικός χώρος</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Εξωτερικός Προμηθευτής</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Επιλογή θέματος μέρας</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Επιλογή θέματος νύχτας</string>
     <string name="snygg__rule_element__glide_trail">Διαδρομή ολίσθησης</string>
@@ -187,11 +163,6 @@
     <string name="pref__gestures__swipe_distance_threshold__label" comment="Preference title">Όριο απόστασης σάρωσης</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">Σχετικά με</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">Εικονίδιο εφαρμογής του FlorisBoard</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Άδειες λογισμικού ανοικτού κώδικα</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Πολιτική απορρήτου</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Πηγαίος κώδικας</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Άδειες λογισμικού ανοικτού κώδικα</string>
     <string name="about__version__title" comment="Preference title">Έκδοση</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Η έκδοση αντιγράφηκε στο πρόχειρο</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">Κάτι πήγε στραβά: {error_message}</string>
@@ -253,16 +224,12 @@
     <string name="clipboard__group_pinned">Καρφιτσωμένα</string>
     <string name="clipboard__group_recent">Πρόσφατα</string>
     <string name="clipboard__group_other">Άλλο</string>
-    <string name="clip__clear_history">Εκκαθάριση ιστορικού</string>
     <string name="clip__unpin_item">Ξεκαρφίτσωμα στοιχείου</string>
     <string name="clip__pin_item">Καρφίτσωμα στοιχείου</string>
     <string name="clip__delete_item">Διαγραφή</string>
     <string name="clip__paste_item">Επικόλληση</string>
-    <string name="clip__back_to_text_input">Πίσω στην εισαγωγή κειμένου</string>
-    <string name="clip__cant_paste">Η εφαρμογή αυτή δεν επιτρέπει την επικόλληση του περιεχομένου.</string>
     <string name="clipboard__cleared_primary_clip">Το κύριο απόκομμα διαγράφηκε</string>
     <string name="clipboard__cleared_history">Το ιστορικό διαγράφηκε</string>
-    <string name="clipboard__cleared_full_history">Το πλήρες ιστορικό διαγράφηκε</string>
     <string name="settings__clipboard__title">Πρόχειρο</string>
     <string name="pref__clipboard__use_internal_clipboard__label">Χρήση εσωτερικού προχείρου</string>
     <string name="pref__clipboard__use_internal_clipboard__summary">Χρήση εσωτερικού προχείρου αντί του συστημικού</string>
@@ -317,9 +284,6 @@
     <string name="ext__import__file_skip" comment="Label when a file cannot be imported in the current context. The actual reason string is in a separate text view below this string.">Το αρχείο δεν μπορεί να εισαχθεί. Αιτία:</string>
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">Μη υποστηριζόμενος ή μη αναγνωρίσιμος τύπος αρχείου.</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">Το αρχείο φαίνεται πως είναι αρχείο προέκτασης αλλά η επεξεργασία των δεδομένων του απέτυχε. Είτε το αρχείο είναι αλλοιωμένο είτε αυτό το αρχείο δεν είναι μία προέκταση γενικά.</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">Ένα αρχείο επέκτασης σειριακού τύπου \"{expected_serial_type}\" αναμενόταν αλλά ήταν \"{actual_serial_type}\".</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">Ένα αρχείο πολυμέσων (εικόνα, ήχος, γραμματοσειρά, κλπ.) αναμενόταν αλλά βρέθηκε ένα αρχείο προέκτασης.</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">Ένα αρχείο προέκτασης αναμενόταν αλλά βρέθηκε ένα αρχείο πολυμέσων (εικόνα, ήχος, γραμματοσειρά, κλπ.).</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">Ένα απρόσμενο σφάλμα προέκυψε κατά την εισαγωγή. Οι εξής πληροφορίες παρασχέθηκαν:</string>
     <!-- Action strings -->
     <string name="action__add">Προσθήκη</string>
@@ -336,16 +300,11 @@
     <string name="action__ok">ΟΚ</string>
     <string name="action__restore">Επαναφορά</string>
     <string name="action__save">Αποθήκευση</string>
-    <string name="action__select">Επολογή</string>
-    <string name="action__select_dir">Επιλογή φακέλου</string>
-    <string name="action__select_dirs">Επιλογή φακέλων</string>
     <string name="action__select_file">Επιλογή αρχείου</string>
     <string name="action__select_files">Επιλογή αρχείων</string>
     <string name="action__yes">Ναι</string>
     <!-- Error strings (generic) -->
     <string name="error__title">Σφάλμα</string>
-    <string name="error__details">Λεπτομέρειες</string>
-    <string name="error__invalid">Μη έγκυρο</string>
     <string name="error__snackbar_message">Κάτι πήγε στραβά</string>
     <string name="error__snackbar_message_template">Κάτι πήγε στραβά: {error_message}</string>
     <!-- General strings -->
@@ -357,9 +316,6 @@
     <string name="screen_orientation__horizontal">Οριζόντια</string>
     <!-- State strings -->
     <string name="state__disabled">Απενεργοποιημένο</string>
-    <string name="state__enabled">Ενεργοποιημένο</string>
-    <string name="state__no_dir_selected">Δεν έχει επιλεγεί φάκελος</string>
-    <string name="state__no_dirs_selected">Δεν έχουν επιλεγεί φάκελοι</string>
     <string name="state__no_file_selected">Δεν έχει επιλεγεί αρχείο</string>
     <string name="state__no_files_selected">Δεν έχουν επιλεγεί αρχεία</string>
     <!-- Enum label and description strings -->
@@ -410,10 +366,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">Δυναμικό: Εναλλαγή σε emojis / Εναλλαγή γλώσσας</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} ώρα</item>
-        <item quantity="other">{v} ώρες</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} λεπτό</item>
         <item quantity="other">{v} λεπτά</item>

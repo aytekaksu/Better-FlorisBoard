@@ -3,28 +3,12 @@
     <string name="app_name">TastieraFloris</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Ndalo</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Prit</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Ikonë me tre pika. Nëse është e dukshme, do të thotë që më shumë shkronja mund te përdoren nëse shtypen më gjatë.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Mbyll metodën e përdorimit me një dorë.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Lëviz tastierën në të majtë.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Lëviz tastierën në të djathtë.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Emojis</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Emojis</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Emoticons</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoji</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Ngjyra e preferuar e lëkurës</string>
     <string name="prefs__media__emoji_preferred_hair_style">Modeli i preferuar i flokëve</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Të qeshura &amp; Emocione</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Njerëz &amp; Trupi</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Kafshët &amp; Natyra</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Ushqimi &amp; Pije</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Udhëtim &amp; Vende</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Aktivitete</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Objekte</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Simbole</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Flamuj</string>
     <!-- Quick action strings -->
     <string name="quick_action__arrow_up" comment="Please mind the limited available space for the quick action strings">Shigjet lart</string>
     <string name="quick_action__arrow_up__tooltip">Trego shigjetën lart</string>
@@ -51,7 +35,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Fshehurazi</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Ndiz / Fik mënyrën fshehurazi</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Autokorrigjo</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">Ndiz / Fik autokorrigjuesin</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Hyrja me zë</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Hap marrësin e hyrjes zanore</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">Me një dorë</string>

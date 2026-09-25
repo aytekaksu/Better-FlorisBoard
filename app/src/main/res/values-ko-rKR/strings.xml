@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">일시정지</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">대기</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">삼점 아이콘입니다. 이 아이콘이 보인다면 길게 눌러서 더 많은 글자를 사용할 수 있습니다.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">한손 모드를 닫습니다.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">키보드를 왼쪽으로 옮깁니다.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">키보드를 오른쪽으로 옮깁니다.</string>
     <!-- Media strings -->
     <string name="settings__media__title">이모지</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">이모지</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">이모티콘</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">카오모지</string>
     <string name="prefs__media__emoji_preferred_skin_tone">선호하는 이모지 피부색</string>
     <string name="prefs__media__emoji_preferred_hair_style">선호하는 이모지 머리 스타일</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">이모지 기록</string>
@@ -29,15 +22,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">최소 요청 길이</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">제안 최대 개수</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">스마일리 및 이모티콘</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">사람 및 신체</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">동물 및 자연</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">음식 및 음료</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">여행 및 장소</string>
-    <string name="emoji__category__activities" comment="Emoji category name">활동</string>
-    <string name="emoji__category__objects" comment="Emoji category name">사물</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">상징</string>
-    <string name="emoji__category__flags" comment="Emoji category name">깃발</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">최근에 이모지를 사용하지 않았습니다. 이모지를 사용하면 사용한 이모지가 여기에 나타납니다.</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">이모티콘 기록을 보려면 먼저 기기의 잠금을 해제해 주세요.</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">전문가 팁: 이모티콘 기록에서 이모티콘을 길게 눌러 고정하거나 제거하세요!</string>
@@ -78,7 +62,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">시크릿</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">시크릿 모드 켜기 / 끄기</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">자동 수정</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">자동 수정 켜기 / 끄기</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">음성 입력</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">음성 입력 제공자 열기</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">한손</string>
@@ -98,8 +81,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">설정</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">설정한 키보드를 사용해 보세요.</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">도움말</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">기본값</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">시스템 기본값</string>
     <string name="settings__home__title" comment="Title of the Home screen">{app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">앱이 시스템 설정에서 켜져 있지 않아 입력 방법으로 선택할 수 없습니다. 여기를 눌러 문제를 해결할 수 있습니다.</string>
@@ -135,8 +116,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">하위 유형을 설정하지 않았습니다. 영어/QWERTY를 기본 하위 유형으로 사용합니다!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">이 하위 유형이 이미 있습니다!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">하나 이상의 필드를 선택하지 않았습니다. 모든 필드의 항목을 선택해 주세요.</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (설치되어 있지 않음)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">레이아웃</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">삭제 확인</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">정말 이 하위 유형을 삭제하시겠습니까?</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">테마</string>
@@ -145,10 +124,6 @@
     <string name="pref__theme__sunset_time__label" comment="Label of the sunset time preference">일몰 시간</string>
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">라이트 테마</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">다크 테마</string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">설치한 테마 관리</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">앱 내장</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">내부 저장소</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">외부 제공자</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">라이트 테마 선택</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">다크 테마 선택</string>
     <string name="settings__theme_editor__fine_tune__title">미세 조정 편집기</string>
@@ -157,7 +132,6 @@
     <string name="settings__theme_editor__no_rules_defined">이 스타일시트는 지정되어 있는 규칙이 없습니다. 규칙을 추가하여 스타일시트를 꾸며 보세요.</string>
     <string name="settings__theme_editor__rule_already_exists">이 스타일시트 규칙은 이미 지정되어 있습니다.</string>
     <string name="settings__theme_editor__rule_codes">대상 키 코드</string>
-    <string name="settings__theme_editor__rule_groups">그룹</string>
     <string name="settings__theme_editor__add_code">키 코드 추가</string>
     <string name="settings__theme_editor__edit_code">키 코드 편집</string>
     <string name="settings__theme_editor__no_codes_defined">모든 대상 요소에 규칙을 적용합니다.</string>
@@ -175,9 +149,7 @@
     <string name="settings__theme_editor__property_name">속성 이름</string>
     <string name="settings__theme_editor__property_value">속성 값</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">모든 가장자리에 적용</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">색상 문자열 편집</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">다크 테마</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">테두리 없음</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">스타일시트 경로</string>
     <string name="snygg__rule_element__key">키</string>
     <string name="snygg__rule_element__key_hint">키 힌트</string>
@@ -290,11 +262,6 @@
     <string name="pref__gestures__delete_key_long_press__label" comment="Preference title">지우기 키 길게 누르기</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">정보</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">앱 아이콘</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">오픈 소스 라이선스s</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">개인 정보 보호 정책</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">소스 코드</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">오픈 소스 라이선스</string>
     <string name="about__version__title" comment="Preference title">버전</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">버전을 클립보드에 복사했습니다.</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">오류가 발생했습니다: {error_message}</string>
@@ -332,7 +299,6 @@
     <string name="backup_and_restore__back_up__destination_share_intent">공유 메뉴를 사용한 서드파티 앱</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">설정</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">키보드 확장 기능</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">맞춤법 검사 확장 기능 / 사전</string>
     <string name="backup_and_restore__back_up__files_ime_theme">테마 확장 기능</string>
     <string name="backup_and_restore__back_up__files_clipboard_history">클립보드 기록</string>
     <string name="backup_and_restore__back_up__files_clipboard_history__clipboard_text_items">글자 항목</string>
@@ -365,7 +331,6 @@
     <string name="clipboard__group_other">기타</string>
     <string name="clipboard__item_description_email">이메일</string>
     <string name="clipboard__item_description_phone">전화번호</string>
-    <string name="clip__clear_history">기록 비우기</string>
     <string name="clip__unpin_item">항목 고정 해제</string>
     <string name="clip__pin_item">항목 고정</string>
     <string name="clip__delete_item">삭제</string>
@@ -425,7 +390,6 @@
     <string name="ext__import__ext_languagepack" comment="Title of Importer screen for language pack extension import">언어 팩 확장 기능 가져오기</string>
     <string name="ext__import__file_skip" comment="Label when a file cannot be imported in the current context. The actual reason string is in a separate text view below this string.">파일을 가져올 수 없습니다. 사유:</string>
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">지원하지 않거나 알 수 없는 파일 형식입니다.</string>
-    <string name="ext__home__manage_extensions">설치한 확장 기능 관리</string>
     <string name="ext__check_updates__title">업데이트 확인</string>
     <!-- Action strings -->
     <string name="action__add">추가</string>
@@ -448,16 +412,11 @@
     <string name="action__ok">확인</string>
     <string name="action__restore">복원</string>
     <string name="action__save">저장</string>
-    <string name="action__select">선택</string>
-    <string name="action__select_dir">디렉터리 선택</string>
-    <string name="action__select_dirs">디렉터리 선택</string>
     <string name="action__select_file">파일 선택</string>
     <string name="action__select_files">파일 선택</string>
     <string name="action__yes">예</string>
     <!-- Error strings (generic) -->
     <string name="error__title">오류</string>
-    <string name="error__details">세부 정보</string>
-    <string name="error__invalid">유효하지 않음</string>
     <string name="error__snackbar_message">오류가 발생했습니다.</string>
     <string name="error__snackbar_message_template">오류가 발생했습니다: {error_message}</string>
     <!-- General strings -->
@@ -472,9 +431,6 @@
     <string name="screen_orientation__horizontal">가로</string>
     <!-- State strings -->
     <string name="state__disabled">꺼짐</string>
-    <string name="state__enabled">켜짐</string>
-    <string name="state__no_dir_selected">선택한 디렉터리 없음</string>
-    <string name="state__no_dirs_selected">선택한 디렉터리 없음</string>
     <string name="state__no_file_selected">선택한 파일 없음</string>
     <string name="state__no_files_selected">선택한 파일 없음</string>
     <!-- Enum label and description strings -->
@@ -488,11 +444,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} 중간 피부색</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} 조금 어두운 피부색</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} 어두운 피부색</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} 기본 머리</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} 빨간 머리</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} 펌</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} 흰 머리</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} 대머리</string>
     <string name="enum__haptic_vibration_mode__use_vibrator_directly" comment="Enum value label">하드웨어 진동 직접 사용</string>
     <string name="enum__haptic_vibration_mode__use_haptic_feedback_interface" comment="Enum value label">햅틱 반응 인터페이스 사용</string>
     <string name="enum__incognito_mode__force_off" comment="Enum value label">항상 끄기</string>
@@ -549,9 +500,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">이모지 입력으로 전환 / 언어 전환</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="other">{v}시간</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="other">{v}분</item>
     </plurals>

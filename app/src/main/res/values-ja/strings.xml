@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">一時停止</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">待機</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">3点リーダーアイコン。表示されている場合、長押しで他の文字が利用できることを示します。</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">片手モードを閉じる</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">キーボードを左に移動。</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">キーボードを右に移動</string>
     <!-- Media strings -->
     <string name="settings__media__title">メディア</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">絵文字</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">顔文字</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">カオモジ</string>
     <string name="prefs__media__emoji_preferred_skin_tone">優先する絵文字の肌の色</string>
     <string name="prefs__media__emoji_preferred_hair_style">優先する絵文字の髪型</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">絵文字履歴</string>
@@ -34,15 +27,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">検索クエリの最小文字数</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">最大候補数</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">笑顔と感情</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">人物と体</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">動物と自然</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">食べ物と飲み物</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">旅行と場所</string>
-    <string name="emoji__category__activities" comment="Emoji category name">アクティビティ</string>
-    <string name="emoji__category__objects" comment="Emoji category name">モノ</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">記号</string>
-    <string name="emoji__category__flags" comment="Emoji category name">旗</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">最近使用した絵文字はありません。絵文字を入力し始めると、ここに表示されます。</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">絵文字履歴にアクセスするには、まずデバイスのロックを解除してください。</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">ヒント：絵文字履歴の絵文字を長押しすると、ピン留めや削除ができます！</string>
@@ -85,7 +69,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">シークレット</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">シークレットモードの切り替え</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">自動修正</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">自動修正の切り替え</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">音声入力</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">音声入力プロバイダを開く</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">片手モード</string>
@@ -106,8 +89,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">設定</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">設定を試す</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">ヘルプ</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">デフォルト</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">システムのデフォルト</string>
     <string name="settings__home__title" comment="Title of the Home screen">{app_name}へようこそ</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">FlorisBoardがシステムで有効になっていないため、入力方法として使用できません。この問題を解決するには、ここをタップしてください。</string>
@@ -145,8 +126,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">サブタイプが設定されていません。フォールバックとして英語/QWERTYサブタイプが使用されます。</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">このサブタイプは既に存在します！</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">少なくとも1つのフィールドで値が選択されていません。フィールドの値を選択してください。</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (未インストール)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">レイアウト</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">削除の確認</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">このサブタイプを削除してもよろしいですか？</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">テーマ</string>
@@ -156,10 +135,6 @@
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">昼のテーマ</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">夜のテーマ</string>
     <string name="pref__theme__theme_accent_color__label" comment="Label of accent color preference in Theme"> アクセントカラー (Material You テーマ) </string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">インストール済みテーマの管理</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">FlorisBoardアプリのアセット</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">内部ストレージ</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">外部プロバイダ</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">昼のテーマを選択</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">夜のテーマを選択</string>
     <string name="settings__theme_editor__fine_tune__title">微調整エディタ</string>
@@ -172,7 +147,6 @@
     <string name="settings__theme_editor__rule_already_exists">このスタイルシートルールは既に定義されています。</string>
     <string name="settings__theme_editor__rule_name">要素 / アノテーション</string>
     <string name="settings__theme_editor__rule_codes">対象キーコード</string>
-    <string name="settings__theme_editor__rule_groups">グループ</string>
     <string name="settings__theme_editor__rule_modes">対象モード（レイヤー）</string>
     <string name="settings__theme_editor__rule_shift_states">対象シフト状態</string>
     <string name="settings__theme_editor__rule_selectors">セレクタ</string>
@@ -195,11 +169,9 @@
     <string name="settings__theme_editor__property_name">プロパティの名前</string>
     <string name="settings__theme_editor__property_value">プロパティ値</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">すべての角に適用</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">カラー文字列を編集</string>
     <string name="settings__theme_editor__file_selector_dialog_title">ファイルを選択</string>
     <string name="settings__theme_editor__file_selector_no_files_text">この拡張機能にはまだファイルが追加されていません。 前の画面の「{action_title}」アクションを使用してファイルをインポートしてください。</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">夜のテーマ</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">枠線なし</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">スタイルシートパス</string>
     <string name="settings__theme_editor__stylesheet_error_title">スタイルシートエラー</string>
     <string name="settings__theme_editor__stylesheet_error_description">{app_name} はスタイルシートを寛大に読み込み、不足しているスキーマやルールを追加したり、無効なルール、プロパティ、値を削除したりすることができます。 {app_name} にこれらの変更を適用させますか？</string>
@@ -502,11 +474,6 @@
     <string name="pref__other__show_app_icon__summary_atleast_q" comment="Summary of Show app icon preference in Other for Android 10+">システムの制限により、Android 10以降では常に有効です</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">アプリについて</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">FlorisBoardのアプリアイコン</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">オープンソースライセンス</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">プライバシーポリシー</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">ソースコード</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">オープンソースライセンス</string>
     <string name="about__version__title" comment="Preference title">バージョン</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">バージョンをクリップボードにコピーしました</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">問題が発生しました: {error_message}</string>
@@ -519,7 +486,6 @@
     <string name="about__project_license__title" comment="Preference title">プロジェクトライセンス</string>
     <string name="about__project_license__summary" comment="Preference summary">FlorisBoardは{license_name}の下でライセンスされています</string>
     <string name="about__project_license__error_license_text_failed" comment="Error text for license text loading failure">エラー: ライセンステキストの読み込みに失敗しました。\n-&gt; 理由: {error_message}</string>
-    <string name="about__project_license__error_reason_asset_manager_null" comment="Error text if asset manager is null">アセットマネージャーの参照がnullです</string>
     <string name="about__third_party_licenses__title" comment="Preference title">サードパーティライセンス</string>
     <string name="about__third_party_licenses__summary" comment="Preference summary">このアプリに含まれるサードパーティライブラリのライセンス</string>
     <!-- Setup UI strings -->
@@ -551,7 +517,6 @@
     <string name="backup_and_restore__back_up__files">バックアップするものを選択</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">設定</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">キーボード拡張機能</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">スペル拡張機能 / 辞書</string>
     <string name="backup_and_restore__back_up__files_ime_theme">テーマ拡張機能</string>
     <string name="backup_and_restore__back_up__files_clipboard_history">クリップボード履歴</string>
     <string name="backup_and_restore__back_up__files_clipboard_history__clipboard_text_items">テキストアイテム</string>
@@ -599,16 +564,12 @@
     <string name="clipboard__item_description_email">メール</string>
     <string name="clipboard__item_description_url">URL</string>
     <string name="clipboard__item_description_phone">電話</string>
-    <string name="clip__clear_history">履歴を消去</string>
     <string name="clip__unpin_item">アイテムのピン留めを解除</string>
     <string name="clip__pin_item">アイテムをピン留め</string>
     <string name="clip__delete_item">削除</string>
     <string name="clip__paste_item">貼り付け</string>
-    <string name="clip__back_to_text_input">テキスト入力に戻る</string>
-    <string name="clip__cant_paste">このアプリはこのコンテンツの貼り付けを許可していません。</string>
     <string name="clipboard__cleared_primary_clip">メインクリップを消去しました</string>
     <string name="clipboard__cleared_history">履歴を消去しました</string>
-    <string name="clipboard__cleared_full_history">全履歴を消去しました</string>
     <string name="settings__clipboard__title">クリップボード</string>
     <string name="pref__clipboard__use_internal_clipboard__label">内部クリップボードを使用</string>
     <string name="pref__clipboard__use_internal_clipboard__summary">システムクリップボードの代わりに内部クリップボードを使用します</string>
@@ -672,7 +633,6 @@
     <string name="ext__list__ext_keyboard">キーボード拡張機能</string>
     <string name="ext__list__ext_languagepack">言語パック拡張機能</string>
     <string name="ext__meta__authors">作成者</string>
-    <string name="ext__meta__components">バンドルコンポーネント</string>
     <string name="ext__meta__components_theme">バンドルテーマ</string>
     <string name="ext__meta__components_language_pack">バンドル言語パック</string>
     <string name="ext__meta__components_none_found">この拡張機能アーカイブにはバンドルコンポーネントが含まれていません。</string>
@@ -707,7 +667,6 @@
     <string name="ext__editor__create_component__from_empty">空</string>
     <string name="ext__editor__create_component__from_existing">既存のものから</string>
     <string name="ext__editor__create_component__from_empty_warning">{app_name}を初めて使用する場合、または詳細に慣れていない場合は、空のコンポーネントを作成して設定するのが難しい場合があります。その場合は、既存のコンポーネントをコピーして好みに合わせて変更することを検討してください。</string>
-    <string name="ext__editor__edit_component__title">コンポーネントを編集</string>
     <string name="ext__editor__edit_component__title_theme">テーマコンポーネントを編集</string>
     <string name="ext__export__success">拡張機能の書き出しに成功しました！</string>
     <string name="ext__export__failure">拡張機能の書き出しに失敗しました: {error_message}</string>
@@ -721,9 +680,6 @@
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">サポートされていない、または認識されないファイルタイプです。</string>
     <string name="ext__import__file_skip_ext_core" comment="Reason string when ext has core extension ID">アプリのコアアセットで提供されるデフォルトの拡張機能パッケージを置換または更新できません。新しいバージョンのコア拡張機能パッケージを使用する場合は、アプリ自体を更新することを検討してください。</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">ファイルは拡張機能アーカイブのようですが、アーカイブデータの解析に失敗しました。アーカイブが破損しているか、このファイルが拡張機能ではない可能性があります。</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">シリアルタイプ「{expected_serial_type}」の拡張機能アーカイブが必要でしたが、「{actual_serial_type}」でした。</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">メディアファイル（画像、音声、フォントなど）が必要でしたが、拡張機能アーカイブが見つかりました。</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">拡張機能アーカイブが必要でしたが、メディアファイル（画像、音声、フォントなど）が見つかりました。</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">取り込み中に予期せぬエラーが発生しました。以下の詳細が提供されました:</string>
     <string name="ext__validation__enter_package_name">パッケージ名を入力してください</string>
     <string name="ext__validation__error_package_name">パッケージ名が正規表現 {id_regex} と一致しません</string>
@@ -755,7 +711,6 @@
     <string name="ext__addon_management_box__go_to_page">{ext_home_title} に移動</string>
     <string name="ext__home__info">FlorisBoardアドオンストアから拡張機能をダウンロードしてインストールしたり、インターネットからダウンロードした拡張機能ファイルをインポートしたりできます。</string>
     <string name="ext__home__visit_store">アドオンストアにアクセス</string>
-    <string name="ext__home__manage_extensions">インストール済み拡張機能を管理</string>
     <string name="ext__list__view_details">詳細を表示</string>
     <string name="ext__check_updates__title">更新を確認</string>
     <!-- Action strings -->
@@ -775,25 +730,17 @@
     <string name="action__discard_confirm_message">未保存の変更を破棄してもよろしいですか？この操作は一度実行すると元に戻せません。</string>
     <string name="action__edit">編集</string>
     <string name="action__export">エクスポート</string>
-    <string name="action__export_file">ファイルをエクスポート</string>
-    <string name="action__export_files">ファイルをエクスポート</string>
     <string name="action__import">インポート</string>
     <string name="action__import_file">ファイルをインポート</string>
-    <string name="action__import_files">ファイルをインポート</string>
     <string name="action__no">いいえ</string>
     <string name="action__ok">OK</string>
     <string name="action__restore">復元</string>
     <string name="action__save">保存</string>
-    <string name="action__select">選択</string>
-    <string name="action__select_dir">ディレクトリを選択</string>
-    <string name="action__select_dirs">ディレクトリを選択</string>
     <string name="action__select_file">ファイルを選択</string>
     <string name="action__select_files">ファイルを選択</string>
     <string name="action__yes">はい</string>
     <!-- Error strings (generic) -->
     <string name="error__title">エラー</string>
-    <string name="error__details">詳細</string>
-    <string name="error__invalid">無効</string>
     <string name="error__snackbar_message">問題が発生しました</string>
     <string name="error__snackbar_message_template">問題が発生しました: {error_message}</string>
     <!-- General strings -->
@@ -810,9 +757,6 @@
     <string name="screen_orientation__horizontal">水平</string>
     <!-- State strings -->
     <string name="state__disabled">無効</string>
-    <string name="state__enabled">有効</string>
-    <string name="state__no_dir_selected">ディレクトリが選択されていません</string>
-    <string name="state__no_dirs_selected">ディレクトリが選択されていません</string>
     <string name="state__no_file_selected">ファイルが選択されていません</string>
     <string name="state__no_files_selected">ファイルが選択されていません</string>
     <!-- Enum label and description strings -->
@@ -848,11 +792,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} 普通の肌の色</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} やや暗い肌の色</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} 暗い肌の色</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} デフォルトの髪型</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} 赤毛</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} カーリーヘア</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} 白髪</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} 坊主</string>
     <string name="enum__emoji_suggestion_type__leading_colon">先頭コロン</string>
     <string name="enum__emoji_suggestion_type__leading_colon__description" comment="Keep the :emoji_name while translating, this is a syntax guide">:emoji_name 構文を使用して絵文字を提案します</string>
     <string name="enum__emoji_suggestion_type__inline_text">インラインテキスト</string>
@@ -960,9 +899,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">動的：絵文字に切り替え / 言語を切り替え</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="other">{v}時間</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="other">{v}分</item>
     </plurals>

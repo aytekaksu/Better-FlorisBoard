@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">إيقاف مؤقت</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">انتظر</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">أيقونة ثلاث نقاط. إذا كانت ظاهرة ، تشير إلى أنه يمكن استخدام المزيد من الأحرف إذا تم الضغط عليها لفترة أطول.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">غلق وضع اليد الواحدة.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">نقل لوحة المفاتيح إلى اليسار.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">نقل لوحة المفاتيح إلى اليمين.</string>
     <!-- Media strings -->
     <string name="settings__media__title">الرموز التعبيرية</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">الرموز التعبيرية</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">وجوه تعبيرية</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">كاوموجي</string>
     <string name="prefs__media__emoji_preferred_skin_tone">لون الرموز التعبيرية المفضل</string>
     <string name="prefs__media__emoji_preferred_hair_style">نوع الشعر المفضل للرموز التعبيرية</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">سجل الرموز التعبيرية</string>
@@ -34,15 +27,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">الحد الأدنى لطول الاستعلام</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">الحد الأقصى لعدد المرشحين</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">وجوه تعبيرية و عواطف</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">أشخاص و أجسام</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">حيوانات و طبيعة</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">مأكولات و مشروبات</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">سفر و أماكن</string>
-    <string name="emoji__category__activities" comment="Emoji category name">الأنشطة</string>
-    <string name="emoji__category__objects" comment="Emoji category name">أشياء</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">الرموز</string>
-    <string name="emoji__category__flags" comment="Emoji category name">أعلام</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">لم يتم العثور على رموز تعبيرية مستخدمة مؤخرًا. بمجرد بَدْء كتابة الرموز التعبيرية، ستظهر تلقائيًا هنا.</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">للوصول إلى سجل الرموز التعبيرية الخاص بك، يرجى أولاً إلغاء قُفْل جهازك.</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">نصيحة احترافية: اضغط لفترة طويلة على الرموز التعبيرية في سجل الرموز التعبيرية لتثبيتها أو إزالتها!</string>
@@ -85,7 +69,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">متخفي</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">تشغيل وضع التخفي</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">تصحيح تلقائي</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">تمكين التصحيح التلقائي</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">إدخال الصوت</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">افتح موفر خدمة الإدخال الصوتي</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">اليد الواحدة</string>
@@ -106,8 +89,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">الإعدادات</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">قم بتجربة أعداداتك</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">مساعدة</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">الإفتراضي</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">الإعداد الافتراضي</string>
     <string name="settings__home__title" comment="Title of the Home screen">مرحبا بكم في {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">لم يتم تمكين FlorisBoard في النظام وبالتالي لن يكون متاحًا كطريقة إدخال في منتقي الإدخال. انقر هنا لحل هذه المشكلة.</string>
@@ -144,8 +125,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">يبدو أنك لم تقم بإختيار أية أنواع إدخال فرعية. كبديل، سيتم استخدام النوع الفرعي English / QWERTY!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">هذا النوع الفرعي موجود مسبقا!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">حقل واحد على الأقل ليس له قيمة محددة. الرجاء اختيار قيمة للحقل (الحقول).</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (غير مثبت)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">التخطيطات</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">تأكيد الحذف</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">هل أنت متيقِّن أنك تريد حذف النوع الفرعي؟</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">المظهر</string>
@@ -154,10 +133,6 @@
     <string name="pref__theme__sunset_time__label" comment="Label of the sunset time preference">وقت الغروب</string>
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">نسق نهاري</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">نسق ليلي</string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">أدارة السمات المثبتة</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">أصول تطبيق FlorisBoard</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">الذاكرة الداخلية</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">مزود خارجي</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">اختيار النمط الصباحي</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">اختيار النمط الليلي</string>
     <string name="settings__theme_editor__fine_tune__title">تعديل متقدم</string>
@@ -168,7 +143,6 @@
     <string name="settings__theme_editor__no_rules_defined">ورق الأنماط هذا ليس له قواعد محددة. أضف قاعدة لبدء تخصيص ورق الأنماط هذا.</string>
     <string name="settings__theme_editor__rule_already_exists">تم تعريف قاعدة ورقة الأنماط هذه بالفعل.</string>
     <string name="settings__theme_editor__rule_codes">رموز المفتاح المستهدف</string>
-    <string name="settings__theme_editor__rule_groups">مجموعات</string>
     <string name="settings__theme_editor__rule_selectors">محددات</string>
     <string name="settings__theme_editor__add_code">إضافة رموز المفتاح</string>
     <string name="settings__theme_editor__edit_code">تعديل رمز المفتاح</string>
@@ -188,9 +162,7 @@
     <string name="settings__theme_editor__property_name">اسم الخاصية</string>
     <string name="settings__theme_editor__property_value">قيمة الخاصية</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">تطبيق على جميع الحواف</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">تعديل نص اللون</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">هو نسق ليلي</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">بدون حدود</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">مسار ورقة الأنماط</string>
     <string name="snygg__rule_element__key">المفتاح</string>
     <string name="snygg__rule_element__key_hint">تلميحة المفتاح</string>
@@ -416,11 +388,6 @@
     <string name="pref__other__show_app_icon__summary_atleast_q" comment="Summary of Show app icon preference in Other for Android 10+">ممكّن دائمًا على اندرويد 10+ فما فوق بسبب قيود النظام</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">حول التطبيق</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">أيقونة التطبيق FlorisBoard</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">تراخيص البرامج مفتوحة المصدر</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">سياسة الخصوصية</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">مصدر التعليمات البرمجية</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">تراخيص البرامج مفتوحة المصدر</string>
     <string name="about__version__title" comment="Preference title">الإصدار</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">تم نسخ الإصدار إلى الحافظة</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">لقد حدث خطأ ما: {error_message}</string>
@@ -433,7 +400,6 @@
     <string name="about__project_license__title" comment="Preference title">رخصة المشروع</string>
     <string name="about__project_license__summary" comment="Preference summary">هذا التطبيق هو مرخص تحت رخصة {license_name}</string>
     <string name="about__project_license__error_license_text_failed" comment="Error text for license text loading failure">خطأ: فشل تحميل نص الترخيص. \n-&gt; السبب: {error_message}</string>
-    <string name="about__project_license__error_reason_asset_manager_null" comment="Error text if asset manager is null">مدير مرجع الأصول فارغ</string>
     <string name="about__third_party_licenses__title" comment="Preference title">تراخيص الأطراف الثالثة</string>
     <string name="about__third_party_licenses__summary" comment="Preference summary">تراخيص مكتبات الطرف الثالث المدرجة في هذا التطبيق</string>
     <!-- Setup UI strings -->
@@ -467,7 +433,6 @@
     <string name="backup_and_restore__back_up__files">حدد ما يتم نسخه احتياطيا</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">تفضيلات</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">ملحقات لوحة المفاتيح</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">ملحقات التهجئة/ القاموس</string>
     <string name="backup_and_restore__back_up__files_ime_theme">ملحقات السمات</string>
     <string name="backup_and_restore__back_up__files_clipboard_history">سجل الحافظة</string>
     <string name="backup_and_restore__back_up__files_clipboard_history__clipboard_text_items">عناصر النص</string>
@@ -515,16 +480,12 @@
     <string name="clipboard__item_description_email">البريد الإلكتروني</string>
     <string name="clipboard__item_description_url">الرابط</string>
     <string name="clipboard__item_description_phone">الهاتف</string>
-    <string name="clip__clear_history">مسح السجل</string>
     <string name="clip__unpin_item">إلغاء تثبيت العنصر</string>
     <string name="clip__pin_item">تثبيت العنصر</string>
     <string name="clip__delete_item">حذف</string>
     <string name="clip__paste_item">لصق</string>
-    <string name="clip__back_to_text_input">رجوع إلى الإدخال النصي</string>
-    <string name="clip__cant_paste">هذا التطبيق لايسمح بلصق المحتويات.</string>
     <string name="clipboard__cleared_primary_clip">تنظيف الحافظة الأساسية</string>
     <string name="clipboard__cleared_history">مسح التاريخ</string>
-    <string name="clipboard__cleared_full_history">مسح التاريخ الكامل</string>
     <string name="settings__clipboard__title">الحافظة</string>
     <string name="pref__clipboard__use_internal_clipboard__label">استخدم الحافظة الداخلية</string>
     <string name="pref__clipboard__use_internal_clipboard__summary">استخدم الحافظة الداخلية بدلا من حافظة النظام</string>
@@ -585,7 +546,6 @@
     <string name="ext__list__ext_keyboard">ملحقات لوحة المفاتيح</string>
     <string name="ext__list__ext_languagepack">ملحقات حزم اللغة</string>
     <string name="ext__meta__authors">المؤلفون</string>
-    <string name="ext__meta__components">العناصر المجمعة</string>
     <string name="ext__meta__components_theme">الثيمات المجمعة</string>
     <string name="ext__meta__components_language_pack">حزم اللغات المضمنة</string>
     <string name="ext__meta__components_none_found">أرشيف هذا الملحق لا يحتوي على أي عناصر مجمعة.</string>
@@ -618,7 +578,6 @@
     <string name="ext__editor__create_component__from_empty">فارغ</string>
     <string name="ext__editor__create_component__from_existing">من الحالية</string>
     <string name="ext__editor__create_component__from_empty_warning">قد يكون إنشاء وتكوين مكون فارغ أمرًا صعبًا إذا كنت جديدًا على {app_name} أو إذا لم تكن على دراية بالتفاصيل. ضع في اعتبارك نسخ مكون متوفر وتعديله حسب رغبتك إذا كان هذا هو الحال.</string>
-    <string name="ext__editor__edit_component__title">تعديل المُكون</string>
     <string name="ext__editor__edit_component__title_theme">تعديل مكونات السمة</string>
     <string name="ext__export__success">تم تصدير الإضافة بنجاح!</string>
     <string name="ext__export__failure">فشل في تصدير ألإضافة: {error_message}</string>
@@ -632,9 +591,6 @@
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">نوع الملف غير مدعوم أو غير معروف.</string>
     <string name="ext__import__file_skip_ext_core" comment="Reason string when ext has core extension ID">تعذر استبدال أو تحديث حزم الإضافات الافتراضية المتوفرة مع أصول التطبيق الأساسية. ضع في اعتبارك تحديث التطبيق نفسه إذا كنت تنوي استخدام إصدار أحدث من حزمة الإضافات الأساسية.</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">يبدو أن الملف عبارة عن أرشيف ملحق ولكن فشل تحليل بيانات الأرشيف. إما أن الأرشيف تالف أو أن هذا الملف ليس امتدادًا على الإطلاق.</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">من المتوقع وجود أرشيف ملحق من النوع التسلسلي \"{expected_serial_type}\" ولكنه كان \"{actual_serial_type}\".</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">من المتوقع وجود ملف وسائط (صورة ، صوت ، خط ، إلخ) ولكن تم العثور على أرشيف ملحق.</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">من المتوقع وجود أرشيف ملحق ولكن تم العثور على ملف وسائط (صورة ، صوت ، خط ، إلخ).</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">حدث خطأ غير متوقع أثناء الاستيراد. تم توفير التفاصيل التالية:</string>
     <string name="ext__validation__enter_package_name">يرجى إدخال اسم الحُزْمَة</string>
     <string name="ext__validation__error_package_name">اسم الحُزْمَة لا يتطابق مع المدى {id_regex}</string>
@@ -666,7 +622,6 @@
     <string name="ext__addon_management_box__go_to_page">انتقل إلى {ext_home_title}</string>
     <string name="ext__home__info">يمكنك تنزيل الإضافات وتثبيتها من متجر إضافات FlorisBoard أو استيراد أي مِلَفّ ملحق قمت بتنزيله من الإنترنت.</string>
     <string name="ext__home__visit_store">زيارة متجر الإضافات</string>
-    <string name="ext__home__manage_extensions">إدارة الإضافات المثبتة</string>
     <string name="ext__list__view_details">عرض التفاصيل</string>
     <string name="ext__check_updates__title">التحقق من وجود تحديثات</string>
     <!-- Action strings -->
@@ -691,16 +646,11 @@
     <string name="action__ok">حسنًا</string>
     <string name="action__restore">إستعادة</string>
     <string name="action__save">حفظ</string>
-    <string name="action__select">اختيار</string>
-    <string name="action__select_dir">اختر مسار</string>
-    <string name="action__select_dirs">اختر مسارات</string>
     <string name="action__select_file">اختر ملفًا</string>
     <string name="action__select_files">إختيار ملفات</string>
     <string name="action__yes">نعم</string>
     <!-- Error strings (generic) -->
     <string name="error__title">خطأ</string>
-    <string name="error__details">التفاصيل</string>
-    <string name="error__invalid">غير صحيح</string>
     <string name="error__snackbar_message">لقد حدث خطأ ما</string>
     <string name="error__snackbar_message_template">لقد حدث خطأ ما: {error_message}</string>
     <!-- General strings -->
@@ -715,9 +665,6 @@
     <string name="screen_orientation__horizontal">عمودي</string>
     <!-- State strings -->
     <string name="state__disabled">معطّل</string>
-    <string name="state__enabled">ممكن</string>
-    <string name="state__no_dir_selected">لم يتم تحديد مسار</string>
-    <string name="state__no_dirs_selected">لم يتم تحديد مسار</string>
     <string name="state__no_file_selected">لم يتم تحديد أي ملف</string>
     <string name="state__no_files_selected">لم تحدد أي ملفات</string>
     <!-- Enum label and description strings -->
@@ -750,11 +697,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} اللون المتوسط للبشرة</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} اللون الداكن المتوسط للبشرة</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} اللون الداكن للبشرة</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} الشعر الافتراضي</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} شعر احمر</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} شعر مجعد</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} شعر ابيض</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} اصلع</string>
     <string name="enum__emoji_suggestion_type__leading_colon">فاصلة متقدمة</string>
     <string name="enum__emoji_suggestion_type__leading_colon__description" comment="Keep the :emoji_name while translating, this is a syntax guide">اقترح الرموز التعبيرية باستخدام بناء جملة:emoji_name</string>
     <string name="enum__emoji_suggestion_type__inline_text">نص المعلومات المضمنة</string>
@@ -855,14 +797,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">ديناميكي: قم بالتبديل إلى الرموز التعبيرية / تبديل اللغة</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="zero">{v} صفر ساعة</item>
-        <item quantity="one">{v} ساعة واحدة</item>
-        <item quantity="two">{v} ساعتان</item>
-        <item quantity="few">{v} ساعات</item>
-        <item quantity="many">{v} ساعات</item>
-        <item quantity="other">{v} ساعات</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="zero">{v} دقيقة</item>
         <item quantity="one">{v} دقيقة واحدة</item>

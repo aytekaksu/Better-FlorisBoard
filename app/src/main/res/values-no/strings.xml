@@ -3,28 +3,12 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Pause</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Vent</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Ikon med tre prikker. Hvis synlig, indikerer det at flere bokstaver kan brukes hvis de trykkes lenger.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Lukk enhåndsmodus.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Flytt tastaturet til venstre.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Flytt tastaturet til høyre.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Emojier</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Emojier</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Emotikon</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoji</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Foretrukket emoji-hudfarge</string>
     <string name="prefs__media__emoji_preferred_hair_style">Foretrukket emoji-sveis</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Smilefjes &amp; Emotikon</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Folk &amp; Kropp</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Dyr &amp; Natur</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Mat &amp; Drikke</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Reise &amp; Steder</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Aktiviteter</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Gjenstander</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Symboler</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Flagg</string>
     <!-- Quick action strings -->
     <string name="quick_action__arrow_up" comment="Please mind the limited available space for the quick action strings">Pil opp</string>
     <string name="quick_action__arrow_up__tooltip">Gjør pil opp</string>
@@ -59,7 +43,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Privat modus</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Skru av/på privat modus</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Autoretting</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">Skru av/på autoretting</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Talefôring</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Åpne taleinndataleverandør</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">Eihåndsmodus</string>
@@ -79,8 +62,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Innstillinger</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Prøv oppsettet ditt</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Hjelp</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Standard</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">Systemstandard</string>
     <string name="settings__home__title" comment="Title of the Home screen">Velkommen til {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">FlorisBoard er ikke aktivert i systemet og vil derfor ikke være tilgjengelig som inndatametode i inndatavelgeren. Klikk her for å løse dette problemet.</string>
@@ -116,18 +97,12 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Det ser ut til at du ikke har konfigurert noen undertyper. Som en reserve vil undertypen engelsk/QWERTY bli brukt!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">Denne undertypen finnes allerede!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">Minst ett felt har ikke en valgt verdi. Vennligst velg en verdi for feltet/felta.</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (ikke installert)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Tegnoppsett</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Tema</string>
     <string name="pref__theme__mode__label" comment="Label of the theme mode preference">Tema-modus</string>
     <string name="pref__theme__sunrise_time__label" comment="Label of the sunrise time preference">Soloppgangstid</string>
     <string name="pref__theme__sunset_time__label" comment="Label of the sunset time preference">Solnedgangstid</string>
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">Dag-tema</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Natt-tema</string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Handsam innlagte tema</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">FlorisBoard App Ressurser</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Intern Lagring</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Ekstern Leverandør</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Velg dagtema</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Velg nattema</string>
     <string name="settings__theme_editor__fine_tune__title">Finpussingsredigerer</string>
@@ -137,7 +112,6 @@
     <string name="settings__theme_editor__edit_rule">Endre rettesnor</string>
     <string name="settings__theme_editor__no_rules_defined">Dette stilarket har ingen definerte rettesnorer. Legg til ei rettesnor for å starte med å endre på stilarket.</string>
     <string name="settings__theme_editor__rule_already_exists">Denne stilarkrettesnora er alt definert.</string>
-    <string name="settings__theme_editor__rule_groups">Grupper</string>
     <string name="settings__theme_editor__add_code">Legg til tastekode</string>
     <string name="settings__theme_editor__edit_code">Rediger tastekode</string>
     <string name="settings__theme_editor__no_codes_defined">Bruk regelen på alle målelementer.</string>
@@ -155,8 +129,6 @@
     <string name="settings__theme_editor__property_already_exists">En egenskap med dette navnet eksisterer allerede innenfor den nåværende regelen.</string>
     <string name="settings__theme_editor__property_name">Egenskapsnavn</string>
     <string name="settings__theme_editor__property_value">Egenskapsverdi</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">Rediger fargestreng</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">Er kantløs(t)</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">Stilark-sti</string>
     <string name="snygg__rule_element__key">Tast</string>
     <string name="snygg__rule_element__glide_trail">Sveipespor</string>
@@ -286,11 +258,6 @@
     <string name="pref__gestures__swipe_distance_threshold__label" comment="Preference title">Sveipedistanseterskel</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">Om</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">FlorisBoard\'s app ikon</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Åpen kildekode-lisenser</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Persovernerklæring</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Kildekode</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Åpen kildekode-lisenser</string>
     <string name="about__version__title" comment="Preference title">Versjon</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Versjon kopiert til utklippstavlen</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">Noe gikk galt: {error_message}</string>
@@ -303,7 +270,6 @@
     <string name="about__project_license__title" comment="Preference title">Prosjektlisens</string>
     <string name="about__project_license__summary" comment="Preference summary">FlorisBoard er lisensiert under {license_name}</string>
     <string name="about__project_license__error_license_text_failed" comment="Error text for license text loading failure">Feil: Fikk ikke til å laste lisenstekst.\n-&gt; Årsak: {error_message}</string>
-    <string name="about__project_license__error_reason_asset_manager_null" comment="Error text if asset manager is null">Referanse for aktivaforvalter er null</string>
     <string name="about__third_party_licenses__title" comment="Preference title">Tredjepartslisenser</string>
     <string name="about__third_party_licenses__summary" comment="Preference summary">Lisenser for tredjeparts-biblioteker som er inkludert i denne appen</string>
     <!-- Setup UI strings -->
@@ -352,13 +318,10 @@
     <string name="clipboard__group_pinned">Festet</string>
     <string name="clipboard__group_other">Annet</string>
     <string name="clipboard__item_description_phone">Telefon</string>
-    <string name="clip__clear_history">Slett loggen</string>
     <string name="clip__unpin_item">Løsne element</string>
     <string name="clip__pin_item">Fest element</string>
     <string name="clip__delete_item">Slett</string>
     <string name="clip__paste_item">Lim inn</string>
-    <string name="clip__back_to_text_input">Tilbake til tekstinput</string>
-    <string name="clip__cant_paste">Denne appen tillater ikke innliming av dette innholdet.</string>
     <string name="settings__clipboard__title">Utklippstavle</string>
     <string name="pref__clipboard__use_internal_clipboard__label">Bruk intern utklippstavle</string>
     <string name="pref__clipboard__use_internal_clipboard__summary">Bruk en intern utklippstavle i steden for systemutklippstavlen</string>
@@ -417,9 +380,6 @@
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">Mangler støtte for eller kjennskap til filtypen.</string>
     <string name="ext__import__file_skip_ext_core" comment="Reason string when ext has core extension ID">Kan ikke erstatte eller oppdatere standardutvidelsespakker som følger med appens kjerneressurser. Vurder å oppdatere selve appen dersom du vil bruke en nyere versjon av en kjerneutvidelsespakke.</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">Filen er tilsynelatende et utvidelsesarkiv, men innlesing av arkivdata feilet. Arkivet er enten skadet eller ikke en utvidelse.</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">Forventet et utvidelsesarkiv av serietype \"{expected_serial_type}\" men var \"{actual_serial_type}\".</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">Forventet en mediafil (bilde, lyd, font, osv.) men fant et utvidelsesarkiv.</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">Forventet et utvidelsesarkiv men fant en mediafil (bilde, lyd, font, osv.).</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">En uventet feil oppstod under import. Følgende detaljer ble oppgitt:</string>
     <!-- Action strings -->
     <string name="action__cancel">Avbryt</string>
@@ -441,7 +401,6 @@
     <string name="screen_orientation__horizontal">Horisontal</string>
     <!-- State strings -->
     <string name="state__disabled">Deaktivert</string>
-    <string name="state__enabled">Aktivert</string>
     <!-- Enum label and description strings -->
     <string name="enum__emoji_skin_tone__default" comment="Enum value label">{emoji} Standard hudfarge</string>
     <string name="enum__emoji_skin_tone__light_skin_tone" comment="Enum value label">{emoji} Lys hudfarge</string>
@@ -449,10 +408,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} Medium hudfarge</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} Medium mørk hudfarge</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} Mørk hudfarge</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} Rødt hår</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} Krøllete hår</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} Hvitt hår</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} Skallet</string>
     <string name="enum__key_hint_mode__accent_priority" comment="Enum value label">Aksent er prioritisert</string>
     <string name="enum__key_hint_mode__accent_priority__description" comment="Enum value description">Det første tegnet som velges etter langt trykk er alltid den primære aksenten, eller tipssymbolet hvis ingen primær aksent er tilgjengelig</string>
     <string name="enum__key_hint_mode__hint_priority" comment="Enum value label">Hint er prioritisert</string>
@@ -507,10 +462,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">Dynamisk: Bytt til emojier / Bytt språk</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} time</item>
-        <item quantity="other">{v} timer</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} minutt</item>
         <item quantity="other">{v} minutter</item>

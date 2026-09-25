@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Paŭzigi</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Atendi</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Tripunkta piktogramo. Se videbla, indikas ke vi povas uzi pliajn literojn se vi longe premetas ĝin.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Fermi unu-manan moduson.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Movi klavaron maldekstren.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Movi klavaron dekstren.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Emoĝioj</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Emoĝioj</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Miensimboloj</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoĝioj</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Perferata emoĝiojn haŭtkoloro</string>
     <string name="prefs__media__emoji_preferred_hair_style">Preferata emoĝiojn hararanĝo</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emoĝia historio</string>
@@ -34,15 +27,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">Minimuma longo de la mendo</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">Maksimuma nombro da sugestoj</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Mienetoj &amp; Emocioj</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Homoj &amp; Korpo</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Bestoj &amp; Naturo</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Manĝaĵo &amp; Trinkaĵo</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Vojaĝo &amp; Lokoj</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Aktivaĵoj</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Objektoj</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Simboloj</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Flagoj</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">Neniu antaŭ ne longe uzita emoĝio trovita. Kiam vi komencos tajpi emoĝiojn, ili aperos aŭtomate ĉi tie.</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">Por iri al via emoĝia historio, bonvolu unue malŝlosi vian aparaton.</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">Informo: Vi povas longe tuŝi emoĝiojn en la historio por alpingli aŭ forigi ilin!</string>
@@ -85,7 +69,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Inkognita</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Aktivigi/Malaktivigi Inkognitan moduson</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Aŭtokorekt.</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">(Mal)aktivigi aŭtokorektadon</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Voĉa enigo</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Malfermi provizanton de voĉa enigo</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">Unu-mana</string>
@@ -106,8 +89,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Agordoj</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Provu vian agordaĵon</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Helpo</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Defaŭlta</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">Sistema defaŭlta</string>
     <string name="settings__home__title" comment="Title of the Home screen">Bonvenon al {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">FlorisBoard estas ne ebligita en la sistemo kaj sekve estos ne disponebla kiel enigmetodo en la elektilo. Klaku ĉi tie por solvi la problemon.</string>
@@ -145,8 +126,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Ŝajnas ke vi agordis neniun subspecon. La subspeco English/QWERTY estos uzata por solvi tiun problemon!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">Ĉi tiu subspeco jam ekzistas!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">Almenaŭ unu kampo ne havas valoron elektitan. Bonvolu elekti valoro(j)n por tiu(j) kampo(j).</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (ne instalita)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Aranĝoj</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">Forigada Konfirmo</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">Ĉu vi estas certa ke vi volas forigi tiun subspecon?</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Etoso</string>
@@ -157,10 +136,6 @@
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Nokta etoso</string>
     <string name="pref__theme__theme_accent_color__label" comment="Label of accent color preference in Theme">        Baza koloro (etosoj Material You)
     </string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Administri instalitajn etosojn</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">Rimedoj apon FlorisBoard</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Interna memoro</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Ekstera provizanto</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Elekti tagan etoson</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Elekti noktan etoson</string>
     <string name="settings__theme_editor__fine_tune__level">Redakta nivelo</string>
@@ -169,7 +144,6 @@
     <string name="settings__theme_editor__edit_rule">Redakti la regulon</string>
     <string name="settings__theme_editor__no_rules_defined">Tiu stilfolio havas neniun regulon difinitan. Aldonu regulon por komenci agordi tiu stilfolio.</string>
     <string name="settings__theme_editor__rule_already_exists">Tiu stilfolia regulo estas jam difinita.</string>
-    <string name="settings__theme_editor__rule_groups">Grupoj</string>
     <string name="settings__theme_editor__add_code">Aldoni klavaran kodon</string>
     <string name="settings__theme_editor__edit_code">Redakti klavaran kodon</string>
     <string name="settings__theme_editor__code_already_exists">Tiu klavaran kodon estas jam difinita.</string>
@@ -181,9 +155,7 @@
     <string name="settings__theme_editor__property_name">Propraĵa nomo</string>
     <string name="settings__theme_editor__property_value">Propraĵa valoro</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">Apliki al ĉiuj anguloj</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">Redakti koloran ĉenon</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">Estas nokta etoso</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">Estas sen bordero</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">Stilfolia vojo</string>
     <string name="snygg__rule_element__key">Klavo</string>
     <string name="snygg__rule_element__clipboard_header">Tonduja ĉapo</string>
@@ -355,11 +327,6 @@
     <string name="pref__other__show_app_icon__summary_atleast_q" comment="Summary of Show app icon preference in Other for Android 10+">Ĉiam ŝaltata en Android 10+ pro sistemaj restriktoj</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">Pri</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">Aplikaĵo bildeto de FlorisBoard</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Malfermitkodaj permesiloj</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Privateca politiko</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Fontkodo</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Malfermitkodaj permesiloj</string>
     <string name="about__version__title" comment="Preference title">Versio</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Versio kopiita al tondujo</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">Io misis: {error_message}</string>
@@ -394,7 +361,6 @@
     <string name="backup_and_restore__back_up__files">Elektu kion estos savatan</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">Agordoj</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">Klavaraj etendaĵoj</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">Literumaj etendaĵoj / vortaroj</string>
     <string name="backup_and_restore__back_up__files_ime_theme">Etosaj etendaĵoj</string>
     <string name="backup_and_restore__back_up__files_clipboard_history">Tonduja historio</string>
     <string name="backup_and_restore__back_up__files_clipboard_history__clipboard_text_items">Tekstaj eroj</string>
@@ -436,16 +402,12 @@
     <string name="clipboard__item_description_email">Retpoŝtadreso</string>
     <string name="clipboard__item_description_url">URL</string>
     <string name="clipboard__item_description_phone">Telefono</string>
-    <string name="clip__clear_history">Forviŝi historion</string>
     <string name="clip__unpin_item">Depingliti eron</string>
     <string name="clip__pin_item">Alpingli eron</string>
     <string name="clip__delete_item">Forigi</string>
     <string name="clip__paste_item">Alglui</string>
-    <string name="clip__back_to_text_input">Reen al teksta enigo</string>
-    <string name="clip__cant_paste">Tiu apo ne ebligas alglui tiun enhavon.</string>
     <string name="clipboard__cleared_primary_clip">Viŝis lastan tondujan eron</string>
     <string name="clipboard__cleared_history">Historio forviŝita</string>
-    <string name="clipboard__cleared_full_history">Historio plene forviŝita</string>
     <string name="settings__clipboard__title">Tondujo</string>
     <string name="pref__clipboard__use_internal_clipboard__label">Uzi internan tondujon</string>
     <string name="pref__clipboard__use_internal_clipboard__summary">Uzi internan tondujon anstataŭ la sistema tondujo</string>
@@ -484,7 +446,6 @@
     <string name="ext__list__ext_keyboard">Klavaraj etendaĵoj</string>
     <string name="ext__list__ext_languagepack">Lingvaj pakaj etendaĵoj</string>
     <string name="ext__meta__authors">Aŭtoroj</string>
-    <string name="ext__meta__components">Kunligataj komponentoj</string>
     <string name="ext__meta__components_theme">Kunligataj etosoj</string>
     <string name="ext__meta__components_language_pack">Kunligataj lingvaj pakoj</string>
     <string name="ext__meta__components_none_found">Tiu etendaĵa arkivo enhavas neniun kunligatajn komponentojn.</string>
@@ -515,7 +476,6 @@
     <string name="ext__editor__create_component__title_theme">Krei etoson</string>
     <string name="ext__editor__create_component__from_empty">Malplena</string>
     <string name="ext__editor__create_component__from_existing">El iu jam ekzistanta</string>
-    <string name="ext__editor__edit_component__title">Redakti komponenton</string>
     <string name="ext__editor__edit_component__title_theme">Redakti etosan komponenton</string>
     <string name="ext__export__success">Sukcesa etendaĵon eksportado!</string>
     <string name="ext__export__failure">Fiaskis eksporti etendaĵon: {error_message}</string>
@@ -527,8 +487,6 @@
     <string name="ext__import__ext_languagepack" comment="Title of Importer screen for language pack extension import">Importi lingvajn pakajn etendaĵojn</string>
     <string name="ext__import__file_skip" comment="Label when a file cannot be imported in the current context. The actual reason string is in a separate text view below this string.">Dosiero ne povas esti importata. Kialo:</string>
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">Nesubtenata aŭ nerekonata dosiera tipo.</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">Atendis aŭdiovidaĵan dosieron (bildon, sonaĵon, tiparon, ktp) sed trovis etendaĵan arkivon.</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">Atendis etendaĵan arkivon sed trovis aŭdiovidaĵan dosieron (bildon, sonaĵon, tiparon, ktp).</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">Neatendita eraro okazis dum enportado. Tiuj detaloj estis provizataj:</string>
     <string name="ext__validation__enter_package_name">Bonvolu enigi pakaĵan nomon</string>
     <string name="ext__validation__error_package_name">Pakaĵon nomo ne kongruas kun regulesprimo {id_regex}</string>
@@ -558,7 +516,6 @@
     <string name="ext__addon_management_box__go_to_page">Iri al {ext_home_title}</string>
     <string name="ext__home__info">Vi povas elŝuti kaj instali etendaĵojn el la FlorisBoard Aldonaĵejo aŭ enporti iun ajn etendaĵan dosieron ke vi elŝutis el la interreto.</string>
     <string name="ext__home__visit_store">Viziti Aldonaĵejon</string>
-    <string name="ext__home__manage_extensions">Administri instalitajn etendaĵojn</string>
     <string name="ext__list__view_details">Vidi detalojn</string>
     <string name="ext__check_updates__title">Serĉi ĝisdatigojn</string>
     <!-- Action strings -->
@@ -583,16 +540,11 @@
     <string name="action__ok">Bone</string>
     <string name="action__restore">Restaŭri</string>
     <string name="action__save">Konservi</string>
-    <string name="action__select">Elekti</string>
-    <string name="action__select_dir">Elekti dosierujon</string>
-    <string name="action__select_dirs">Elekti dosierujojn</string>
     <string name="action__select_file">Elekti dosieron</string>
     <string name="action__select_files">Elekti dosierojn</string>
     <string name="action__yes">Jes</string>
     <!-- Error strings (generic) -->
     <string name="error__title">Eraro</string>
-    <string name="error__details">Detaloj</string>
-    <string name="error__invalid">Nevalida</string>
     <string name="error__snackbar_message">Io misis</string>
     <string name="error__snackbar_message_template">Io misis: {error_message}</string>
     <!-- General strings -->
@@ -607,9 +559,6 @@
     <string name="screen_orientation__horizontal">Horizontala</string>
     <!-- State strings -->
     <string name="state__disabled">Malŝaltita</string>
-    <string name="state__enabled">Aktivigita</string>
-    <string name="state__no_dir_selected">Neniu dosierujo elektita</string>
-    <string name="state__no_dirs_selected">Neniu dosierujoj elektitaj</string>
     <string name="state__no_file_selected">Neniu dosiero elektita</string>
     <string name="state__no_files_selected">Neniu dosieroj elektitaj</string>
     <!-- Enum label and description strings -->
@@ -639,11 +588,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} Meza haŭtkoloro</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} Malheleta haŭtkoloro</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} Malhela haŭtkoloro</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} Defaŭltaj haroj</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} Rufaj haroj</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} Buklaj haroj</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} Blankaj haroj</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} Senhara</string>
     <string name="enum__emoji_suggestion_type__leading_colon__description" comment="Keep the :emoji_name while translating, this is a syntax guide">Sugesti emoĝiojn per la sintakso :emoĝion_nomo</string>
     <string name="enum__emoji_suggestion_type__inline_text">Enlinie teksto</string>
     <string name="enum__emoji_suggestion_type__inline_text__description">Sugesti emoĝion simple per la tajpado de ĝia nomo</string>
@@ -734,10 +678,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">Dinamika: iri al emoĝiojn / ŝanĝi lingvon</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} horo</item>
-        <item quantity="other">{v} horoj</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} minuto</item>
         <item quantity="other">{v} minutoj</item>

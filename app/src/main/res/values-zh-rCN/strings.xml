@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">暂停</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">等待</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">三点图标。如果可见，表明长按后可使用更多字符。</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">关闭单手模式。</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">将键盘移动到左边。</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">将键盘移动到右边。</string>
     <!-- Media strings -->
     <string name="settings__media__title">表情符号</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">表情符号</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">绘文字</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">颜文字</string>
     <string name="prefs__media__emoji_preferred_skin_tone">首选表情符号肤色</string>
     <string name="prefs__media__emoji_preferred_hair_style">首选表情符号发型</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emoji表情选择历史</string>
@@ -34,15 +27,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">最小查询长度</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">最大候选数量</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">表情 &amp; 颜文字</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">人物 &amp; 身体</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">动物 &amp; 自然</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">食品 &amp; 饮料</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">旅游 &amp; 地点</string>
-    <string name="emoji__category__activities" comment="Emoji category name">活动</string>
-    <string name="emoji__category__objects" comment="Emoji category name">物体</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">符号</string>
-    <string name="emoji__category__flags" comment="Emoji category name">旗帜</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">最近的emoji表情历史记录为空，但一旦你开始输入emoji表情时便会开始将使用历史记录在这里。</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">访问你的emoji表情历史记录？请先解锁你的设备。</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">温馨提示：长按emoji表情历史记录中的某一个，可以将其置顶或移除！</string>
@@ -88,7 +72,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">无痕模式</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">无痕模式开关</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">自动更正</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">自动更正开关</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">语音输入</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">打开语音输入提供者</string>
     <string name="quick_action__floating_window_mode" comment="Please mind the limited available space for the quick action strings">浮动</string>
@@ -113,8 +96,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">设置</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">试用您的配置</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">帮助</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">默认</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">系统默认</string>
     <string name="settings__home__title" comment="Title of the Home screen">欢迎使用{app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">FlorisBoard没有在系统中被启用，因此在输入法选择界面中不会出现。点击这里解决这一问题。</string>
@@ -152,8 +133,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">看起来您没有配置任何键盘子类型。将会使用英语 / QWERTY键盘子类型作为后备方案！</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">这一键盘子类型已经存在。</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">至少有一个字段没有选择一个值。请为这些字段选择一个值。</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} （未安装）</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">键盘布局</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">删除前确认</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">你确定要删除此子类型嘛？</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">主题</string>
@@ -163,10 +142,6 @@
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">日间主题</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">夜间主题</string>
     <string name="pref__theme__theme_accent_color__label" comment="Label of accent color preference in Theme">强调色（Material You 主题）</string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">管理已安装的主题</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">FlorisBoard应用资源</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">内部存储空间</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">外部提供者</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">选择日间主题</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">选择夜间主题</string>
     <string name="settings__theme_editor__fine_tune__title">微调编辑器</string>
@@ -179,7 +154,6 @@
     <string name="settings__theme_editor__rule_already_exists">此样式表规则已定义。</string>
     <string name="settings__theme_editor__rule_name">元素 / 注释</string>
     <string name="settings__theme_editor__rule_codes">目标键码</string>
-    <string name="settings__theme_editor__rule_groups">规则组</string>
     <string name="settings__theme_editor__rule_modes">目标模式（层）</string>
     <string name="settings__theme_editor__rule_shift_states">目标转换状态</string>
     <string name="settings__theme_editor__rule_selectors">选择器</string>
@@ -202,11 +176,9 @@
     <string name="settings__theme_editor__property_name">属性名称</string>
     <string name="settings__theme_editor__property_value">属性值</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">应用于所有角落</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">编辑颜色字符串</string>
     <string name="settings__theme_editor__file_selector_dialog_title">选择文件</string>
     <string name="settings__theme_editor__file_selector_no_files_text">此扩展尚未添加任何文件。请在上一屏幕中使用“{action_title}”操作来导入文件。</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">是夜间主题</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">无边框</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">样式表路径</string>
     <string name="settings__theme_editor__component_meta_material_you__title">Material You</string>
     <string name="settings__theme_editor__stylesheet_error_title">样式表错误</string>
@@ -530,11 +502,6 @@
     <string name="pref__other__show_app_icon__summary_atleast_q" comment="Summary of Show app icon preference in Other for Android 10+">由于系统限制，在Android 10及以上版本中将始终启用</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">关于</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">FlorisBoard 的应用图标</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">开源协议</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">隐私政策</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">源代码</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">开源协议</string>
     <string name="about__version__title" comment="Preference title">版本</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">版本号已复制到剪贴板</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">出错了：{error_message}</string>
@@ -547,7 +514,6 @@
     <string name="about__project_license__title" comment="Preference title">项目开源协议</string>
     <string name="about__project_license__summary" comment="Preference summary">FlorisBoard 在 {license_name} 下进行授权</string>
     <string name="about__project_license__error_license_text_failed" comment="Error text for license text loading failure">错误：无法加载许可证文本。\n-&gt; 原因：{error_message}</string>
-    <string name="about__project_license__error_reason_asset_manager_null" comment="Error text if asset manager is null">资源管理器引用为空</string>
     <string name="about__third_party_licenses__title" comment="Preference title">第三方许可</string>
     <string name="about__third_party_licenses__summary" comment="Preference summary">此应用中包含的第三方库的许可证</string>
     <!-- Setup UI strings -->
@@ -588,7 +554,6 @@
     <string name="backup_and_restore__back_up__files">选择要备份的内容</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">选项</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">键盘扩展</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">拼写扩展 / 词典</string>
     <string name="backup_and_restore__back_up__files_ime_theme">主题扩展</string>
     <string name="backup_and_restore__back_up__files_clipboard_history">剪贴板历史</string>
     <string name="backup_and_restore__back_up__files_clipboard_history__clipboard_text_items">文本条目</string>
@@ -636,16 +601,12 @@
     <string name="clipboard__item_description_email">电子邮箱</string>
     <string name="clipboard__item_description_url">链接地址</string>
     <string name="clipboard__item_description_phone">电话号码</string>
-    <string name="clip__clear_history">清除历史记录</string>
     <string name="clip__unpin_item">取消置顶本条</string>
     <string name="clip__pin_item">置顶本条</string>
     <string name="clip__delete_item">删除</string>
     <string name="clip__paste_item">粘贴</string>
-    <string name="clip__back_to_text_input">返回文本输入</string>
-    <string name="clip__cant_paste">此应用不允许粘贴此内容。</string>
     <string name="clipboard__cleared_primary_clip">已清除主要剪贴板条目</string>
     <string name="clipboard__cleared_history">已清除历史记录</string>
-    <string name="clipboard__cleared_full_history">已清除全部历史记录</string>
     <string name="clipboard__confirm_clear_unfiltered_history__message">您确定要清除完整的剪贴板历史记录吗？这将影响所有项目，固定的项目除外。</string>
     <string name="clipboard__confirm_clear_filtered_history__message">您确定要清除剪贴板历史记录吗？这将影响所有当前已筛选的项目，但已固定的除外。</string>
     <string name="settings__clipboard__title">剪贴板</string>
@@ -723,7 +684,6 @@
     <string name="ext__list__ext_keyboard">键盘扩展</string>
     <string name="ext__list__ext_languagepack">语言包扩展</string>
     <string name="ext__meta__authors">作者</string>
-    <string name="ext__meta__components">捆绑组件</string>
     <string name="ext__meta__components_theme">捆绑主题</string>
     <string name="ext__meta__components_language_pack">捆绑语言包</string>
     <string name="ext__meta__components_none_found">此扩展档案不包含任何捆绑的组件。</string>
@@ -758,7 +718,6 @@
     <string name="ext__editor__create_component__from_empty">空白</string>
     <string name="ext__editor__create_component__from_existing">从现有</string>
     <string name="ext__editor__create_component__from_empty_warning">如果您不熟悉 {app_name} 或不熟悉具体细节，从空白开始创建和配置组件可能会很困难。如果是这种情况，请考虑复制现有组件并根据自己的喜好修改。</string>
-    <string name="ext__editor__edit_component__title">编辑组件</string>
     <string name="ext__editor__edit_component__title_theme">编辑主题组件</string>
     <string name="ext__export__success">成功导出扩展！</string>
     <string name="ext__export__failure">导出扩展失败：{error_message}</string>
@@ -772,9 +731,6 @@
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">不支持或无法识别的文件类型。</string>
     <string name="ext__import__file_skip_ext_core" comment="Reason string when ext has core extension ID">无法替换或更新随应用核心资源提供的默认扩展包。如果您打算使用更新版本的核心扩展包，请考虑更新应用本身。</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">文件表面上是扩展档案，但档案数据解析失败。档案已损坏或此文件并不是扩展。</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">需要一个序列类型为“{expected_serial_type}”的扩展档案，但为“{actual_serial_type}”。</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">需要一个媒体文件（图像、音频、字体等），但找到了一个扩展档案。</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">需要扩展档案，但找到了媒体文件（图像、音频、字体等）。</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">导入过程中出现意外错误。提供了以下详细信息：</string>
     <string name="ext__validation__enter_package_name">请输入包名</string>
     <string name="ext__validation__error_package_name">包名不符合正则表达式 {id_regex}</string>
@@ -806,7 +762,6 @@
     <string name="ext__addon_management_box__go_to_page">跳转到{ext_home_title}</string>
     <string name="ext__home__info">您可以从 FlorisBoard 插件商店下载并安装扩展，或者导入您从互联网上下载的任何匹配和兼容的扩展文件。</string>
     <string name="ext__home__visit_store">访问插件商店</string>
-    <string name="ext__home__manage_extensions">管理已安装的扩展</string>
     <string name="ext__list__view_details">查看详细信息</string>
     <string name="ext__check_updates__title">检查更新</string>
     <!-- Action strings -->
@@ -827,26 +782,17 @@
     <string name="action__discard_confirm_message">您确定要放弃未保存的更改吗？此操作一旦执行，无法撤消。</string>
     <string name="action__edit">编辑</string>
     <string name="action__export">导出</string>
-    <string name="action__export_file">导入文件</string>
-    <string name="action__export_files">导入文件</string>
     <string name="action__import">导入</string>
     <string name="action__import_file">导入文件</string>
-    <string name="action__import_files">导入文件</string>
     <string name="action__no">否</string>
     <string name="action__ok">确定</string>
-    <string name="action__done">完成</string>
     <string name="action__restore">还原</string>
     <string name="action__save">保存</string>
-    <string name="action__select">选择</string>
-    <string name="action__select_dir">选择文件夹</string>
-    <string name="action__select_dirs">选择文件夹（多选）</string>
     <string name="action__select_file">选择文件</string>
     <string name="action__select_files">选择文件（多选）</string>
     <string name="action__yes">是</string>
     <!-- Error strings (generic) -->
     <string name="error__title">出错</string>
-    <string name="error__details">详情</string>
-    <string name="error__invalid">无效</string>
     <string name="error__snackbar_message">出错了：</string>
     <string name="error__snackbar_message_template">出错了：{error_message}</string>
     <!-- General strings -->
@@ -864,9 +810,6 @@
     <string name="screen_orientation__horizontal">水平</string>
     <!-- State strings -->
     <string name="state__disabled">已禁用</string>
-    <string name="state__enabled">已启用</string>
-    <string name="state__no_dir_selected">未选择文件夹</string>
-    <string name="state__no_dirs_selected">未选择文件夹</string>
     <string name="state__no_file_selected">未选择文件</string>
     <string name="state__no_files_selected">未选择文件</string>
     <!-- Enum label and description strings -->
@@ -910,11 +853,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} 中等肤色</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} 中等偏深肤色</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} 深肤色</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} 默认发型</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} 红发</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} 卷发</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} 白发</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} 光头</string>
     <string name="enum__emoji_suggestion_type__leading_colon">冒号</string>
     <string name="enum__emoji_suggestion_type__leading_colon__description" comment="Keep the :emoji_name while translating, this is a syntax guide">使用 :emoji_name 语法建议表情符号</string>
     <string name="enum__emoji_suggestion_type__inline_text">行内文本</string>
@@ -1025,9 +963,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">动态：切换到表情符号 / 切换语言</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="other">{v} 小时</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="other">{v} 分</item>
     </plurals>

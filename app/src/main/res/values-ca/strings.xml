@@ -3,16 +3,9 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Pausa</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Espera</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Icona de tres punts. Si és visible, indica que es poden utilitzar més lletres si es prem més temps.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Tanca el mode d\'una mà.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Mou el teclat a l\'esquerra.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Mou el teclat a la dreta.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Emojis</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Emojis</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Emoticones</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoji</string>
     <string name="prefs__media__emoji_preferred_skin_tone">To de pell preferit dels emojis</string>
     <string name="prefs__media__emoji_preferred_hair_style">Pentinat preferit dels emojis</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Historial d\'emojis</string>
@@ -34,15 +27,6 @@
     <string name="prefs__media__emoji_suggestion_query_min_length" comment="Preference title">Longitud mínima de la consulta</string>
     <string name="prefs__media__emoji_suggestion_candidate_max_count" comment="Preference title">Nombre màxim de suggeriments</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Emoticones &amp; Emocions</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Persones &amp; Cos</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Animals &amp; Natura</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Menjar &amp; Beure</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Viatges &amp; Llocs</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Activitats</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Objectes</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Símbols</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Banderes</string>
     <string name="emoji__history__empty_message" comment="Message if the emoji history is empty">No s\'han trobat emojis recents. Un cop comencis a entrar-ne apareixeran automàticament aquí.</string>
     <string name="emoji__history__phone_locked_message" comment="Message to show if phone is locked">Per accedir a l\'historial d\'emojis has de desbloquejar primer el dispositiu.</string>
     <string name="emoji__history__usage_tip" comment="Feature discoverability for actions of emoji history">Consell d\'amic: Fes un toc llarg sobre l\'emoji de l\'historial per fixar-la o suprimir-la!</string>
@@ -85,7 +69,6 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Incògnit</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Passa al mode incògnit</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Correc. auto</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">Habilita la correcció automàtica</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Entrada veu</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Obre el proveïdor d\'entrada de veu</string>
     <string name="quick_action__one_handed_mode" comment="Please mind the limited available space for the quick action strings">Amb una mà</string>
@@ -106,8 +89,6 @@
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Preferències</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Prova la configuració</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Ajuda</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Per defecte</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">Per defecte del sistema</string>
     <string name="settings__home__title" comment="Title of the Home screen">Us donem la benvinguda a {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">FlorisBoard no està habilitat en el sistema i, per tant, no estarà disponible com a mètode d\'entrada en el selector d\'entrada. Feu clic aquí per a resoldre aquest problema.</string>
@@ -145,8 +126,6 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Sembla que no heu configurat cap subtipus. Com a alternativa s\'utilitzarà el subtipus anglès/QWERTY!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">Aquest subtipus ja existeix!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">Almenys un camp no té cap valor seleccionat. Trieu un valor per al(s) camp(s).</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (no instal·lat)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Dissenys</string>
     <string name="settings__localization__subtype_delete_confirmation_title" comment="Title of the subtype delete confirmation dialog">Confirmació de la supressió</string>
     <string name="settings__localization__subtype_delete_confirmation_warning" comment="Warning message in the confirmation dialog to confirm the user's intent to delete">Segur que vols suprimir aquest subtipus?</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Tema</string>
@@ -157,10 +136,6 @@
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Tema nocturn</string>
     <string name="pref__theme__theme_accent_color__label" comment="Label of accent color preference in Theme">        Color de ressalt (Temes Material You)
     </string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Gestiona els temes instal·lats</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">Actius d\'aplicacions FlorisBoard</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Emmagatzematge intern</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Proveïdor extern</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Selecciona el tema del dia</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Selecciona el tema de nit</string>
     <string name="settings__theme_editor__fine_tune__title">Editor d\'ajusts precisos</string>
@@ -173,7 +148,6 @@
     <string name="settings__theme_editor__rule_already_exists">Aquesta regla de full d\'estil ja ha estat definida.</string>
     <string name="settings__theme_editor__rule_name">Element / Anotació</string>
     <string name="settings__theme_editor__rule_codes">Codis de tecla de destinació</string>
-    <string name="settings__theme_editor__rule_groups">Grups</string>
     <string name="settings__theme_editor__rule_modes">Modes de destinació (capes)</string>
     <string name="settings__theme_editor__rule_shift_states">Estats de destinació a majúscules</string>
     <string name="settings__theme_editor__rule_selectors">Selectors</string>
@@ -196,11 +170,9 @@
     <string name="settings__theme_editor__property_name">Nom de la propietat</string>
     <string name="settings__theme_editor__property_value">Valor de la propietat</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">Aplica-ho per a tots els cantons</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">Edita la cadena de colors</string>
     <string name="settings__theme_editor__file_selector_dialog_title">Escull un fitxer</string>
     <string name="settings__theme_editor__file_selector_no_files_text">Encara no s\'ha afegit cap fitxer a aquesta extensió. Usa l\'acció {action_title} de la pantalla anterior per importar fitxers.</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">És tema fosc</string>
-    <string name="settings__theme_editor__component_meta_is_borderless">És sense vores</string>
     <string name="settings__theme_editor__component_meta_stylesheet_path">Camí al full d\'estil</string>
     <string name="settings__theme_editor__stylesheet_error_title">Error amb el full d\'estil</string>
     <string name="settings__theme_editor__stylesheet_error_description">{app_name} pot carregar el full d\'estil i afegir-hi les regles i esquemes que falten, o suprimir-ne les regles, propietats o valors no vàlids. Vols que {app_name} faci aquests canvis?</string>
@@ -435,11 +407,6 @@
     <string name="pref__other__show_app_icon__summary_atleast_q" comment="Summary of Show app icon preference in Other for Android 10+">Habilitat sempre a Android 10 i posteriors a conseqüència de les restriccions del sistema</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">Quant a</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">Icona de l\'aplicació de FlorisBoard</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Llicències de codi obert</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Política de privacitat</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Codi font</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Llicències de codi obert</string>
     <string name="about__version__title" comment="Preference title">Versió</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Versió copiada al porta-retalls</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">Alguna cosa ha anat malament: {error_message}</string>
@@ -452,7 +419,6 @@
     <string name="about__project_license__title" comment="Preference title">Llicència del projecte</string>
     <string name="about__project_license__summary" comment="Preference summary">FlorisBoard està sota la llicència de {license_name}</string>
     <string name="about__project_license__error_license_text_failed" comment="Error text for license text loading failure">Error: No s\'ha pogut carregar la llicència.\n-&gt; Motiu: {error_message}</string>
-    <string name="about__project_license__error_reason_asset_manager_null" comment="Error text if asset manager is null">La referència al gestor de recursos és nul·la</string>
     <string name="about__third_party_licenses__title" comment="Preference title">Llicències de tercers</string>
     <string name="about__third_party_licenses__summary" comment="Preference summary">Llicències de les biblioteques de tercers incloses en aquesta aplicació</string>
     <!-- Setup UI strings -->
@@ -487,7 +453,6 @@
     <string name="backup_and_restore__back_up__files">Tria de què fer còpia de seguretat</string>
     <string name="backup_and_restore__back_up__files_jetpref_datastore">Preferències</string>
     <string name="backup_and_restore__back_up__files_ime_keyboard">Extensions del teclat</string>
-    <string name="backup_and_restore__back_up__files_ime_spelling">Extensions de correcció ortogràfica / diccionaris</string>
     <string name="backup_and_restore__back_up__files_ime_theme">Extensions del tema</string>
     <string name="backup_and_restore__back_up__files_clipboard_history">Historial del porta-retalls</string>
     <string name="backup_and_restore__back_up__files_clipboard_history__clipboard_text_items">Entrades de text</string>
@@ -535,16 +500,12 @@
     <string name="clipboard__item_description_email">Correu</string>
     <string name="clipboard__item_description_url">Enllaç</string>
     <string name="clipboard__item_description_phone">Telèfon</string>
-    <string name="clip__clear_history">Suprimeix l\'historial</string>
     <string name="clip__unpin_item">Solta l\'entrada</string>
     <string name="clip__pin_item">Fixa l\'entrada</string>
     <string name="clip__delete_item">Eliminar</string>
     <string name="clip__paste_item">Enganxa</string>
-    <string name="clip__back_to_text_input">Torna a l\'entrada de text</string>
-    <string name="clip__cant_paste">Aquesta aplicació no permet enganxar aquest contingut.</string>
     <string name="clipboard__cleared_primary_clip">S\'ha suprimit el clip principal</string>
     <string name="clipboard__cleared_history">S\'ha suprimit l\'historial</string>
-    <string name="clipboard__cleared_full_history">S\'ha suprimit tot l\'historial</string>
     <string name="settings__clipboard__title">Porta-retalls</string>
     <string name="pref__clipboard__use_internal_clipboard__label">Usa el porta-retalls intern</string>
     <string name="pref__clipboard__use_internal_clipboard__summary">Usa un porta-retalls intern en lloc del porta-retalls del sistema</string>
@@ -609,7 +570,6 @@
     <string name="ext__list__ext_keyboard">Extensions del teclat</string>
     <string name="ext__list__ext_languagepack">Extensions del paquet d\'idiomes</string>
     <string name="ext__meta__authors">Autors</string>
-    <string name="ext__meta__components">Components agrupats</string>
     <string name="ext__meta__components_theme">Temes agrupats</string>
     <string name="ext__meta__components_language_pack">Paquets d\'idiomes fornits</string>
     <string name="ext__meta__components_none_found">Aquest fitxer d\'extensió no conté cap component agrupat.</string>
@@ -644,7 +604,6 @@
     <string name="ext__editor__create_component__from_empty">Buit</string>
     <string name="ext__editor__create_component__from_existing">D\'un existent</string>
     <string name="ext__editor__create_component__from_empty_warning">Crear i configurar un component buit pot ser difícil si ets nou a {app_name} o si no estàs familiaritzat amb els detalls. Sempre pots copiar un component existent i modificar-lo al teu gust si és el cas.</string>
-    <string name="ext__editor__edit_component__title">Edita el component</string>
     <string name="ext__editor__edit_component__title_theme">Edita el component de tema</string>
     <string name="ext__export__success">L\'extensió s\'ha exportat correctament!</string>
     <string name="ext__export__failure">Error en exportar l\'extensió: {error_message}</string>
@@ -658,9 +617,6 @@
     <string name="ext__import__file_skip_unsupported" comment="Reason string when file is unsupported">Tipus de fitxer incompatible o no reconegut.</string>
     <string name="ext__import__file_skip_ext_core" comment="Reason string when ext has core extension ID">Impossible substituir o actualitzar els paquets d\'extensió per defecte proveïts amb els recursos base de l\'aplicació. Planteja\'t d\'actualitzar l\'aplicació mateixa si vols usar una versió nova d\'un paquet d\'extensió base.</string>
     <string name="ext__import__file_skip_ext_corrupted" comment="Reason string when file seems to be ext but is corrupted">El fitxer sembla un arxiu d\'extensió però l\'anàlisi de dades de l\'arxiu ha fallat. O l\'arxiu està malmès o el fitxer no és realment una extensió.</string>
-    <string name="ext__import__file_skip_ext_incorrect_type" comment="Reason string when file is of incorrect extension serial type">S\'esperava un arxiu d\'extensió amb tipus de sèrie \"{expected_serial_type}\" però era \"{actual_serial_type}\".</string>
-    <string name="ext__import__file_skip_ext_not_supported" comment="Reason string when file is loaded in incorrect context">S\'esperava un fitxer multimèdia (imatge, àudio, font, etc.) però s\'ha trobat un arxiu d\'extensió.</string>
-    <string name="ext__import__file_skip_media_not_supported" comment="Reason string when file is loaded in incorrect context">S\'esperava un arxiu d\'extensió però s\'ha trobat un fitxer multimèdia (imatge, àudio, font, etc.).</string>
     <string name="ext__import__error_unexpected_exception" comment="Label when an error occurred during import. The error message will be appended below this text view">S\'ha produït un error inesperat durant la importació. Els detalls són els següents:</string>
     <string name="ext__validation__enter_package_name">Introdueix el nom del paquet</string>
     <string name="ext__validation__error_package_name">El nom del paquet no coincideix amb l\'expressió regular {id_regex}</string>
@@ -692,7 +648,6 @@
     <string name="ext__addon_management_box__go_to_page">Ves a {ext_home_title}</string>
     <string name="ext__home__info">Pots descarregar i instal·lar les extensions des de la botiga de complements de FlorisBoard o importar qualsevol fitxer d\'extensió que hagis descarregat d\'internet.</string>
     <string name="ext__home__visit_store">Visita la botiga de complements</string>
-    <string name="ext__home__manage_extensions">Administra les extensions instal·lades</string>
     <string name="ext__list__view_details">Visualitza els detalls</string>
     <string name="ext__check_updates__title">Comprova les actualitzacions</string>
     <!-- Action strings -->
@@ -712,25 +667,17 @@
     <string name="action__discard_confirm_message">Segur que vols descartar els canvis no desats\"? Aquesta acció no es podrà revertir un cop s\'hagi fet.</string>
     <string name="action__edit">Edita</string>
     <string name="action__export">Exporta</string>
-    <string name="action__export_file">Exporta el fitxer</string>
-    <string name="action__export_files">Exporta els fitxers</string>
     <string name="action__import">Importa</string>
     <string name="action__import_file">Importa el fitxer</string>
-    <string name="action__import_files">Importa els fitxers</string>
     <string name="action__no">No</string>
     <string name="action__ok">D\'acord</string>
     <string name="action__restore">Restaura</string>
     <string name="action__save">Desa</string>
-    <string name="action__select">Selecciona</string>
-    <string name="action__select_dir">Selecciona el directori</string>
-    <string name="action__select_dirs">Selecciona els directoris</string>
     <string name="action__select_file">Selecciona el fitxer</string>
     <string name="action__select_files">Selecciona els fitxers</string>
     <string name="action__yes">Sí</string>
     <!-- Error strings (generic) -->
     <string name="error__title">Error</string>
-    <string name="error__details">Detalls</string>
-    <string name="error__invalid">No és vàlid</string>
     <string name="error__snackbar_message">Alguna cosa ha anat malament</string>
     <string name="error__snackbar_message_template">Alguna cosa ha anat malament: {error_message}</string>
     <!-- General strings -->
@@ -748,9 +695,6 @@
     <string name="screen_orientation__horizontal">Horitzontal</string>
     <!-- State strings -->
     <string name="state__disabled">Deshabilitat</string>
-    <string name="state__enabled">Habilitat</string>
-    <string name="state__no_dir_selected">No s\'ha seleccionat cap directori</string>
-    <string name="state__no_dirs_selected">No s\'han seleccionat directoris</string>
     <string name="state__no_file_selected">No s\'ha seleccionat cap fitxer</string>
     <string name="state__no_files_selected">No s\'han seleccionat fitxers</string>
     <!-- Enum label and description strings -->
@@ -786,11 +730,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} To de pell mitjà</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} To de pell mitjà-fosc</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} To de pell fosc</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} Cabell per defecte</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} Pèl-roig</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} Rull</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} Blanc</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} Calb</string>
     <string name="enum__emoji_suggestion_type__leading_colon">Dos punts a l\'inici</string>
     <string name="enum__emoji_suggestion_type__leading_colon__description" comment="Keep the :emoji_name while translating, this is a syntax guide">Suggereix emojis fent servir la sintaxi :nom_emoji</string>
     <string name="enum__emoji_suggestion_type__inline_text">Integrat al text</string>
@@ -898,10 +837,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">Dinámic: Canviar a emojis/Canviar idioma</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} hora</item>
-        <item quantity="other">{v} hores</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} minut</item>
         <item quantity="other">{v} minuts</item>

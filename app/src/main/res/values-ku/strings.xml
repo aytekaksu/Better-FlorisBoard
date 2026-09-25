@@ -3,35 +3,17 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Rawestandin</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Li bendê bimîne</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">Îkona sê-dot. Eger xuya be, nîşan dide ku eger zêdetir pêl bê kirin, zêdetir tîp dikarin bên bikaranîn.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Moda yek destî bigire.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Klavyeyê ber bi çepê ve bibe.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Klavyeyê ber bi rastê ve bibe.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Emûcî</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Emojîyan</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Hestnîşan</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoji</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Tona çermê emojî ya tercîhkirî</string>
     <string name="prefs__media__emoji_preferred_hair_style">Tercîha porê emojî</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Pêkenok &amp; Heskirin</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Xelk &amp; Beden</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Heywan &amp; Xweza</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Xwarin &amp; Vexwe</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Rêwîtî &amp; Cih</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Çalakî</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Amanc</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Sembol</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Alayen</string>
     <!-- Quick action strings -->
     <!-- Incognito mode strings -->
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Mîhengan</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Sazkirina xwe biceribîne</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Alîkarî</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Rawêj</string>
     <string name="settings__system_default" comment="General string which is used when a preference has the system default value set">Jixwebera Sîstemê</string>
     <string name="settings__home__title" comment="Title of the Home screen">Bi xêr hatî {app_name}</string>
     <string name="settings__home__ime_not_enabled" comment="Error message shown in Home fragment when FlorisBoard is not enabled in the system">FlorisBoard di pergalê de ne çalak e û ji ber vê yekê dê wekî rêbazek têketê di hilbijarka têketê de tune be. Ji bo çareserkirina vê pirsgirêkê li vir bitikin.</string>
@@ -65,18 +47,12 @@
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Wusa dixuye ku te tu cureyên jêr ava nekirine. Wekî paşvekê wê subtype English/QWERTY were bikaranîn!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">Ev jêrnivîs jixwe heye!</string>
     <string name="settings__localization__subtype_error_fields_no_value" comment="Error message shown in subtype editor if at least one field is set to '- select -' (means no value specified)">Qet nebe li qadekê nirxekî ku hatîye bijartin tune ye. Ji kerema xwe ji bo zevîyan nirxekî hilbijêrin.</string>
-    <string name="settings__localization__subtype_error_layout_not_installed" comment="Error message shown in subtype list when a layout is not installed, where %s will be replaced by the layout ID">{layout_id} (saznekirî)</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Rêzkirin</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Mijar</string>
     <string name="pref__theme__mode__label" comment="Label of the theme mode preference">Moda tema</string>
     <string name="pref__theme__sunrise_time__label" comment="Label of the sunrise time preference">Dema rojbûnê</string>
     <string name="pref__theme__sunset_time__label" comment="Label of the sunset time preference">dema berava rojê</string>
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">Rûkara Rojê</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Rûkara şevê</string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Rûkarên sazkirî bi rê ve bibe</string>
-    <string name="pref__theme__source_assets" comment="Label for the theme source field">FlorisBoard Hebûnên Sepan</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Depoya Navxweyî</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Pêşkêşkerê Derve</string>
     <string name="settings__theme_manager__title_day" comment="Title of the theme manager screen for day theme selection">Rûkarê ronahiyê hilbijêre</string>
     <string name="settings__theme_manager__title_night" comment="Title of the theme manager screen for night theme selection">Rûkarê tarî hilbijêre</string>
     <string name="settings__theme_editor__fine_tune__title">Edîtorê awazê xweşik</string>
@@ -85,7 +61,6 @@
     <string name="settings__theme_editor__add_rule">Rêbazekê tevlî bike</string>
     <string name="settings__theme_editor__edit_rule">Rêbazê serrast bike</string>
     <string name="settings__theme_editor__rule_codes">Kodên sereke yên armanc</string>
-    <string name="settings__theme_editor__rule_groups">Kom</string>
     <string name="settings__theme_editor__rule_selectors">Hilbijêr</string>
     <string name="settings__theme_editor__add_code">Koda mifteyê zêde bike</string>
     <string name="settings__theme_editor__edit_code">Koda mifteyê biguherîne</string>
@@ -99,7 +74,6 @@
     <string name="settings__theme_editor__property_name">Navê milkê</string>
     <string name="settings__theme_editor__property_value">Nirxa milkê</string>
     <string name="settings__theme_editor__property_value_shape_apply_for_all_corners">Ji bo hemî kûçeyan bicîh bikin</string>
-    <string name="settings__theme_editor__property_value_color_dialog_title">Rêza rengîn biguherîne</string>
     <string name="settings__theme_editor__component_meta_is_night_theme">Mijara şevê ye</string>
     <string name="snygg__rule_element__key">Kilîd</string>
     <string name="snygg__rule_selector__pressed">Çewisandî</string>
@@ -200,11 +174,6 @@
     <string name="pref__gestures__swipe_distance_threshold__label" comment="Preference title">Derbenda mesafeyê şemitîn</string>
     <!-- About UI strings -->
     <string name="about__title" comment="Title of About activity">Derbar</string>
-    <string name="about__app_icon_content_description" comment="Content description of app icon in About">Îkona Sepan ya FlorisBoard</string>
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Lîsansên çavkaniya vekirî</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Polîtîkaya nepenîtiyê</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Koda çavkanî</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Lîsansên çavkaniya vekirî</string>
     <string name="about__version__title" comment="Preference title">Guherto</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">Hejmara guhertoya ji bo panoyê hatiye kopîkirin</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">ھەڵەیەک ڕوویدا: {error_message}</string>
@@ -266,16 +235,12 @@
     <string name="clipboard__group_pinned">جێگیرکراو</string>
     <string name="clipboard__group_recent">دوایین لەبەرگیراوە</string>
     <string name="clipboard__group_other">Din</string>
-    <string name="clip__clear_history">Dîrokê paqij bike</string>
     <string name="clip__unpin_item">Hêmanê sabit rake</string>
     <string name="clip__pin_item">Hêmanê sabit bike</string>
     <string name="clip__delete_item">Jê birin</string>
     <string name="clip__paste_item">Bizeliqêne</string>
-    <string name="clip__back_to_text_input">Vegere navnîşa nivîsê</string>
-    <string name="clip__cant_paste">Ev sepan destûrê nade ku vê naverokê pêve bike.</string>
     <string name="clipboard__cleared_primary_clip">لەبەرگیراوەی بنەڕەتی سڕایەوە</string>
     <string name="clipboard__cleared_history">لەبەرگیراوەکان سڕانەوە</string>
-    <string name="clipboard__cleared_full_history">سەرجەم لەبەرگیراوەکان سڕانەوە</string>
     <string name="pref__clipboard__group_clipboard_history__label">Dîroka panelê</string>
     <string name="pref__clipboard__enable_clipboard_history__label">Dîroka panoyê çalak bike</string>
     <string name="pref__clipboard__enable_clipboard_history__summary">هەڵگرتنی شتە لەبەرگیراوەکان بۆ هێشتنەوە</string>
@@ -318,16 +283,11 @@
     <string name="action__ok">Başe</string>
     <string name="action__restore">Nûvdekirin</string>
     <string name="action__save">Berhevkirin</string>
-    <string name="action__select">Hilbijartin</string>
-    <string name="action__select_dir">Cilbend hilbijér in</string>
-    <string name="action__select_dirs">Pêvekan hilbijêre</string>
     <string name="action__select_file">Pelî hilbijêre</string>
     <string name="action__select_files">Pelgeyan Hilbijêre</string>
     <string name="action__yes">Erê</string>
     <!-- Error strings (generic) -->
     <string name="error__title">Çewtî</string>
-    <string name="error__details">Hûrgulî</string>
-    <string name="error__invalid">Seqet</string>
     <string name="error__snackbar_message">Tiştek çewt çû</string>
     <string name="error__snackbar_message_template">Tiştek çewt çû: {error_message}</string>
     <!-- General strings -->
@@ -341,7 +301,6 @@
     <string name="screen_orientation__horizontal">Berwar</string>
     <!-- State strings -->
     <string name="state__disabled">Hat neçalakkirin</string>
-    <string name="state__enabled">Çalakkirî</string>
     <string name="state__no_file_selected">Pelge nehatiye Hilbijartin</string>
     <string name="state__no_files_selected">Pelge nehatiye Hilbijartin</string>
     <!-- Enum label and description strings -->
@@ -353,11 +312,6 @@
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">{emoji} Çermê navîn</string>
     <string name="enum__emoji_skin_tone__medium_dark_skin_tone" comment="Enum value label">{emoji} Çermê tarî yê navîn</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">{emoji} Çermê tarî</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">{emoji} Porê xwerû</string>
-    <string name="enum__emoji_hair_style__red_hair" comment="Enum value label">{emoji} Porê sor</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">{emoji} Porê kulîlk</string>
-    <string name="enum__emoji_hair_style__white_hair" comment="Enum value label">{emoji} Porê spî</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">{emoji} Rût</string>
     <string name="enum__landscape_input_ui_mode__never_show" comment="Enum value label">Tu carî nîşan nede</string>
     <string name="enum__landscape_input_ui_mode__always_show" comment="Enum value label">Herdem nîşan bide</string>
     <string name="enum__landscape_input_ui_mode__dynamically_show" comment="Enum value label">Dînamîk nîşan bide</string>
@@ -398,10 +352,6 @@
     <string name="enum__utility_key_action__dynamic_switch_language_emojis" comment="Enum value label">Dînamîk: Bi zimanê emojîyan / Ziman veguherîn</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} saet</item>
-        <item quantity="other">{v} saet</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} xulek</item>
         <item quantity="other">{v} xulek</item>

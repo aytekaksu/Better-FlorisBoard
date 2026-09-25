@@ -3,29 +3,13 @@
     <string name="app_name">FlorisBoard</string>
     <string name="key__phone_pause" comment="Label for the Pause key in the telephone keyboard layout">Posar</string>
     <string name="key__phone_wait" comment="Label for the Wait key in the telephone keyboard layout">Espera</string>
-    <string name="key_popup__threedots_alt" comment="Content description for the three-dots icon in a key popup">L\'iconu de tres puntos. Si apaez, indica que se puen usar más lletres al tener primío.</string>
     <!-- One-handed strings -->
-    <string name="one_handed__close_btn_content_description" comment="Content description for the one-handed close button">Zarrar mou a dos manes.</string>
-    <string name="one_handed__move_start_btn_content_description" comment="Content description for the one-handed move to left button">Muevi\'l tecláu a la esquierda.</string>
-    <string name="one_handed__move_end_btn_content_description" comment="Content description for the one-handed move to right button">Muevi\'l tecláu a la derecha.</string>
     <!-- Media strings -->
     <string name="settings__media__title">Fustaxes</string>
-    <string name="media__tab__emojis" comment="Tab description for emojis in the media UI">Fustaxes</string>
-    <string name="media__tab__emoticons" comment="Tab description for emoticons in the media UI">Fustaxes ASCII</string>
-    <string name="media__tab__kaomoji" comment="Tab description for kaomoji in the media UI">Kaomoji</string>
     <string name="prefs__media__emoji_preferred_skin_tone">لون البشرة المفضل للرموز التعبيرية</string>
     <string name="prefs__media__emoji_preferred_hair_style">تصفيفة الشعر الرموز التعبيرية المفضلة</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">Activar l\'historial de fustaxes</string>
     <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion" comment="Emoji category name">Sorrises y fustaxes</string>
-    <string name="emoji__category__people_body" comment="Emoji category name">Persones y cuerpu</string>
-    <string name="emoji__category__animals_nature" comment="Emoji category name">Animales y natura</string>
-    <string name="emoji__category__food_drink" comment="Emoji category name">Comida y bébores</string>
-    <string name="emoji__category__travel_places" comment="Emoji category name">Viaxes y llugares</string>
-    <string name="emoji__category__activities" comment="Emoji category name">Actividaes</string>
-    <string name="emoji__category__objects" comment="Emoji category name">Oxetos</string>
-    <string name="emoji__category__symbols" comment="Emoji category name">Símbolos</string>
-    <string name="emoji__category__flags" comment="Emoji category name">Banderes</string>
     <!-- Quick action strings -->
     <string name="quick_action__arrow_up" comment="Please mind the limited available space for the quick action strings">سهم لأعلى</string>
     <string name="quick_action__arrow_up__tooltip">أداء السهم لأعلى</string>
@@ -44,15 +28,12 @@
     <string name="quick_action__undo" comment="Please mind the limited available space for the quick action strings">Desfacer</string>
     <string name="quick_action__redo" comment="Please mind the limited available space for the quick action strings">Refacer</string>
     <string name="quick_action__toggle_actions_overflow" comment="Please mind the limited available space for the quick action strings">Más aiciones</string>
-    <string name="quick_action__toggle_autocorrect__tooltip">Alternar el correutor automáticu</string>
     <string name="quick_actions_editor__subheader_dynamic_actions">Aiciones dinámiques ({n})</string>
     <string name="quick_actions_editor__subheader_hidden_actions">Aiciones anubríes ({n})</string>
     <!-- Incognito mode strings -->
     <!-- Settings UI strings -->
     <string name="settings__title" comment="Title of Settings">Configuración</string>
     <string name="settings__preview_keyboard" comment="Hint for try your setup box">Toca equí pa probar la configuración</string>
-    <string name="settings__help" comment="General label for help buttons in Settings">Ayuda</string>
-    <string name="settings__default" comment="General string which is used when a preference has the default value set">Por defeutu</string>
     <string name="settings__home__title" comment="Title of the Home screen">Afáyate en {app_name}</string>
     <string name="settings__localization__title" comment="Title of languages and Layout screen">Llingües y distribuciones</string>
     <string name="settings__localization__display_language_names_in__label" comment="Label of Display language names in preference">Amosar los nomes de les llingües na</string>
@@ -78,18 +59,13 @@
     <string name="settings__localization__subtype_presets_view_all" comment="View all presets button">Amosar too</string>
     <string name="settings__localization__subtype_no_subtypes_configured_warning" comment="Warning message that no subtype has been defined">Paez que nun configuresti nengún sotipu. ¡Va usase\'l sotipu «English/QWERTY» como alternativa!</string>
     <string name="settings__localization__subtype_error_already_exists" comment="Error message shown in subtype dialog when a subtype to add already exists">¡Esti sotipu yá esiste!</string>
-    <string name="settings__localization__group_layouts__label" comment="Label of layouts group">Distribuciones</string>
     <string name="settings__theme__title" comment="Title of the Theme screen">Estilu</string>
     <string name="pref__theme__mode__label" comment="Label of the theme mode preference">Mou del estilu</string>
     <string name="pref__theme__sunrise_time__label" comment="Label of the sunrise time preference">Hora del riscar</string>
     <string name="pref__theme__sunset_time__label" comment="Label of the sunset time preference">Hora del aséu</string>
     <string name="pref__theme__day" comment="Label of the day group (day means light theme)">Estilu diurnu</string>
     <string name="pref__theme__night" comment="Label of the night group (night means dark theme)">Estilu nocherniegu</string>
-    <string name="settings__theme_manager__title_manage" comment="Title of the theme manager screen for managing installed and custom themes">Xestionar los estilos instalaos</string>
-    <string name="pref__theme__source_internal" comment="Label for the theme source field">Almacenamientu internu</string>
-    <string name="pref__theme__source_external" comment="Label for the theme source field">Fornidor esternu</string>
     <string name="settings__theme_editor__no_rules_defined">Esta fueya d\'estilu nun tien nenguna regla definida. Amiesta una regla pa comenzar a personalizar la fueya d\'estilu.</string>
-    <string name="settings__theme_editor__rule_groups">Grupos</string>
     <string name="settings__theme_editor__rule_selectors">Selectores</string>
     <string name="settings__theme_editor__no_codes_defined">Aplica la regla a tolos elementos de destín.</string>
     <string name="snygg__rule_element__extracted_landscape_input_layout">Distribución d\'entrada n\'horizontal</string>
@@ -149,10 +125,6 @@
     <string name="pref__gestures__general_title" comment="Preference group title">Xestos en xeneral</string>
     <string name="pref__gestures__space_bar_title" comment="Preference group title">Xestos de la barra d\'espaciu</string>
     <!-- About UI strings -->
-    <string name="about__view_licenses" comment="Label of View licenses button in About">Llicencies de códigu abiertu</string>
-    <string name="about__view_privacy_policy" comment="Label of View privacy policy button in About">Política de privacidá</string>
-    <string name="about__view_source_code" comment="Label of View source code button in About">Códigu fonte</string>
-    <string name="about__license__title" comment="Title of Open-source licenses dialog">Llicencies de códigu abiertu</string>
     <string name="about__version__title" comment="Preference title">Versión</string>
     <string name="about__version_copied__title" comment="Title of the toast for copying the version string">La versión copióse al cartafueyu</string>
     <string name="about__version_copied__error" comment="Title of the error toast for copying the version string">Prodúxose daqué malo: {error_message}</string>
@@ -209,7 +181,6 @@
     <string name="clipboard__locked__message">P\'acceder al historial del cartafueyu, desbloquia primero\'l preséu.</string>
     <string name="clipboard__item_description_email">Corréu electrónicu</string>
     <string name="clipboard__item_description_url">URL</string>
-    <string name="clip__cant_paste">Esta aplicación nun permite apegar esti conteníu.</string>
     <string name="settings__clipboard__title">Cartafueyu</string>
     <string name="pref__clipboard__use_internal_clipboard__label">Usar el cartafueyu internu</string>
     <string name="pref__clipboard__use_internal_clipboard__summary">Usa un cartafueyu internu en cuentes del que tien sistema</string>
@@ -282,8 +253,6 @@
     <string name="screen_orientation__vertical">Vertical</string>
     <string name="screen_orientation__horizontal">Horizontal</string>
     <!-- State strings -->
-    <string name="state__no_dir_selected">Nun se seleicionó nengún direutoriu</string>
-    <string name="state__no_dirs_selected">Nun se seleicionó nengún direutoriu</string>
     <string name="state__no_file_selected">Nun se seleicionó nengún ficheru</string>
     <string name="state__no_files_selected">Nun se seleicionó nengún ficheru</string>
     <!-- Enum label and description strings -->
@@ -294,9 +263,6 @@
     <string name="enum__emoji_skin_tone__light_skin_tone" comment="Enum value label">Tonu de pelleyu blanco {emoji}</string>
     <string name="enum__emoji_skin_tone__medium_skin_tone" comment="Enum value label">Tonu de pelleyu mulato {emoji}</string>
     <string name="enum__emoji_skin_tone__dark_skin_tone" comment="Enum value label">Tonu de pelleyu negro {emoji}</string>
-    <string name="enum__emoji_hair_style__default" comment="Enum value label">Pelo predeterminao {emoji}</string>
-    <string name="enum__emoji_hair_style__curly_hair" comment="Enum value label">Pelo rizoso {emoji}</string>
-    <string name="enum__emoji_hair_style__bald" comment="Enum value label">Calvez {emoji}</string>
     <string name="enum__key_hint_mode__smart_priority" comment="Enum value label">Prioridá intelixente</string>
     <string name="enum__incognito_mode__dynamic_on_off" comment="Enum value label">Des/activación automática</string>
     <string name="enum__landscape_input_ui_mode__dynamically_show" comment="Enum value label">Apaición dinámica</string>
@@ -309,10 +275,6 @@
     <string name="enum__swipe_action__toggle_smartbar_visibility" comment="Enum value label">Alternar la visibilidá de la barra intelixente</string>
     <!-- Unit strings (symbols) -->
     <!-- Unit strings (written words) -->
-    <plurals name="unit__hours__written">
-        <item quantity="one">{v} hora</item>
-        <item quantity="other">{v} hores</item>
-    </plurals>
     <plurals name="unit__minutes__written">
         <item quantity="one">{v} minutu</item>
         <item quantity="other">{v} minutos</item>
