@@ -1,16 +1,5 @@
-# Language Packs
+# Language packs
 
-## Languages
+Language packs are `.flex` extensions for locale-specific input data. This fork bundles a default pack and a basic Chinese shape-based pack. Users can import other compatible packs through the Extensions screen.
 
-- [Summary](#summary)
-- [Chinese / 中文](LANGUAGEPACKS-CHINESE.md)
-
-## Summary
-
-Stub.
-
-This page should describe how language packs work, how to import them, and point to the location of downloadable
-language packs.
-
-The homepage of default language packs included in FlorisBoard should link to this page.
-
+See [Chinese language pack](LANGUAGEPACKS-CHINESE.md) for the bundled Chinese methods and [Extensions](docs/features/extensions/README.md) for package and import details.
