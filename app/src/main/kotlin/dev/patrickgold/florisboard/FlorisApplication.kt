@@ -33,6 +33,7 @@ import dev.patrickgold.florisboard.ime.clipboard.ClipboardManager
 import dev.patrickgold.florisboard.ime.core.SubtypeManager
 import dev.patrickgold.florisboard.ime.dictionary.DictionaryManager
 import dev.patrickgold.florisboard.ime.editor.EditorInstance
+import dev.patrickgold.florisboard.ime.keyboard.KeyboardExtensionRepository
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardManager
 import dev.patrickgold.florisboard.ime.media.emoji.FlorisEmojiCompat
 import dev.patrickgold.florisboard.ime.nlp.NlpManager
@@ -169,6 +170,7 @@ class FlorisApplication : Application() {
     val editorInstance = lazy { EditorInstance(this) }
     val extensionManager = lazy { ExtensionManager(this) }
     val glideTypingManager = lazy { GlideTypingManager(this) }
+    val keyboardExtensionRepository = lazy { KeyboardExtensionRepository(this) }
     val keyboardManager = lazy { KeyboardManager(this) }
     val autocorrectPluginManager = lazy { AutocorrectPluginManager(this) }
     val nlpManager = lazy { NlpManager(this) }
@@ -375,6 +377,8 @@ fun Context.editorInstance() = this.florisApplication().editorInstance
 fun Context.extensionManager() = this.florisApplication().extensionManager
 
 fun Context.glideTypingManager() = this.florisApplication().glideTypingManager
+
+fun Context.keyboardExtensionRepository() = this.florisApplication().keyboardExtensionRepository
 
 fun Context.keyboardManager() = this.florisApplication().keyboardManager
 

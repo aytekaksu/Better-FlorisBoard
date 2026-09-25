@@ -20,6 +20,7 @@ import android.content.Context
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.extensionManager
+import dev.patrickgold.florisboard.keyboardExtensionRepository
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.popup.PopupMapping
 import dev.patrickgold.florisboard.ime.popup.PopupMappingComponent
@@ -27,7 +28,6 @@ import dev.patrickgold.florisboard.ime.text.key.KeyType
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKey
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboard
-import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.lib.devtools.LogTopic
 import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import dev.patrickgold.florisboard.lib.devtools.flogWarning
@@ -82,7 +82,7 @@ class LayoutManager(context: Context) {
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
     private val extensionManager by context.extensionManager()
-    private val keyboardManager by context.keyboardManager()
+    private val keyboardExtensionRepository by context.keyboardExtensionRepository()
 
     private val layoutCache: HashMap<LTN, DeferredResult<CachedLayout>> = hashMapOf()
     private val layoutCacheGuard: Mutex = Mutex(locked = false)
@@ -111,7 +111,7 @@ class LayoutManager(context: Context) {
                 return@withLock cached
             } else {
                 flogDebug(LogTopic.LAYOUT_MANAGER) { "Loading layout: type=${ltn.type}" }
-                val meta = keyboardManager.resources.layouts.value[ltn.type]?.get(ltn.name)
+                val meta = keyboardExtensionRepository.snapshot.value.layouts[ltn.type]?.get(ltn.name)
                     ?: error("No indexed entry found for ${ltn.type} - ${ltn.name}")
                 val ext = extensionManager.getExtensionById(ltn.name.extensionId)
                     ?: error("Extension ${ltn.name.extensionId} not found")
@@ -138,7 +138,7 @@ class LayoutManager(context: Context) {
                 return@withLock cached
             } else {
                 flogDebug(LogTopic.LAYOUT_MANAGER) { "Loading popup mapping" }
-                val meta = keyboardManager.resources.popupMappings.value[name]
+                val meta = keyboardExtensionRepository.snapshot.value.popupMappings[name]
                     ?: error("No indexed entry found for $name")
                 val ext = extensionManager.getExtensionById(name.extensionId)
                     ?: error("Extension ${name.extensionId} not found")

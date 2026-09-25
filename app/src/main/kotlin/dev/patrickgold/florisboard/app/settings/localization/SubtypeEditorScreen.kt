@@ -74,7 +74,7 @@ import dev.patrickgold.florisboard.ime.keyboard.LayoutType
 import dev.patrickgold.florisboard.ime.keyboard.extCorePopupMapping
 import dev.patrickgold.florisboard.ime.nlp.han.HanShapeBasedLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.latin.LatinLanguageProvider
-import dev.patrickgold.florisboard.keyboardManager
+import dev.patrickgold.florisboard.keyboardExtensionRepository
 import dev.patrickgold.florisboard.lib.FlorisLocale
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
@@ -190,15 +190,16 @@ fun SubtypeEditorScreen(id: Long?) = FlorisScreen {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val keyboardManager by context.keyboardManager()
+    val keyboardExtensionRepository by context.keyboardExtensionRepository()
     val subtypeManager by context.subtypeManager()
 
     val displayLanguageNamesIn by prefs.localization.displayLanguageNamesIn.collectAsState()
-    val composers by keyboardManager.resources.composers.collectAsState()
-    val currencySets by keyboardManager.resources.currencySets.collectAsState()
-    val layoutExtensions by keyboardManager.resources.layouts.collectAsState()
-    val popupMappings by keyboardManager.resources.popupMappings.collectAsState()
-    val subtypePresets by keyboardManager.resources.subtypePresets.collectAsState()
+    val keyboardExtensions by keyboardExtensionRepository.snapshot.collectAsState()
+    val composers = keyboardExtensions.composers
+    val currencySets = keyboardExtensions.currencySets
+    val layoutExtensions = keyboardExtensions.layouts
+    val popupMappings = keyboardExtensions.popupMappings
+    val subtypePresets = keyboardExtensions.subtypePresets
 
     val subtypeEditor = rememberSaveable(saver = SubtypeEditorState.Saver) {
         val subtype = id?.let { subtypeManager.getSubtypeById(id) }
