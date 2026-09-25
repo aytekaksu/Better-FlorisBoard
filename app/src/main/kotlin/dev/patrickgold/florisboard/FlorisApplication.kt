@@ -43,6 +43,9 @@ import dev.patrickgold.florisboard.ime.nlp.plugin.liveAutocorrectKeyboardTraits
 import dev.patrickgold.florisboard.ime.text.gestures.GlideTypingManager
 import dev.patrickgold.florisboard.ime.theme.ThemeManager
 import dev.patrickgold.florisboard.lib.cache.CacheManager
+import dev.patrickgold.florisboard.lib.cache.StartupCacheCleanup
+import dev.patrickgold.florisboard.lib.cache.StartupCacheCleanupReport
+import dev.patrickgold.florisboard.lib.cache.StartupCacheJanitor
 import dev.patrickgold.florisboard.lib.crashutility.CrashUtility
 import dev.patrickgold.florisboard.lib.devtools.Flog
 import dev.patrickgold.florisboard.lib.devtools.LogTopic
@@ -54,7 +57,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import org.florisboard.lib.kotlin.io.deleteContentsRecursively
 import org.florisboard.lib.kotlin.tryOrNull
 import java.io.FileInputStream
 import java.io.InputStream
@@ -154,6 +156,10 @@ internal fun readBoundedProcessName(input: InputStream): String? {
 class FlorisApplication : Application() {
     private val mainHandler by lazy { Handler(mainLooper) }
     private val scope = CoroutineScope(Dispatchers.Default)
+    private val startupCacheCleanup = StartupCacheCleanup(scope) {
+        cacheDir?.toPath()?.let { StartupCacheJanitor(it).sweep() }
+            ?: StartupCacheCleanupReport(failures = 1)
+    }
     private val initializationStarted = AtomicBoolean(false)
     private val completedBootstrapStages = AtomicInteger(0)
     private val clipboardInitializationFailure = TerminalFailureLatch<ClipboardManager> {
@@ -230,7 +236,6 @@ class FlorisApplication : Application() {
             FlorisEmojiCompat.init(this)
 
             if (getSystemService(UserManager::class.java)?.isUserUnlocked != true) {
-                cacheDir?.deleteContentsRecursively()
                 extensionManager.value.init()
                 val unlockReceiver = BootComplete()
                 registerReceiver(unlockReceiver, IntentFilter(Intent.ACTION_USER_UNLOCKED))
@@ -252,7 +257,8 @@ class FlorisApplication : Application() {
     fun init() {
         if (!initializationStarted.compareAndSet(false, true)) return
         try {
-            cacheDir?.deleteContentsRecursively()
+            // Credential-protected cache cleanup starts only after unlock.
+            startupCacheCleanup.start()
             // Android 8 requires ClipboardManager to be created on a Looper thread.
             val initializedClipboardManager = clipboardManager.value
             scope.launch {
@@ -291,6 +297,15 @@ class FlorisApplication : Application() {
             flogInfo { "Preference store initialization completed" }
         } catch (_: Exception) {
             // Diagnostics must never decide bootstrap success.
+        }
+        // IME and spellchecker need preferences promptly; only cache consumers wait.
+        val cleanup = startupCacheCleanup.await()
+        if (cleanup.failures > 0) {
+            try {
+                flogError { "Startup cache cleanup left some stale workspaces." }
+            } catch (_: Exception) {
+                // Diagnostics must never decide bootstrap success.
+            }
         }
         try {
             initializedClipboardManager.initializeForContext(this)

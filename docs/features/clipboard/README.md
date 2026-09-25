@@ -30,6 +30,10 @@ import starts a clean process instead of retaining a blocked app worker. There
 is no direct-process fallback. A hostile provider may retain its own blocked
 thread, but it cannot pin FlorisBoard's clipboard actor or future imports.
 
+After unlock, startup cleanup removes abandoned provider and share-preview
+partial files before the clipboard actor or share UI can use their directories.
+It leaves durable clipboard media in no-backup storage untouched.
+
 The exported share activity accepts only a granted `content:` URI from another
 UID, then publishes a rooted app-owned snapshot with validated declared,
 decoded, and provider-reported MIME metadata. Preview decoding is bounded,

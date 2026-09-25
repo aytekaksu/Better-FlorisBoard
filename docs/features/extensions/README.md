@@ -25,8 +25,16 @@ keeps its extracted files until that install finishes, even if the screen exits.
 A failed deletion gets one delayed I/O retry. Exhausted failures reach waiters;
 one app-owned worker retains only failed workspace paths and retries them in
 bounded batches, skipping active workspaces. Persistent failures log once
-at their source without paths; steady retries are quiet. A process restart
-still relies on the existing cache reset.
+at their source without paths; steady retries are quiet. After unlock, one
+background job cleans abandoned, canonical workspace directories.
+
+That startup cleanup also retires known export and editor staging paths. It
+finishes before settings, sharing, or clipboard cache users start, but does not
+hold up the IME or spellchecker. Unknown entries and symbolic links stay put.
+Theme materializations and loaded extension runtime files are not part of this
+sweep: their managers retire stale roots on first use, without deleting live
+assets during direct-boot unlock. A failed sweep leaves the app usable and is
+retried on the next process start.
 
 One selection is limited to 64 files, 256 MiB of source data, 512 MiB of
 expanded data, and 16,384 entries. Reads and extraction also preserve 128 MiB
