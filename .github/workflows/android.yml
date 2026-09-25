@@ -135,33 +135,8 @@ jobs:
           "platforms;android-36"
           "build-tools;36.0.0"
 
-      - name: Build debug, minified beta, benchmark, and API artifacts
+      - name: Build artifacts and verify beta APK privacy
         run: ./gradlew ciPackage --stacktrace
-
-      - name: Verify packaged privacy invariants
-        shell: bash
-        run: |
-          readonly apk="app/build/outputs/apk/beta/app-beta-unsigned.apk"
-          readonly aapt="$ANDROID_HOME/build-tools/36.0.0/aapt"
-          test -f "$apk"
-          test -x "$aapt"
-
-          permissions="$("$aapt" dump permissions "$apk")"
-          if grep -Fq "android.permission.INTERNET" <<< "$permissions"; then
-            echo "::error::The production-like APK must not request INTERNET permission."
-            exit 1
-          fi
-
-          manifest="$("$aapt" dump xmltree "$apk" AndroidManifest.xml)"
-          if grep -Eq "android:debuggable.*(0xffffffff|0x1)$" <<< "$manifest"; then
-            echo "::error::The production-like APK must not be debuggable."
-            exit 1
-          fi
-          if grep -Fq "EditorHarnessActivity" <<< "$manifest" ||
-            grep -Fq "dev.patrickgold.florisboard.test.action.EDITOR_HARNESS" <<< "$manifest"; then
-            echo "::error::The production-like APK must not contain the debug-only editor harness."
-            exit 1
-          fi
 
       - name: Upload build artifacts
         if: success()
