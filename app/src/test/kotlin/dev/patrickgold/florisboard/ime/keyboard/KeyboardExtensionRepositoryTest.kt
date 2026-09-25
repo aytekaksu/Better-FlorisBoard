@@ -23,6 +23,7 @@ import dev.patrickgold.florisboard.ime.popup.PopupMappingComponent
 import dev.patrickgold.florisboard.ime.text.composing.WithRules
 import dev.patrickgold.florisboard.lib.FlorisLocale
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
+import dev.patrickgold.florisboard.lib.ext.ExtensionIndexState
 import dev.patrickgold.florisboard.lib.ext.ExtensionMeta
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -71,23 +72,27 @@ class KeyboardExtensionRepositoryTest :
 
         test("publishes each refresh as one new snapshot with no stale entries") {
             runTest {
-                val source = MutableStateFlow<List<KeyboardExtension>>(emptyList())
+                val source = MutableStateFlow(ExtensionIndexState(0L, emptyList<KeyboardExtension>()))
                 val repository = KeyboardExtensionRepository(source, backgroundScope)
                 runCurrent()
                 val observed = mutableListOf<KeyboardExtensionSnapshot>()
                 backgroundScope.launch { repository.snapshot.collect { observed.add(it) } }
                 runCurrent()
 
-                source.value = listOf(extension("org.example.first", "first"))
+                source.value = ExtensionIndexState(1L, listOf(extension("org.example.first", "first")))
                 runCurrent()
-                source.value = listOf(extension("org.example.second", "second"))
+                source.value = ExtensionIndexState(2L, listOf(extension("org.example.second", "second")))
+                runCurrent()
+                // Archive bytes may change without any manifest field changing.
+                source.value = ExtensionIndexState(3L, listOf(extension("org.example.second", "second")))
                 runCurrent()
 
-                observed.map { it.generation } shouldBe listOf(1L, 2L, 3L)
+                observed.map { it.generation } shouldBe listOf(0L, 1L, 2L, 3L)
                 observed[1].composers.keys shouldBe setOf(ExtensionComponentName("org.example.first", "shared"))
                 observed[2].composers.keys shouldBe setOf(ExtensionComponentName("org.example.second", "shared"))
                 observed[2].layouts[LayoutType.CHARACTERS]?.keys shouldBe
                     setOf(ExtensionComponentName("org.example.second", "shared"))
+                observed[3].layouts shouldBe observed[2].layouts
             }
         }
     })

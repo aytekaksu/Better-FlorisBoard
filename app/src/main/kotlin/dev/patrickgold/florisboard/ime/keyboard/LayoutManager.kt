@@ -65,6 +65,35 @@ private data class CachedPopupMapping(
     val mapping: PopupMapping,
 )
 
+private class GenerationCache<K, V> {
+    private val entries = hashMapOf<K, DeferredResult<V>>()
+    private val guard = Mutex()
+    private var generation = -1L
+
+    suspend fun load(
+        scope: CoroutineScope,
+        requestedGeneration: Long,
+        key: K,
+        description: String,
+        create: CoroutineScope.() -> DeferredResult<V>,
+    ): V = guard.withLock {
+        if (requestedGeneration > generation) {
+            entries.clear()
+            generation = requestedGeneration
+        }
+        if (requestedGeneration < generation) {
+            // An older computation must not put a stale entry back after a refresh.
+            return@withLock scope.create()
+        }
+        entries[key]?.also {
+            flogDebug(LogTopic.LAYOUT_MANAGER) { "Using cached $description" }
+        } ?: run {
+            flogDebug(LogTopic.LAYOUT_MANAGER) { "Loading $description" }
+            scope.create().also { entries[key] = it }
+        }
+    }.await().getOrThrow()
+}
+
 data class DebugLayoutComputationResult(
     val main: Result<CachedLayout?>,
     val mod: Result<CachedLayout?>,
@@ -82,43 +111,30 @@ class LayoutManager(context: Context) {
     private val extensionManager by context.extensionManager()
     private val keyboardExtensionRepository by context.keyboardExtensionRepository()
 
-    private val layoutCache: HashMap<LTN, DeferredResult<CachedLayout>> = hashMapOf()
-    private val layoutCacheGuard: Mutex = Mutex(locked = false)
-    private val popupMappingCache: HashMap<ExtensionComponentName, DeferredResult<CachedPopupMapping>> = hashMapOf()
-    private val popupMappingCacheGuard: Mutex = Mutex(locked = false)
+    private val layoutCache = GenerationCache<LTN, CachedLayout>()
+    private val popupMappingCache = GenerationCache<ExtensionComponentName, CachedPopupMapping>()
     private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     val debugLayoutComputationResultFlow = MutableStateFlow<DebugLayoutComputationResult?>(null)
-
-    private suspend fun <K, V> CoroutineScope.loadCached(
-        cache: MutableMap<K, DeferredResult<V>>,
-        guard: Mutex,
-        key: K,
-        description: String,
-        create: CoroutineScope.() -> DeferredResult<V>,
-    ): V = guard.withLock {
-        cache[key]?.also {
-            flogDebug(LogTopic.LAYOUT_MANAGER) { "Using cached $description" }
-        } ?: run {
-            flogDebug(LogTopic.LAYOUT_MANAGER) { "Loading $description" }
-            create().also { cache[key] = it }
-        }
-    }.await().getOrThrow()
 
     /**
      * Loads the layout for the specified type and name.
      *
      * @return A deferred result for a layout.
      */
-    private fun loadLayoutAsync(ltn: LTN?, allowNullLTN: Boolean) = ioScope.runCatchingAsync {
+    private fun loadLayoutAsync(
+        ltn: LTN?,
+        allowNullLTN: Boolean,
+        snapshot: KeyboardExtensionSnapshot,
+    ) = ioScope.runCatchingAsync {
         if (!allowNullLTN) {
             requireNotNull(ltn) { "Invalid argument value for 'ltn': null" }
         }
         if (ltn == null) {
             return@runCatchingAsync null
         }
-        loadCached(layoutCache, layoutCacheGuard, ltn, "layout: type=${ltn.type}") {
-            val meta = keyboardExtensionRepository.snapshot.value.layouts[ltn.type]?.get(ltn.name)
+        layoutCache.load(this, snapshot.generation, ltn, "layout: type=${ltn.type}") {
+            val meta = snapshot.layouts[ltn.type]?.get(ltn.name)
                 ?: error("No indexed entry found for ${ltn.type} - ${ltn.name}")
             val ext = extensionManager.getExtensionById(ltn.name.extensionId)
                 ?: error("Extension ${ltn.name.extensionId} not found")
@@ -133,10 +149,13 @@ class LayoutManager(context: Context) {
         }
     }
 
-    private fun loadPopupMappingAsync(subtype: Subtype? = null) = ioScope.runCatchingAsync {
+    private fun loadPopupMappingAsync(
+        snapshot: KeyboardExtensionSnapshot,
+        subtype: Subtype? = null,
+    ) = ioScope.runCatchingAsync {
         val name = subtype?.popupMapping ?: extCorePopupMapping("default")
-        loadCached(popupMappingCache, popupMappingCacheGuard, name, "popup mapping") {
-            val meta = keyboardExtensionRepository.snapshot.value.popupMappings[name]
+        popupMappingCache.load(this, snapshot.generation, name, "popup mapping") {
+            val meta = snapshot.popupMappings[name]
                 ?: error("No indexed entry found for $name")
             val ext = extensionManager.getExtensionById(name.extensionId)
                 ?: error("Extension ${name.extensionId} not found")
@@ -173,11 +192,12 @@ class LayoutManager(context: Context) {
         main: LTN? = null,
         modifier: LTN? = null,
         extension: LTN? = null,
+        snapshot: KeyboardExtensionSnapshot,
     ): TextKeyboard {
-        val extendedPopupsDefault = loadPopupMappingAsync()
-        val extendedPopups = loadPopupMappingAsync(subtype)
+        val extendedPopupsDefault = loadPopupMappingAsync(snapshot)
+        val extendedPopups = loadPopupMappingAsync(snapshot, subtype)
 
-        val mainLayoutResult = loadLayoutAsync(main, allowNullLTN = false).await()
+        val mainLayoutResult = loadLayoutAsync(main, allowNullLTN = false, snapshot = snapshot).await()
         val mainLayout = mainLayoutResult.onFailure {
             flogWarning { "Layout load failed: mode=$keyboardMode, role=main, error=${it.javaClass.simpleName}" }
         }.getOrNull()
@@ -197,11 +217,11 @@ class LayoutManager(context: Context) {
         } else {
             modifier
         }
-        val modifierLayoutResult = loadLayoutAsync(modifierToLoad, allowNullLTN = true).await()
+        val modifierLayoutResult = loadLayoutAsync(modifierToLoad, allowNullLTN = true, snapshot = snapshot).await()
         val modifierLayout = modifierLayoutResult.onFailure {
             flogWarning { "Layout load failed: mode=$keyboardMode, role=modifier, error=${it.javaClass.simpleName}" }
         }.getOrNull()
-        val extensionLayoutResult = loadLayoutAsync(extension, allowNullLTN = true).await()
+        val extensionLayoutResult = loadLayoutAsync(extension, allowNullLTN = true, snapshot = snapshot).await()
         val extensionLayout = extensionLayoutResult.onFailure {
             flogWarning { "Layout load failed: mode=$keyboardMode, role=extension, error=${it.javaClass.simpleName}" }
         }.getOrNull()
@@ -246,7 +266,7 @@ class LayoutManager(context: Context) {
 
         // Add hints to keys
         if (keyboardMode == KeyboardMode.CHARACTERS && computedArrangement.isNotEmpty()) {
-            val symbolsComputedArrangement = computeKeyboardAsync(KeyboardMode.SYMBOLS, subtype).await().arrangement
+            val symbolsComputedArrangement = computeKeyboardAsync(KeyboardMode.SYMBOLS, subtype, snapshot).await().arrangement
             // number row hint always happens on first row
             if (prefs.keyboard.hintedNumberRowEnabled.get() && symbolsComputedArrangement.isNotEmpty()) {
                 val row = computedArrangement[0]
@@ -308,6 +328,12 @@ class LayoutManager(context: Context) {
     fun computeKeyboardAsync(
         keyboardMode: KeyboardMode,
         subtype: Subtype,
+    ): Deferred<TextKeyboard> = computeKeyboardAsync(keyboardMode, subtype, keyboardExtensionRepository.snapshot.value)
+
+    private fun computeKeyboardAsync(
+        keyboardMode: KeyboardMode,
+        subtype: Subtype,
+        snapshot: KeyboardExtensionSnapshot,
     ): Deferred<TextKeyboard> = ioScope.async {
         var main: LTN? = null
         var modifier: LTN? = null
@@ -347,7 +373,7 @@ class LayoutManager(context: Context) {
             }
         }
 
-        return@async mergeLayouts(keyboardMode, subtype, main, modifier, extension)
+        return@async mergeLayouts(keyboardMode, subtype, main, modifier, extension, snapshot)
     }
 
     /**
