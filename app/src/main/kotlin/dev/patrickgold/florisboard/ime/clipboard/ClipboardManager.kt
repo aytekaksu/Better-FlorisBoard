@@ -44,7 +44,6 @@ import dev.patrickgold.florisboard.ime.clipboard.provider.OwnedClipboardMediaUri
 import dev.patrickgold.florisboard.ime.clipboard.provider.isValidClipboardTimestamp
 import dev.patrickgold.florisboard.ime.clipboard.provider.resolveObservedSystemClipboardMedia
 import dev.patrickgold.florisboard.ime.clipboard.provider.systemClipboardMediaUri
-import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.lib.util.InputMethodUtils
 import java.io.Closeable
 import java.security.MessageDigest
@@ -585,13 +584,13 @@ internal fun commitSystemClipboardMediaPublication(
  * State-changing work runs through one FIFO actor so Room writes and media
  * ownership changes cannot overtake each other.
  */
-class ClipboardManager(
+class ClipboardManager internal constructor(
     context: Context,
+    private val inputSink: Lazy<ClipboardInputSink>,
 ) : OnPrimaryClipChangedListener, Closeable {
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
     private val editorInstance by context.editorInstance()
-    private val keyboardManager by context.keyboardManager()
     private val systemClipboardManager = context.systemService(AndroidClipboardManager::class)
     private val appOpsManager = context.systemService(AppOpsManager::class)
     private val keyguardManager = context.systemService(AndroidKeyguardManager::class)
@@ -1147,7 +1146,7 @@ class ClipboardManager(
     ) {
         val itemSnapshot = item.copy(mimeTypes = item.mimeTypes.toList())
         if (itemSnapshot.type == ItemType.TEXT) {
-            keyboardManager.inputEventDispatcher.dispatchInputEvent {
+            inputSink.value.dispatchPaste {
                 reportPasteResult(
                     editorInstance.commitClipboardItem(itemSnapshot),
                     onResult,
@@ -1209,7 +1208,7 @@ class ClipboardManager(
                 }
             }
         }
-        keyboardManager.inputEventDispatcher.deferInputEvents(
+        inputSink.value.deferMediaPaste(
             onLaterInputQueued = ::abandon,
             onInvalidated = ::abandon,
             start = { onResolved ->

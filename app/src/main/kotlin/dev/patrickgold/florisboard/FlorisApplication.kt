@@ -30,6 +30,7 @@ import android.os.UserManager
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.initAndroidWithLegacyMigrations
 import dev.patrickgold.florisboard.ime.clipboard.ClipboardManager
+import dev.patrickgold.florisboard.ime.clipboard.asClipboardInputSink
 import dev.patrickgold.florisboard.ime.core.SubtypeManager
 import dev.patrickgold.florisboard.ime.dictionary.DictionaryManager
 import dev.patrickgold.florisboard.ime.editor.EditorInstance
@@ -164,7 +165,11 @@ class FlorisApplication : Application() {
 
     val cacheManager = lazy { CacheManager(this) }
     val clipboardManager = lazy {
-        clipboardInitializationFailure.register(ClipboardManager(this))
+        clipboardInitializationFailure.register(
+            ClipboardManager(this, lazy {
+                keyboardManager.value.inputEventDispatcher.asClipboardInputSink()
+            }),
+        )
     }
     val dictionaryManager = lazy { DictionaryManager(this) }
     val editorInstance = lazy { EditorInstance(this) }
