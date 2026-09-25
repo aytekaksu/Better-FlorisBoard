@@ -52,12 +52,12 @@ class UserDictionaryScreenModelTest : FunSpec({
                 drain(io)
                 model.state.loading shouldBe false
                 model.state.languages shouldBe listOf(
-                    AllLanguagesLocale,
-                    FlorisLocale.fromTag("en"),
-                    FlorisLocale.fromTag("fr"),
+                    UserDictionaryLocaleChoice.All,
+                    standard("en"),
+                    standard("fr"),
                 )
 
-                model.selectLocale(AllLanguagesLocale)
+                model.selectLocale(UserDictionaryLocaleChoice.All)
                 drain(io)
                 model.state.words.map { it.word } shouldBe listOf("universal")
                 dao.queriedLocales.last() shouldBe null
@@ -79,14 +79,112 @@ class UserDictionaryScreenModelTest : FunSpec({
                 val model = model(io, dao)
                 drain(io)
 
-                model.state.languages shouldBe listOf(FlorisLocale.fromTag("en-US"))
-                model.selectLocale(FlorisLocale.fromTag("en-US"))
+                model.state.languages shouldBe listOf(standard("en-US"))
+                model.selectLocale(standard("en-US"))
                 drain(io)
                 model.state.words.map { it.word } shouldBe listOf("canonical", "legacy")
             } finally {
                 Dispatchers.resetMain()
             }
         }
+    }
+
+    test("extended and malformed Floris tags stay distinct selectable raw choices") {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val io = QueuedIoDispatcher()
+                val script = "sr-Latn-RS"
+                val extension = "sr-Latn-RS-u-ca-gregory"
+                val malformed = "sr-Latn-RS-"
+                val legacyAlias = "iw"
+                val dao = FakeDao(io).apply {
+                    entries += entry(1, "same", script)
+                    entries += entry(2, "same", extension)
+                    entries += entry(3, "same", malformed)
+                    entries += entry(4, "simple", "en-US")
+                    entries += entry(5, "simple", "en_US")
+                    entries += entry(6, "alias", legacyAlias)
+                }
+                val model = model(io, dao)
+                drain(io)
+
+                model.state.languages shouldBe listOf(
+                    standard("en-US"),
+                    UserDictionaryLocaleChoice.Exact(legacyAlias),
+                    UserDictionaryLocaleChoice.Exact(script),
+                    UserDictionaryLocaleChoice.Exact(malformed),
+                    UserDictionaryLocaleChoice.Exact(extension),
+                )
+                listOf(script to 1L, extension to 2L, malformed to 3L, legacyAlias to 6L).forEach { (tag, id) ->
+                    model.selectLocale(UserDictionaryLocaleChoice.Exact(tag))
+                    drain(io)
+                    model.state.currentLocale shouldBe UserDictionaryLocaleChoice.Exact(tag)
+                    model.state.words.map { it.id } shouldBe listOf(id)
+                    model.selectLocale(null)
+                    drain(io)
+                }
+                dao.queriedRawTags shouldBe listOf(script, extension, malformed, legacyAlias)
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+    }
+
+    test("system dictionary keeps its parsed language choices") {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val io = QueuedIoDispatcher()
+                val dao = FakeDao(io).apply { entries += entry(1, "system", "sr-Latn-RS") }
+                val model = model(io, dao, UserDictionaryType.SYSTEM)
+                drain(io)
+
+                model.state.languages shouldBe listOf(standard("sr-Latn-RS"))
+                model.selectLocale(standard("sr-Latn-RS"))
+                drain(io)
+                dao.queriedLocales.last() shouldBe FlorisLocale.fromTag("sr-Latn-RS")
+                dao.queriedRawTags shouldBe emptyList()
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+    }
+
+    test("reserved-looking raw tags never overlap the all-languages choice") {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val io = QueuedIoDispatcher()
+                val tags = listOf("all", "ALL", "null", "NULL")
+                val dao = FakeDao(io).apply {
+                    tags.forEachIndexed { index, tag -> entries += entry(index + 1L, "same", tag) }
+                }
+                val model = model(io, dao)
+                drain(io)
+
+                model.state.languages shouldBe tags.sorted().map { UserDictionaryLocaleChoice.Exact(it) }
+                tags.forEachIndexed { index, tag ->
+                    model.selectLocale(UserDictionaryLocaleChoice.Exact(tag))
+                    drain(io)
+                    model.state.words.map { it.id } shouldBe listOf(index + 1L)
+                }
+                dao.queriedRawTags shouldBe tags
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+    }
+
+    test("editing Floris entries preserves extended tags while system normalization stays unchanged") {
+        normalizeEditedUserDictionaryLocale(" sr-Latn-RS-u-ca-gregory ", UserDictionaryType.FLORIS) shouldBe
+            "sr-Latn-RS-u-ca-gregory"
+        normalizeEditedUserDictionaryLocale(" en-US ", UserDictionaryType.FLORIS) shouldBe "en_US"
+        normalizeEditedUserDictionaryLocale(" sr-Latn-RS ", UserDictionaryType.SYSTEM) shouldBe "sr_LATN_RS"
+        normalizeEditedUserDictionaryLocale("  ", UserDictionaryType.FLORIS) shouldBe null
+        normalizeEditedUserDictionaryLocale("en-US", UserDictionaryType.FLORIS, "en-US") shouldBe "en-US"
+        normalizeEditedUserDictionaryLocale("", UserDictionaryType.FLORIS, "") shouldBe ""
+        normalizeEditedUserDictionaryLocale("en-US", UserDictionaryType.SYSTEM, "en-US") shouldBe "en_US"
     }
 
     test("a completed old read cannot replace a newer locale selection") {
@@ -101,13 +199,13 @@ class UserDictionaryScreenModelTest : FunSpec({
                 val model = model(io, dao)
                 drain(io)
 
-                model.selectLocale(FlorisLocale.fromTag("en"))
+                model.selectLocale(standard("en"))
                 runCurrent()
                 io.runAll() // The English result is ready, but has not reached the UI yet.
-                model.selectLocale(FlorisLocale.fromTag("fr"))
+                model.selectLocale(standard("fr"))
                 drain(io)
 
-                model.state.currentLocale shouldBe FlorisLocale.fromTag("fr")
+                model.state.currentLocale shouldBe standard("fr")
                 model.state.words.map { it.word } shouldBe listOf("bonjour")
             } finally {
                 Dispatchers.resetMain()
@@ -131,7 +229,7 @@ class UserDictionaryScreenModelTest : FunSpec({
 
                 dao.entries.map { it.word } shouldBe listOf("first")
                 model.state.busy shouldBe false
-                model.state.languages shouldBe listOf(AllLanguagesLocale)
+                model.state.languages shouldBe listOf(UserDictionaryLocaleChoice.All)
             } finally {
                 Dispatchers.resetMain()
             }
@@ -148,14 +246,14 @@ class UserDictionaryScreenModelTest : FunSpec({
                 drain(io)
 
                 model.save(entry(0, "bonjour", "fr"), isAdd = true) shouldBe true
-                model.selectLocale(FlorisLocale.fromTag("fr"))
-                model.state.currentLocale shouldBe FlorisLocale.fromTag("fr")
+                model.selectLocale(standard("fr"))
+                model.state.currentLocale shouldBe standard("fr")
                 model.state.loading shouldBe true
                 runCurrent()
                 io.pendingCount shouldBe 1 // Selection did not start a read during the write.
 
                 drain(io)
-                model.state.currentLocale shouldBe FlorisLocale.fromTag("fr")
+                model.state.currentLocale shouldBe standard("fr")
                 model.state.words.map { it.word } shouldBe listOf("bonjour")
             } finally {
                 Dispatchers.resetMain()
@@ -212,7 +310,7 @@ class UserDictionaryScreenModelTest : FunSpec({
                 val dao = FakeDao(io).apply { entries += word }
                 val model = model(io, dao)
                 drain(io)
-                model.selectLocale(FlorisLocale.fromTag("en"))
+                model.selectLocale(standard("en"))
                 drain(io)
 
                 model.delete(word) shouldBe true
@@ -248,7 +346,13 @@ class UserDictionaryScreenModelTest : FunSpec({
     }
 })
 
-private fun model(io: QueuedIoDispatcher, dao: FakeDao): UserDictionaryScreenModel {
+private fun standard(tag: String) = UserDictionaryLocaleChoice.Standard(FlorisLocale.fromTag(tag))
+
+private fun model(
+    io: QueuedIoDispatcher,
+    dao: FakeDao,
+    type: UserDictionaryType = UserDictionaryType.FLORIS,
+): UserDictionaryScreenModel {
     return UserDictionaryScreenModel(
         database = {
             check(io.running) { "Database must be acquired on the I/O dispatcher" }
@@ -260,6 +364,7 @@ private fun model(io: QueuedIoDispatcher, dao: FakeDao): UserDictionaryScreenMod
             }
         },
         context = { error("Context is not needed by DAO operations") },
+        type = type,
         ioDispatcher = io,
     )
 }
@@ -271,6 +376,7 @@ private fun entry(id: Long, word: String, locale: String? = null): UserDictionar
 private class FakeDao(private val io: QueuedIoDispatcher) : UserDictionaryDao {
     val entries = mutableListOf<UserDictionaryEntry>()
     val queriedLocales = mutableListOf<FlorisLocale?>()
+    val queriedRawTags = mutableListOf<String>()
     var insertFailure: Exception? = null
     var queryFailure: Exception? = null
     private var nextId = 10L
@@ -285,7 +391,21 @@ private class FakeDao(private val io: QueuedIoDispatcher) : UserDictionaryDao {
     override fun queryAll(locale: FlorisLocale?): List<UserDictionaryEntry> {
         requireIo()
         queriedLocales += locale
-        return entries.filter { it.locale?.let { tag -> FlorisLocale.fromTag(tag) } == locale }
+        val tag = locale?.localeTag()
+        return entries.filter { entry ->
+            if (tag == null) {
+                entry.locale == null
+            } else {
+                entry.locale.equals(tag, ignoreCase = true) ||
+                    entry.locale.equals(tag.replace('_', '-'), ignoreCase = true)
+            }
+        }
+    }
+
+    override fun queryAllRaw(locale: String): List<UserDictionaryEntry> {
+        requireIo()
+        queriedRawTags += locale
+        return entries.filter { it.locale == locale }
     }
 
     override fun queryExact(word: String, locale: FlorisLocale?): List<UserDictionaryEntry> {
@@ -298,10 +418,10 @@ private class FakeDao(private val io: QueuedIoDispatcher) : UserDictionaryDao {
         return entries.filter { it.word == word && it.locale == locale }
     }
 
-    override fun queryLanguageList(): List<FlorisLocale?> {
+    override fun queryLanguageList(): List<String?> {
         requireIo()
         queryFailure?.let { throw it }
-        return entries.map { it.locale }.distinct().map { it?.let(FlorisLocale::fromTag) }
+        return entries.map { it.locale }.distinct()
     }
 
     override fun insert(entry: UserDictionaryEntry): Long {

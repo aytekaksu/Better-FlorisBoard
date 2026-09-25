@@ -118,6 +118,46 @@ class DictionaryManagerAndroidTest {
     }
 
     @Test
+    fun florisImportKeepsPlatformDependentAliasesAndExtendedRowsDistinct() {
+        withImportSource { context, database, source ->
+            val dao = database.userDictionaryDao()
+            val word = "legacy-alias-${UUID.randomUUID()}"
+            val rawAlias = "iw_IL"
+            val modernTag = "he_IL"
+            assertEquals(rawAlias, canonicalImportedFlorisLocale(rawAlias))
+            assertEquals(modernTag, canonicalImportedFlorisLocale(modernTag))
+            val extendedTag = "iw-IL-u-ca-gregory"
+            val legacy = UserDictionaryEntry(0, word, 42, rawAlias, "legacy")
+            val modern = UserDictionaryEntry(0, word, 64, modernTag, "modern")
+            val extended = UserDictionaryEntry(0, word, 73, extendedTag, "extended")
+            val legacyId = dao.insert(legacy)
+            val modernId = dao.insert(modern)
+            val extendedId = dao.insert(extended)
+
+            source.writeText("dictionary=test;version=1\n w=$word;f=173;l=$rawAlias;s=updated\n")
+            database.importCombinedList(context, Uri.fromFile(source))
+
+            val updated = legacy.copy(id = legacyId, freq = 173, shortcut = "updated")
+            assertEquals(listOf(updated), dao.queryAllRaw(rawAlias))
+            assertEquals(listOf(modern.copy(id = modernId)), dao.queryAllRaw(modernTag))
+            assertEquals(listOf(extended.copy(id = extendedId)), dao.queryAllRaw(extendedTag))
+            assertEquals(3, dao.queryAll().size)
+
+            val duplicateId = dao.insert(legacy)
+            source.writeText("dictionary=test;version=1\n w=$word;f=211;l=$rawAlias;s=newer\n")
+            database.importCombinedList(context, Uri.fromFile(source))
+
+            assertEquals(
+                listOf(updated.copy(freq = 211, shortcut = "newer"), legacy.copy(id = duplicateId)),
+                dao.queryAllRaw(rawAlias).sortedBy { it.id },
+            )
+            assertEquals(listOf(modern.copy(id = modernId)), dao.queryAllRaw(modernTag))
+            assertEquals(listOf(extended.copy(id = extendedId)), dao.queryAllRaw(extendedTag))
+            assertEquals(4, dao.queryAll().size)
+        }
+    }
+
+    @Test
     fun florisImportPrefersCanonicalRowWhenLegacyDuplicateExists() {
         withImportSource { context, database, source ->
             val dao = database.userDictionaryDao()
@@ -172,6 +212,59 @@ class DictionaryManagerAndroidTest {
                 longer.copy(freq = 211, shortcut = "updated"),
                 reimported.single { it.locale == longerTag },
             )
+            assertEquals(setOf(shorterTag, longerTag), dao.queryLanguageList().toSet())
+            assertEquals(listOf(shorter.copy(id = shorterId)), dao.queryAllRaw(shorterTag))
+            assertEquals(listOf(longer.copy(freq = 211, shortcut = "updated")), dao.queryAllRaw(longerTag))
+
+            val exported = File.createTempFile("floris-dictionary-extended-", ".txt", context.cacheDir)
+            try {
+                database.exportCombinedList(context, Uri.fromFile(exported))
+                val lines = exported.readLines()
+                assertTrue(lines.any { it.contains(";l=$shorterTag;") })
+                assertTrue(lines.any { it.contains(";l=$longerTag;") })
+            } finally {
+                exported.delete()
+            }
+        }
+    }
+
+    @Test
+    fun florisRawLocaleQueriesKeepScriptExtensionAndMalformedTagsSeparate() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val database = Room.inMemoryDatabaseBuilder(context, FlorisUserDictionaryDatabase::class.java).build()
+        try {
+            val dao = database.userDictionaryDao()
+            val tags = listOf(
+                "sr-Latn-RS", "sr-Latn-RS-u-ca-gregory", "sr-Latn-RS-", "sr-latn-RS",
+                "iw", "all", "ALL", "null", "NULL",
+            )
+            val entries = tags.mapIndexed { index, tag ->
+                val entry = UserDictionaryEntry(0, "locale-choice-$index", 100, tag, null)
+                entry.copy(id = dao.insert(entry))
+            }
+            assertEquals(tags.toSet(), dao.queryLanguageList().toSet())
+            entries.forEach { entry ->
+                assertEquals(listOf(entry), dao.queryAllRaw(entry.locale!!))
+            }
+            assertTrue(dao.queryAllRaw("sr-Latn").isEmpty())
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun malformedFlorisLocaleImportStaysBrowsableByItsStoredTag() {
+        withImportSource { context, database, source ->
+            val tag = "sr-Latn-RS-"
+            source.writeText("dictionary=test;version=1\n w=malformed-locale;f=173;l=$tag\n")
+
+            database.importCombinedList(context, Uri.fromFile(source))
+
+            val dao = database.userDictionaryDao()
+            val imported = dao.queryAllRaw(tag).single()
+            assertEquals(tag, imported.locale)
+            assertEquals(listOf(tag), dao.queryLanguageList())
+            assertEquals(listOf(imported), dao.queryExactRaw(imported.word, tag))
         }
     }
 

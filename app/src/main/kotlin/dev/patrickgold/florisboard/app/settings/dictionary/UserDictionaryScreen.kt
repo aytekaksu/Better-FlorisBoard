@@ -57,7 +57,6 @@ import dev.patrickgold.florisboard.ime.dictionary.FREQUENCY_MAX
 import dev.patrickgold.florisboard.ime.dictionary.FREQUENCY_MIN
 import dev.patrickgold.florisboard.ime.dictionary.UserDictionaryEntry
 import dev.patrickgold.florisboard.ime.dictionary.UserDictionaryValidation
-import dev.patrickgold.florisboard.lib.FlorisLocale
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.lib.compose.Validation
 import dev.patrickgold.florisboard.lib.rememberValidationResult
@@ -104,6 +103,7 @@ fun UserDictionaryScreen(type: UserDictionaryType, routeEntry: NavBackStackEntry
                     }
                 },
                 context = context.applicationContext,
+                type = type,
             ) as T
         })[UserDictionaryScreenModel::class.java]
     }
@@ -113,11 +113,11 @@ fun UserDictionaryScreen(type: UserDictionaryType, routeEntry: NavBackStackEntry
 
     var userDictionaryEntryForDialog by remember { mutableStateOf<UserDictionaryEntry?>(null) }
 
-    fun getDisplayNameForLocale(locale: FlorisLocale): String {
-        return if (locale == AllLanguagesLocale) {
-            context.stringRes(R.string.settings__udm__all_languages)
-        } else {
-            locale.displayName()
+    fun getDisplayNameForLocale(locale: UserDictionaryLocaleChoice): String {
+        return when (locale) {
+            UserDictionaryLocaleChoice.All -> context.stringRes(R.string.settings__udm__all_languages)
+            is UserDictionaryLocaleChoice.Standard -> locale.locale.displayName()
+            is UserDictionaryLocaleChoice.Exact -> locale.tag.ifBlank { "\"${locale.tag}\"" }
         }
     }
 
@@ -302,10 +302,7 @@ fun UserDictionaryScreen(type: UserDictionaryType, routeEntry: NavBackStackEntry
                             word = word.trim(),
                             freq = freq.toInt(10),
                             shortcut = shortcut.trim().takeIf { it.isNotBlank() },
-                            locale = locale.trim().takeIf { it.isNotBlank() }?.let {
-                                // Normalize tag
-                                FlorisLocale.fromTag(it).localeTag()
-                            },
+                            locale = normalizeEditedUserDictionaryLocale(locale, type, wordEntry.locale),
                         )
                         if (model.save(entry, isAddWord)) {
                             userDictionaryEntryForDialog = null

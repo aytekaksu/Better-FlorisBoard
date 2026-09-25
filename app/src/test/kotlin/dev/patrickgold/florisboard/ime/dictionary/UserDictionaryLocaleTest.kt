@@ -26,6 +26,13 @@ class UserDictionaryLocaleTest : FunSpec({
             "en-us" to "en_US",
             "de_DE" to "de_DE",
             "de-419" to "de_419",
+            "iw_IL" to "iw_IL",
+            "he_IL" to "he_IL",
+            "in_ID" to "in_ID",
+            "id_ID" to "id_ID",
+            "ji" to "ji",
+            "yi" to "yi",
+            "iw-IL-u-ca-gregory" to "iw-IL-u-ca-gregory",
             "sr-Latn-RS" to "sr-Latn-RS",
             "en-US-u-ca-gregory" to "en-US-u-ca-gregory",
             "en_US_#u-ca-gregory" to "en_US_#u-ca-gregory",
@@ -33,6 +40,17 @@ class UserDictionaryLocaleTest : FunSpec({
             canonicalImportedFlorisLocale(input) shouldBe expected
         }
         canonicalImportedFlorisLocale(null) shouldBe null
+    }
+
+    test("parsed browsing is limited to tags the standard Room query can actually match") {
+        parsedFlorisBrowseLocale("en_US")?.localeTag() shouldBe "en_US"
+        parsedFlorisBrowseLocale("en-US")?.localeTag() shouldBe "en_US"
+        listOf(
+            "iw", "iw_IL", "he", "in", "id", "ji", "yi", "sr-Latn-RS", "en-US-u-ca-gregory", "sr-Latn-RS-",
+            "all", "ALL", "null", "NULL",
+        ).forEach { tag ->
+            parsedFlorisBrowseLocale(tag) shouldBe null
+        }
     }
 
     test("Android storage locales retain scripts, extensions, and legacy variants") {
