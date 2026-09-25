@@ -58,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -76,6 +77,7 @@ import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.ext.FONTS
 import dev.patrickgold.florisboard.app.ext.IMAGES
 import dev.patrickgold.florisboard.lib.ValidationResult
+import dev.patrickgold.florisboard.lib.ValidationRule
 import dev.patrickgold.florisboard.lib.cache.CacheManager
 import dev.patrickgold.florisboard.lib.compose.Validation
 import dev.patrickgold.florisboard.lib.ext.ExtensionValidation
@@ -992,106 +994,48 @@ private fun ShapeValueEditor(
                     }
                 )
             }
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceAround,
-            ) {
-                Column {
-                    FlorisChip(
-                        onClick = {
-                            showDialogInitDp = topStart
-                            showDialogForCorner = ShapeCorner.TOP_START
-                        },
-                        text = stringRes(R.string.unit__display_pixel__symbol).curlyFormat("v" to topStart.value.toStringWithoutDotZero()),
-                        shape = MaterialTheme.shapes.medium,
-                    )
-                    FlorisChip(
-                        onClick = {
-                            showDialogInitDp = bottomStart
-                            showDialogForCorner = ShapeCorner.BOTTOM_START
-                        },
-                        text = stringRes(R.string.unit__display_pixel__symbol).curlyFormat("v" to bottomStart.value.toStringWithoutDotZero()),
-                        shape = MaterialTheme.shapes.medium,
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .requiredSize(40.dp)
-                        .border(1.dp, MaterialTheme.colorScheme.onBackground, shape),
-                )
-                Column {
-                    FlorisChip(
-                        onClick = {
-                            showDialogInitDp = topEnd
-                            showDialogForCorner = ShapeCorner.TOP_END
-                        },
-                        text = stringRes(R.string.unit__display_pixel__symbol).curlyFormat("v" to topEnd.value.toStringWithoutDotZero()),
-                        shape = MaterialTheme.shapes.medium,
-                    )
-                    FlorisChip(
-                        onClick = {
-                            showDialogInitDp = bottomEnd
-                            showDialogForCorner = ShapeCorner.BOTTOM_END
-                        },
-                        text = stringRes(R.string.unit__display_pixel__symbol).curlyFormat("v" to bottomEnd.value.toStringWithoutDotZero()),
-                        shape = MaterialTheme.shapes.medium,
-                    )
-                }
-            }
+            val unit = stringRes(R.string.unit__display_pixel__symbol)
+            ShapeCornerPreview(
+                shape = shape,
+                topStart = unit.curlyFormat("v" to topStart.value.toStringWithoutDotZero()),
+                topEnd = unit.curlyFormat("v" to topEnd.value.toStringWithoutDotZero()),
+                bottomEnd = unit.curlyFormat("v" to bottomEnd.value.toStringWithoutDotZero()),
+                bottomStart = unit.curlyFormat("v" to bottomStart.value.toStringWithoutDotZero()),
+                modifier = modifier,
+                onCornerClick = { corner ->
+                    showDialogInitDp = when (corner) {
+                        ShapeCorner.TOP_START -> topStart
+                        ShapeCorner.TOP_END -> topEnd
+                        ShapeCorner.BOTTOM_END -> bottomEnd
+                        ShapeCorner.BOTTOM_START -> bottomStart
+                    }
+                    showDialogForCorner = corner
+                },
+            )
             val dialogForCorner = showDialogForCorner
             if (dialogForCorner != null) {
-                var showValidationErrors by rememberSaveable { mutableStateOf(false) }
-                var size by rememberSaveable {
-                    mutableStateOf(showDialogInitDp.value.toStringWithoutDotZero())
-                }
-                val sizeValidation = rememberValidationResult(ExtensionValidation.SnyggDpShapeValue, size)
-                JetPrefAlertDialog(
-                    title = dialogForCorner.label(),
-                    confirmLabel = stringRes(R.string.action__apply),
-                    onConfirm = {
-                        if (sizeValidation.isInvalid()) {
-                            showValidationErrors = true
-                        } else {
-                            val sizeDp = size.toFloat().dp
-                            when (dialogForCorner) {
-                                ShapeCorner.TOP_START -> topStart = sizeDp
-                                ShapeCorner.TOP_END -> topEnd = sizeDp
-                                ShapeCorner.BOTTOM_END -> bottomEnd = sizeDp
-                                ShapeCorner.BOTTOM_START -> bottomStart = sizeDp
-                            }
-                            showDialogForCorner = null
+                ShapeCornerDialog(
+                    corner = dialogForCorner,
+                    initialSize = showDialogInitDp.value.toStringWithoutDotZero(),
+                    validationRule = ExtensionValidation.SnyggDpShapeValue,
+                    onApply = { size ->
+                        val sizeDp = size.toFloat().dp
+                        when (dialogForCorner) {
+                            ShapeCorner.TOP_START -> topStart = sizeDp
+                            ShapeCorner.TOP_END -> topEnd = sizeDp
+                            ShapeCorner.BOTTOM_END -> bottomEnd = sizeDp
+                            ShapeCorner.BOTTOM_START -> bottomStart = sizeDp
                         }
                     },
-                    dismissLabel = stringRes(R.string.action__cancel),
-                    onDismiss = {
-                        showDialogForCorner = null
+                    onApplyToAll = { size ->
+                        val sizeDp = size.toFloat().dp
+                        topStart = sizeDp
+                        topEnd = sizeDp
+                        bottomEnd = sizeDp
+                        bottomStart = sizeDp
                     },
-                ) {
-                    Column {
-                        JetPrefTextField(
-                            value = size,
-                            onValueChange = { size = it },
-                        )
-                        Validation(showValidationErrors, sizeValidation)
-                        FlorisTextButton(
-                            onClick = {
-                                if (sizeValidation.isInvalid()) {
-                                    showValidationErrors = true
-                                } else {
-                                    val sizeDp = size.toFloat().dp
-                                    topStart = sizeDp
-                                    topEnd = sizeDp
-                                    bottomEnd = sizeDp
-                                    bottomStart = sizeDp
-                                    showDialogForCorner = null
-                                }
-                            },
-                            modifier = Modifier.align(Alignment.End),
-                            text = stringRes(R.string.settings__theme_editor__property_value_shape_apply_for_all_corners),
-                        )
-                    }
-                }
+                    onDismiss = { showDialogForCorner = null },
+                )
             }
         }
 
@@ -1138,107 +1082,48 @@ private fun ShapeValueEditor(
                     }
                 )
             }
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceAround,
-            ) {
-                Column {
-                    FlorisChip(
-                        onClick = {
-                            showDialogInitPercentage = topStart
-                            showDialogForCorner = ShapeCorner.TOP_START
-                        },
-                        text = stringRes(R.string.unit__percent__symbol).curlyFormat("v" to topStart),
-                        shape = MaterialTheme.shapes.medium,
-                    )
-                    FlorisChip(
-                        onClick = {
-                            showDialogInitPercentage = bottomStart
-                            showDialogForCorner = ShapeCorner.BOTTOM_START
-                        },
-                        text = stringRes(R.string.unit__percent__symbol).curlyFormat("v" to bottomStart),
-                        shape = MaterialTheme.shapes.medium,
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .requiredSize(40.dp)
-                        .border(1.dp, MaterialTheme.colorScheme.onBackground, shape),
-                )
-                Column {
-                    FlorisChip(
-                        onClick = {
-                            showDialogInitPercentage = topEnd
-                            showDialogForCorner = ShapeCorner.TOP_END
-                        },
-                        text = stringRes(R.string.unit__percent__symbol).curlyFormat("v" to topEnd),
-                        shape = MaterialTheme.shapes.medium,
-                    )
-                    FlorisChip(
-                        onClick = {
-                            showDialogInitPercentage = bottomEnd
-                            showDialogForCorner = ShapeCorner.BOTTOM_END
-                        },
-                        text = stringRes(R.string.unit__percent__symbol).curlyFormat("v" to bottomEnd),
-                        shape = MaterialTheme.shapes.medium,
-                    )
-                }
-            }
+            val unit = stringRes(R.string.unit__percent__symbol)
+            ShapeCornerPreview(
+                shape = shape,
+                topStart = unit.curlyFormat("v" to topStart),
+                topEnd = unit.curlyFormat("v" to topEnd),
+                bottomEnd = unit.curlyFormat("v" to bottomEnd),
+                bottomStart = unit.curlyFormat("v" to bottomStart),
+                modifier = modifier,
+                onCornerClick = { corner ->
+                    showDialogInitPercentage = when (corner) {
+                        ShapeCorner.TOP_START -> topStart
+                        ShapeCorner.TOP_END -> topEnd
+                        ShapeCorner.BOTTOM_END -> bottomEnd
+                        ShapeCorner.BOTTOM_START -> bottomStart
+                    }
+                    showDialogForCorner = corner
+                },
+            )
             val dialogForCorner = showDialogForCorner
             if (dialogForCorner != null) {
-                var showValidationErrors by rememberSaveable { mutableStateOf(false) }
-                var size by rememberSaveable {
-                    mutableStateOf(showDialogInitPercentage.toString())
-                }
-                val sizeValidation = rememberValidationResult(ExtensionValidation.SnyggPercentShapeValue, size)
-                JetPrefAlertDialog(
-                    title = dialogForCorner.label(),
-                    confirmLabel = stringRes(R.string.action__apply),
-                    onConfirm = {
-                        if (sizeValidation.isInvalid()) {
-                            showValidationErrors = true
-                        } else {
-                            val sizePercentage = size.toInt()
-                            when (showDialogForCorner) {
-                                ShapeCorner.TOP_START -> topStart = sizePercentage
-                                ShapeCorner.TOP_END -> topEnd = sizePercentage
-                                ShapeCorner.BOTTOM_END -> bottomEnd = sizePercentage
-                                ShapeCorner.BOTTOM_START -> bottomStart = sizePercentage
-                                else -> {}
-                            }
-                            showDialogForCorner = null
+                ShapeCornerDialog(
+                    corner = dialogForCorner,
+                    initialSize = showDialogInitPercentage.toString(),
+                    validationRule = ExtensionValidation.SnyggPercentShapeValue,
+                    onApply = { size ->
+                        val sizePercentage = size.toInt()
+                        when (dialogForCorner) {
+                            ShapeCorner.TOP_START -> topStart = sizePercentage
+                            ShapeCorner.TOP_END -> topEnd = sizePercentage
+                            ShapeCorner.BOTTOM_END -> bottomEnd = sizePercentage
+                            ShapeCorner.BOTTOM_START -> bottomStart = sizePercentage
                         }
                     },
-                    dismissLabel = stringRes(R.string.action__cancel),
-                    onDismiss = {
-                        showDialogForCorner = null
+                    onApplyToAll = { size ->
+                        val sizePercentage = size.toInt()
+                        topStart = sizePercentage
+                        topEnd = sizePercentage
+                        bottomEnd = sizePercentage
+                        bottomStart = sizePercentage
                     },
-                ) {
-                    Column {
-                        JetPrefTextField(
-                            value = size,
-                            onValueChange = { size = it },
-                        )
-                        Validation(showValidationErrors, sizeValidation)
-                        FlorisTextButton(
-                            onClick = {
-                                if (sizeValidation.isInvalid()) {
-                                    showValidationErrors = true
-                                } else {
-                                    val sizePercentage = size.toInt()
-                                    topStart = sizePercentage
-                                    topEnd = sizePercentage
-                                    bottomEnd = sizePercentage
-                                    bottomStart = sizePercentage
-                                    showDialogForCorner = null
-                                }
-                            },
-                            modifier = Modifier.align(Alignment.End),
-                            text = stringRes(R.string.settings__theme_editor__property_value_shape_apply_for_all_corners),
-                        )
-                    }
-                }
+                    onDismiss = { showDialogForCorner = null },
+                )
             }
         }
 
@@ -1253,6 +1138,90 @@ private fun ShapeValueEditor(
                         .border(1.dp, MaterialTheme.colorScheme.onBackground, value.shape),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ShapeCornerPreview(
+    shape: Shape,
+    topStart: String,
+    topEnd: String,
+    bottomEnd: String,
+    bottomStart: String,
+    modifier: Modifier,
+    onCornerClick: (ShapeCorner) -> Unit,
+) {
+    @Composable
+    fun CornerChip(corner: ShapeCorner, text: String) {
+        FlorisChip(
+            onClick = { onCornerClick(corner) },
+            text = text,
+            shape = MaterialTheme.shapes.medium,
+        )
+    }
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceAround,
+    ) {
+        Column {
+            CornerChip(ShapeCorner.TOP_START, topStart)
+            CornerChip(ShapeCorner.BOTTOM_START, bottomStart)
+        }
+        Box(
+            modifier = Modifier
+                .requiredSize(40.dp)
+                .border(1.dp, MaterialTheme.colorScheme.onBackground, shape),
+        )
+        Column {
+            CornerChip(ShapeCorner.TOP_END, topEnd)
+            CornerChip(ShapeCorner.BOTTOM_END, bottomEnd)
+        }
+    }
+}
+
+@Composable
+private fun ShapeCornerDialog(
+    corner: ShapeCorner,
+    initialSize: String,
+    validationRule: ValidationRule<String>,
+    onApply: (String) -> Unit,
+    onApplyToAll: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var showValidationErrors by rememberSaveable { mutableStateOf(false) }
+    var size by rememberSaveable { mutableStateOf(initialSize) }
+    val sizeValidation = rememberValidationResult(validationRule, size)
+
+    fun applySize(onValid: (String) -> Unit) {
+        if (sizeValidation.isInvalid()) {
+            showValidationErrors = true
+        } else {
+            onValid(size)
+            onDismiss()
+        }
+    }
+
+    JetPrefAlertDialog(
+        title = corner.label(),
+        confirmLabel = stringRes(R.string.action__apply),
+        onConfirm = { applySize(onApply) },
+        dismissLabel = stringRes(R.string.action__cancel),
+        onDismiss = onDismiss,
+    ) {
+        Column {
+            JetPrefTextField(
+                value = size,
+                onValueChange = { size = it },
+            )
+            Validation(showValidationErrors, sizeValidation)
+            FlorisTextButton(
+                onClick = { applySize(onApplyToAll) },
+                modifier = Modifier.align(Alignment.End),
+                text = stringRes(R.string.settings__theme_editor__property_value_shape_apply_for_all_corners),
+            )
         }
     }
 }
