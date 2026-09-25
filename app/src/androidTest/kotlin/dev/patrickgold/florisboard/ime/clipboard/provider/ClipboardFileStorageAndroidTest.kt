@@ -561,6 +561,12 @@ class ClipboardFileStorageAndroidTest {
                 setOf(systemRoot),
                 observedBootCount = ACTIVE_BOOT_COUNT,
             )
+            ClipboardFileStorage.prepareSystemRoots(
+                context,
+                emptySet(),
+                observedBootCount = ACTIVE_BOOT_COUNT,
+            )
+            assertTrue(systemRoot in ClipboardFileStorage.systemRoots(context))
             ClipboardFileStorage.markPasteRoot(
                 context,
                 pasteRoot,
@@ -589,6 +595,7 @@ class ClipboardFileStorageAndroidTest {
                 emptySet(),
                 observedBootCount = ACTIVE_BOOT_COUNT,
             )
+            assertFalse(systemRoot in ClipboardFileStorage.systemRoots(context))
             ClipboardFileStorage.trimPasteRoots(context, now = Long.MAX_VALUE)
             assertFalse(
                 ClipboardFileStorage.deleteOwned(

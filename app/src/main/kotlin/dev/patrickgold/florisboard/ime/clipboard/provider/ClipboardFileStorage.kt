@@ -744,17 +744,7 @@ object ClipboardFileStorage {
         observedBootCount: Int = currentBootCount(context),
     ) {
         if (ownedUris.isEmpty()) return
-        synchronized(mutationLock) {
-            initialize(context)
-            val validRoots = ownedUris.takeIf { candidates ->
-                candidates.all { fileInfo(context, it) != null }
-            } ?: throw ClipboardMediaStorageException(ClipboardMediaStorageFailure.INVALID_SOURCE)
-            MetadataStore.setSystemRoots(
-                ownedUris = validRoots,
-                retainExisting = true,
-                externalCapabilityBootCount = observedBootCount,
-            )
-        }
+        updateSystemRoots(context, ownedUris, observedBootCount, retainExisting = true)
     }
 
     internal fun recordSystemRoots(
@@ -762,14 +752,23 @@ object ClipboardFileStorage {
         ownedUris: Set<OwnedClipboardMediaUri>,
         observedBootCount: Int = currentBootCount(context),
     ) {
+        updateSystemRoots(context, ownedUris, observedBootCount, retainExisting = false)
+    }
+
+    private fun updateSystemRoots(
+        context: Context,
+        ownedUris: Set<OwnedClipboardMediaUri>,
+        observedBootCount: Int,
+        retainExisting: Boolean,
+    ) {
         synchronized(mutationLock) {
             initialize(context)
-            val validRoots = ownedUris.takeIf { candidates ->
-                candidates.all { fileInfo(context, it) != null }
-            } ?: throw ClipboardMediaStorageException(ClipboardMediaStorageFailure.INVALID_SOURCE)
+            if (ownedUris.any { fileInfo(context, it) == null }) {
+                throw ClipboardMediaStorageException(ClipboardMediaStorageFailure.INVALID_SOURCE)
+            }
             MetadataStore.setSystemRoots(
-                ownedUris = validRoots,
-                retainExisting = false,
+                ownedUris = ownedUris,
+                retainExisting = retainExisting,
                 externalCapabilityBootCount = observedBootCount,
             )
         }
@@ -1192,22 +1191,13 @@ object ClipboardFileStorage {
                 liveInstalls += ownedUri
                 val appContext = context.applicationContext
                 return installReceipt(appContext, ownedUri, fileInfo)
-            } catch (error: CancellationException) {
+            } catch (error: Exception) {
                 if (published) {
                     deleteBestEffort(destination)
                     forceDirectoryBestEffort(directory)
                 }
-                throw error
-            } catch (error: ClipboardMediaStorageException) {
-                if (published) {
-                    deleteBestEffort(destination)
-                    forceDirectoryBestEffort(directory)
-                }
-                throw error
-            } catch (_: Exception) {
-                if (published) {
-                    deleteBestEffort(destination)
-                    forceDirectoryBestEffort(directory)
+                if (error is CancellationException || error is ClipboardMediaStorageException) {
+                    throw error
                 }
                 throw ClipboardMediaStorageException(ClipboardMediaStorageFailure.STORAGE_UNAVAILABLE)
             } finally {
