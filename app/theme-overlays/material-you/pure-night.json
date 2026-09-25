@@ -1,0 +1,6 @@
+{
+  "@defines": {
+    "--background": "#000000",
+    "--surface": "dynamic-dark-color(surfaceDim)"
+  }
+}
