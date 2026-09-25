@@ -1,0 +1,20 @@
+{
+  "@defines": {
+    "--primary": "dynamic-dark-color(inversePrimary)",
+    "--primary-variant": "dynamic-dark-color(primary)",
+    "--secondary": "dynamic-dark-color(secondaryContainer)",
+    "--secondary-variant": "dynamic-dark-color(secondary)",
+    "--background": "dynamic-dark-color(background)",
+    "--background-variant": "dynamic-dark-color(background)",
+    "--surface": "dynamic-dark-color(surfaceBright)",
+    "--surface-variant": "dynamic-dark-color(surfaceVariant)",
+    "--popup-surface": "dynamic-dark-color(surfaceContainerLow)",
+    "--focused-popup-surface": "dynamic-dark-color(surfaceContainerHigh)",
+    "--spacer-color": "dynamic-dark-color(scrim)",
+    "--one-hand-background": "dynamic-dark-color(inversePrimary)",
+    "--one-hand-foreground": "dynamic-dark-color(scrim)",
+    "--on-primary": "dynamic-dark-color(onPrimary)",
+    "--on-background": "dynamic-dark-color(onBackground)",
+    "--on-surface": "dynamic-dark-color(onSurface)"
+  }
+}

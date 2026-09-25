@@ -64,6 +64,10 @@ abstract class GenerateBuiltInThemeAssets : DefaultTask() {
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val baseStylesheet: RegularFileProperty
 
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val materialYouBaseStylesheet: RegularFileProperty
+
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val overlaysDirectory: DirectoryProperty
@@ -73,17 +77,36 @@ abstract class GenerateBuiltInThemeAssets : DefaultTask() {
 
     @TaskAction
     fun generate() {
-        val base = readObject(baseStylesheet.get().asFile)
-        val overlays = overlaysDirectory.get().asFile
-        val stylesheets = mapOf(
-            "floris_night" to listOf("night"),
-            "floris_pure_night" to listOf("night", "pure-night"),
-            "floris_day_borderless" to listOf("borderless", "day-borderless"),
-            "floris_night_borderless" to listOf("night", "borderless"),
-            "floris_pure_night_borderless" to listOf("night", "pure-night", "borderless"),
+        val targetRoot = outputDirectory.get().asFile.resolve("ime/theme")
+        check(!targetRoot.exists() || targetRoot.deleteRecursively()) { "Unable to replace generated themes" }
+        generateFamily(
+            baseStylesheet.get().asFile,
+            overlaysDirectory.get().asFile,
+            targetRoot.resolve("org.florisboard.themes/stylesheets"),
+            mapOf(
+                "floris_night" to listOf("night"),
+                "floris_pure_night" to listOf("night", "pure-night"),
+                "floris_day_borderless" to listOf("borderless", "day-borderless"),
+                "floris_night_borderless" to listOf("night", "borderless"),
+                "floris_pure_night_borderless" to listOf("night", "pure-night", "borderless"),
+            ),
         )
-        val target = outputDirectory.get().asFile.resolve("ime/theme/org.florisboard.themes/stylesheets")
-        check(!target.exists() || target.deleteRecursively()) { "Unable to replace generated themes" }
+        generateFamily(
+            materialYouBaseStylesheet.get().asFile,
+            overlaysDirectory.get().asFile.resolve("material-you"),
+            targetRoot.resolve("org.florisboard.themes.my/stylesheets"),
+            mapOf(
+                "floris_night_my" to listOf("night"),
+                "floris_pure_night_my" to listOf("night", "pure-night"),
+                "floris_day_my_borderless" to listOf("borderless"),
+                "floris_night_my_borderless" to listOf("night", "borderless"),
+                "floris_pure_night_my_borderless" to listOf("night", "pure-night", "borderless"),
+            ),
+        )
+    }
+
+    private fun generateFamily(baseFile: File, overlays: File, target: File, stylesheets: Map<String, List<String>>) {
+        val base = readObject(baseFile)
         check(target.mkdirs()) { "Unable to create generated theme directory" }
 
         for ((name, layers) in stylesheets) {
@@ -272,6 +295,11 @@ androidComponents {
             baseStylesheet.set(
                 layout.projectDirectory.file(
                     "src/main/assets/ime/theme/org.florisboard.themes/stylesheets/floris_day.json",
+                ),
+            )
+            materialYouBaseStylesheet.set(
+                layout.projectDirectory.file(
+                    "src/main/assets/ime/theme/org.florisboard.themes.my/stylesheets/floris_day_my.json",
                 ),
             )
             overlaysDirectory.set(layout.projectDirectory.dir("theme-overlays"))
