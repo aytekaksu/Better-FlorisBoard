@@ -14,6 +14,7 @@ changes.
 | Preferences | Define stored settings and preserve supported upgrade and restore behavior | [Preferences](preferences/README.md) |
 | Backup and restore | Validate archive contents and plan exactly which selected data may change | [Backup and restore](backup-restore/README.md) |
 | Clipboard | Synchronize text and media while keeping history, URI grants, and private files consistent | [Clipboard](clipboard/README.md) |
+| Emoji palette | Load bundled emoji data without blocking keyboard composition | [Emoji palette](emoji/README.md) |
 | User dictionary | Browse, edit, import, and export internal and system words without blocking settings | [User dictionary](user-dictionary/README.md) |
 | Extensions | Import, validate, install, edit, export, and load keyboard, theme, and language packages | [Extensions](extensions/README.md) |
 
