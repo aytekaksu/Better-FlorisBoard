@@ -469,6 +469,57 @@ class TextKeyboardTouchE2eTest {
         )
     }
 
+    @Test
+    fun navigationArrowMovesCursorAndExtendsManualSelection() {
+        val keyboardManager by instrumentation.targetContext.keyboardManager()
+        var previousFlags = Triple(false, false, false)
+        instrumentation.runOnMainSync {
+            previousFlags = Triple(
+                keyboardManager.activeState.isManualSelectionMode,
+                keyboardManager.activeState.isManualSelectionModeStart,
+                keyboardManager.activeState.isManualSelectionModeEnd,
+            )
+        }
+        fun selection(): Pair<Int, Int> {
+            var result = 0 to 0
+            instrumentation.runOnMainSync { result = editor.selectionStart to editor.selectionEnd }
+            return result
+        }
+
+        try {
+            setEditorText("abcd")
+            instrumentation.runOnMainSync {
+                keyboardManager.activeState.isManualSelectionMode = false
+                editor.setSelection(2)
+            }
+            instrumentation.waitForIdleSync()
+            instrumentation.runOnMainSync {
+                keyboardManager.onInputKeyDown(TextKeyData.ARROW_LEFT)
+                keyboardManager.onInputKeyUp(TextKeyData.ARROW_LEFT)
+            }
+            waitUntil("left arrow did not move the cursor") { selection() == (1 to 1) }
+
+            instrumentation.runOnMainSync {
+                keyboardManager.activeState.isManualSelectionMode = true
+                keyboardManager.onInputKeyDown(TextKeyData.ARROW_LEFT)
+                keyboardManager.onInputKeyUp(TextKeyData.ARROW_LEFT)
+            }
+            instrumentation.waitForIdleSync()
+            val manualSelection = selection()
+            assertEquals(setOf(0, 1), setOf(manualSelection.first, manualSelection.second))
+            instrumentation.runOnMainSync {
+                assertTrue(keyboardManager.activeState.isManualSelectionModeStart)
+                assertEquals(false, keyboardManager.activeState.isManualSelectionModeEnd)
+            }
+        } finally {
+            instrumentation.runOnMainSync {
+                keyboardManager.activeState.isManualSelectionMode = previousFlags.first
+                keyboardManager.activeState.isManualSelectionModeStart = previousFlags.second
+                keyboardManager.activeState.isManualSelectionModeEnd = previousFlags.third
+            }
+        }
+    }
+
     private fun switchKeyboardModeAndWait(mode: KeyboardMode, requiredCodes: Set<Int>) {
         val keyboardManager by instrumentation.targetContext.keyboardManager()
         instrumentation.runOnMainSync { keyboardManager.activeState.keyboardMode = mode }

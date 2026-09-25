@@ -88,6 +88,28 @@ import org.florisboard.lib.kotlin.collectLatestIn
 
 private val DoubleSpacePeriodMatcher = """([^.!?‽\s]\s)""".toRegex()
 
+internal data class NavigationMovement(
+    val dpadKeyCode: Int,
+    val movesSelectionStart: Boolean,
+    val alt: Boolean = false,
+)
+
+// Navigation codes are contiguous; keep the hot key-event check as a primitive range test.
+internal val navigationMovements = mapOf(
+    KeyCode.ARROW_LEFT to NavigationMovement(KeyEvent.KEYCODE_DPAD_LEFT, movesSelectionStart = true),
+    KeyCode.ARROW_RIGHT to NavigationMovement(KeyEvent.KEYCODE_DPAD_RIGHT, movesSelectionStart = false),
+    KeyCode.ARROW_UP to NavigationMovement(KeyEvent.KEYCODE_DPAD_UP, movesSelectionStart = true),
+    KeyCode.ARROW_DOWN to NavigationMovement(KeyEvent.KEYCODE_DPAD_DOWN, movesSelectionStart = false),
+    KeyCode.MOVE_START_OF_PAGE to NavigationMovement(KeyEvent.KEYCODE_DPAD_UP, movesSelectionStart = true, alt = true),
+    KeyCode.MOVE_END_OF_PAGE to NavigationMovement(KeyEvent.KEYCODE_DPAD_DOWN, movesSelectionStart = false, alt = true),
+    KeyCode.MOVE_START_OF_LINE to NavigationMovement(
+        KeyEvent.KEYCODE_DPAD_LEFT, movesSelectionStart = true, alt = true,
+    ),
+    KeyCode.MOVE_END_OF_LINE to NavigationMovement(
+        KeyEvent.KEYCODE_DPAD_RIGHT, movesSelectionStart = false, alt = true,
+    ),
+)
+
 class KeyboardManager(context: Context) : InputKeyEventReceiver {
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
@@ -439,64 +461,11 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             ?: (activeState.isManualSelectionMode || inputEventDispatcher.isPressed(KeyCode.SHIFT))
         val content = activeContent
         val selection = content.selection
-        when (code) {
-            KeyCode.ARROW_LEFT -> {
-                if (!selection.isSelectionMode && activeState.isManualSelectionMode) {
-                    activeState.isManualSelectionModeStart = true
-                    activeState.isManualSelectionModeEnd = false
-                }
-                sendDownUpKeyEvent(KeyEvent.KEYCODE_DPAD_LEFT, meta(shift = isShiftPressed), count)
-            }
-            KeyCode.ARROW_RIGHT -> {
-                if (!selection.isSelectionMode && activeState.isManualSelectionMode) {
-                    activeState.isManualSelectionModeStart = false
-                    activeState.isManualSelectionModeEnd = true
-                }
-                sendDownUpKeyEvent(KeyEvent.KEYCODE_DPAD_RIGHT, meta(shift = isShiftPressed), count)
-            }
-            KeyCode.ARROW_UP -> {
-                if (!selection.isSelectionMode && activeState.isManualSelectionMode) {
-                    activeState.isManualSelectionModeStart = true
-                    activeState.isManualSelectionModeEnd = false
-                }
-                sendDownUpKeyEvent(KeyEvent.KEYCODE_DPAD_UP, meta(shift = isShiftPressed), count)
-            }
-            KeyCode.ARROW_DOWN -> {
-                if (!selection.isSelectionMode && activeState.isManualSelectionMode) {
-                    activeState.isManualSelectionModeStart = false
-                    activeState.isManualSelectionModeEnd = true
-                }
-                sendDownUpKeyEvent(KeyEvent.KEYCODE_DPAD_DOWN, meta(shift = isShiftPressed), count)
-            }
-            KeyCode.MOVE_START_OF_PAGE -> {
-                if (!selection.isSelectionMode && activeState.isManualSelectionMode) {
-                    activeState.isManualSelectionModeStart = true
-                    activeState.isManualSelectionModeEnd = false
-                }
-                sendDownUpKeyEvent(KeyEvent.KEYCODE_DPAD_UP, meta(alt = true, shift = isShiftPressed), count)
-            }
-            KeyCode.MOVE_END_OF_PAGE -> {
-                if (!selection.isSelectionMode && activeState.isManualSelectionMode) {
-                    activeState.isManualSelectionModeStart = false
-                    activeState.isManualSelectionModeEnd = true
-                }
-                sendDownUpKeyEvent(KeyEvent.KEYCODE_DPAD_DOWN, meta(alt = true, shift = isShiftPressed), count)
-            }
-            KeyCode.MOVE_START_OF_LINE -> {
-                if (!selection.isSelectionMode && activeState.isManualSelectionMode) {
-                    activeState.isManualSelectionModeStart = true
-                    activeState.isManualSelectionModeEnd = false
-                }
-                sendDownUpKeyEvent(KeyEvent.KEYCODE_DPAD_LEFT, meta(alt = true, shift = isShiftPressed), count)
-            }
-            KeyCode.MOVE_END_OF_LINE -> {
-                if (!selection.isSelectionMode && activeState.isManualSelectionMode) {
-                    activeState.isManualSelectionModeStart = false
-                    activeState.isManualSelectionModeEnd = true
-                }
-                sendDownUpKeyEvent(KeyEvent.KEYCODE_DPAD_RIGHT, meta(alt = true, shift = isShiftPressed), count)
-            }
+        val movement = navigationMovements[code] ?: return@apply
+        if (!selection.isSelectionMode && activeState.isManualSelectionMode) {
+            activeState.setManualSelectionEndpoint(movement.movesSelectionStart)
         }
+        sendDownUpKeyEvent(movement.dpadKeyCode, meta(alt = movement.alt, shift = isShiftPressed), count)
     }
 
     /**
@@ -838,14 +807,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         val windowController = FlorisImeService.windowControllerOrNull()
         windowController?.editor?.disableIfNoGestureInProgress()
         when (data.code) {
-            KeyCode.ARROW_DOWN,
-            KeyCode.ARROW_LEFT,
-            KeyCode.ARROW_RIGHT,
-            KeyCode.ARROW_UP,
-            KeyCode.MOVE_START_OF_PAGE,
-            KeyCode.MOVE_END_OF_PAGE,
-            KeyCode.MOVE_START_OF_LINE,
-            KeyCode.MOVE_END_OF_LINE -> {
+            in KeyCode.MOVE_END_OF_LINE..KeyCode.ARROW_LEFT -> {
                 editorInstance.massSelection.begin()
             }
             KeyCode.SHIFT -> handleShiftDown(data)
@@ -855,14 +817,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     override fun onInputKeyUp(data: KeyData) = activeState.batchEdit {
         val windowController = FlorisImeService.windowControllerOrNull() ?: return@batchEdit
         when (data.code) {
-            KeyCode.ARROW_DOWN,
-            KeyCode.ARROW_LEFT,
-            KeyCode.ARROW_RIGHT,
-            KeyCode.ARROW_UP,
-            KeyCode.MOVE_START_OF_PAGE,
-            KeyCode.MOVE_END_OF_PAGE,
-            KeyCode.MOVE_START_OF_LINE,
-            KeyCode.MOVE_END_OF_LINE -> {
+            in KeyCode.MOVE_END_OF_LINE..KeyCode.ARROW_LEFT -> {
                 editorInstance.massSelection.end()
                 handleArrow(data.code)
             }
@@ -1000,14 +955,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
 
     override fun onInputKeyCancel(data: KeyData) {
         when (data.code) {
-            KeyCode.ARROW_DOWN,
-            KeyCode.ARROW_LEFT,
-            KeyCode.ARROW_RIGHT,
-            KeyCode.ARROW_UP,
-            KeyCode.MOVE_START_OF_PAGE,
-            KeyCode.MOVE_END_OF_PAGE,
-            KeyCode.MOVE_START_OF_LINE,
-            KeyCode.MOVE_END_OF_LINE -> {
+            in KeyCode.MOVE_END_OF_LINE..KeyCode.ARROW_LEFT -> {
                 editorInstance.massSelection.end()
             }
             KeyCode.SHIFT -> handleShiftCancel()
@@ -1016,14 +964,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
 
     override fun onInputKeyRepeat(data: KeyData) {
         when (data.code) {
-            KeyCode.ARROW_DOWN,
-            KeyCode.ARROW_LEFT,
-            KeyCode.ARROW_RIGHT,
-            KeyCode.ARROW_UP,
-            KeyCode.MOVE_START_OF_PAGE,
-            KeyCode.MOVE_END_OF_PAGE,
-            KeyCode.MOVE_START_OF_LINE,
-            KeyCode.MOVE_END_OF_LINE -> handleArrow(data.code)
+            in KeyCode.MOVE_END_OF_LINE..KeyCode.ARROW_LEFT -> handleArrow(data.code)
             else -> onInputKeyUp(data)
         }
     }
