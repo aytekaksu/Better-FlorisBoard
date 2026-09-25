@@ -105,6 +105,10 @@ archive, and closing a preview waits until the keyboard has released its assets
 before deleting the workspace. Fonts and images selected in the editor cross
 the same disposable provider boundary before entering that workspace.
 
+The theme shape editor displays corners from the current property value. Changing
+shape type resets the preview and chips to the new type's value, and a corner edit
+updates that value before the property can be saved.
+
 ## Verification
 
 Run the full JVM suite and local gate:
