@@ -30,6 +30,7 @@ import dev.patrickgold.florisboard.ime.clipboard.provider.DisposableExternalCont
 import dev.patrickgold.florisboard.ime.clipboard.provider.StagedExternalContent
 import dev.patrickgold.florisboard.ime.theme.ThemeExtensionEditor
 import dev.patrickgold.florisboard.ime.theme.ThemeMaterialization
+import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.ext.Extension
 import dev.patrickgold.florisboard.lib.ext.ExtensionDefaults
 import dev.patrickgold.florisboard.lib.ext.InstalledExtensionArchiveFingerprint
@@ -115,10 +116,34 @@ class CacheManager(context: Context) {
         stagingDirectory = ExtensionSourceStagingDirName,
     )
     private val workspaceCleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    val importer = WorkspacesContainer(ImporterDirName) { ImporterWorkspace(it) }
+    val importer = WorkspacesContainer(
+        ImporterDirName,
+        onFailedClose = {
+            flogError { "Import workspace creation cleanup failed." }
+            queueFailedImporterCleanup(it)
+        },
+    ) { ImporterWorkspace(it) }
     val exporter = WorkspacesContainer(ExporterDirName) { ExporterWorkspace(it) }
     val themeEditor = WorkspacesContainer(EditorDirName) { ThemeEditorWorkspace(it) }
     val backupAndRestore = WorkspacesContainer(BackupAndRestoreDirName) { BackupAndRestoreWorkspace(it) }
+    private val importerJanitor = ImportWorkspaceJanitor(workspaceCleanupScope) { directory ->
+        synchronized(importer) {
+            if (importer.getWorkspaceByUuid(directory.name) != null || Files.isSymbolicLink(directory.toPath())) {
+                false
+            } else {
+                !directory.exists() || directory.deleteRecursively()
+            }
+        }
+    }
+
+    internal fun queueFailedImporterCleanup(workspace: ImporterWorkspace) {
+        val directory = workspace.dir
+        if (directory.parentFile == importer.dir &&
+            runCatching { UUID.fromString(directory.name).toString() == directory.name }.getOrDefault(false)
+        ) {
+            importerJanitor.enqueue(directory)
+        }
+    }
 
     private fun createWorkspaceDirectory(directory: FsDir) {
         if (!directory.isDirectory && !directory.mkdirs()) {
@@ -157,7 +182,11 @@ class CacheManager(context: Context) {
                 readFromUriIntoCacheBlocking(uriList).also { completedWorkspace = it }
             }
         } catch (error: CancellationException) {
-            runCatching { completedWorkspace?.close() }
+            try {
+                completedWorkspace?.retire()
+            } catch (cleanupError: Exception) {
+                error.addSuppressed(cleanupError)
+            }
             throw error
         }
     }
@@ -261,27 +290,33 @@ class CacheManager(context: Context) {
             throw ExtensionImportException()
         } finally {
             if (!completed) {
-                runCatching { workspace.close() }
+                if (runCatching { workspace.close() }.isFailure) {
+                    flogError { "Partial import workspace cleanup failed." }
+                    queueFailedImporterCleanup(workspace)
+                }
             }
         }
     }
 
     open inner class WorkspacesContainer<T : Workspace> internal constructor(
         val dirName: String,
+        private val onFailedClose: (T) -> Unit = {},
         val factory: (uuid: String) -> T,
     ) {
         private val workspaces = ConcurrentHashMap<String, T>()
 
         val dir: FsDir = appContext.cacheDir.subDir(dirName)
 
-        fun new(uuid: String = UUID.randomUUID().toString()): T {
+        fun new(uuid: String = UUID.randomUUID().toString()): T = synchronized(this) {
             val workspace = factory(uuid)
             add(workspace)
             try {
                 workspace.mkdirs()
-                return workspace
+                workspace
             } catch (error: Throwable) {
-                runCatching { workspace.close() }
+                if (runCatching { workspace.close() }.isFailure) {
+                    runCatching { onFailedClose(workspace) }
+                }
                 throw error
             }
         }
@@ -334,11 +369,25 @@ class CacheManager(context: Context) {
 
     inner class ImporterWorkspace(uuid: String) : Workspace(uuid) {
         override val dir: FsDir = importer.dir.subDir(uuid)
+        private val retirement = ImportWorkspaceRetirement(
+            workspaceCleanupScope,
+            onTerminalFailure = { error ->
+                flogError { "Import workspace retirement failed: failureClass=${error.javaClass.simpleName}" }
+                queueFailedImporterCleanup(this)
+            },
+        ) { close() }
 
         val inputDir: FsDir = dir.subDir(InputDirName)
         val outputDir: FsDir = dir.subDir(OutputDirName)
 
         var inputFileInfos = emptyList<FileInfo>()
+
+        /** Keep extracted files available until the current install attempt ends. */
+        fun retainForImport(): Closeable = retirement.retainForImport()
+
+        fun requestRetirement() = retirement.request()
+
+        suspend fun retire() = retirement.retire()
 
         override fun mkdirs() {
             super.mkdirs()

@@ -151,7 +151,7 @@ fun ExtensionImportScreen(
             }
             workspace
         }.onFailure {
-            workspace.close()
+            workspace.requestRetirement()
         }
     }
 
@@ -170,7 +170,7 @@ fun ExtensionImportScreen(
     DisposableEffect(importResult?.getOrNull()) {
         val workspace = importResult?.getOrNull()
         onDispose {
-            workspace?.close()
+            workspace?.requestRetirement()
         }
     }
 
@@ -182,7 +182,7 @@ fun ExtensionImportScreen(
             //  we don't display an error message here.
             if (uriList.isEmpty() || isReadingUris) return@rememberLauncherForActivityResult
             isReadingUris = true
-            importResult?.getOrNull()?.close()
+            importResult?.getOrNull()?.requestRetirement()
             importResult = null
             importScope.launch {
                 try {
@@ -206,7 +206,7 @@ fun ExtensionImportScreen(
                 enabled = !isBusy,
             ) {
                 if (navController.popOwnedRoute(routeEntry) == OwnedRoutePopResult.POPPED) {
-                    importResult?.getOrNull()?.close()
+                    importResult?.getOrNull()?.requestRetirement()
                 }
             }
             val enabled = remember(importResult) {
@@ -219,8 +219,9 @@ fun ExtensionImportScreen(
                 enabled = enabled && !isImporting,
             ) {
                 val workspace = importResult!!.getOrThrow()
+                val importLease = workspace.retainForImport()
                 isImporting = true
-                importScope.launch {
+                val importJob = importScope.launch {
                     try {
                         runCatching {
                             for (fileInfo in workspace.inputFileInfos) {
@@ -236,7 +237,7 @@ fun ExtensionImportScreen(
                                 navController.popOwnedRouteWhenResumed(routeEntry) ==
                                 OwnedRoutePopResult.POPPED
                             ) {
-                                workspace.close()
+                                workspace.requestRetirement()
                             }
                         }.onFailure {
                             context.showLongToast(
@@ -248,6 +249,7 @@ fun ExtensionImportScreen(
                         isImporting = false
                     }
                 }
+                importJob.invokeOnCompletion { importLease.close() }
             }
         }
     }

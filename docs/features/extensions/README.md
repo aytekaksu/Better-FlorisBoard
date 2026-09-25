@@ -19,6 +19,15 @@ Import therefore follows one path:
 6. Decode and structurally validate the manifest before extracting or exposing
    package data.
 
+Import workspaces retire on app-owned I/O. Selection changes and screen disposal
+request the same cleanup; cancellation before handoff awaits it. An install
+keeps its extracted files until that install finishes, even if the screen exits.
+A failed deletion gets one delayed I/O retry. Exhausted failures reach waiters;
+one app-owned worker retains only failed workspace paths and retries them in
+bounded batches, skipping active workspaces. Persistent failures log once
+at their source without paths; steady retries are quiet. A process restart
+still relies on the existing cache reset.
+
 One selection is limited to 64 files, 256 MiB of source data, 512 MiB of
 expanded data, and 16,384 entries. Reads and extraction also preserve 128 MiB
 of storage headroom. Rejected packages remove their private source and
