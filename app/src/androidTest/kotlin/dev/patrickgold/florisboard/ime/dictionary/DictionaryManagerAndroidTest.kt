@@ -118,42 +118,78 @@ class DictionaryManagerAndroidTest {
     }
 
     @Test
-    fun florisImportKeepsPlatformDependentAliasesAndExtendedRowsDistinct() {
+    fun florisImportHealsAliasSeparatorsWithoutMergingLanguageCodesOrExtendedTags() {
         withImportSource { context, database, source ->
             val dao = database.userDictionaryDao()
             val word = "legacy-alias-${UUID.randomUUID()}"
-            val rawAlias = "iw_IL"
-            val modernTag = "he_IL"
-            assertEquals(rawAlias, canonicalImportedFlorisLocale(rawAlias))
-            assertEquals(modernTag, canonicalImportedFlorisLocale(modernTag))
+            val legacyTag = "iw-IL"
+            val modernTag = "he-IL"
             val extendedTag = "iw-IL-u-ca-gregory"
-            val legacy = UserDictionaryEntry(0, word, 42, rawAlias, "legacy")
+            val legacy = UserDictionaryEntry(0, word, 42, legacyTag, "legacy")
             val modern = UserDictionaryEntry(0, word, 64, modernTag, "modern")
             val extended = UserDictionaryEntry(0, word, 73, extendedTag, "extended")
             val legacyId = dao.insert(legacy)
             val modernId = dao.insert(modern)
             val extendedId = dao.insert(extended)
 
-            source.writeText("dictionary=test;version=1\n w=$word;f=173;l=$rawAlias;s=updated\n")
+            source.writeText("dictionary=test;version=1\n w=$word;f=173;l=$legacyTag;s=updated\n")
+            database.importCombinedList(context, Uri.fromFile(source))
+            source.writeText("dictionary=test;version=1\n w=$word;f=181;l=$modernTag;s=updated\n")
             database.importCombinedList(context, Uri.fromFile(source))
 
-            val updated = legacy.copy(id = legacyId, freq = 173, shortcut = "updated")
-            assertEquals(listOf(updated), dao.queryAllRaw(rawAlias))
-            assertEquals(listOf(modern.copy(id = modernId)), dao.queryAllRaw(modernTag))
+            val healedLegacy = legacy.copy(id = legacyId, freq = 173, locale = "iw_IL", shortcut = "updated")
+            val healedModern = modern.copy(id = modernId, freq = 181, locale = "he_IL", shortcut = "updated")
+            assertEquals(listOf(healedLegacy), dao.queryAllRawAliases("iw_IL"))
+            assertEquals(listOf(healedModern), dao.queryAllRawAliases("he_IL"))
             assertEquals(listOf(extended.copy(id = extendedId)), dao.queryAllRaw(extendedTag))
             assertEquals(3, dao.queryAll().size)
 
-            val duplicateId = dao.insert(legacy)
-            source.writeText("dictionary=test;version=1\n w=$word;f=211;l=$rawAlias;s=newer\n")
-            database.importCombinedList(context, Uri.fromFile(source))
+            val exported = File.createTempFile("floris-dictionary-alias-", ".txt", context.cacheDir)
+            try {
+                database.exportCombinedList(context, Uri.fromFile(exported))
+                val lines = exported.readLines()
+                assertTrue(lines.any { it.contains(";l=iw_IL;") })
+                assertTrue(lines.any { it.contains(";l=he_IL;") })
+                assertTrue(lines.any { it.contains(";l=$extendedTag;") })
+                database.importCombinedList(context, Uri.fromFile(exported))
+                assertEquals(3, dao.queryAll().size)
+                assertEquals(listOf(healedLegacy), dao.queryAllRawAliases("iw_IL"))
+                assertEquals(listOf(healedModern), dao.queryAllRawAliases("he_IL"))
+            } finally {
+                exported.delete()
+            }
+        }
+    }
 
-            assertEquals(
-                listOf(updated.copy(freq = 211, shortcut = "newer"), legacy.copy(id = duplicateId)),
-                dao.queryAllRaw(rawAlias).sortedBy { it.id },
-            )
-            assertEquals(listOf(modern.copy(id = modernId)), dao.queryAllRaw(modernTag))
-            assertEquals(listOf(extended.copy(id = extendedId)), dao.queryAllRaw(extendedTag))
-            assertEquals(4, dao.queryAll().size)
+    @Test
+    fun florisImportPrefersCanonicalAliasRowAndPreservesLegacyDuplicate() {
+        withImportSource { context, database, source ->
+            val dao = database.userDictionaryDao()
+            listOf(
+                "iw" to "he", "he" to "iw", "in" to "id",
+                "id" to "in", "ji" to "yi", "yi" to "ji",
+            ).forEachIndexed { index, (code, otherCode) ->
+                val word = "alias-duplicate-$index-${UUID.randomUUID()}"
+                val caseOnly = UserDictionaryEntry(0, word, 35, "${code}_il", "case-only")
+                val legacy = UserDictionaryEntry(0, word, 42, "$code-IL", "legacy")
+                val other = UserDictionaryEntry(0, word, 64, "${otherCode}_IL", "other")
+                val canonical = UserDictionaryEntry(0, word, 73, "${code}_IL", "canonical")
+                val caseOnlyId = dao.insert(caseOnly)
+                val legacyId = dao.insert(legacy)
+                val otherId = dao.insert(other)
+                val canonicalId = dao.insert(canonical)
+
+                source.writeText("dictionary=test;version=1\n w=$word;f=211;l=$code-IL;s=updated\n")
+                database.importCombinedList(context, Uri.fromFile(source))
+
+                assertEquals(listOf(caseOnly.copy(id = caseOnlyId)), dao.queryExactRaw(word, "${code}_il"))
+                assertEquals(listOf(legacy.copy(id = legacyId)), dao.queryExactRaw(word, "$code-IL"))
+                assertEquals(listOf(other.copy(id = otherId)), dao.queryExactRaw(word, "${otherCode}_IL"))
+                assertEquals(
+                    listOf(canonical.copy(id = canonicalId, freq = 211, shortcut = "updated")),
+                    dao.queryExactRaw(word, "${code}_IL"),
+                )
+            }
         }
     }
 
