@@ -107,7 +107,7 @@ configure<LibraryExtension> {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         sourceSets {
             maybeCreate("androidTest").apply {
-                assets.directories += "$projectDir/../../fastlane/staging/fonts"
+                assets.directories += "$projectDir/../../test-fixtures/fonts"
             }
         }
     }
