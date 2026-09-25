@@ -111,6 +111,10 @@ archive, and closing a preview waits until the keyboard has released its assets
 before deleting the workspace. Fonts and images selected in the editor cross
 the same disposable provider boundary before entering that workspace.
 
+Theme stylesheet reads and parsing also run off the UI thread. The component
+shows a loading state until its current stylesheet is ready; a stale or cancelled
+load cannot replace edits. Invalid stylesheets still offer lenient or empty retry.
+
 The theme shape editor displays corners from the current property value. Changing
 shape type resets the preview and chips to the new type's value, and a corner edit
 updates that value before the property can be saved.
