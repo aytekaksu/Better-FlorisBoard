@@ -6,7 +6,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
+  issues: read
 
 jobs:
   # Keep this job id unchanged: branch protection currently requires "validate".
@@ -15,27 +15,37 @@ jobs:
     timeout-minutes: 5
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
       - name: Validate changed resource files
         env:
           GH_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         shell: bash
         run: |
-          changed_files="$(
-            gh api --paginate \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" \
-              --jq '.[].filename'
-          )"
-
-          illegal_files="$(
-            grep -E '^app/src/main/res/values-.+/strings\.xml$' <<< "$changed_files" || true
-          )"
-          if [[ -n "$illegal_files" ]]; then
-            echo "::error::Translated strings.xml files are managed outside pull requests."
-            sed 's/^/  - /' <<< "$illegal_files"
+          set -euo pipefail
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]
+          git fetch --no-tags --depth=1 origin "refs/pull/$PR_NUMBER/head"
+          if [[ "$(git rev-parse FETCH_HEAD)" != "$HEAD_SHA" ]]; then
+            echo "::error::Pull request head moved during validation; rerun on its current head."
             exit 1
           fi
 
-          echo "No translated strings.xml files were changed."
+          # Execute only code from the base commit. The policy's first PR has no
+          # base-side script yet, so it remains subject to the old blanket ban.
+          if [[ -f .github/scripts/validate_translation_deletions.py ]]; then
+            python3 .github/scripts/validate_translation_deletions.py \
+              --base "$BASE_SHA" --head "$HEAD_SHA" --event "$GITHUB_EVENT_PATH"
+          elif git diff --name-only --no-renames "$BASE_SHA" "$HEAD_SHA" -- | \
+            grep -Eq '^app/src/main/res/values-[^/]+/strings\.xml$'; then
+            echo "::error::Localized strings.xml files are not allowed before the issue #131 policy lands."
+            exit 1
+          else
+            echo "No localized strings.xml files were changed."
+          fi
