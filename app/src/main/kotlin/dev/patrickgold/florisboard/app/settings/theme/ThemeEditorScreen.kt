@@ -18,12 +18,14 @@ package dev.patrickgold.florisboard.app.settings.theme
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.isImeVisible
@@ -44,6 +46,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemDefaults
@@ -78,6 +81,7 @@ import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.apptheme.Shapes
 import dev.patrickgold.florisboard.app.ext.ExtensionComponentView
+import dev.patrickgold.florisboard.app.ext.ThemeEditorAction
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.ime.theme.ThemeExtensionComponent
 import dev.patrickgold.florisboard.ime.theme.ThemeExtensionComponentEditor
@@ -97,7 +101,12 @@ import dev.patrickgold.jetpref.material.ui.JetPrefAlertDialog
 import dev.patrickgold.jetpref.material.ui.JetPrefDropdown
 import dev.patrickgold.jetpref.material.ui.JetPrefListItem
 import dev.patrickgold.jetpref.material.ui.JetPrefTextField
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
 import org.florisboard.lib.android.showLongToast
 import org.florisboard.lib.color.MaterialYouFlagsSaver
 import org.florisboard.lib.compose.FlorisIconButton
@@ -119,8 +128,10 @@ import org.florisboard.lib.snygg.SnyggSpecDecl
 import org.florisboard.lib.snygg.SnyggStylesheet
 import org.florisboard.lib.snygg.SnyggStylesheetEditor
 import org.florisboard.lib.snygg.ui.Saver
+import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.LinkOption
+import java.nio.file.Path
 
 private const val MAX_STYLESHEET_BYTES = 8L * 1_024 * 1_024
 
@@ -138,17 +149,153 @@ private val LenientConfig = SnyggJsonConfiguration.of(
     ignoreInvalidValues = true,
 )
 
-private enum class StylesheetLoadingStrategy {
+internal enum class StylesheetLoadingStrategy {
     TRY_LOAD_OR_ASK_ON_CONFLICT, // default state
     TRY_LOAD_OR_EMPTY, // user chose to not auto-fix errors
     TRY_LOAD_OR_PARSE_LENIENT; // user chose to auto-fix errors
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+internal sealed interface StylesheetLoadResult {
+    data object Loading : StylesheetLoadResult
+    data class Ready(val editor: SnyggStylesheetEditor) : StylesheetLoadResult
+    data object Conflict : StylesheetLoadResult
+}
+
+/** File resolution, bounded reading, and parsing must stay off the Compose thread. */
+internal suspend fun loadThemeStylesheetEditor(
+    root: Path,
+    stylesheetPath: String,
+    strategy: StylesheetLoadingStrategy,
+): StylesheetLoadResult = runInterruptible(Dispatchers.IO) {
+    try {
+        val file = SafeRelativePath.parse(stylesheetPath)
+            .mapCatching { it.resolveWithin(root).getOrThrow() }
+            .getOrNull()
+        val stylesheet = if (file != null && Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) &&
+            Files.size(file) <= MAX_STYLESHEET_BYTES
+        ) {
+            readBoundedStylesheet(file)?.let { json ->
+                val config = when (strategy) {
+                    StylesheetLoadingStrategy.TRY_LOAD_OR_PARSE_LENIENT -> LenientConfig
+                    else -> PrettyPrintConfig
+                }
+                SnyggStylesheet.fromJson(json, config).getOrThrow().edit(CustomRuleComparator)
+            }
+        } else {
+            null
+        }
+        StylesheetLoadResult.Ready((stylesheet ?: newEmptyThemeStylesheetEditor()).also {
+            it.rules.putIfAbsent(SnyggAnnotationRule.Defines, SnyggSinglePropertySetEditor())
+        })
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: InterruptedException) {
+        throw error
+    } catch (_: Exception) {
+        when (strategy) {
+            StylesheetLoadingStrategy.TRY_LOAD_OR_ASK_ON_CONFLICT -> StylesheetLoadResult.Conflict
+            else -> StylesheetLoadResult.Ready(newEmptyThemeStylesheetEditor())
+        }
+    }
+}
+
+private fun readBoundedStylesheet(file: Path): String? = Files.newInputStream(file).use { input ->
+    val bytes = ByteArrayOutputStream()
+    val buffer = ByteArray(8192)
+    while (true) {
+        val count = input.read(buffer)
+        if (count < 0) break
+        if (bytes.size().toLong() + count > MAX_STYLESHEET_BYTES) return null
+        bytes.write(buffer, 0, count)
+    }
+    String(bytes.toByteArray(), Charsets.UTF_8)
+}
+
 @Composable
 fun ThemeEditorScreen(
     workspace: CacheManager.ThemeEditorWorkspace,
     editor: ThemeExtensionComponentEditor,
+) {
+    var strategy by remember(workspace, editor) {
+        mutableStateOf(StylesheetLoadingStrategy.TRY_LOAD_OR_ASK_ON_CONFLICT)
+    }
+    var loadState by remember(workspace, editor) {
+        mutableStateOf<StylesheetLoadResult>(
+            editor.stylesheetEditor?.let(StylesheetLoadResult::Ready) ?: StylesheetLoadResult.Loading,
+        )
+    }
+    val requestedStrategy = strategy
+    LaunchedEffect(workspace, editor, requestedStrategy) {
+        editor.stylesheetEditor?.let {
+            loadState = StylesheetLoadResult.Ready(it)
+            return@LaunchedEffect
+        }
+        loadState = StylesheetLoadResult.Loading
+        val result = loadThemeStylesheetEditor(
+            root = workspace.extDir.toPath(),
+            stylesheetPath = editor.stylesheetPath(),
+            strategy = requestedStrategy,
+        )
+        currentCoroutineContext().ensureActive()
+        if (strategy != requestedStrategy ||
+            (workspace.currentAction as? ThemeEditorAction.EditTheme)?.editor !== editor
+        ) return@LaunchedEffect
+        if (result is StylesheetLoadResult.Ready) {
+            editor.stylesheetEditor = result.editor
+        }
+        loadState = result
+    }
+
+    when (val state = loadState) {
+        is StylesheetLoadResult.Ready -> ThemeEditorReadyScreen(workspace, editor, state.editor)
+        else -> ThemeEditorPendingScreen(
+            workspace = workspace,
+            conflict = state == StylesheetLoadResult.Conflict,
+            onRetry = {
+                loadState = StylesheetLoadResult.Loading
+                strategy = it
+            },
+        )
+    }
+}
+
+@Composable
+private fun ThemeEditorPendingScreen(
+    workspace: CacheManager.ThemeEditorWorkspace,
+    conflict: Boolean,
+    onRetry: (StylesheetLoadingStrategy) -> Unit,
+) = FlorisScreen {
+    title = stringRes(R.string.ext__editor__edit_component__title_theme)
+    scrollable = false
+    navigationIcon {
+        FlorisIconButton(onClick = { workspace.currentAction = null }, icon = Icons.Default.Close)
+    }
+    content {
+        BackHandler { workspace.currentAction = null }
+        if (conflict) {
+            JetPrefAlertDialog(
+                title = stringRes(R.string.settings__theme_editor__stylesheet_error_title),
+                confirmLabel = stringRes(R.string.action__yes),
+                onConfirm = { onRetry(StylesheetLoadingStrategy.TRY_LOAD_OR_PARSE_LENIENT) },
+                dismissLabel = stringRes(R.string.action__no),
+                onDismiss = { onRetry(StylesheetLoadingStrategy.TRY_LOAD_OR_EMPTY) },
+            ) {
+                Text(text = stringRes(R.string.settings__theme_editor__stylesheet_error_description))
+            }
+        } else {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ThemeEditorReadyScreen(
+    workspace: CacheManager.ThemeEditorWorkspace,
+    editor: ThemeExtensionComponentEditor,
+    stylesheetEditor: SnyggStylesheetEditor,
 ) = FlorisScreen {
     title = stringRes(R.string.ext__editor__edit_component__title_theme)
     scrollable = false
@@ -160,45 +307,6 @@ fun ThemeEditorScreen(
 
     val scope = rememberCoroutineScope()
     val previewFieldController = rememberPreviewFieldController().also { it.isVisible = true }
-
-    var stylesheetLoadingStrategy by rememberSaveable {
-        mutableStateOf(StylesheetLoadingStrategy.TRY_LOAD_OR_ASK_ON_CONFLICT)
-    }
-    var stylesheetEditorFailure by remember { mutableStateOf<Throwable?>(null) }
-    val stylesheetEditor = remember(stylesheetLoadingStrategy) {
-        editor.stylesheetEditor ?: run {
-            stylesheetEditorFailure = null
-            val stylesheetPath = editor.stylesheetPath()
-            editor.stylesheetPathOnLoad = stylesheetPath
-            val stylesheetFile = SafeRelativePath.parse(stylesheetPath)
-                .mapCatching { it.resolveWithin(workspace.extDir.toPath()).getOrThrow() }
-                .getOrNull()
-            val stylesheetEditor = if (
-                stylesheetFile != null &&
-                Files.isRegularFile(stylesheetFile, LinkOption.NOFOLLOW_LINKS) &&
-                Files.size(stylesheetFile) <= MAX_STYLESHEET_BYTES
-            ) {
-                try {
-                    val stylesheetJson = stylesheetFile.toFile().readText()
-                    val config = when (stylesheetLoadingStrategy) {
-                        StylesheetLoadingStrategy.TRY_LOAD_OR_PARSE_LENIENT -> LenientConfig
-                        else -> PrettyPrintConfig
-                    }
-                    SnyggStylesheet.fromJson(stylesheetJson, config).getOrThrow().edit(CustomRuleComparator)
-                } catch (error: Throwable) {
-                    stylesheetEditorFailure = when (stylesheetLoadingStrategy) {
-                        StylesheetLoadingStrategy.TRY_LOAD_OR_ASK_ON_CONFLICT -> error
-                        else -> null
-                    }
-                    newEmptyThemeStylesheetEditor()
-                }
-            } else {
-                newEmptyThemeStylesheetEditor()
-            }
-            stylesheetEditor.rules.putIfAbsent(SnyggAnnotationRule.Defines, SnyggSinglePropertySetEditor())
-            stylesheetEditor
-        }.also { editor.stylesheetEditor = it }
-    }
 
     val definedVariables = remember(stylesheetEditor.rules, workspace.version) {
         stylesheetEditor.rules.firstNotNullOfOrNull { (rule, propertySet) ->
@@ -266,26 +374,6 @@ fun ThemeEditorScreen(
     }
 
     content {
-        if (stylesheetEditorFailure != null) {
-            JetPrefAlertDialog(
-                title = stringRes(R.string.settings__theme_editor__stylesheet_error_title),
-                confirmLabel = stringRes(R.string.action__yes),
-                onConfirm = {
-                    editor.stylesheetEditor = null
-                    stylesheetLoadingStrategy = StylesheetLoadingStrategy.TRY_LOAD_OR_PARSE_LENIENT
-                },
-                dismissLabel = stringRes(R.string.action__no),
-                onDismiss = {
-                    editor.stylesheetEditor = null
-                    stylesheetLoadingStrategy = StylesheetLoadingStrategy.TRY_LOAD_OR_EMPTY
-                },
-            ) {
-                Text(
-                    text = stringRes(R.string.settings__theme_editor__stylesheet_error_description),
-                )
-            }
-        }
-
         BackHandler {
             handleBackPress()
         }

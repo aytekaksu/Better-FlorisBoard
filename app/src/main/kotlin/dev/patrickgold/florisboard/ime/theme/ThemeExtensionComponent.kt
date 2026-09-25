@@ -82,7 +82,6 @@ class ThemeExtensionComponentEditor(
     override var stylesheetPath: String = "",
 ) : ThemeExtensionComponent {
 
-    var stylesheetPathOnLoad: String? = null
     var stylesheetEditor: SnyggStylesheetEditor? = null
 
     fun build(): ThemeExtensionComponentImpl {
