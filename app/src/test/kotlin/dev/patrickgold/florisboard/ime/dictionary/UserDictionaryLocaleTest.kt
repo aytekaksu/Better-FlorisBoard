@@ -26,11 +26,17 @@ class UserDictionaryLocaleTest : FunSpec({
             "en-us" to "en_US",
             "de_DE" to "de_DE",
             "de-419" to "de_419",
+            "iw-IL" to "iw_IL",
             "iw_IL" to "iw_IL",
+            "he-IL" to "he_IL",
             "he_IL" to "he_IL",
+            "in-ID" to "in_ID",
             "in_ID" to "in_ID",
+            "id-ID" to "id_ID",
             "id_ID" to "id_ID",
+            "ji-US" to "ji_US",
             "ji" to "ji",
+            "yi-US" to "yi_US",
             "yi" to "yi",
             "iw-IL-u-ca-gregory" to "iw-IL-u-ca-gregory",
             "sr-Latn-RS" to "sr-Latn-RS",
@@ -40,6 +46,15 @@ class UserDictionaryLocaleTest : FunSpec({
             canonicalImportedFlorisLocale(input) shouldBe expected
         }
         canonicalImportedFlorisLocale(null) shouldBe null
+    }
+
+    test("language-alias families canonicalize separators without merging codes or losing subtags") {
+        canonicalAliasFamilyLocale("IW-il") shouldBe "iw_IL"
+        canonicalAliasFamilyLocale("HE-il") shouldBe "he_IL"
+        canonicalAliasFamilyLocale("iw-IL-POSIX") shouldBe "iw_IL_POSIX"
+        listOf("iw-IL-u-ca-gregory", "he-Latn-IL", "in-ID-", "iw_IL-POSIX", "en-US").forEach { tag ->
+            canonicalAliasFamilyLocale(tag) shouldBe null
+        }
     }
 
     test("parsed browsing is limited to tags the standard Room query can actually match") {

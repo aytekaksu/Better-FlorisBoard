@@ -117,6 +117,7 @@ fun UserDictionaryScreen(type: UserDictionaryType, routeEntry: NavBackStackEntry
         return when (locale) {
             UserDictionaryLocaleChoice.All -> context.stringRes(R.string.settings__udm__all_languages)
             is UserDictionaryLocaleChoice.Standard -> locale.locale.displayName()
+            is UserDictionaryLocaleChoice.RawAliases -> locale.canonicalTag
             is UserDictionaryLocaleChoice.Exact -> locale.tag.ifBlank { "\"${locale.tag}\"" }
         }
     }

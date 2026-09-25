@@ -111,12 +111,12 @@ class UserDictionaryScreenModelTest : FunSpec({
 
                 model.state.languages shouldBe listOf(
                     standard("en-US"),
-                    UserDictionaryLocaleChoice.Exact(legacyAlias),
+                    UserDictionaryLocaleChoice.RawAliases(legacyAlias),
                     UserDictionaryLocaleChoice.Exact(script),
                     UserDictionaryLocaleChoice.Exact(malformed),
                     UserDictionaryLocaleChoice.Exact(extension),
                 )
-                listOf(script to 1L, extension to 2L, malformed to 3L, legacyAlias to 6L).forEach { (tag, id) ->
+                listOf(script to 1L, extension to 2L, malformed to 3L).forEach { (tag, id) ->
                     model.selectLocale(UserDictionaryLocaleChoice.Exact(tag))
                     drain(io)
                     model.state.currentLocale shouldBe UserDictionaryLocaleChoice.Exact(tag)
@@ -124,7 +124,56 @@ class UserDictionaryScreenModelTest : FunSpec({
                     model.selectLocale(null)
                     drain(io)
                 }
-                dao.queriedRawTags shouldBe listOf(script, extension, malformed, legacyAlias)
+                model.selectLocale(UserDictionaryLocaleChoice.RawAliases(legacyAlias))
+                drain(io)
+                model.state.words.map { it.id } shouldBe listOf(6L)
+                dao.queriedRawTags shouldBe listOf(script, extension, malformed)
+                dao.queriedRawAliasTags shouldBe listOf(legacyAlias)
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+    }
+
+    test("platform-dependent language codes group only their own simple spellings") {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val io = QueuedIoDispatcher()
+                val extended = "iw-IL-u-ca-gregory"
+                val mixed = "iw_IL-POSIX"
+                val dao = FakeDao(io).apply {
+                    entries += entry(1, "same", "iw_IL")
+                    entries += entry(2, "same", "iw-IL")
+                    entries += entry(3, "same", "he_IL")
+                    entries += entry(4, "same", "he-IL")
+                    entries += entry(5, "same", extended)
+                    entries += entry(6, "same", mixed)
+                }
+                val model = model(io, dao)
+                drain(io)
+
+                model.state.languages.toSet() shouldBe setOf(
+                    UserDictionaryLocaleChoice.RawAliases("iw_IL"),
+                    UserDictionaryLocaleChoice.RawAliases("he_IL"),
+                    UserDictionaryLocaleChoice.Exact(extended),
+                    UserDictionaryLocaleChoice.Exact(mixed),
+                )
+                model.state.languages.size shouldBe 4
+                model.selectLocale(UserDictionaryLocaleChoice.RawAliases("iw_IL"))
+                drain(io)
+                model.state.words.map { it.id } shouldBe listOf(1L, 2L)
+                model.selectLocale(UserDictionaryLocaleChoice.RawAliases("he_IL"))
+                drain(io)
+                model.state.words.map { it.id } shouldBe listOf(3L, 4L)
+                model.selectLocale(UserDictionaryLocaleChoice.Exact(extended))
+                drain(io)
+                model.state.words.map { it.id } shouldBe listOf(5L)
+                model.selectLocale(UserDictionaryLocaleChoice.Exact(mixed))
+                drain(io)
+                model.state.words.map { it.id } shouldBe listOf(6L)
+                dao.queriedRawAliasTags shouldBe listOf("iw_IL", "he_IL")
+                dao.queriedRawTags shouldBe listOf(extended, mixed)
             } finally {
                 Dispatchers.resetMain()
             }
@@ -180,9 +229,12 @@ class UserDictionaryScreenModelTest : FunSpec({
         normalizeEditedUserDictionaryLocale(" sr-Latn-RS-u-ca-gregory ", UserDictionaryType.FLORIS) shouldBe
             "sr-Latn-RS-u-ca-gregory"
         normalizeEditedUserDictionaryLocale(" en-US ", UserDictionaryType.FLORIS) shouldBe "en_US"
+        normalizeEditedUserDictionaryLocale(" he-IL ", UserDictionaryType.FLORIS) shouldBe "he_IL"
+        normalizeEditedUserDictionaryLocale(" iw-IL ", UserDictionaryType.FLORIS) shouldBe "iw_IL"
         normalizeEditedUserDictionaryLocale(" sr-Latn-RS ", UserDictionaryType.SYSTEM) shouldBe "sr_LATN_RS"
         normalizeEditedUserDictionaryLocale("  ", UserDictionaryType.FLORIS) shouldBe null
         normalizeEditedUserDictionaryLocale("en-US", UserDictionaryType.FLORIS, "en-US") shouldBe "en-US"
+        normalizeEditedUserDictionaryLocale("iw-IL", UserDictionaryType.FLORIS, "iw-IL") shouldBe "iw-IL"
         normalizeEditedUserDictionaryLocale("", UserDictionaryType.FLORIS, "") shouldBe ""
         normalizeEditedUserDictionaryLocale("en-US", UserDictionaryType.SYSTEM, "en-US") shouldBe "en_US"
     }
@@ -377,11 +429,15 @@ private class FakeDao(private val io: QueuedIoDispatcher) : UserDictionaryDao {
     val entries = mutableListOf<UserDictionaryEntry>()
     val queriedLocales = mutableListOf<FlorisLocale?>()
     val queriedRawTags = mutableListOf<String>()
+    val queriedRawAliasTags = mutableListOf<String>()
     var insertFailure: Exception? = null
     var queryFailure: Exception? = null
     private var nextId = 10L
 
     private fun requireIo() = check(io.running) { "DAO work must use the I/O dispatcher" }
+
+    private fun String?.matchesRawAliases(locale: String) =
+        equals(locale, ignoreCase = true) || equals(locale.replace('_', '-'), ignoreCase = true)
 
     override fun queryAll(): List<UserDictionaryEntry> {
         requireIo()
@@ -408,6 +464,12 @@ private class FakeDao(private val io: QueuedIoDispatcher) : UserDictionaryDao {
         return entries.filter { it.locale == locale }
     }
 
+    override fun queryAllRawAliases(locale: String): List<UserDictionaryEntry> {
+        requireIo()
+        queriedRawAliasTags += locale
+        return entries.filter { it.locale.matchesRawAliases(locale) }
+    }
+
     override fun queryExact(word: String, locale: FlorisLocale?): List<UserDictionaryEntry> {
         requireIo()
         return entries.filter { it.word == word && it.locale?.let { tag -> FlorisLocale.fromTag(tag) } == locale }
@@ -416,6 +478,11 @@ private class FakeDao(private val io: QueuedIoDispatcher) : UserDictionaryDao {
     override fun queryExactRaw(word: String, locale: String): List<UserDictionaryEntry> {
         requireIo()
         return entries.filter { it.word == word && it.locale == locale }
+    }
+
+    override fun queryExactRawAliases(word: String, locale: String): List<UserDictionaryEntry> {
+        requireIo()
+        return entries.filter { it.word == word && it.locale.matchesRawAliases(locale) }
     }
 
     override fun queryLanguageList(): List<String?> {

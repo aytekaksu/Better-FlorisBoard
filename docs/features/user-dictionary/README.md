@@ -13,14 +13,13 @@ then each `;`-separated row carries word, frequency, optional locale, and
 optional shortcut. Import updates the first matching word/locale or inserts a
 new row. A malformed later row can leave earlier rows imported; this format
 does not provide an all-or-nothing transaction.
-Floris imports canonicalize only locale tags that can be represented without
-losing subtags. Older simple hyphenated rows stay browsable and heal on
-reimport. The Floris language list groups simple spelling aliases, but shows
-script, extension, malformed, and Java language-alias tags as separate exact-tag
-choices. Java and Android disagree on some language aliases, so imports retain
-their exact tags rather than rewriting or merging distinct rows. Editing a
-Floris word keeps tags it cannot represent; system dictionary behavior is
-unchanged.
+Floris imports canonicalize simple hyphenated tags without losing subtags.
+Older spellings stay browsable and heal on reimport. Java and Android disagree
+on a few language codes, so those codes use raw-string grouping: `iw` and `he`
+(likewise `in`/`id` and `ji`/`yi`) stay distinct, while each code's simple
+hyphen and underscore spellings share a choice. Script, extension, and malformed
+tags remain separate exact-tag choices. Editing an unchanged Floris locale keeps
+its stored spelling; system dictionary behavior is unchanged.
 The format reserves `l=all` and `l=null` for no locale. Preexisting rows with
 those literal locale values can be browsed, but cannot round-trip as literal
 tags through this format.

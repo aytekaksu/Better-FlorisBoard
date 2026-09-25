@@ -25,6 +25,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.patrickgold.florisboard.ime.dictionary.UserDictionaryDatabase
 import dev.patrickgold.florisboard.ime.dictionary.UserDictionaryEntry
+import dev.patrickgold.florisboard.ime.dictionary.canonicalAliasFamilyLocale
 import dev.patrickgold.florisboard.ime.dictionary.canonicalImportedFlorisLocale
 import dev.patrickgold.florisboard.ime.dictionary.parsedFlorisBrowseLocale
 import dev.patrickgold.florisboard.lib.FlorisLocale
@@ -42,6 +43,7 @@ import kotlinx.coroutines.withContext
 internal sealed interface UserDictionaryLocaleChoice {
     data object All : UserDictionaryLocaleChoice
     data class Standard(val locale: FlorisLocale) : UserDictionaryLocaleChoice
+    data class RawAliases(val canonicalTag: String) : UserDictionaryLocaleChoice
     data class Exact(val tag: String) : UserDictionaryLocaleChoice
 }
 
@@ -186,6 +188,7 @@ internal class UserDictionaryScreenModel(
             null -> emptyList()
             UserDictionaryLocaleChoice.All -> dao.queryAll(null)
             is UserDictionaryLocaleChoice.Standard -> dao.queryAll(requestedLocale.locale)
+            is UserDictionaryLocaleChoice.RawAliases -> dao.queryAllRawAliases(requestedLocale.canonicalTag)
             is UserDictionaryLocaleChoice.Exact -> dao.queryAllRaw(requestedLocale.tag)
         }
         return if (requestedLocale != null && words.isNotEmpty()) {
@@ -196,7 +199,8 @@ internal class UserDictionaryScreenModel(
                     when {
                         tag == null -> UserDictionaryLocaleChoice.All
                         type == UserDictionaryType.FLORIS ->
-                            parsedFlorisBrowseLocale(tag)?.let { UserDictionaryLocaleChoice.Standard(it) }
+                            canonicalAliasFamilyLocale(tag)?.let { UserDictionaryLocaleChoice.RawAliases(it) }
+                                ?: parsedFlorisBrowseLocale(tag)?.let { UserDictionaryLocaleChoice.Standard(it) }
                                 ?: UserDictionaryLocaleChoice.Exact(tag)
                         else -> UserDictionaryLocaleChoice.Standard(FlorisLocale.fromTag(tag))
                     }
@@ -206,6 +210,7 @@ internal class UserDictionaryScreenModel(
                     when (choice) {
                         UserDictionaryLocaleChoice.All -> ""
                         is UserDictionaryLocaleChoice.Standard -> choice.locale.displayLanguage()
+                        is UserDictionaryLocaleChoice.RawAliases -> choice.canonicalTag
                         is UserDictionaryLocaleChoice.Exact -> choice.tag
                     }
                 }
