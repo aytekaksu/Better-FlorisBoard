@@ -25,6 +25,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.patrickgold.florisboard.ime.dictionary.UserDictionaryDatabase
 import dev.patrickgold.florisboard.ime.dictionary.UserDictionaryEntry
+import dev.patrickgold.florisboard.ime.dictionary.canonicalImportedFlorisLocale
+import dev.patrickgold.florisboard.ime.dictionary.parsedFlorisBrowseLocale
 import dev.patrickgold.florisboard.lib.FlorisLocale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -37,11 +39,30 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-internal val AllLanguagesLocale = FlorisLocale.from(language = "zz")
+internal sealed interface UserDictionaryLocaleChoice {
+    data object All : UserDictionaryLocaleChoice
+    data class Standard(val locale: FlorisLocale) : UserDictionaryLocaleChoice
+    data class Exact(val tag: String) : UserDictionaryLocaleChoice
+}
+
+internal fun normalizeEditedUserDictionaryLocale(
+    input: String,
+    type: UserDictionaryType,
+    original: String? = null,
+): String? = if (type == UserDictionaryType.FLORIS && input == original.orEmpty()) {
+    original
+} else {
+    input.trim().takeIf { it.isNotBlank() }?.let { tag ->
+        when (type) {
+            UserDictionaryType.FLORIS -> canonicalImportedFlorisLocale(tag)
+            UserDictionaryType.SYSTEM -> FlorisLocale.fromTag(tag).localeTag()
+        }
+    }
+}
 
 internal data class UserDictionaryScreenState(
-    val currentLocale: FlorisLocale? = null,
-    val languages: List<FlorisLocale> = emptyList(),
+    val currentLocale: UserDictionaryLocaleChoice? = null,
+    val languages: List<UserDictionaryLocaleChoice> = emptyList(),
     val words: List<UserDictionaryEntry> = emptyList(),
     val loading: Boolean = true,
     val busy: Boolean = false,
@@ -58,13 +79,15 @@ internal sealed interface UserDictionaryNotice {
 internal class UserDictionaryScreenModel(
     private val database: () -> UserDictionaryDatabase,
     private val context: () -> Context,
+    private val type: UserDictionaryType,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
     constructor(
         database: () -> UserDictionaryDatabase,
         context: Context,
+        type: UserDictionaryType,
         ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    ) : this(database, { context }, ioDispatcher)
+    ) : this(database, { context }, type, ioDispatcher)
 
     var state by mutableStateOf(UserDictionaryScreenState())
         private set
@@ -78,7 +101,7 @@ internal class UserDictionaryScreenModel(
         refresh()
     }
 
-    fun selectLocale(locale: FlorisLocale?) {
+    fun selectLocale(locale: UserDictionaryLocaleChoice?) {
         if (cleared) return
         state = state.copy(currentLocale = locale, words = emptyList(), loading = true)
         if (!state.busy) refresh()
@@ -157,20 +180,35 @@ internal class UserDictionaryScreenModel(
         }
     }
 
-    private fun load(requestedLocale: FlorisLocale?): Snapshot {
+    private fun load(requestedLocale: UserDictionaryLocaleChoice?): Snapshot {
         val dao = database().userDictionaryDao()
-        val words = if (requestedLocale == null) {
-            emptyList()
-        } else {
-            dao.queryAll(requestedLocale.takeUnless { it == AllLanguagesLocale }).toList()
+        val words = when (requestedLocale) {
+            null -> emptyList()
+            UserDictionaryLocaleChoice.All -> dao.queryAll(null)
+            is UserDictionaryLocaleChoice.Standard -> dao.queryAll(requestedLocale.locale)
+            is UserDictionaryLocaleChoice.Exact -> dao.queryAllRaw(requestedLocale.tag)
         }
         return if (requestedLocale != null && words.isNotEmpty()) {
             Snapshot(requestedLocale, emptyList(), words)
         } else {
             val languages = dao.queryLanguageList()
+                .map { tag ->
+                    when {
+                        tag == null -> UserDictionaryLocaleChoice.All
+                        type == UserDictionaryType.FLORIS ->
+                            parsedFlorisBrowseLocale(tag)?.let { UserDictionaryLocaleChoice.Standard(it) }
+                                ?: UserDictionaryLocaleChoice.Exact(tag)
+                        else -> UserDictionaryLocaleChoice.Standard(FlorisLocale.fromTag(tag))
+                    }
+                }
                 .distinct()
-                .sortedBy { it?.displayLanguage() }
-                .map { it ?: AllLanguagesLocale }
+                .sortedBy { choice ->
+                    when (choice) {
+                        UserDictionaryLocaleChoice.All -> ""
+                        is UserDictionaryLocaleChoice.Standard -> choice.locale.displayLanguage()
+                        is UserDictionaryLocaleChoice.Exact -> choice.tag
+                    }
+                }
             Snapshot(null, languages, emptyList())
         }
     }
@@ -181,8 +219,8 @@ internal class UserDictionaryScreenModel(
     }
 
     private data class Snapshot(
-        val locale: FlorisLocale?,
-        val languages: List<FlorisLocale>,
+        val locale: UserDictionaryLocaleChoice?,
+        val languages: List<UserDictionaryLocaleChoice>,
         val words: List<UserDictionaryEntry>,
     )
 }
