@@ -110,11 +110,9 @@ internal fun parsedFlorisBrowseLocale(value: String): FlorisLocale? {
 }
 
 internal fun canonicalImportedFlorisLocale(value: String?): String? = value?.let { raw ->
-    canonicalAliasFamilyLocale(raw) ?: when {
-        isPlatformDependentLanguageAlias(raw) -> raw
-        isRepresentableFlorisLocale(raw) -> FlorisLocale.fromTag(raw).localeTag()
-        else -> raw
-    }
+    canonicalAliasFamilyLocale(raw)
+        ?: parsedFlorisBrowseLocale(raw)?.localeTag()
+        ?: raw
 }
 
 internal fun storedUserDictionaryLocale(value: String): Locale? {
@@ -365,8 +363,8 @@ abstract class FlorisUserDictionaryDatabase :
         if (locale != null && canonicalAliasFamilyLocale(locale) != null) {
             return dao.queryExactRawAliases(word, locale)
         }
-        if (locale != null && (isPlatformDependentLanguageAlias(locale) || !isRepresentableFlorisLocale(locale))) {
-            // Parsing can discard subtags or platform-dependent alias identity.
+        if (locale != null && parsedFlorisBrowseLocale(locale) == null) {
+            // Parsing can discard subtags, separator spelling, or platform-dependent alias identity.
             return dao.queryExactRaw(word, locale)
         }
         return dao.queryExact(word, locale?.let(FlorisLocale::fromTag))

@@ -265,6 +265,28 @@ class DictionaryManagerAndroidTest {
     }
 
     @Test
+    fun florisExportReimportKeepsMixedSeparatorVariantRowsExact() {
+        withImportSource { context, database, source ->
+            val dao = database.userDictionaryDao()
+            val word = "mixed-separator-${UUID.randomUUID()}"
+            val tags = listOf("en_US-POSIX", "en-US_POSIX")
+            val entries = tags.mapIndexed { index, tag ->
+                val entry = UserDictionaryEntry(0, word, 100 + index, tag, "mixed-$index")
+                entry.copy(id = dao.insert(entry))
+            }
+
+            database.exportCombinedList(context, Uri.fromFile(source))
+            database.importCombinedList(context, Uri.fromFile(source))
+
+            assertEquals(2, dao.queryAll().size)
+            entries.forEach { entry ->
+                assertEquals(listOf(entry), dao.queryExactRaw(word, entry.locale!!))
+            }
+            assertTrue(dao.queryExactRaw(word, "en_US_POSIX").isEmpty())
+        }
+    }
+
+    @Test
     fun florisRawLocaleQueriesKeepScriptExtensionAndMalformedTagsSeparate() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val database = Room.inMemoryDatabaseBuilder(context, FlorisUserDictionaryDatabase::class.java).build()

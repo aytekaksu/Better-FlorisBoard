@@ -57,6 +57,13 @@ class UserDictionaryLocaleTest : FunSpec({
         }
     }
 
+    test("mixed separator variant tags keep their exact import and browsing identity") {
+        listOf("en_US-POSIX", "en-US_POSIX").forEach { tag ->
+            canonicalImportedFlorisLocale(tag) shouldBe tag
+            parsedFlorisBrowseLocale(tag) shouldBe null
+        }
+    }
+
     test("parsed browsing is limited to tags the standard Room query can actually match") {
         parsedFlorisBrowseLocale("en_US")?.localeTag() shouldBe "en_US"
         parsedFlorisBrowseLocale("en-US")?.localeTag() shouldBe "en_US"
