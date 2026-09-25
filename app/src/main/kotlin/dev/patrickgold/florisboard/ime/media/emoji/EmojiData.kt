@@ -26,10 +26,15 @@ import java.util.*
 
 private typealias EmojiDataByCategoryImpl = EnumMap<EmojiCategory, MutableList<EmojiSet>>
 private typealias EmojiDataBySkinToneImpl = EnumMap<EmojiSkinTone, MutableList<Emoji>>
+private const val ROOT_EMOJI_ASSET = "ime/media/emoji/root.txt"
+private const val ENGLISH_EMOJI_ASSET = "ime/media/emoji/en.txt"
 typealias EmojiDataByCategory = Map<EmojiCategory, List<EmojiSet>>
 typealias EmojiDataBySkinTone = Map<EmojiSkinTone, List<Emoji>>
 
 internal suspend fun <T> runEmojiAssetIo(block: () -> T): T = runInterruptible(Dispatchers.IO, block)
+
+internal fun rootEmojiAssetLine(line: String): String =
+    if (';' in line) "${line.substringBefore(';')};;" else line
 
 data class EmojiData(
     val byCategory: EmojiDataByCategory,
@@ -73,6 +78,8 @@ data class EmojiData(
         }
 
         private fun loadEmojiDataMap(context: Context, path: String): EmojiData {
+            val isRoot = path == ROOT_EMOJI_ASSET
+            val sourcePath = if (isRoot) ENGLISH_EMOJI_ASSET else path
             val byCategory = newByCategory()
             val bySkinTone = newBySkinTone()
 
@@ -84,8 +91,9 @@ data class EmojiData(
                 emojiEditorList = null
             }
 
-            context.assets.open(path).bufferedReader(Charsets.UTF_8).useLines { lines ->
-                for (line in lines) {
+            context.assets.open(sourcePath).bufferedReader(Charsets.UTF_8).useLines { lines ->
+                for (rawLine in lines) {
+                    val line = if (isRoot) rootEmojiAssetLine(rawLine) else rawLine
                     if (line.startsWith("#")) {
                         // Comment line
                     } else if (line.startsWith("[")) {
@@ -137,28 +145,7 @@ data class EmojiData(
             return EmojiData(byCategory, bySkinTone)
         }
 
-        /**
-         * Resolves the path to the emoji asset file based on the active keyboard subtype and active locale.
-         *
-         * This method prioritizes usage of cached emoji layout maps when available. If a cached map is found then return,
-         * the parseRawEmojiSpecsFile will correctly return the cached data
-         *
-         * It then attempts to locate a matching emoji asset file within the "ime/media/emoji/" directory in the
-         * application's assets based on locale priority:
-         * - Primary locale of the active subtype
-         * - Secondary locales of the active subtype
-         * - Root path ("ime/media/emoji/root.txt") as a fallback
-         *
-         * For each locale, file matching follows this preference order:
-         * - {language}_{country}_{variant}.txt
-         * - {language}_{country}.txt
-         * - {language}.txt
-         *
-         * @param context The context used to access application assets.
-         * @param locale The locale to resolve for.
-         *
-         * @return The path to the emoji asset file, or the root path ("ime/media/emoji/root.txt") if no match is found.
-         */
+        /** Finds a bundled locale file, preferring variant, then country, then language. */
         private fun resolveEmojiAssetPath(context: Context, locale: FlorisLocale): String? {
             val emojiAssets = context.assets.list("ime/media/emoji/")!!.toList()
             val makePath = { file: String -> "ime/media/emoji/$file" }
