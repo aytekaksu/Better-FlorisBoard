@@ -498,7 +498,7 @@
     <string name="pref__spelling__title" comment="Preference group title">Spelling</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Disabled system-wide. No red lines will appear in text fields for incorrect words. Tap to change.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">No inline text spell checker service set. Tap to change.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Languages</string>
+    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref" tools:ignore="UnusedResources">Languages</string>
     <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref" tools:ignore="UnusedResources">Use names from contacts</string>
     <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref" tools:ignore="UnusedResources">Look up names from your contact list</string>
     <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref" tools:ignore="UnusedResources">Use user dictionary entries</string>
@@ -737,8 +737,8 @@
     <string name="devtools__show_primary_clip__summary" comment="Summary of Show clipboard metadata in Devtools">Shows the primary clipboard item’s type and flags</string>
     <string name="devtools__show_input_state_overlay__label" comment="Label of Show input cache overlay in Devtools">Show input state overlay</string>
     <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">Shows content lengths and state without text</string>
-    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools">Show spelling overlay</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">Shows spelling outcomes and suggestion counts</string>
+    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools" tools:ignore="UnusedResources">Show spelling overlay</string>
+    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools" tools:ignore="UnusedResources">Shows spelling outcomes and suggestion counts</string>
     <string name="devtools__show_inline_autofill_overlay__label">Show inline autofill overlay</string>
     <string name="devtools__show_inline_autofill_overlay__summary">Overlays the current inline autofill results for debugging</string>
     <string name="devtools__show_key_touch_boundaries__label" comment="Label of Show key touch boundaries in Devtools">Show key touch boundaries</string>
@@ -1075,8 +1075,8 @@
     <string name="enum__space_bar_language_label_mode__language_name" comment="Enum value label">Language name</string>
     <string name="enum__space_bar_language_label_mode__language_code" comment="Enum value label">Language code</string>
 
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Use system languages</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">Use keyboard subtypes</string>
+    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label" tools:ignore="UnusedResources">Use system languages</string>
+    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label" tools:ignore="UnusedResources">Use keyboard subtypes</string>
 
     <string name="enum__swipe_activation_area__keys_only" comment="Enum value label">Keys only</string>
     <string name="enum__swipe_activation_area__entire_keyboard" comment="Enum value label">Entire keyboard, including gaps</string>

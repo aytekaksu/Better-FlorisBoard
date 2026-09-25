@@ -16,9 +16,13 @@
 
 package dev.patrickgold.florisboard.app.settings.typing
 
+import android.Manifest
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import android.os.Build
+import android.service.textservice.SpellCheckerService
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
@@ -54,10 +58,23 @@ fun SpellCheckerServiceSelector() {
         key = "spell_checker_enabled",
         foregroundOnly = true,
     )
-    val systemSpellCheckerPkgName = remember(systemSpellCheckerId) {
-        runCatching {
-            ComponentName.unflattenFromString(systemSpellCheckerId!!)!!.packageName
-        }.getOrDefault("null")
+    // Android may retain the selected ID after an app update removes its service.
+    val selectedService = remember(systemSpellCheckerId, context) {
+        val selected = ComponentName.unflattenFromString(systemSpellCheckerId.orEmpty())
+        selected?.let { component ->
+            val packageManager = context.packageManager
+            val intent = Intent(SpellCheckerService.SERVICE_INTERFACE)
+            val services = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.queryIntentServices(intent, PackageManager.ResolveInfoFlags.of(0L))
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.queryIntentServices(intent, 0)
+            }
+            services.mapNotNull { it.serviceInfo }.firstOrNull { service ->
+                ComponentName(service.packageName, service.name) == component &&
+                    service.exported && service.permission == Manifest.permission.BIND_TEXT_SERVICE
+            }
+        }
     }
     val openSystemSpellCheckerSettings = {
         val componentToLaunch = ComponentName(
@@ -71,7 +88,7 @@ fun SpellCheckerServiceSelector() {
     }
     Column(modifier = Modifier.padding(horizontal = 8.dp)) {
         if (systemSpellCheckerEnabled == "1") {
-            if (systemSpellCheckerId == null) {
+            if (selectedService == null) {
                 FlorisWarningCard(
                     text = stringRes(R.string.pref__spelling__active_spellchecker__summary_none),
                     onClick = openSystemSpellCheckerSettings,
@@ -81,7 +98,7 @@ fun SpellCheckerServiceSelector() {
                 var spellCheckerLabel = "Unknown"
                 try {
                     val pm = context.packageManager
-                    val remoteAppInfo = pm.getApplicationInfo(systemSpellCheckerPkgName, 0)
+                    val remoteAppInfo = pm.getApplicationInfo(selectedService.packageName, 0)
                     spellCheckerIcon = pm.getApplicationIcon(remoteAppInfo)
                     spellCheckerLabel = pm.getApplicationLabel(remoteAppInfo).toString()
                 } catch (e: Exception) {
@@ -107,7 +124,7 @@ fun SpellCheckerServiceSelector() {
                         }
                     },
                     text = spellCheckerLabel,
-                    secondaryText = systemSpellCheckerPkgName,
+                    secondaryText = selectedService.packageName,
                     contentPadding = PaddingValues(all = 8.dp),
                     onClick = openSystemSpellCheckerSettings,
                 )

@@ -77,7 +77,6 @@ val qualityKotlinSources = files(
     fileTree("app/src") {
         include("**/ime/nlp/plugin/**/*.kt")
     },
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/FlorisSpellCheckerService.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceMigrationTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceSchemaContractTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/app/FlorisPreferencePersistence.kt"),
@@ -128,7 +127,6 @@ val formattedKotlinSources = files(
         include("**/*.kt")
     },
     file("app/src/main/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummary.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/FlorisSpellCheckerService.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/dictionary/UserDictionary.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/BreakIteratorGroup.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycle.kt"),
@@ -196,7 +194,6 @@ val formattedKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/editor/AutoCorrectionRevertTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycleTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderCapabilityTest.kt"),
-    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/SpellingDiagnosticsTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/composing/ComposerTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardCacheTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/theme/FlorisAssetResolverTest.kt"),
