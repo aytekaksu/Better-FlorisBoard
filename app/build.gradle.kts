@@ -216,6 +216,20 @@ configure<ApplicationExtension> {
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += listOf("release")
         }
+
+        // Capture profile rules from readable, unoptimized code. The shipped
+        // release and measured benchmark variants remain minified.
+        create("profile") {
+            initWith(getByName("release"))
+
+            applicationIdSuffix = ".profile"
+            versionNameSuffix = "-profile+${getGitCommitHash(short = true).get()}"
+
+            isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     lint {

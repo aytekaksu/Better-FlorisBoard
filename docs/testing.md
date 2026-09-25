@@ -13,7 +13,13 @@ not stronger evidence for a pure state rule.
 
 `./gradlew qualityGate` is the local merge gate. It runs formatting, Detekt,
 privacy checks, Android lint, JVM/Robolectric tests, debug packaging, a minified
-beta build, benchmark source compilation, and the autocorrect API checks.
+beta build, profile/benchmark source compilation, and the autocorrect API checks.
+The profile-capture test is compiled separately against an unminified,
+non-debuggable `.profile` app variant; the startup benchmarks still measure the
+minified `.bench` variant. Run profile capture only on a dedicated API 33+ device
+with an explicit ADB serial. Review the generated rules and packaged beta
+profile before replacing `app/src/main/baseline-prof.txt`; building the test
+APK alone does not refresh that checked-in file.
 The platform-neutral host core additionally enforces minimum coverage of 85%
 for lines and 65% for branches. These are regression floors, not a reason to
 write tests which merely execute code without proving behavior.
