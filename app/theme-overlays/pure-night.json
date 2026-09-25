@@ -1,0 +1,21 @@
+{
+  "@defines": {
+    "--primary": "#388e3c",
+    "--primary-variant": "#306d32",
+    "--secondary": "#ff9800",
+    "--secondary-variant": "#804c00",
+    "--background": "#000000",
+    "--background-variant": "#111111",
+    "--surface": "#212121",
+    "--surface-variant": "#3d3d3d",
+    "--popup-surface": "#424242",
+    "--focused-popup-surface": "#707070",
+    "--on-background": "#eeeeee",
+    "--on-surface": "#eeeeee",
+    "--on-surface-variant": "#ffffff73"
+  },
+  "smartbar-action-key:pressed": {
+    "background": "var(--surface)",
+    "foreground": "var(--on-surface)"
+  }
+}

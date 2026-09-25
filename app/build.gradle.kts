@@ -15,10 +15,13 @@
  */
 
 import com.android.build.api.dsl.ApplicationExtension
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
@@ -52,6 +55,59 @@ abstract class GenerateProjectLicenseAsset : DefaultTask() {
         val target = outputDirectory.file("license/project_license.txt").get().asFile.toPath()
         Files.createDirectories(target.parent)
         Files.copy(licenseFile.get().asFile.toPath(), target, StandardCopyOption.REPLACE_EXISTING)
+    }
+}
+
+@CacheableTask
+abstract class GenerateBuiltInThemeAssets : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val baseStylesheet: RegularFileProperty
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val overlaysDirectory: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun generate() {
+        val base = readObject(baseStylesheet.get().asFile)
+        val overlays = overlaysDirectory.get().asFile
+        val stylesheets = mapOf(
+            "floris_night" to listOf("night"),
+            "floris_pure_night" to listOf("night", "pure-night"),
+            "floris_day_borderless" to listOf("borderless", "day-borderless"),
+            "floris_night_borderless" to listOf("night", "borderless"),
+            "floris_pure_night_borderless" to listOf("night", "pure-night", "borderless"),
+        )
+        val target = outputDirectory.get().asFile.resolve("ime/theme/org.florisboard.themes/stylesheets")
+        check(!target.exists() || target.deleteRecursively()) { "Unable to replace generated themes" }
+        check(target.mkdirs()) { "Unable to create generated theme directory" }
+
+        for ((name, layers) in stylesheets) {
+            val result = base.toMutableMap()
+            for (layer in layers) {
+                val overlay = readObject(overlays.resolve("$layer.json"))
+                for ((rule, value) in overlay) {
+                    result[rule] = if (rule == "@defines") {
+                        readObject(result[rule], "base @defines") + readObject(value, "$layer @defines")
+                    } else {
+                        // A selector overlay replaces the rule, including properties it removes.
+                        value
+                    }
+                }
+            }
+            target.resolve("$name.json").writeText(JsonOutput.prettyPrint(JsonOutput.toJson(result)) + "\n")
+        }
+    }
+
+    private fun readObject(file: File) = readObject(JsonSlurper().parse(file), file.name)
+
+    private fun readObject(value: Any?, label: String): Map<String, Any?> {
+        val entries = value as? Map<*, *> ?: error("$label must be a JSON object")
+        return entries.mapKeys { (key, _) -> key as? String ?: error("$label has a non-string key") }
     }
 }
 
@@ -187,8 +243,9 @@ configure<ApplicationExtension> {
 
 androidComponents {
     onVariants(selector().all()) { variant ->
+        val variantName = variant.name.replaceFirstChar { it.titlecase() }
         val task = tasks.register<GenerateProjectLicenseAsset>(
-            "generate${variant.name.replaceFirstChar { it.titlecase() }}ProjectLicenseAsset",
+            "generate${variantName}ProjectLicenseAsset",
         ) {
             licenseFile.set(rootProject.layout.projectDirectory.file("LICENSE"))
             outputDirectory.set(layout.buildDirectory.dir("generated/projectLicenseAssets/${variant.name}"))
@@ -196,6 +253,19 @@ androidComponents {
         checkNotNull(variant.sources.assets).addGeneratedSourceDirectory(
             task,
             GenerateProjectLicenseAsset::outputDirectory,
+        )
+        val themes = tasks.register<GenerateBuiltInThemeAssets>("generate${variantName}BuiltInThemeAssets") {
+            baseStylesheet.set(
+                layout.projectDirectory.file(
+                    "src/main/assets/ime/theme/org.florisboard.themes/stylesheets/floris_day.json",
+                ),
+            )
+            overlaysDirectory.set(layout.projectDirectory.dir("theme-overlays"))
+            outputDirectory.set(layout.buildDirectory.dir("generated/builtInThemeAssets/${variant.name}"))
+        }
+        checkNotNull(variant.sources.assets).addGeneratedSourceDirectory(
+            themes,
+            GenerateBuiltInThemeAssets::outputDirectory,
         )
     }
 }

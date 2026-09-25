@@ -1,0 +1,18 @@
+{
+  "@defines": {
+    "--secondary": "#f57c00",
+    "--background": "#212121",
+    "--background-variant": "#313131",
+    "--surface": "#424242",
+    "--surface-variant": "#616161",
+    "--popup-surface": "#757575",
+    "--spacer-color": "rgba(255, 255, 255, 0.25)",
+    "--one-hand-background": "#1b5e20",
+    "--one-hand-foreground": "#eeeeee",
+    "--incognito-icon-color": "#ffffff11",
+    "--on-background": "#dcdcdc",
+    "--on-background-disabled": "#dcdcdc48",
+    "--on-surface": "#ffffff",
+    "--on-surface-variant": "#a0a0a0"
+  }
+}

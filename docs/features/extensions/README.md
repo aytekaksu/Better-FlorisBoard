@@ -60,6 +60,9 @@ APK assets are trusted input, but their directory copy still uses staged,
 all-or-nothing publication.
 Bundled keyboard layout IDs may share one arrangement file through
 `arrangementFile`; their labels, modifiers, and subtype choices stay separate.
+The six bundled themes keep their manifest paths; five stylesheets are built
+from the day stylesheet and small palette/borderless overlays. Generated
+selectors replace whole rules, while `@defines` entries merge by name.
 
 ## Manifest rules
 
@@ -152,6 +155,7 @@ device tests:
 dev.patrickgold.florisboard.lib.cache.CacheManagerAndroidTest,\
 dev.patrickgold.florisboard.lib.ext.ExtensionLifecycleAndroidTest,\
 dev.patrickgold.florisboard.ime.keyboard.LayoutCacheRefreshAndroidTest,\
+dev.patrickgold.florisboard.ime.theme.BundledThemeAssetsAndroidTest,\
 dev.patrickgold.florisboard.ime.theme.ThemeFontCompilationAndroidTest,\
 dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaImporterAndroidTest
 
