@@ -19,12 +19,17 @@ package dev.patrickgold.florisboard.ime.media.emoji
 import android.content.Context
 import dev.patrickgold.florisboard.lib.FlorisLocale
 import io.github.reactivecircus.cache4k.Cache
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.withContext
 import java.util.*
 
 private typealias EmojiDataByCategoryImpl = EnumMap<EmojiCategory, MutableList<EmojiSet>>
 private typealias EmojiDataBySkinToneImpl = EnumMap<EmojiSkinTone, MutableList<Emoji>>
 typealias EmojiDataByCategory = Map<EmojiCategory, List<EmojiSet>>
 typealias EmojiDataBySkinTone = Map<EmojiSkinTone, List<Emoji>>
+
+internal suspend fun <T> runEmojiAssetIo(block: () -> T): T = runInterruptible(Dispatchers.IO, block)
 
 data class EmojiData(
     val byCategory: EmojiDataByCategory,
@@ -54,15 +59,17 @@ data class EmojiData(
             return EmojiData(newByCategory(), newBySkinTone())
         }
 
-        suspend fun get(context: Context, path: String): EmojiData {
-            return cache.get(path) {
-                loadEmojiDataMap(context, path)
-            }
+        suspend fun get(context: Context, path: String): EmojiData = withContext(Dispatchers.IO) {
+            getCached(context, path)
         }
 
-        suspend fun get(context: Context, locale: FlorisLocale): EmojiData {
-            val path = resolveEmojiAssetPath(context, locale) ?: return empty()
-            return get(context, path)
+        suspend fun get(context: Context, locale: FlorisLocale): EmojiData = withContext(Dispatchers.IO) {
+            val path = runEmojiAssetIo { resolveEmojiAssetPath(context, locale) } ?: return@withContext empty()
+            getCached(context, path)
+        }
+
+        private suspend fun getCached(context: Context, path: String): EmojiData = cache.get(path) {
+            runEmojiAssetIo { loadEmojiDataMap(context, path) }
         }
 
         private fun loadEmojiDataMap(context: Context, path: String): EmojiData {

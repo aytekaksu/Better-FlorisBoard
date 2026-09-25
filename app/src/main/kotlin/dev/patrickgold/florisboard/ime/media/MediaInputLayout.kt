@@ -66,8 +66,8 @@ fun MediaInputLayout(
     val context = LocalContext.current
     val keyboardManager by context.keyboardManager()
 
-    var emojiLayoutDataMap by remember { mutableStateOf(EmojiData.Fallback) }
-    LaunchedEffect(Unit) {
+    var emojiLayoutDataMap by remember(context) { mutableStateOf(EmojiData.Fallback) }
+    LaunchedEffect(context) {
         emojiLayoutDataMap = EmojiData.get(context, "ime/media/emoji/root.txt")
     }
 
