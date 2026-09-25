@@ -65,7 +65,9 @@ rejection before editor dispatch rolls the admission back. Once dispatch
 begins, even a false result or exception keeps the capability until it is safe
 to retire because the editor may already hold the grant. Input barriers are
 resolved, abandoned, or invalidated exactly once when the editor generation
-changes.
+changes. The app wires the keyboard's existing input queue as a lazy paste-only
+sink, preserving text/media ordering without a direct manager lookup from
+Clipboard.
 
 ## Synchronization and privacy
 
