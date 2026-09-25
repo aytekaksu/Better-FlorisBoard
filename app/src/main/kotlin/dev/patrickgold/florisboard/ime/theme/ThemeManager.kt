@@ -30,6 +30,7 @@ import androidx.autofill.inline.common.ViewStyle
 import androidx.autofill.inline.v1.InlineSuggestionUi
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.core.graphics.ColorUtils
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
@@ -50,6 +51,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.sync.Mutex
@@ -59,6 +61,7 @@ import org.florisboard.lib.kotlin.collectIn
 import org.florisboard.lib.kotlin.io.FsDir
 import org.florisboard.lib.kotlin.io.subDir
 import org.florisboard.lib.snygg.SnyggStylesheet
+import org.florisboard.lib.snygg.SnyggTheme
 import java.time.LocalTime
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
@@ -72,6 +75,7 @@ class ThemeManager(context: Context) {
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
     private val extensionManager by context.extensionManager()
+    private val fontResolver = createFontFamilyResolver(appContext)
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -83,13 +87,18 @@ class ThemeManager(context: Context) {
     val previewThemeInfo = MutableStateFlow<ThemeInfo?>(null)
     val configurationChangeCounter = MutableStateFlow(0)
 
-    private val cachedThemeInfos = mutableListOf<ThemeInfo>()
+    private val cachedThemes = mutableListOf<ActiveTheme>()
     private val materializationRoot = appContext.cacheDir.subDir("theme-materializations")
     private var materializationRootPrepared = false
     private var activeMaterializationLease: ThemeMaterialization.Lease? = null
+    private var retireAfterThemeChange: ThemeMaterialization? = null
     private val activeThemeGuard = Mutex(locked = false)
-    private val _activeThemeInfo = MutableStateFlow(ThemeInfo.DEFAULT)
-    val activeThemeInfo get() = _activeThemeInfo.asStateFlow()
+    private val defaultTheme = ActiveTheme(
+        ThemeInfo.DEFAULT,
+        SnyggTheme.compileFrom(ThemeInfo.DEFAULT.stylesheet),
+    )
+    private val _activeTheme = MutableStateFlow(defaultTheme)
+    val activeTheme get() = _activeTheme.asStateFlow()
 
     init {
         extensionManager.themes.collectIn(scope) { themeExtensions ->
@@ -105,15 +114,17 @@ class ThemeManager(context: Context) {
         indexedThemeConfigs.collectIn(scope) {
             updateActiveTheme { clearCachedThemes() }
         }
-        combine(
-            prefs.theme.mode.asFlow(),
-            prefs.theme.dayThemeId.asFlow(),
-            prefs.theme.nightThemeId.asFlow(),
-            previewThemeId,
-            previewThemeInfo,
-            configurationChangeCounter,
-        ) {}.collectIn(scope) {
-            updateActiveTheme()
+        scope.launch {
+            combine(
+                prefs.theme.mode.asFlow(),
+                prefs.theme.dayThemeId.asFlow(),
+                prefs.theme.nightThemeId.asFlow(),
+                previewThemeId,
+                previewThemeInfo,
+                configurationChangeCounter,
+            ) {}.collectLatest {
+                updateActiveTheme()
+            }
         }
     }
 
@@ -123,32 +134,58 @@ class ThemeManager(context: Context) {
      */
     suspend fun updateActiveTheme(action: () -> Unit = { }) = activeThemeGuard.withLock {
         action()
-        previewThemeInfo.value?.let { previewThemeInfo ->
-            publishTheme(previewThemeInfo)
+        previewThemeInfo.value?.let { preview ->
+            try {
+                compileCurrentTheme(
+                    materialization = preview.materialization,
+                    fallbackDir = preview.loadedDir,
+                    isCurrent = { previewThemeInfo.value === preview },
+                    compile = { directory ->
+                        compileThemeOffMain(preview.stylesheet, FlorisAssetResolver(directory), fontResolver)
+                    },
+                    publish = { compiled -> publishTheme(ActiveTheme(preview, compiled)) },
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: InterruptedException) {
+                throw error
+            } catch (error: Exception) {
+                if (previewThemeInfo.value === preview) {
+                    publishTheme(defaultTheme.copy(info = ThemeInfo.DEFAULT.copy(loadFailure = LoadFailure(error))))
+                }
+            }
             return@withLock
         }
         val activeName = evaluateActiveThemeName()
-        val cachedInfo = cachedThemeInfos.find { it.name == activeName }
-        if (cachedInfo != null) {
-            cachedThemeInfos.remove(cachedInfo)
-            cachedThemeInfos.add(cachedInfo)
-            publishTheme(cachedInfo)
-            return@withLock
+        val cachedTheme = cachedThemes.find { it.info.name == activeName }
+        if (cachedTheme != null) {
+            if (previewThemeInfo.value != null || evaluateActiveThemeName() != activeName) return@withLock
+            if (publishTheme(cachedTheme)) {
+                cachedThemes.remove(cachedTheme)
+                cachedThemes.add(cachedTheme)
+                return@withLock
+            }
+            cachedThemes.remove(cachedTheme)
+            cachedTheme.info.materialization?.retire()
         }
         val themeExt = extensionManager.getExtensionById(activeName.extensionId) as? ThemeExtension
         val themeExtRef = themeExt?.sourceRef
         if (themeExtRef == null) {
-            publishTheme(ThemeInfo.DEFAULT)
+            if (previewThemeInfo.value == null && evaluateActiveThemeName() == activeName) {
+                publishTheme(defaultTheme)
+            }
             return@withLock
         }
         val themeConfig = themeExt.themes.find { it.id == activeName.componentId }
         if (themeConfig == null) {
-            publishTheme(ThemeInfo.DEFAULT)
+            if (previewThemeInfo.value == null && evaluateActiveThemeName() == activeName) {
+                publishTheme(defaultTheme)
+            }
             return@withLock
         }
         val pendingMaterialization = AtomicReference<ThemeMaterialization?>()
         val loaded = try {
-            val assets = runInterruptible(Dispatchers.IO) {
+            val materialized = runInterruptible(Dispatchers.IO) {
                 prepareMaterializationRoot()
                 check(
                     materializationRoot.conservativeUsableSpace() >=
@@ -165,16 +202,21 @@ class ThemeManager(context: Context) {
                     ).getOrThrow()
                     val stylesheet = SnyggStylesheet.fromJson(stylesheetJson).getOrThrow()
                     ZipUtils.unzip(appContext, themeExtRef, loadedDir).getOrThrow()
+                    val compiled = SnyggTheme.compileFrom(stylesheet, FlorisAssetResolver(loadedDir))
                     val materialization = ThemeMaterialization(loadedDir, ::scheduleMaterializationDelete)
                     pendingMaterialization.set(materialization)
-                    Triple(stylesheet, loadedDir, materialization)
+                    ActiveTheme(
+                        ThemeInfo(activeName, themeConfig, stylesheet, loadedDir, null, materialization),
+                        compiled,
+                    )
                 } catch (error: Throwable) {
                     loadedDir.deleteRecursively()
                     throw error
                 }
             }
+            val assets = materialized.copy(snyggTheme = materialized.snyggTheme.preloadFonts(fontResolver))
             currentCoroutineContext().ensureActive()
-            check(pendingMaterialization.compareAndSet(assets.third, null)) {
+            check(pendingMaterialization.compareAndSet(assets.info.materialization, null)) {
                 "Theme asset ownership transfer failed."
             }
             Result.success(assets)
@@ -189,25 +231,20 @@ class ThemeManager(context: Context) {
             Result.failure(error)
         }
         loaded.fold(
-            onSuccess = { (newStylesheet, loadedDir, materialization) ->
-                flogInfo { "Theme extension loaded" }
-                val newInfo = ThemeInfo(
-                    activeName,
-                    themeConfig,
-                    newStylesheet,
-                    loadedDir,
-                    null,
-                    materialization,
-                )
-                cacheTheme(newInfo)
-                publishTheme(newInfo)
+            onSuccess = { theme ->
+                if (previewThemeInfo.value != null || evaluateActiveThemeName() != activeName) {
+                    theme.info.materialization?.retire()
+                } else if (publishTheme(theme)) {
+                    flogInfo { "Theme extension loaded" }
+                    cacheTheme(theme)
+                } else {
+                    theme.info.materialization?.retire()
+                }
             },
             onFailure = { cause ->
-                publishTheme(
-                    ThemeInfo.DEFAULT.copy(
-                        loadFailure = LoadFailure(cause),
-                    ),
-                )
+                if (previewThemeInfo.value == null && evaluateActiveThemeName() == activeName) {
+                    publishTheme(defaultTheme.copy(info = ThemeInfo.DEFAULT.copy(loadFailure = LoadFailure(cause))))
+                }
             },
         )
     }
@@ -221,24 +258,39 @@ class ThemeManager(context: Context) {
         materializationRootPrepared = true
     }
 
-    private fun cacheTheme(info: ThemeInfo) {
-        while (cachedThemeInfos.size >= MaxCachedThemes) {
-            cachedThemeInfos.removeAt(0).materialization?.retire()
+    private fun cacheTheme(theme: ActiveTheme) {
+        while (cachedThemes.size >= MaxCachedThemes) {
+            cachedThemes.removeAt(0).info.materialization?.retire()
         }
-        cachedThemeInfos.add(info)
+        cachedThemes.add(theme)
     }
 
     private fun clearCachedThemes() {
-        cachedThemeInfos.forEach { it.materialization?.retire() }
-        cachedThemeInfos.clear()
+        val activeMaterialization = _activeTheme.value.info.materialization
+        cachedThemes.forEach { theme ->
+            val materialization = theme.info.materialization
+            if (materialization != null && materialization === activeMaterialization) {
+                retireAfterThemeChange = materialization
+            } else {
+                materialization?.retire()
+            }
+        }
+        cachedThemes.clear()
     }
 
-    private fun publishTheme(info: ThemeInfo) {
-        val nextLease = info.materialization?.acquire()
+    private fun publishTheme(theme: ActiveTheme): Boolean {
+        val materialization = theme.info.materialization
+        val nextLease = materialization?.tryAcquire()
+        if (materialization != null && nextLease == null) return false
         val previousLease = activeMaterializationLease
         activeMaterializationLease = nextLease
-        _activeThemeInfo.value = info
+        _activeTheme.value = theme
+        if (retireAfterThemeChange !== materialization) {
+            retireAfterThemeChange?.retire()
+            retireAfterThemeChange = null
+        }
         previousLease?.close()
+        return true
     }
 
     private fun scheduleMaterializationDelete(directory: FsDir) {
@@ -353,6 +405,8 @@ class ThemeManager(context: Context) {
             build()
         }
     }
+
+    data class ActiveTheme(val info: ThemeInfo, val snyggTheme: SnyggTheme)
 
     data class ThemeInfo(
         val name: ExtensionComponentName,

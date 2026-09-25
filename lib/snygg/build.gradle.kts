@@ -104,6 +104,12 @@ configure<LibraryExtension> {
 
     defaultConfig {
         minSdk = projectMinSdk.toInt()
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        sourceSets {
+            maybeCreate("androidTest").apply {
+                assets.directories += "$projectDir/../../fastlane/staging/fonts"
+            }
+        }
     }
 
     buildFeatures {
@@ -140,8 +146,11 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.coroutines)
 
     testImplementation(libs.kotlin.test.junit5)
+    androidTestImplementation(libs.androidx.test.ext)
+    androidTestImplementation(libs.androidx.test.runner)
 }
 
 val generatedSnyggSchema = layout.buildDirectory.file("generated/snygg/stylesheet.schema.json")
