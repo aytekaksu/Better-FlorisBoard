@@ -15,8 +15,19 @@
  */
 
 import com.android.build.api.dsl.ApplicationExtension
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 plugins {
     alias(libs.plugins.agp.application)
@@ -25,6 +36,23 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.mikepenz.aboutlibraries)
     alias(libs.plugins.kotest)
+}
+
+@CacheableTask
+abstract class GenerateProjectLicenseAsset : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val licenseFile: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun generate() {
+        val target = outputDirectory.file("license/project_license.txt").get().asFile.toPath()
+        Files.createDirectories(target.parent)
+        Files.copy(licenseFile.get().asFile.toPath(), target, StandardCopyOption.REPLACE_EXISTING)
+    }
 }
 
 val projectMinSdk: String by project
@@ -153,6 +181,21 @@ configure<ApplicationExtension> {
         unitTests.all {
             it.useJUnitPlatform()
         }
+    }
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        val task = tasks.register<GenerateProjectLicenseAsset>(
+            "generate${variant.name.replaceFirstChar { it.titlecase() }}ProjectLicenseAsset",
+        ) {
+            licenseFile.set(rootProject.layout.projectDirectory.file("LICENSE"))
+            outputDirectory.set(layout.buildDirectory.dir("generated/projectLicenseAssets/${variant.name}"))
+        }
+        checkNotNull(variant.sources.assets).addGeneratedSourceDirectory(
+            task,
+            GenerateProjectLicenseAsset::outputDirectory,
+        )
     }
 }
 
