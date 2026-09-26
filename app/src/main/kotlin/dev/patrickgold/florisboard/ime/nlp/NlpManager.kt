@@ -19,7 +19,6 @@ package dev.patrickgold.florisboard.ime.nlp
 import android.content.Context
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.autocorrectPluginManager
-import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.core.Subtype
@@ -44,6 +43,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -288,11 +288,12 @@ internal fun shouldExpandSmartbarActions(
 
 class NlpManager internal constructor(
     context: Context,
+    clipboardPrimaryClipFlow: Lazy<StateFlow<ClipboardItem?>>,
     private val currentEditorContent: () -> EditorContent,
     private val isIncognitoMode: () -> Boolean,
 ) : EditorComposingPolicy {
     private val prefs by FlorisPreferenceStore
-    private val clipboardManager by context.clipboardManager()
+    private val primaryClipFlow by clipboardPrimaryClipFlow
     private val autocorrectPluginManager by context.autocorrectPluginManager()
     private val subtypeManager by context.subtypeManager()
     private val keyguardManager = context.systemService(AndroidKeyguardManager::class)
@@ -334,7 +335,7 @@ class NlpManager internal constructor(
         }
 
     init {
-        clipboardManager.primaryClipFlow.collectLatestIn(scope) {
+        primaryClipFlow.collectLatestIn(scope) {
             assembleCandidates()
         }
         prefs.suggestion.enabled.asFlow().collectLatestIn(scope) {
@@ -675,7 +676,7 @@ class NlpManager internal constructor(
                 return emptyList()
             }
 
-            val currentItem = validateClipboardItem(clipboardManager.primaryClip, suppressedClipboardCopy, content.text)
+            val currentItem = validateClipboardItem(primaryClipFlow.value, suppressedClipboardCopy, content.text)
                 ?: return emptyList()
             val now = System.currentTimeMillis()
             if ((now - currentItem.creationTimestampMs) >= prefs.clipboard.suggestionTimeout.get() * 1_000L) {
