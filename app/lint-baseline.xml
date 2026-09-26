@@ -2,28 +2,6 @@
 <issues format="6" by="lint 9.0.0" type="baseline" client="gradle" dependencies="true" name="AGP (9.0.0)" variant="all" version="9.0.0">
 
     <issue
-        id="InvalidManifestAttribute"
-        message="Attribute `launchMode` on `&lt;activity-alias>` `dev.patrickgold.florisboard.SettingsLauncherAlias` is invalid, and will be silently ignored. This attribute is always ignored on `&lt;activity-alias>`."
-        errorLine1="            android:launchMode=&quot;singleTask&quot;"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="104"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="InvalidManifestAttribute"
-        message="Attribute `theme` on `&lt;activity-alias>` `dev.patrickgold.florisboard.SettingsLauncherAlias` is invalid, and will be silently ignored. This attribute is always ignored on `&lt;activity-alias>`."
-        errorLine1="            android:theme=&quot;@style/FlorisAppTheme.Splash&quot;"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="107"
-            column="13"/>
-    </issue>
-
-    <issue
         id="RestrictedApi"
         message="EmojiCompat.reset can only be called from within the same library (androidx.emoji2:emoji2)"
         errorLine1="        private val instance: EmojiCompat? = if (config != null) EmojiCompat.reset(config) else null"
@@ -1181,61 +1159,6 @@
             file="src/main/res/values-zh-rCN/strings.xml"
             line="521"
             column="77"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="                Uri.parse(resources.getString(R.string.florisboard__issue_tracker_url))"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/lib/crashutility/CrashDialogActivity.kt"
-            line="130"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="            context.getSharedPreferences(SHARED_PREFS_FILE, Context.MODE_PRIVATE)"
-        errorLine2="            ^">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/lib/crashutility/CrashUtility.kt"
-            line="236"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="                else -> FlorisRef(Uri.parse(str))"
-        errorLine2="                                  ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/lib/io/FlorisRef.kt"
-            line="156"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="                    url.startsWith(URL_MAILTO_PREFIX) -> Uri.parse(url)"
-        errorLine2="                                                         ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/lib/io/FlorisRef.kt"
-            line="171"
-            column="58"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="                else -> Uri.parse(&quot;$URL_HTTPS_PREFIX$url&quot;).normalizeScheme()"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/lib/io/FlorisRef.kt"
-            line="172"
-            column="25"/>
     </issue>
 
 </issues>
