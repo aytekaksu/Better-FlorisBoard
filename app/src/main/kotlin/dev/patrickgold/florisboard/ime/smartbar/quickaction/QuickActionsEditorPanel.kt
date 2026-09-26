@@ -40,7 +40,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -67,9 +66,86 @@ import org.florisboard.lib.snygg.ui.SnyggIconButton
 import org.florisboard.lib.snygg.ui.SnyggRow
 import org.florisboard.lib.snygg.ui.SnyggText
 
-private const val ItemNotFound = -1
 private val NoopAction = QuickAction.InsertKey(TextKeyData(code = KeyCode.NOOP))
 private val DragMarkerAction = QuickAction.InsertKey(TextKeyData(code = KeyCode.DRAG_MARKER))
+
+internal enum class QuickActionSection { STICKY, DYNAMIC, HIDDEN }
+
+internal data class QuickActionSlot(val section: QuickActionSection, val index: Int = 0)
+
+internal data class QuickActionDragState(
+    // Ordered like QuickActionSection; the sticky section always has one slot.
+    private val sections: List<List<QuickAction>>,
+    val activeDragAction: QuickAction? = null,
+) {
+    constructor(sticky: QuickAction, dynamic: List<QuickAction>, hidden: List<QuickAction>) :
+        this(listOf(listOf(sticky), dynamic, hidden))
+
+    val stickyAction get() = sections[0][0]
+    val dynamicActions get() = sections[1]
+    val hiddenActions get() = sections[2]
+
+    fun slotForGridIndex(index: Int): QuickActionSlot? = when {
+        index == 1 -> QuickActionSlot(QuickActionSection.STICKY)
+        index in 3 until dynamicActions.size + 3 -> QuickActionSlot(QuickActionSection.DYNAMIC, index - 3)
+        index in dynamicActions.size + 4 until dynamicActions.size + hiddenActions.size + 4 ->
+            QuickActionSlot(QuickActionSection.HIDDEN, index - dynamicActions.size - 4)
+        else -> null
+    }
+
+    private fun actionAt(slot: QuickActionSlot) = sections[slot.section.ordinal].getOrNull(slot.index)
+
+    private fun withSection(section: QuickActionSection, actions: List<QuickAction>) =
+        copy(sections = sections.toMutableList().apply { this[section.ordinal] = actions })
+
+    private fun withAction(slot: QuickActionSlot, action: QuickAction) = withSection(slot.section,
+        sections[slot.section.ordinal].toMutableList().apply { this[slot.index] = action })
+
+    private fun withoutMarker() = copy(sections = sections.map { actions ->
+        if (DragMarkerAction !in actions) actions else actions.toMutableList().apply {
+            remove(DragMarkerAction)
+            if (isEmpty()) add(NoopAction)
+        }
+    })
+
+    fun beginDrag(slot: QuickActionSlot): QuickActionDragState {
+        if (activeDragAction != null) return this
+        val action = actionAt(slot)?.takeUnless { it == NoopAction } ?: return this
+        return withAction(slot, DragMarkerAction).copy(activeDragAction = action)
+    }
+
+    fun moveDrag(slot: QuickActionSlot): QuickActionDragState {
+        if (activeDragAction == null) return this
+        val target = actionAt(slot) ?: return this
+        if (target == DragMarkerAction) return this
+        return if (slot.section == QuickActionSection.STICKY) {
+            val displaced = if (target == NoopAction) this else
+                withSection(QuickActionSection.DYNAMIC, listOf(target) + dynamicActions)
+            displaced.withoutMarker().withAction(slot, DragMarkerAction)
+        } else {
+            val cleared = withoutMarker()
+            val markerBeforeTarget = sections[slot.section.ordinal].indexOf(DragMarkerAction) in 0 until slot.index
+            cleared.withSection(slot.section, cleared.sections[slot.section.ordinal].toMutableList().apply {
+                // A saved NOOP may follow the marker; removal shifts that slot left.
+                if (target == NoopAction) this[slot.index - if (markerBeforeTarget) 1 else 0] = DragMarkerAction
+                else add(slot.index, DragMarkerAction)
+            })
+        }
+    }
+
+    fun completeDrag(): QuickActionDragState {
+        val action = activeDragAction ?: return this
+        val markerSlot = sections.indices.firstNotNullOfOrNull { section ->
+            sections[section].indexOf(DragMarkerAction).takeIf { it >= 0 }
+                ?.let { QuickActionSlot(QuickActionSection.entries[section], it) }
+        }
+        return (markerSlot?.let { withAction(it, action) } ?: this).copy(activeDragAction = null)
+    }
+
+    fun toArrangement() = sections.map { section ->
+        section.filterNot { it == NoopAction || it == DragMarkerAction }
+    }.let { QuickActionArrangement(it[0].firstOrNull(), it[1], it[2]) }
+}
 
 @Composable
 fun QuickActionsEditorPanel() {
@@ -79,19 +155,16 @@ fun QuickActionsEditorPanel() {
 
     // We get the current arrangement once and do not observe on purpose
     val actionArrangement = remember { prefs.smartbar.actionArrangement.get().withAvailableActions() }
-    var stickyAction by remember(actionArrangement) {
-        mutableStateOf(actionArrangement.stickyAction ?: NoopAction)
-    }
-    val dynamicActions = remember(actionArrangement) {
-        actionArrangement.dynamicActions.ifEmpty { listOf(NoopAction) }.toMutableStateList()
-    }
-    val hiddenActions = remember(actionArrangement) {
-        actionArrangement.hiddenActions.ifEmpty { listOf(NoopAction) }.toMutableStateList()
+    var dragState by remember(actionArrangement) {
+        mutableStateOf(QuickActionDragState(
+            actionArrangement.stickyAction ?: NoopAction,
+            actionArrangement.dynamicActions.ifEmpty { listOf(NoopAction) },
+            actionArrangement.hiddenActions.ifEmpty { listOf(NoopAction) },
+        ))
     }
 
     val evaluator by keyboardManager.activeSmartbarEvaluator.collectAsState()
     val gridState = rememberLazyGridState()
-    var activeDragAction by remember { mutableStateOf<QuickAction?>(null) }
     var activeDragPosition by remember { mutableStateOf(IntOffset.Zero) }
     var activeDragSize by remember { mutableStateOf(IntSize.Zero) }
 
@@ -111,117 +184,29 @@ fun QuickActionsEditorPanel() {
         return closestItemInRow
     }
 
-    fun indexOfStickyAction(item: LazyGridItemInfo): Int {
-        val i = item.index
-        return if (i == 1) 0 else ItemNotFound
-    }
-
-    fun indexOfDynamicAction(item: LazyGridItemInfo): Int {
-        val i = item.index
-        val base = 3
-        return if (i >= base && i < (dynamicActions.size + base)) i - base else ItemNotFound
-    }
-
-    fun indexOfHiddenAction(item: LazyGridItemInfo): Int {
-        val i = item.index
-        val base = dynamicActions.size + 4
-        return if (i >= base && i < (hiddenActions.size + base)) i - base else ItemNotFound
-    }
-
-    fun keyOf(action: QuickAction): Any? {
-        return if (action.keyData().code == KeyCode.NOOP) {
-            null
-        } else {
-            action.hashCode()
-        }
-    }
-
-    fun removeAllMarkers() {
-        if (stickyAction == DragMarkerAction) {
-            stickyAction = NoopAction
-        }
-        dynamicActions.remove(DragMarkerAction)
-        if (dynamicActions.isEmpty()) {
-            dynamicActions.add(NoopAction)
-        }
-        hiddenActions.remove(DragMarkerAction)
-        if (hiddenActions.isEmpty()) {
-            hiddenActions.add(NoopAction)
-        }
-    }
+    fun keyOf(action: QuickAction): Any? =
+        if (action.keyData().code == KeyCode.NOOP) null else action.hashCode()
 
     fun beginDragGesture(pos: IntOffset) {
         val item = findItemForOffsetOrClosestInRow(pos) ?: return
-        val stickyActionIndex = indexOfStickyAction(item)
-        val dynamicActionIndex = indexOfDynamicAction(item)
-        val hiddenActionIndex = indexOfHiddenAction(item)
-        if (stickyActionIndex != ItemNotFound && stickyAction != NoopAction) {
-            activeDragAction = stickyAction
-            stickyAction = DragMarkerAction
-        } else if (dynamicActionIndex != ItemNotFound && dynamicActions[dynamicActionIndex] != NoopAction) {
-            activeDragAction = dynamicActions[dynamicActionIndex]
-            dynamicActions[dynamicActionIndex] = DragMarkerAction
-        } else if (hiddenActionIndex != ItemNotFound && hiddenActions[hiddenActionIndex] != NoopAction) {
-            activeDragAction = hiddenActions[hiddenActionIndex]
-            hiddenActions[hiddenActionIndex] = DragMarkerAction
-        } else {
-            return
-        }
+        val slot = dragState.slotForGridIndex(item.index) ?: return
+        val started = dragState.beginDrag(slot)
+        if (started === dragState) return
+        dragState = started
         activeDragPosition = pos
         activeDragSize = item.size
     }
 
     fun handleDragGestureChange(posChange: IntOffset) {
-        if (activeDragAction == null) return
+        if (dragState.activeDragAction == null) return
         val pos = activeDragPosition + posChange
         activeDragPosition = pos
         val item = findItemForOffsetOrClosestInRow(pos) ?: return
-        val stickyActionIndex = indexOfStickyAction(item)
-        val dynamicActionIndex = indexOfDynamicAction(item)
-        val hiddenActionIndex = indexOfHiddenAction(item)
-        if (stickyActionIndex != ItemNotFound && stickyAction != DragMarkerAction) {
-            if (stickyAction != NoopAction) {
-                dynamicActions.add(0, stickyAction)
-            }
-            removeAllMarkers()
-            stickyAction = DragMarkerAction
-        } else if (dynamicActionIndex != ItemNotFound && dynamicActions[dynamicActionIndex] != DragMarkerAction) {
-            if (dynamicActions[dynamicActionIndex] == NoopAction) {
-                removeAllMarkers()
-                dynamicActions[dynamicActionIndex] = DragMarkerAction
-            } else {
-                removeAllMarkers()
-                dynamicActions.add(dynamicActionIndex, DragMarkerAction)
-            }
-        } else if (hiddenActionIndex != ItemNotFound && hiddenActions[hiddenActionIndex] != DragMarkerAction) {
-            if (hiddenActions[hiddenActionIndex] == NoopAction) {
-                removeAllMarkers()
-                hiddenActions[hiddenActionIndex] = DragMarkerAction
-            } else {
-                removeAllMarkers()
-                hiddenActions.add(hiddenActionIndex, DragMarkerAction)
-            }
-        }
+        dragState.slotForGridIndex(item.index)?.let { dragState = dragState.moveDrag(it) }
     }
 
     fun completeDragGestureAndCleanUp() {
-        val action = activeDragAction
-        if (action != null) {
-            if (stickyAction == DragMarkerAction) {
-                stickyAction = action
-            } else {
-                val i = dynamicActions.indexOf(DragMarkerAction)
-                if (i >= 0) {
-                    dynamicActions[i] = action
-                } else {
-                    val j = hiddenActions.indexOf(DragMarkerAction)
-                    if (j >= 0) {
-                        hiddenActions[j] = action
-                    }
-                }
-            }
-        }
-        activeDragAction = null
+        dragState = dragState.completeDrag()
         activeDragPosition = IntOffset.Zero
         activeDragSize = IntSize.Zero
     }
@@ -229,11 +214,7 @@ fun QuickActionsEditorPanel() {
     DisposableEffect(Unit) {
         onDispose {
             completeDragGestureAndCleanUp()
-            val newActionArrangement = QuickActionArrangement(
-                if (stickyAction != NoopAction && stickyAction != DragMarkerAction) stickyAction else null,
-                dynamicActions.filter { it != NoopAction && it != DragMarkerAction },
-                hiddenActions.filter { it != NoopAction && it != DragMarkerAction },
-            )
+            val newActionArrangement = dragState.toArrangement()
             runBlocking {
                 prefs.smartbar.actionArrangement.set(newActionArrangement)
             }
@@ -285,49 +266,37 @@ fun QuickActionsEditorPanel() {
                 state = gridState,
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    val n = if (stickyAction != NoopAction) 1 else 0
+                    val n = if (dragState.stickyAction != NoopAction) 1 else 0
                     Subheader(
                         text = stringRes(R.string.quick_actions_editor__subheader_sticky_action, "n" to n),
                     )
                 }
-                item(key = keyOf(stickyAction)) {
+                item(key = keyOf(dragState.stickyAction)) {
                     QuickActionButton(
                         modifier = Modifier.animateItem(),
-                        action = stickyAction,
+                        action = dragState.stickyAction,
                         evaluator = evaluator,
                         type = QuickActionBarType.EDITOR_TILE,
                     )
                 }
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    val n = dynamicActions.count { it != NoopAction }
-                    Subheader(
-                        text = stringRes(R.string.quick_actions_editor__subheader_dynamic_actions, "n" to n),
-                    )
-                }
-                itemsIndexed(dynamicActions, key = { i, a -> keyOf(a) ?: i }) { _, action ->
-                    QuickActionButton(
-                        modifier = Modifier.animateItem(),
-                        action = action,
-                        evaluator = evaluator,
-                        type = QuickActionBarType.EDITOR_TILE,
-                    )
-                }
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    val n = hiddenActions.count { it != NoopAction }
-                    Subheader(
-                        text = stringRes(R.string.quick_actions_editor__subheader_hidden_actions, "n" to n),
-                    )
-                }
-                itemsIndexed(hiddenActions, key = { i, a -> keyOf(a) ?: i }) { _, action ->
-                    QuickActionButton(
-                        modifier = Modifier.animateItem(),
-                        action = action,
-                        evaluator = evaluator,
-                        type = QuickActionBarType.EDITOR_TILE,
-                    )
+                for ((actions, title) in listOf(
+                    dragState.dynamicActions to R.string.quick_actions_editor__subheader_dynamic_actions,
+                    dragState.hiddenActions to R.string.quick_actions_editor__subheader_hidden_actions,
+                )) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Subheader(text = stringRes(title, "n" to actions.count { it != NoopAction }))
+                    }
+                    itemsIndexed(actions, key = { i, a -> keyOf(a) ?: i }) { _, action ->
+                        QuickActionButton(
+                            modifier = Modifier.animateItem(),
+                            action = action,
+                            evaluator = evaluator,
+                            type = QuickActionBarType.EDITOR_TILE,
+                        )
+                    }
                 }
             }
-            if (activeDragAction != null) {
+            if (dragState.activeDragAction != null) {
                 val size = with(LocalDensity.current) {
                     remember(activeDragSize) { activeDragSize.toSize().toDpSize() }
                 }
@@ -336,7 +305,7 @@ fun QuickActionsEditorPanel() {
                         .size(size)
                         .offset { activeDragPosition }
                         .offset(-size.width / 2, -size.height / 2),
-                    action = activeDragAction!!,
+                    action = dragState.activeDragAction!!,
                     evaluator = evaluator,
                     type = QuickActionBarType.EDITOR_TILE,
                 )
