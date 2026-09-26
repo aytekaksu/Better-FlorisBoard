@@ -38,6 +38,7 @@ import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.extensionManager
 import dev.patrickgold.florisboard.ime.smartbar.CachedInlineSuggestionsChipStyleSet
 import dev.patrickgold.florisboard.lib.devtools.flogInfo
+import dev.patrickgold.florisboard.lib.devtools.flogWarning
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
 import dev.patrickgold.florisboard.lib.io.BoundedExtensionArchive
 import dev.patrickgold.florisboard.lib.io.ZipUtils
@@ -295,9 +296,8 @@ class ThemeManager(context: Context) {
 
     private fun scheduleMaterializationDelete(directory: FsDir) {
         scope.launch(Dispatchers.IO) {
-            repeat(2) {
-                if (!directory.exists()) return@launch
-                directory.deleteRecursively()
+            if (!deleteRetiredThemeAssets(directory)) {
+                flogWarning { "Theme asset cache cleanup failed" }
             }
         }
     }
@@ -439,4 +439,22 @@ class ThemeManager(context: Context) {
         const val MaxCachedThemes = 2
         const val MinFreeSpaceBytes = 128L * 1_024 * 1_024
     }
+}
+
+internal fun deleteRetiredThemeAssets(
+    directory: FsDir,
+    delete: (FsDir) -> Boolean = { it.deleteRecursively() },
+): Boolean {
+    repeat(2) {
+        try {
+            if (!directory.exists()) return true
+            delete(directory)
+            if (!directory.exists()) return true
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            // A failed attempt must not prevent the retry.
+        }
+    }
+    return false
 }
