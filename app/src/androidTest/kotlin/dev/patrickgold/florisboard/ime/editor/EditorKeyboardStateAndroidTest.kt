@@ -22,9 +22,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.ObservableKeyboardState
+import dev.patrickgold.florisboard.ime.nlp.BreakIteratorGroup
 import dev.patrickgold.florisboard.ime.text.key.KeyVariation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -40,6 +42,7 @@ class EditorKeyboardStateAndroidTest {
                 isActionsEditorVisible = true
             }
             var stateResolutions = 0
+            var policyResolutions = 0
             var shiftCalls = 0
             val editor = EditorInstance(
                 instrumentation.targetContext,
@@ -47,10 +50,15 @@ class EditorKeyboardStateAndroidTest {
                     stateResolutions++
                     state
                 },
+                lazy {
+                    policyResolutions++
+                    TestEditorComposingPolicy()
+                },
             ) {
                 shiftCalls++
             }
             assertEquals(0, stateResolutions)
+            assertEquals(0, policyResolutions)
 
             fun startInput(type: Int) {
                 editor.handleStartInputView(FlorisEditorInfo.wrap(EditorInfo().apply {
@@ -88,6 +96,98 @@ class EditorKeyboardStateAndroidTest {
             )
             assertEquals(4, shiftCalls)
             assertEquals(1, stateResolutions)
+            assertEquals(0, policyResolutions)
         }
+    }
+
+    @Test
+    fun composingEligibilityUsesTheLazyPolicyOnlyWhenKeyboardAllowsIt() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val state = ObservableKeyboardState.new()
+            val policy = TestEditorComposingPolicy()
+            var policyResolutions = 0
+            val editor = EditorInstance(
+                instrumentation.targetContext,
+                lazy { state },
+                lazy {
+                    policyResolutions++
+                    policy
+                },
+            ) { }
+
+            assertFalse(editor.determineComposingEnabled())
+            assertEquals(0, policyResolutions)
+            state.isComposingEnabled = true
+            assertFalse(editor.determineComposingEnabled())
+            assertEquals(1, policyResolutions)
+            policy.suggestionsOn = true
+            assertTrue(editor.determineComposingEnabled())
+            assertEquals(1, policyResolutions)
+            assertEquals(2, policy.suggestionChecks)
+            state.isComposingEnabled = false
+            assertFalse(editor.determineComposingEnabled())
+            assertEquals(2, policy.suggestionChecks)
+        }
+    }
+
+    @Test
+    fun currentWordPolicyRunsForCursorButNotSelectedText() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val state = ObservableKeyboardState.new().apply { isComposingEnabled = true }
+            val policy = TestEditorComposingPolicy().apply {
+                suggestionsOn = true
+                localComposingRange = EditorRange(0, 3)
+            }
+            val editor = EditorInstance(
+                instrumentation.targetContext,
+                lazy { state },
+                lazy { policy },
+            ) { }
+            val info = FlorisEditorInfo.wrap(EditorInfo().apply {
+                inputType = InputType.TYPE_CLASS_TEXT
+            })
+
+            val cursorContent = editor.generateContent(info, EditorRange.cursor(3), "abc", "", "")
+            assertEquals(EditorRange(0, 3), cursorContent.localCurrentWord)
+            assertEquals(EditorRange(0, 3), cursorContent.localComposing)
+            assertEquals(listOf("determine", "enabled"), policy.calls)
+
+            policy.suggestionsOn = false
+            policy.calls.clear()
+            val disabledContent = editor.generateContent(info, EditorRange.cursor(3), "abc", "", "")
+            assertEquals(EditorRange(0, 3), disabledContent.localCurrentWord)
+            assertEquals(EditorRange.Unspecified, disabledContent.localComposing)
+            assertEquals(listOf("determine", "enabled"), policy.calls)
+
+            policy.calls.clear()
+            val selectedContent = editor.generateContent(info, EditorRange(1, 2), "a", "c", "b")
+            assertEquals(EditorRange.Unspecified, selectedContent.localCurrentWord)
+            assertEquals(EditorRange.Unspecified, selectedContent.localComposing)
+            assertEquals(listOf("enabled"), policy.calls)
+        }
+    }
+}
+
+private class TestEditorComposingPolicy : EditorComposingPolicy {
+    var suggestionsOn = false
+    var suggestionChecks = 0
+    var localComposingRange = EditorRange.Unspecified
+    val calls = mutableListOf<String>()
+
+    override fun isSuggestionOn(): Boolean {
+        suggestionChecks++
+        calls += "enabled"
+        return suggestionsOn
+    }
+
+    override fun determineLocalComposing(
+        textBeforeSelection: CharSequence,
+        breakIterators: BreakIteratorGroup,
+        localLastCommitPosition: Int,
+    ): EditorRange {
+        calls += "determine"
+        return localComposingRange
     }
 }

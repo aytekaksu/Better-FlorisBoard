@@ -183,6 +183,7 @@ class FlorisApplication : Application() {
         EditorInstance(
             this,
             lazy { keyboardManager.value.activeState },
+            lazy { nlpManager.value },
         ) { keyboardManager.value.reevaluateInputShiftState() }
     }
     val extensionManager = lazy { ExtensionManager(this) }

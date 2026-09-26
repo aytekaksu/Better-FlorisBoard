@@ -29,7 +29,6 @@ import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.ime.nlp.BreakIteratorGroup
 import dev.patrickgold.florisboard.ime.text.composing.Composer
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
-import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -94,8 +93,20 @@ internal fun absoluteCollapsedSelection(
     return (startOffset.toLong() + selectionStart).takeIf { it <= Int.MAX_VALUE }?.toInt()
 }
 
+/** Language decisions the editor needs when calculating its composing range. */
+interface EditorComposingPolicy {
+    fun isSuggestionOn(): Boolean
+
+    fun determineLocalComposing(
+        textBeforeSelection: CharSequence,
+        breakIterators: BreakIteratorGroup,
+        localLastCommitPosition: Int,
+    ): EditorRange
+}
+
 abstract class AbstractEditorInstance(
     context: Context,
+    composingPolicy: Lazy<EditorComposingPolicy>,
     private val reevaluateInputShiftState: () -> Unit,
 ) {
     companion object {
@@ -109,7 +120,7 @@ abstract class AbstractEditorInstance(
     }
 
     private val subtypeManager by context.subtypeManager()
-    private val nlpManager by context.nlpManager()
+    protected val editorComposingPolicy by composingPolicy
     private val scope = MainScope()
     protected val breakIterators = BreakIteratorGroup()
 
@@ -292,7 +303,7 @@ abstract class AbstractEditorInstance(
         _lastCommitPosition.reset()
     }
 
-    private fun generateContent(
+    internal fun generateContent(
         editorInfo: FlorisEditorInfo,
         selection: EditorRange,
         textBeforeSelection: CharSequence,
@@ -314,7 +325,9 @@ abstract class AbstractEditorInstance(
         // Determine local composing word range, if any
         val localCurrentWord =
             if (shouldDetermineComposingRegion(editorInfo) && localSelection.isCursorMode && textBeforeSelection.isNotEmpty()) {
-                determineLocalComposing(textBeforeSelection, _lastCommitPosition.pos - offset)
+                editorComposingPolicy.determineLocalComposing(
+                    textBeforeSelection, breakIterators, _lastCommitPosition.pos - offset
+                )
             } else {
                 EditorRange.Unspecified
             }
@@ -359,12 +372,6 @@ abstract class AbstractEditorInstance(
     protected open fun shouldDetermineComposingRegion(editorInfo: FlorisEditorInfo): Boolean {
         return editorInfo.isRichInputEditor &&
             editorInfo.inputAttributes.allowsWordComposingRegion()
-    }
-
-    private fun determineLocalComposing(
-        textBeforeSelection: CharSequence, localLastCommitPosition: Int
-    ): EditorRange {
-        return nlpManager.determineLocalComposing(textBeforeSelection, breakIterators, localLastCommitPosition)
     }
 
     private fun InputConnection.setComposingRegion(composing: EditorRange) {

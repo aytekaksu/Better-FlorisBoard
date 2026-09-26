@@ -24,6 +24,7 @@ import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.core.Subtype
+import dev.patrickgold.florisboard.ime.editor.EditorComposingPolicy
 import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSuggestionProvider
@@ -31,7 +32,6 @@ import dev.patrickgold.florisboard.ime.nlp.han.HanShapeBasedLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.latin.LatinLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginSuggestionBatch
-import dev.patrickgold.florisboard.keyboardExtensionRepository
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
 import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.CancellationException
@@ -278,11 +278,11 @@ internal class SharedActionsAnimationSuppressionTracker {
     }
 }
 
-class NlpManager internal constructor(context: Context, private val isIncognitoMode: () -> Boolean) {
+class NlpManager internal constructor(context: Context, private val isIncognitoMode: () -> Boolean) :
+    EditorComposingPolicy {
     private val prefs by FlorisPreferenceStore
     private val clipboardManager by context.clipboardManager()
     private val editorInstance by context.editorInstance()
-    private val keyboardExtensionRepository by context.keyboardExtensionRepository()
     private val autocorrectPluginManager by context.autocorrectPluginManager()
     private val subtypeManager by context.subtypeManager()
     private val keyguardManager = context.systemService(AndroidKeyguardManager::class)
@@ -346,27 +346,6 @@ class NlpManager internal constructor(context: Context, private val isIncognitoM
         }
     }
 
-    /**
-     * Gets the punctuation rule from the currently active subtype and returns it. Falls back to a default one if the
-     * subtype does not exist or defines an invalid punctuation rule.
-     *
-     * @return The punctuation rule or a fallback.
-     */
-    fun getActivePunctuationRule(): PunctuationRule {
-        return getPunctuationRule(subtypeManager.activeSubtype)
-    }
-
-    /**
-     * Gets the punctuation rule from the given subtype and returns it. Falls back to a default one if the subtype does
-     * not exist or defines an invalid punctuation rule.
-     *
-     * @return The punctuation rule or a fallback.
-     */
-    fun getPunctuationRule(subtype: Subtype): PunctuationRule {
-        return keyboardExtensionRepository.snapshot.value.punctuationRules[subtype.punctuationRule]
-            ?: PunctuationRule.Fallback
-    }
-
     private fun resolveBuiltInSuggestionProvider(subtype: Subtype): SuggestionProvider {
         return providers[subtype.nlpProviders.suggestion]?.provider.asSuggestionProviderOrFallback()
     }
@@ -417,7 +396,7 @@ class NlpManager internal constructor(context: Context, private val isIncognitoM
         }
     }
 
-    fun determineLocalComposing(
+    override fun determineLocalComposing(
         textBeforeSelection: CharSequence, breakIterators: BreakIteratorGroup, localLastCommitPosition: Int
     ): EditorRange {
         val subtype = subtypeManager.activeSubtype
@@ -430,7 +409,7 @@ class NlpManager internal constructor(context: Context, private val isIncognitoM
         return resolveSuggestionProvider(subtype).forcesSuggestionOn
     }
 
-    fun isSuggestionOn(): Boolean =
+    override fun isSuggestionOn(): Boolean =
         prefs.suggestion.enabled.get()
             || prefs.emoji.suggestionEnabled.get()
             || providerForcesSuggestionOn(subtypeManager.activeSubtype)
