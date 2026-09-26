@@ -32,6 +32,7 @@ import dev.patrickgold.florisboard.ime.clipboard.provider.OwnedClipboardMediaUri
 import dev.patrickgold.florisboard.ime.editor.EditorInstance
 import dev.patrickgold.florisboard.ime.editor.FlorisEditorInfo
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
+import dev.patrickgold.florisboard.ime.keyboard.ObservableKeyboardState
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKey
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboard
@@ -135,7 +136,10 @@ class ClipboardInputSinkAndroidTest {
     @Test
     fun mimeEligibilityFollowsTheCurrentEditor() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val editor = EditorInstance(instrumentation.targetContext)
+        val editor = EditorInstance(
+            instrumentation.targetContext,
+            lazy { ObservableKeyboardState.new() },
+        ) { }
         fun info(vararg types: String) = FlorisEditorInfo.wrap(EditorInfo().apply {
             packageName = "test.editor"
             contentMimeTypes = types

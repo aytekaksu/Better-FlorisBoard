@@ -28,7 +28,6 @@ import android.view.inputmethod.InputConnection
 import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.ime.nlp.BreakIteratorGroup
 import dev.patrickgold.florisboard.ime.text.composing.Composer
-import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
 import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.subtypeManager
@@ -95,7 +94,10 @@ internal fun absoluteCollapsedSelection(
     return (startOffset.toLong() + selectionStart).takeIf { it <= Int.MAX_VALUE }?.toInt()
 }
 
-abstract class AbstractEditorInstance(context: Context) {
+abstract class AbstractEditorInstance(
+    context: Context,
+    private val reevaluateInputShiftState: () -> Unit,
+) {
     companion object {
         private const val NumCharsBeforeCursor: Int = 256
         private const val NumCharsAfterCursor: Int = 128
@@ -106,7 +108,6 @@ abstract class AbstractEditorInstance(context: Context) {
         private const val CursorUpdateNone: Int = 0
     }
 
-    private val keyboardManager by context.keyboardManager()
     private val subtypeManager by context.subtypeManager()
     private val nlpManager by context.nlpManager()
     private val scope = MainScope()
@@ -172,7 +173,7 @@ abstract class AbstractEditorInstance(context: Context) {
         if (ic == null || selection.isNotValid || editorInfo.isRawInputEditor) {
             activeCursorCapsMode = InputAttributes.CapsMode.NONE
             activeContent = EditorContent.Unspecified
-            keyboardManager.reevaluateInputShiftState()
+            reevaluateInputShiftState()
             return
         }
 
@@ -201,7 +202,7 @@ abstract class AbstractEditorInstance(context: Context) {
             contentRevision.publishIfCurrent(revision) {
                 activeCursorCapsMode = content.cursorCapsMode()
                 activeContent = content
-                keyboardManager.reevaluateInputShiftState()
+                reevaluateInputShiftState()
                 ic.setComposingRegion(content.composing)
             }
         }
@@ -234,7 +235,7 @@ abstract class AbstractEditorInstance(context: Context) {
         if (ic == null || newSelection.isNotValid || editorInfo.isRawInputEditor) {
             activeCursorCapsMode = InputAttributes.CapsMode.NONE
             activeContent = EditorContent.Unspecified
-            keyboardManager.reevaluateInputShiftState()
+            reevaluateInputShiftState()
             return false
         }
 
@@ -243,7 +244,7 @@ abstract class AbstractEditorInstance(context: Context) {
         if (expected != null) {
             activeCursorCapsMode = expected.cursorCapsMode()
             activeContent = expected
-            keyboardManager.reevaluateInputShiftState()
+            reevaluateInputShiftState()
             return true
         }
 
@@ -264,7 +265,7 @@ abstract class AbstractEditorInstance(context: Context) {
             contentRevision.publishIfCurrent(revision) {
                 activeCursorCapsMode = content.cursorCapsMode()
                 activeContent = content
-                keyboardManager.reevaluateInputShiftState()
+                reevaluateInputShiftState()
                 if (content.composing != composing) {
                     ic.setComposingRegion(content.composing)
                 }

@@ -179,7 +179,12 @@ class FlorisApplication : Application() {
         )
     }
     val dictionaryManager = lazy { DictionaryManager(this) }
-    val editorInstance = lazy { EditorInstance(this) }
+    val editorInstance = lazy {
+        EditorInstance(
+            this,
+            lazy { keyboardManager.value.activeState },
+        ) { keyboardManager.value.reevaluateInputShiftState() }
+    }
     val extensionManager = lazy { ExtensionManager(this) }
     val glideTypingManager = lazy { GlideTypingManager(this) }
     val keyboardExtensionRepository = lazy { KeyboardExtensionRepository(this) }
