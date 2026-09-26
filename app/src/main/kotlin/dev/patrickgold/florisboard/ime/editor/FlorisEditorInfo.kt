@@ -69,6 +69,7 @@ class FlorisEditorInfo private constructor(val base: EditorInfo) {
         if (packageName != other.packageName) return false
         if (initialSelection != other.initialSelection) return false
         if (initialCapsMode != other.initialCapsMode) return false
+        if (contentMimeTypes != other.contentMimeTypes) return false
         if (extractedActionLabel != other.extractedActionLabel) return false
         if (extractedActionId != other.extractedActionId) return false
 
@@ -81,13 +82,13 @@ class FlorisEditorInfo private constructor(val base: EditorInfo) {
         result = 31 * result + (packageName?.hashCode() ?: 0)
         result = 31 * result + initialSelection.hashCode()
         result = 31 * result + initialCapsMode.hashCode()
+        result = 31 * result + contentMimeTypes.hashCode()
         result = 31 * result + (extractedActionLabel?.hashCode() ?: 0)
         result = 31 * result + extractedActionId
         return result
     }
 
-    val contentMimeTypes: Array<out String>
-        get() = base.contentMimeTypes.orEmpty()
+    val contentMimeTypes: List<String> = base.contentMimeTypes.orEmpty().toList()
 
     val extractedActionLabel: String?
         get() = base.actionLabel?.toString()
