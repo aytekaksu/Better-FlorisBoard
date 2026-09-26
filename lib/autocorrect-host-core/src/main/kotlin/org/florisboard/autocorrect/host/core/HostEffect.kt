@@ -25,7 +25,7 @@ sealed interface HostEffect {
 
     data class StartSession(val lease: SessionLease, val configuration: SessionConfiguration) : HostEffect
 
-    data class FinishSession(val lease: SessionFinishLease) : HostEffect
+    data class FinishSession(val lease: SessionFinishLease, val configuration: SessionConfiguration) : HostEffect
 
     data class RequestSuggestions(val lease: RequestLease) : HostEffect
 

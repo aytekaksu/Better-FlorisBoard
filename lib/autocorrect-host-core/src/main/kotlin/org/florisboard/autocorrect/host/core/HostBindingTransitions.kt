@@ -310,7 +310,7 @@ private fun HostReduction.emitFinish(session: HostSession, binding: BindingLease
         sessionId = session.sessionId,
         finalRequestId = RequestId(allocateId()),
     )
-    effects += HostEffect.FinishSession(lease)
+    effects += HostEffect.FinishSession(lease, session.configuration)
     if (retainFinish) {
         state = state.copy(
             pendingFinishes = state.pendingFinishes +
