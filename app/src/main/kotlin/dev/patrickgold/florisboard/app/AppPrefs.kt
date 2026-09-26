@@ -747,6 +747,41 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
 
     override fun migrate(entry: PreferenceMigrationEntry): PreferenceMigrationEntry {
         // Restore accepts historical stores. Keep a rule while its source version remains supported.
+        val renamedKey = when (entry.key) {
+            "smartbar__primary_row_flip_toggles" -> "smartbar__flip_toggles"
+            "smartbar__action_row_expanded", "smartbar__primary_actions_expanded" -> "smartbar__shared_actions_expanded"
+            "smartbar__secondary_row_expanded", "smartbar__secondary_actions_expanded" ->
+                "smartbar__extended_actions_expanded"
+            "media__emoji_recently_used_max_size" -> "emoji__history_recent_max_size"
+            "media__emoji_preferred_skin_tone" -> "emoji__preferred_skin_tone"
+            "advanced__settings_theme" -> "other__settings_theme"
+            "advanced__accent_color" -> "other__accent_color"
+            "advanced__settings_language" -> "other__settings_language"
+            "advanced__show_app_icon" -> "other__show_app_icon"
+            "advanced__incognito_mode" -> "suggestion__incognito_mode"
+            "advanced__force_incognito_mode_from_dynamic" -> "suggestion__force_incognito_mode_from_dynamic"
+            "suggestion__clipboard_content_enabled" -> "clipboard__suggestion_enabled"
+            "suggestion__clipboard_content_timeout" -> "clipboard__suggestion_timeout"
+            "clipboard__num_history_grid_columns_portrait" -> "clipboard__history_num_grid_columns_portrait"
+            "clipboard__num_history_grid_columns_landscape" -> "clipboard__history_num_grid_columns_landscape"
+            "clipboard__clean_up_old" -> "clipboard__history_auto_clean_old_enabled"
+            "clipboard__clean_up_after" -> "clipboard__history_auto_clean_old_after"
+            "clipboard__auto_clean_sensitive" -> "clipboard__history_auto_clean_sensitive_enabled"
+            "clipboard__auto_clean_sensitive_after" -> "clipboard__history_auto_clean_sensitive_after"
+            "clipboard__limit_history_size" -> "clipboard__history_size_limit_enabled"
+            "clipboard__max_history_size" -> "clipboard__history_size_limit"
+            "clipboard__clear_primary_clip_deletes_last_item" ->
+                "clipboard__clear_primary_clip_affects_history_if_unpinned"
+            else -> null
+        }
+        if (renamedKey != null) {
+            val rawValue = when (entry.key) {
+                "media__emoji_preferred_skin_tone", "advanced__settings_theme", "advanced__incognito_mode" ->
+                    entry.rawValue.uppercase()
+                else -> entry.rawValue
+            }
+            return entry.transform(key = renamedKey, rawValue = rawValue)
+        }
         return when (entry.key) {
             // JetPref versions used by 0.3.x stored enums in lowercase.
             "gestures__swipe_up", "gestures__swipe_down", "gestures__swipe_left",
@@ -797,16 +832,6 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
                 falseValue = SpaceBarMode.NOTHING,
             )
 
-            // Preserve Smartbar options whose names changed in 0.3.x.
-            "smartbar__primary_row_flip_toggles" -> {
-                entry.transform(key = "smartbar__flip_toggles")
-            }
-            "smartbar__action_row_expanded", "smartbar__primary_actions_expanded" -> {
-                entry.transform(key = "smartbar__shared_actions_expanded")
-            }
-            "smartbar__secondary_row_expanded", "smartbar__secondary_actions_expanded" -> {
-                entry.transform(key = "smartbar__extended_actions_expanded")
-            }
             "smartbar__secondary_row_placement", "smartbar__secondary_actions_placement" -> {
                 entry.transformLegacySmartbarPlacement()
             }
@@ -821,16 +846,6 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
                 val data = EmojiHistory(emptyList(), recent)
                 entry.transform(key = "emoji__history_data", rawValue = Json.encodeToString(data))
             }
-            "media__emoji_recently_used_max_size" -> {
-                entry.transform(key = "emoji__history_recent_max_size")
-            }
-            "media__emoji_preferred_skin_tone" -> {
-                entry.transform(
-                    key = "emoji__preferred_skin_tone",
-                    rawValue = entry.rawValue.uppercase(),
-                )
-            }
-
             // Migrate advanced prefs to other prefs
             "advanced__use_material_you" -> {
                 if (!entry.type.isBoolean()) {
@@ -848,38 +863,6 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
                     )
                 }
             }
-            "advanced__settings_theme" -> {
-                entry.transform(
-                    key = "other__settings_theme",
-                    rawValue = entry.rawValue.uppercase(),
-                )
-            }
-            "advanced__accent_color" -> {
-                entry.transform(key = "other__accent_color")
-            }
-            "advanced__settings_language" -> {
-                entry.transform(key = "other__settings_language")
-            }
-            "advanced__show_app_icon" -> {
-                entry.transform(key = "other__show_app_icon")
-            }
-            "advanced__incognito_mode" -> {
-                entry.transform(
-                    key = "suggestion__incognito_mode",
-                    rawValue = entry.rawValue.uppercase(),
-                )
-            }
-            "advanced__force_incognito_mode_from_dynamic" -> {
-                entry.transform(key = "suggestion__force_incognito_mode_from_dynamic")
-            }
-            // Migrate clipboard suggestion prefs to clipboard
-            "suggestion__clipboard_content_enabled" -> {
-                entry.transform(key = "clipboard__suggestion_enabled")
-            }
-            "suggestion__clipboard_content_timeout" -> {
-                entry.transform(key = "clipboard__suggestion_timeout")
-            }
-
             "smartbar__action_arrangement" -> {
                 fun migrateAction(action: QuickAction): QuickAction {
                     return if (action is QuickAction.InsertKey && action.data.code == KeyCode.COMPACT_LAYOUT_TO_RIGHT) {
@@ -927,7 +910,6 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
                 )
             }
 
-            // Migrate clipboard history pref names
             "clipboard__sync_to_floris", "clipboard__sync_to_system" -> {
                 if (entry.type.isString()) {
                     entry.keepAsIs()
@@ -939,43 +921,8 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
                     )
                 }
             }
-            "clipboard__num_history_grid_columns_portrait" -> {
-                entry.transform(key = "clipboard__history_num_grid_columns_portrait")
-            }
-            "clipboard__num_history_grid_columns_landscape" -> {
-                entry.transform(key = "clipboard__history_num_grid_columns_landscape")
-            }
-            "clipboard__clean_up_old" -> {
-                entry.transform(key = "clipboard__history_auto_clean_old_enabled")
-            }
-            "clipboard__clean_up_after" -> {
-                entry.transform(key = "clipboard__history_auto_clean_old_after")
-            }
-            "clipboard__auto_clean_sensitive" -> {
-                entry.transform(key = "clipboard__history_auto_clean_sensitive_enabled")
-            }
-            "clipboard__auto_clean_sensitive_after" -> {
-                entry.transform(key = "clipboard__history_auto_clean_sensitive_after")
-            }
-            "clipboard__limit_history_size" -> {
-                entry.transform(key = "clipboard__history_size_limit_enabled")
-            }
-            "clipboard__max_history_size" -> {
-                entry.transform(key = "clipboard__history_size_limit")
-            }
-            "clipboard__clear_primary_clip_deletes_last_item" -> {
-                entry.transform(key = "clipboard__clear_primary_clip_affects_history_if_unpinned")
-            }
-
             // Old dp spacing cannot be converted to the current constraint-dependent percentages.
-            "keyboard__key_spacing_horizontal" -> {
-                if (entry.type.isFloat()) {
-                    entry.reset()
-                } else {
-                    entry.keepAsIs()
-                }
-            }
-            "keyboard__key_spacing_vertical" -> {
+            "keyboard__key_spacing_horizontal", "keyboard__key_spacing_vertical" -> {
                 if (entry.type.isFloat()) {
                     entry.reset()
                 } else {

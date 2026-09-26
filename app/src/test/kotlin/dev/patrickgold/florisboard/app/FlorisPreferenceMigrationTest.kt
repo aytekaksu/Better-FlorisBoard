@@ -248,6 +248,57 @@ class FlorisPreferenceMigrationTest :
             }
         }
 
+        test("legacy aliases preserve their typed values and final keys") {
+            runTest {
+                val cases = listOf(
+                    "b;smartbar__primary_row_flip_toggles;true" to "b;smartbar__flip_toggles;true",
+                    "b;smartbar__action_row_expanded;true" to "b;smartbar__shared_actions_expanded;true",
+                    "b;smartbar__primary_actions_expanded;true" to "b;smartbar__shared_actions_expanded;true",
+                    "b;smartbar__secondary_row_expanded;true" to "b;smartbar__extended_actions_expanded;true",
+                    "b;smartbar__secondary_actions_expanded;true" to "b;smartbar__extended_actions_expanded;true",
+                    "i;media__emoji_recently_used_max_size;42" to "i;emoji__history_recent_max_size;42",
+                    "s;advanced__accent_color;\"0000000000000000\"" to "s;other__accent_color;\"0000000000000000\"",
+                    "s;advanced__settings_language;\"en-US\"" to "s;other__settings_language;\"en-US\"",
+                    "b;advanced__show_app_icon;false" to "b;other__show_app_icon;false",
+                    "b;advanced__force_incognito_mode_from_dynamic;true" to
+                        "b;suggestion__force_incognito_mode_from_dynamic;true",
+                    "b;suggestion__clipboard_content_enabled;false" to "b;clipboard__suggestion_enabled;false",
+                    "i;suggestion__clipboard_content_timeout;17" to "i;clipboard__suggestion_timeout;17",
+                    "i;clipboard__num_history_grid_columns_portrait;3" to
+                        "i;clipboard__history_num_grid_columns_portrait;3",
+                    "i;clipboard__num_history_grid_columns_landscape;4" to
+                        "i;clipboard__history_num_grid_columns_landscape;4",
+                    "b;clipboard__clean_up_old;true" to "b;clipboard__history_auto_clean_old_enabled;true",
+                    "i;clipboard__clean_up_after;13" to "i;clipboard__history_auto_clean_old_after;13",
+                    "b;clipboard__auto_clean_sensitive;true" to
+                        "b;clipboard__history_auto_clean_sensitive_enabled;true",
+                    "i;clipboard__auto_clean_sensitive_after;11" to
+                        "i;clipboard__history_auto_clean_sensitive_after;11",
+                    "b;clipboard__limit_history_size;false" to "b;clipboard__history_size_limit_enabled;false",
+                    "i;clipboard__max_history_size;123" to "i;clipboard__history_size_limit;123",
+                    "b;clipboard__clear_primary_clip_deletes_last_item;false" to
+                        "b;clipboard__clear_primary_clip_affects_history_if_unpinned;false",
+                    "s;media__emoji_preferred_skin_tone;\"medium_dark_skin_tone\"" to
+                        "s;emoji__preferred_skin_tone;\"MEDIUM_DARK_SKIN_TONE\"",
+                    "s;advanced__settings_theme;\"dark\"" to "s;other__settings_theme;\"DARK\"",
+                    "s;advanced__incognito_mode;\"force_off\"" to "s;suggestion__incognito_mode;\"FORCE_OFF\"",
+                )
+                for ((legacy, expected) in cases) {
+                    val fixture = PreferenceFixture()
+                    fixture.load(encodedPreferences(legacy))
+                    withClue(legacy.substringBeforeLast(';')) { fixture.exportRaw().trim() shouldBe expected }
+                }
+                for (key in listOf("keyboard__key_spacing_horizontal", "keyboard__key_spacing_vertical")) {
+                    val oldFloat = PreferenceFixture()
+                    oldFloat.load(encodedPreferences("f;$key;1.5"))
+                    oldFloat.exportedKeys() shouldBe emptySet()
+                    val currentInt = PreferenceFixture()
+                    currentInt.load(encodedPreferences("i;$key;95"))
+                    currentInt.exportRaw().trim() shouldBe "i;$key;95"
+                }
+            }
+        }
+
         test("malformed legacy values are dropped") {
             runTest {
                 val fixture = PreferenceFixture()
