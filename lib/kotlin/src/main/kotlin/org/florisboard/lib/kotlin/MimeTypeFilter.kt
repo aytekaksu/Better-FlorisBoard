@@ -52,28 +52,17 @@ class MimeTypeFilter {
         }
     }
 
-    private fun matchMimeTypeAgainstFilters(mimeType: String): Boolean {
-        val mimeTypeParts = mimeType.split("/")
-        if (mimeTypeParts.size != 2 || mimeTypeParts[0].isEmpty() || mimeTypeParts[1].isEmpty()) {
-            return false
-        }
-        for ((filter0, filter1) in filters) {
-            if (mimeTypeParts[0].matches(filter0) && mimeTypeParts[1].matches(filter1)) {
-                return true
-            }
-        }
-        return false
-    }
-
     /**
      * Matches a given [mimeType] against the filter types of this [MimeTypeFilter]. If the MIME type is null or
      * ill-formatted, it will not match.
      */
     fun matches(mimeType: String?): Boolean {
-        if (mimeType.isNullOrEmpty()) {
-            return false
+        if (mimeType.isNullOrEmpty()) return false
+        val mimeTypeParts = mimeType.split("/")
+        if (mimeTypeParts.size != 2 || mimeTypeParts[0].isEmpty() || mimeTypeParts[1].isEmpty()) return false
+        return filters.any { (typeFilter, subtypeFilter) ->
+            mimeTypeParts[0].matches(typeFilter) && mimeTypeParts[1].matches(subtypeFilter)
         }
-        return matchMimeTypeAgainstFilters(mimeType)
     }
 
 }
