@@ -72,6 +72,8 @@ Effects are processed in order:
 
 Binder calls must not occur while a core-state lock is held. A synchronous
 failure is converted to an event after the new state is installed.
+The Android adapter has a separate monitor for the physical lease and final
+content check at send time; it is not the reducer's state lock.
 
 ## Safe migration sequence
 

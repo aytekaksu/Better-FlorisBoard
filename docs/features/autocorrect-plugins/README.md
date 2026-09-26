@@ -34,13 +34,11 @@ The wire format and provider responsibilities are documented in the
 | Gesture trace and fallback | [`GlideTypingManager.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/GlideTypingManager.kt) |
 | Deterministic editor fixture | [`DeterministicInputConnection.kt`](../../../app/src/test/kotlin/dev/patrickgold/florisboard/test/editor/DeterministicInputConnection.kt) |
 
-The Android manager remains the public facade. The host core is authoritative
-for suggestion request identity, supersession, cancellation, reply admission,
-and circuit health; the coordinator executes that part of the reducer contract.
-Discovery, binding handles, session transport, `Messenger`, document pickers,
-and content resolvers remain Android adapters. Do not reimplement migrated
-request rules in the manager or add new direct manager dependencies to core
-keyboard code.
+The Android manager remains the public facade. The host core decides discovery,
+binding and session lifecycle, request identity, reply admission, and circuit
+health. The coordinator applies those transitions; the manager executes their
+effects through Android binding, `Messenger`, document pickers, and content
+resolvers. Do not duplicate reducer decisions in the adapter.
 
 ## Data and lifecycle
 
@@ -83,15 +81,16 @@ typing, UI/document leases, and pending finish acknowledgements have ended.
 - Request and session IDs are opaque and monotonic within the host process.
 - The editor generation changes when the editing context or provider changes.
   A result must match it before publication or commit.
-- Mutable binding/session transport state currently belongs to
-  `AutocorrectPluginManager`. Suggestion request state belongs to the
-  synchronized request coordinator; provider UI, dictionary work, and host
-  setting mutations have separate serialization guards.
+- The reducer owns binding epochs, session admission, pending finishes, and
+  request state. The manager keeps only physical Android handles and bounded
+  runtime payloads; provider UI, dictionary work, and host setting mutations
+  use their own guards.
 - The reducer-issued request lease follows the reply into each visible
   candidate. Both publication and commit require the latest request ID, active
   session, admitted session, provider, and editor generation.
-- Provider work runs asynchronously. Never wait for it on the main thread and
-  never hold a state lock across Binder, editor, disk, or content-resolver work.
+- Provider work runs asynchronously. Never wait for a provider result on the
+  main thread or while holding the manager lock. Binder sends serialize lease
+  and privacy checks; editor, disk, and resolver work must not block that lock.
 - Superseding input cancels obsolete suggestions. Every cancellation names the
   exact request it retires; a late cancellation for an older request must be a
   no-op after newer work starts. Cancellation must remain distinguishable from
