@@ -146,9 +146,6 @@ object ZipUtils {
         }
     }
 
-    fun zip(context: Context, srcRef: FlorisRef, dstRef: FlorisRef) =
-        zip(context, FsDir(srcRef.absolutePath(context)), dstRef)
-
     fun zip(context: Context, srcDir: FsDir, dstRef: FlorisRef) = runCatching {
         val limits = extensionWriteLimits()
         val entries = collectZipEntries(srcDir, limits)
@@ -616,9 +613,6 @@ object ZipUtils {
             },
         )
     }
-
-    fun unzip(context: Context, srcRef: FlorisRef, dstRef: FlorisRef) =
-        unzip(context, srcRef, FsDir(dstRef.absolutePath(context)))
 
     fun unzip(context: Context, srcRef: FlorisRef, dstDir: FsFile) = runCatching {
         BoundedExtensionArchive.protect {
