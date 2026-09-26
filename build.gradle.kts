@@ -73,10 +73,7 @@ val extensionHardeningKotlinSources = files(
     file("app/src/androidTest/kotlin/dev/patrickgold/florisboard/lib/ext/ExtensionLifecycleAndroidTest.kt"),
 )
 
-val qualityKotlinSources = files(
-    fileTree("app/src") {
-        include("**/ime/nlp/plugin/**/*.kt")
-    },
+val sharedQualityKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceMigrationTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceSchemaContractTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/app/FlorisPreferencePersistence.kt"),
@@ -91,10 +88,8 @@ val qualityKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/popup/PopupSetTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/BreakIteratorGroup.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviders.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/PunctuationRule.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderCapabilityTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/editor/AutoCorrectionRevertTest.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickAction.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickActionPresentationTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardCache.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardCacheTest.kt"),
@@ -112,29 +107,35 @@ val qualityKotlinSources = files(
     file("lib/snygg/src/main/kotlin/org/florisboard/lib/snygg/value/SnyggShapeValue.kt"),
     file("lib/snygg/src/main/kotlin/org/florisboard/lib/snygg/value/SnyggValueSpec.kt"),
     file("lib/snygg/src/test/kotlin/org/florisboard/lib/snygg/value/SnyggShapeValueTest.kt"),
+)
+
+val autocorrectPluginKotlinSources = fileTree("app/src") {
+    include("**/ime/nlp/plugin/**/*.kt")
+}
+val autocorrectApiKotlinSources = fileTree("lib/autocorrect-api/src") {
+    include("**/*.kt")
+}
+val autocorrectHostCoreKotlinSources = fileTree("lib/autocorrect-host-core/src") {
+    include("**/*.kt")
+}
+
+val qualityKotlinSources = files(
+    autocorrectPluginKotlinSources,
+    sharedQualityKotlinSources,
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/PunctuationRule.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickAction.kt"),
     backupArchiveKotlinSources,
     extensionHardeningKotlinSources,
-    fileTree("lib/autocorrect-api/src") {
-        include("**/*.kt")
-    },
-    fileTree("lib/autocorrect-host-core/src") {
-        include("**/*.kt")
-    },
+    autocorrectApiKotlinSources,
+    autocorrectHostCoreKotlinSources,
 )
 
 val formattedKotlinSources = files(
-    fileTree("lib/autocorrect-host-core/src") {
-        include("**/*.kt")
-    },
+    autocorrectHostCoreKotlinSources,
+    sharedQualityKotlinSources,
     file("app/src/main/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummary.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/dictionary/UserDictionary.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/BreakIteratorGroup.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycle.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviders.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/popup/PopupMapping.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/popup/PopupSet.kt"),
-    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/popup/PopupSetTest.kt"),
-    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickActionPresentationTest.kt"),
     file(
         "app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/" +
             "AutocorrectPerformanceSection.kt",
@@ -157,32 +158,9 @@ val formattedKotlinSources = files(
         "app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/" +
             "TextKeyboardInteractionPolicy.kt",
     ),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardCache.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/theme/FlorisImeUi.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/Validation.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/compose/Validation.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/ext/ExtensionValidation.kt"),
-    file("lib/compose/src/main/kotlin/org/florisboard/lib/compose/ScrollableModifiers.kt"),
-    file("lib/compose/src/test/kotlin/org/florisboard/lib/compose/ScrollbarGeometryTest.kt"),
-    file("lib/snygg/src/debug/kotlin/org/florisboard/lib/snygg/ui/SnyggUiPreview.kt"),
-    file("lib/snygg/src/main/kotlin/org/florisboard/lib/snygg/SnyggRule.kt"),
     file("lib/snygg/src/main/kotlin/org/florisboard/lib/snygg/SnyggTheme.kt"),
-    file("lib/snygg/src/test/kotlin/org/florisboard/lib/snygg/SnyggAttributesTest.kt"),
-    file("lib/snygg/src/main/kotlin/org/florisboard/lib/snygg/value/SnyggShapeValue.kt"),
-    file("lib/snygg/src/main/kotlin/org/florisboard/lib/snygg/value/SnyggValueSpec.kt"),
-    file("lib/snygg/src/test/kotlin/org/florisboard/lib/snygg/value/SnyggShapeValueTest.kt"),
     file("app/src/androidTest/kotlin/org/florisboard/lib/kotlin/CurlyFormatAndroidTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummaryTest.kt"),
-    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceMigrationTest.kt"),
-    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceSchemaContractTest.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/app/FlorisPreferencePersistence.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/app/LegacyPreferencePayload.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/app/LegacyPreferencePayloadPreprocessor.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/app/LegacySmartbarPreferenceMigration.kt"),
-    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferencePersistenceTest.kt"),
-    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacyPreferencePayloadPreprocessorTest.kt"),
-    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/LegacySmartbarPreferencePayloadTest.kt"),
-    file("app/src/test/kotlin/dev/patrickgold/florisboard/app/settings/theme/ThemeElementCatalogTest.kt"),
     backupArchiveKotlinSources,
     extensionHardeningKotlinSources,
     file(
@@ -191,13 +169,9 @@ val formattedKotlinSources = files(
     ),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyDataPrivacyTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyboardMetadataContractTest.kt"),
-    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/editor/AutoCorrectionRevertTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycleTest.kt"),
-    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderCapabilityTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/composing/ComposerTest.kt"),
-    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardCacheTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/theme/FlorisAssetResolverTest.kt"),
-    file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/ValidationRuleTest.kt"),
     file(
         "app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/" +
             "AutocorrectPluginDiagnosticsTest.kt",
@@ -222,6 +196,24 @@ val formattedKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/test/editor/DeterministicInputConnectionTest.kt"),
     file("lib/kotlin/src/test/kotlin/org/florisboard/lib/kotlin/LibraryTest.kt"),
 )
+
+val verifyQualitySourceScope by tasks.registering {
+    group = "verification"
+    doLast {
+        val missing = (qualityKotlinSources.files + formattedKotlinSources.files).filterNot { it.isFile }
+        check(missing.isEmpty()) {
+            "Missing quality sources: ${missing.map { it.relativeTo(rootDir).path }.sorted().joinToString()}"
+        }
+        listOf(
+            "backup archives" to backupArchiveKotlinSources,
+            "autocorrect plugins" to autocorrectPluginKotlinSources,
+            "autocorrect API" to autocorrectApiKotlinSources,
+            "autocorrect host core" to autocorrectHostCoreKotlinSources,
+        ).forEach { (name, sources) ->
+            check(sources.files.isNotEmpty()) { "Empty quality source glob: $name" }
+        }
+    }
+}
 
 configure<SpotlessExtension> {
     kotlin {
@@ -779,6 +771,7 @@ val ciStaticAnalysis by tasks.registering {
     group = "verification"
     description = "Runs formatting, Detekt, lint, documentation, privacy, and schema checks."
     dependsOn(
+        verifyQualitySourceScope,
         formatCheck,
         tasks.named("detekt"),
         ciLint,
