@@ -308,15 +308,6 @@ internal class ValidatedArchive private constructor(
     }
 }
 
-internal enum class RestoreMode {
-    MERGE,
-    REPLACE_SELECTED,
-}
-
-internal class RestoreRequest(val mode: RestoreMode, selectedComponents: Set<BackupComponent>) {
-    val selectedComponents: Set<BackupComponent> = selectedComponents.immutableSet()
-}
-
 internal enum class RestorePlanFailure {
     EMPTY_SELECTION,
     COMPONENT_UNAVAILABLE,
@@ -329,53 +320,25 @@ internal sealed interface RestorePlanResult {
     data class Invalid(val failure: RestorePlanFailure) : RestorePlanResult
 }
 
-internal enum class ClipboardMediaPolicy {
-    NONE,
-
-    /**
-     * Add media referenced by semantically validated selected indexes without
-     * deleting existing shared media.
-     */
-    COPY_SELECTED_REFERENCES,
-
-    /**
-     * Reconcile media only after the executor semantically validates selected
-     * indexes and accounts for references retained by unselected indexes. This
-     * never authorizes deleting every shared media file.
-     */
-    RECONCILE_SELECTED_REFERENCES,
-}
-
 internal class RestorePlan private constructor(
-    val mode: RestoreMode,
-    val resetComponentsOnCommit: List<BackupComponent>,
     val componentsToStage: List<ValidatedComponent>,
     internal val clipboardMediaCandidatesToStage: List<ValidatedArchiveEntry>,
-    val clipboardMediaPolicy: ClipboardMediaPolicy,
     val declaredComponentBytes: Long,
 ) {
-    override fun toString(): String = "RestorePlan(mode=$mode, resetComponentsOnCommit=$resetComponentsOnCommit, " +
-        "componentsToStage=${componentsToStage.map { it.component }}, " +
-        "mediaCandidateCount=${clipboardMediaCandidatesToStage.size}, " +
-        "clipboardMediaPolicy=$clipboardMediaPolicy, declaredComponentBytes=$declaredComponentBytes)"
+    override fun toString(): String = "RestorePlan(componentsToStage=${componentsToStage.map { it.component }}, " +
+        "mediaCandidateCount=${clipboardMediaCandidatesToStage.size}, declaredComponentBytes=$declaredComponentBytes)"
 
     companion object {
         fun create(
             authority: Any,
-            mode: RestoreMode,
-            resetComponentsOnCommit: List<BackupComponent>,
             componentsToStage: List<ValidatedComponent>,
             clipboardMediaCandidatesToStage: List<ValidatedArchiveEntry>,
-            clipboardMediaPolicy: ClipboardMediaPolicy,
             declaredComponentBytes: Long,
         ): RestorePlan {
             authority.requireArchiveValidationAuthority()
             return RestorePlan(
-                mode = mode,
-                resetComponentsOnCommit = resetComponentsOnCommit.immutableList(),
                 componentsToStage = componentsToStage.immutableList(),
                 clipboardMediaCandidatesToStage = clipboardMediaCandidatesToStage.immutableList(),
-                clipboardMediaPolicy = clipboardMediaPolicy,
                 declaredComponentBytes = declaredComponentBytes,
             )
         }
@@ -383,42 +346,30 @@ internal class RestorePlan private constructor(
 }
 
 internal object RestorePlanner {
-    fun create(archive: ValidatedArchive, request: RestoreRequest): RestorePlanResult {
-        if (request.selectedComponents.isEmpty()) {
+    fun create(archive: ValidatedArchive, selectedComponents: Set<BackupComponent>): RestorePlanResult {
+        val selection = selectedComponents.immutableSet()
+        if (selection.isEmpty()) {
             return RestorePlanResult.Invalid(RestorePlanFailure.EMPTY_SELECTION)
         }
-        val components = RESTORE_APPLY_ORDER.mapNotNull { component ->
-            archive.component(component).takeIf { component in request.selectedComponents }
+        val components = STAGING_ORDER.mapNotNull { component ->
+            archive.component(component).takeIf { component in selection }
         }
-        if (components.size != request.selectedComponents.size) {
+        if (components.size != selection.size) {
             return RestorePlanResult.Invalid(RestorePlanFailure.COMPONENT_UNAVAILABLE)
         }
 
-        val needsClipboardMedia = request.selectedComponents.any {
+        val needsClipboardMedia = selection.any {
             it == BackupComponent.CLIPBOARD_IMAGES || it == BackupComponent.CLIPBOARD_VIDEOS
         }
         val mediaEntries = if (needsClipboardMedia) archive.clipboardMediaEntries else emptyList()
         val declaredComponentBytes = checkedSizeSum(
             components.asSequence().flatMap { it.entries.asSequence() },
         ) ?: return RestorePlanResult.Invalid(RestorePlanFailure.PAYLOAD_SIZE_OVERFLOW)
-        val resetComponentsOnCommit = if (request.mode == RestoreMode.REPLACE_SELECTED) {
-            components.map { it.component }
-        } else {
-            emptyList()
-        }
-
         return RestorePlanResult.Valid(
             RestorePlan.create(
                 authority = ArchiveValidationAuthority,
-                mode = request.mode,
-                resetComponentsOnCommit = resetComponentsOnCommit,
                 componentsToStage = components,
                 clipboardMediaCandidatesToStage = mediaEntries,
-                clipboardMediaPolicy = when {
-                    !needsClipboardMedia -> ClipboardMediaPolicy.NONE
-                    request.mode == RestoreMode.MERGE -> ClipboardMediaPolicy.COPY_SELECTED_REFERENCES
-                    else -> ClipboardMediaPolicy.RECONCILE_SELECTED_REFERENCES
-                },
                 declaredComponentBytes = declaredComponentBytes,
             ),
         )
@@ -433,7 +384,7 @@ internal object RestorePlanner {
         return total
     }
 
-    private val RESTORE_APPLY_ORDER = listOf(
+    private val STAGING_ORDER = listOf(
         BackupComponent.PREFERENCES,
         BackupComponent.KEYBOARD_EXTENSIONS,
         BackupComponent.THEME_EXTENSIONS,

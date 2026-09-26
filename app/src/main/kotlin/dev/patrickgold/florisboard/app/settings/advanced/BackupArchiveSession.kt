@@ -80,7 +80,8 @@ internal class BackupArchiveSession internal constructor(
         check(authority === BackupArchiveSessionAuthority)
     }
 
-    fun createPlan(request: RestoreRequest): RestorePlanResult = RestorePlanner.create(archive, request)
+    fun createPlan(selectedComponents: Set<BackupComponent>): RestorePlanResult =
+        RestorePlanner.create(archive, selectedComponents)
 
     /**
      * Returns whether every staged entry in [plan] belongs to this exact

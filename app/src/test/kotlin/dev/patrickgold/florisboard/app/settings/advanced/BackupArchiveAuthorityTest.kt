@@ -73,11 +73,8 @@ class BackupArchiveAuthorityTest :
             shouldThrow<IllegalStateException> {
                 RestorePlan.create(
                     authority = Any(),
-                    mode = RestoreMode.MERGE,
-                    resetComponentsOnCommit = emptyList(),
                     componentsToStage = listOf(component),
                     clipboardMediaCandidatesToStage = emptyList(),
-                    clipboardMediaPolicy = ClipboardMediaPolicy.NONE,
                     declaredComponentBytes = 1,
                 )
             }

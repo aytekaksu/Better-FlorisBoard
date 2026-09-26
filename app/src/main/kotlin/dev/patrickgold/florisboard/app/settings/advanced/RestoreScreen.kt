@@ -450,16 +450,7 @@ fun RestoreScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                             val session = workspace?.restoreSession
                                 ?: throw RestoreFlowException(RestoreFlowFailure.ARCHIVE_REJECTED)
                             val plan = when (
-                                val result = session.createPlan(
-                                    RestoreRequest(
-                                        mode = if (strategy == ImportStrategy.Erase) {
-                                            RestoreMode.REPLACE_SELECTED
-                                        } else {
-                                            RestoreMode.MERGE
-                                        },
-                                        selectedComponents = selection.components(),
-                                    ),
-                                )
+                                val result = session.createPlan(selection.components())
                             ) {
                                 is RestorePlanResult.Valid -> result.plan
                                 is RestorePlanResult.Invalid -> {

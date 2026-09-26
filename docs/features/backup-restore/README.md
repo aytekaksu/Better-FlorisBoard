@@ -104,20 +104,15 @@ session also checks encryption and Unix entry kinds from the central directory;
 ## Restore plans
 
 A plan is created only from a validated archive and a non-empty selection of
-available components. Output order and declared-payload totals are
-deterministic.
+available components. It selects payloads for staging in a deterministic order:
+preferences, keyboard extensions, themes, then clipboard text, images, and
+videos. The live screen controls merge or replacement separately.
 
-- `MERGE` applies the selected payloads without reset operations.
-- `REPLACE_SELECTED` records a conditional reset scope for exactly the
-  selected, structurally valid, present components.
-- Apply order is preferences, keyboard extensions, themes, then clipboard
-  text, images, and videos.
-
-The live screen completes bounded staging before it applies the plan. It then
-snapshots selected preferences and extension directories, validates preferences
-in an isolated store, applies preferences and extensions, and commits clipboard
-history last in one Room transaction. A failure in this sequence attempts to
-restore the touched snapshots in reverse order before it returns.
+After bounded staging, it snapshots selected preferences and extension
+directories, validates preferences in an isolated store, applies preferences
+and extensions, and commits clipboard history last in one Room transaction.
+A failure in this sequence attempts to restore the touched snapshots in
+reverse order before it returns.
 
 Clipboard media is not independently selectable. Only media referenced by
 selected, semantically valid clipboard records is staged; other candidates are

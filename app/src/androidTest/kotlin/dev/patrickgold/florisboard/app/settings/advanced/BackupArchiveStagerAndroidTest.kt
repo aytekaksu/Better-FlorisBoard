@@ -96,12 +96,9 @@ class BackupArchiveStagerAndroidTest {
             session.use {
                 val plan = (
                     session.createPlan(
-                        RestoreRequest(
-                            mode = RestoreMode.MERGE,
-                            selectedComponents = setOf(
-                                BackupComponent.PREFERENCES,
-                                BackupComponent.KEYBOARD_EXTENSIONS,
-                            ),
+                        setOf(
+                            BackupComponent.PREFERENCES,
+                            BackupComponent.KEYBOARD_EXTENSIONS,
                         ),
                     ) as RestorePlanResult.Valid
                     ).plan
