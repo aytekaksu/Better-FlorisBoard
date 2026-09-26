@@ -78,11 +78,12 @@ Both six-theme bundled families keep their manifest paths. The static day
 stylesheet is the shared base; a small day overlay supplies Material You colors.
 Night and borderless overlays build the remaining stylesheets. Generated
 selectors replace whole rules; `@defines` merge by name.
-The 57 bundled popup mappings keep their manifest paths. A build task expands
-one shared punctuation popup in 38 templates and copies the other 19 unchanged;
-it rejects missing names or malformed JSON before packaging. Run
-`./gradlew :app:testPopupMappingAssetGenerator :app:testDebugUnitTest` for
-generator and generated mapping contracts.
+The bundled localization manifest keeps its 73 subtype presets in order. The
+build expands 71 compact entries; the unusual Han and Bengali entries stay
+literal. The same task expands a shared punctuation popup in 38 templates and
+copies the other 19 mappings unchanged. It rejects malformed or missing data
+before packaging. Run `./gradlew :app:testLocalizationAssetGenerator :app:testDebugUnitTest`
+to check the generated assets and their metadata.
 
 ## Manifest rules
 
