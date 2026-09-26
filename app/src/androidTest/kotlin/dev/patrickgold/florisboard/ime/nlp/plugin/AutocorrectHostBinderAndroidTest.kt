@@ -40,6 +40,7 @@ import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.editor.FlorisEditorInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
@@ -447,6 +448,161 @@ class AutocorrectHostBinderAndroidTest {
         }
     }
 
+    @Test
+    fun malformedSuggestionWithCurrentIdFailsPromptlyAndUpdatesHealth(): Unit = runBlocking {
+        val editor by targetContext.editorInstance()
+        val oldInfo = editor.activeInfo
+        editor.handleStartInput(plainTextEditorInfo(imeOptions = 0))
+        try {
+            selectSecondProvider()
+            control("hold_suggest_b")
+            val suggestCount = snapshot().events.count { it == "B_SUGGEST" }
+            val pending = async(Dispatchers.Default) { suggestOnce(manager.captureEditorGeneration()) }
+            waitForEventCount("B_SUGGEST", suggestCount + 1)
+            val lease = requireNotNull(manager.hostStateSnapshot().pendingRequest?.lease)
+            assertEquals(snapshot().latestBRequestId, lease.requestId.value)
+            val failuresBefore = manager.hostStateSnapshot().healthOf(lease.providerId).consecutiveFailures
+
+            assertTrue(sendMalformedSuggestion(lease.requestId.value))
+            assertFalse(withTimeout(10_000) { pending.await() }.handled)
+            val state = manager.hostStateSnapshot()
+            assertNull(state.pendingRequest)
+            assertEquals(failuresBefore + 1, state.healthOf(lease.providerId).consecutiveFailures)
+            assertMalformedFailure(lease.requestId.value)
+        } finally {
+            control("release_suggest_b")
+            editor.handleStartInput(oldInfo)
+        }
+    }
+
+    @Test
+    fun malformedSuggestionWithoutIdFailsCurrentBindingAndAllowsNextRequest(): Unit = runBlocking {
+        val editor by targetContext.editorInstance()
+        val oldInfo = editor.activeInfo
+        editor.handleStartInput(plainTextEditorInfo(imeOptions = 0))
+        try {
+            selectSecondProvider()
+            control("hold_suggest_b")
+            val generation = manager.captureEditorGeneration()
+            val suggestCount = snapshot().events.count { it == "B_SUGGEST" }
+            val pending = async(Dispatchers.Default) { suggestOnce(generation) }
+            waitForEventCount("B_SUGGEST", suggestCount + 1)
+            val lease = requireNotNull(manager.hostStateSnapshot().pendingRequest?.lease)
+            assertEquals(snapshot().latestBRequestId, lease.requestId.value)
+            val failuresBefore = manager.hostStateSnapshot().healthOf(lease.providerId).consecutiveFailures
+
+            assertTrue(sendMalformedSuggestion(requestId = null, corruptCandidates = false))
+            assertFalse(withTimeout(10_000) { pending.await() }.handled)
+            val state = manager.hostStateSnapshot()
+            assertNull(state.pendingRequest)
+            assertEquals(failuresBefore + 1, state.healthOf(lease.providerId).consecutiveFailures)
+            assertMalformedFailure(lease.requestId.value)
+
+            control("release_suggest_b")
+            assertTrue(suggestOnce(generation).handled)
+            waitForEventCount("B_SUGGEST", suggestCount + 2)
+        } finally {
+            control("release_suggest_b")
+            editor.handleStartInput(oldInfo)
+        }
+    }
+
+    @Test
+    fun malformedSuggestionWithStaleIdCannotFailNewerRequest(): Unit = runBlocking {
+        val editor by targetContext.editorInstance()
+        val oldInfo = editor.activeInfo
+        editor.handleStartInput(plainTextEditorInfo(imeOptions = 0))
+        try {
+            selectSecondProvider()
+            control("hold_suggest_b")
+            val generation = manager.captureEditorGeneration()
+            val suggestCount = snapshot().events.count { it == "B_SUGGEST" }
+            val first = async(Dispatchers.Default) { suggestOnce(generation) }
+            waitForEventCount("B_SUGGEST", suggestCount + 1)
+            val oldRequestId = snapshot().latestBRequestId
+            assertTrue(oldRequestId > 0L)
+
+            val next = async(Dispatchers.Default) { suggestOnce(generation) }
+            waitForEventCount("B_SUGGEST", suggestCount + 2)
+            val lease = requireNotNull(manager.hostStateSnapshot().pendingRequest?.lease)
+            assertEquals(snapshot().latestBRequestId, lease.requestId.value)
+            assertNotEquals(oldRequestId, lease.requestId.value)
+            val failuresBefore = manager.hostStateSnapshot().healthOf(lease.providerId).consecutiveFailures
+            val rejectedBefore = malformedReplyRejectionCount()
+
+            assertTrue(sendMalformedSuggestion(oldRequestId))
+            waitForMalformedReplyRejectionCount(rejectedBefore + 1)
+            assertFalse("stale malformed reply completed newer work", next.isCompleted)
+            val state = manager.hostStateSnapshot()
+            assertEquals(lease, state.pendingRequest?.lease)
+            assertEquals(failuresBefore, state.healthOf(lease.providerId).consecutiveFailures)
+
+            control("release_suggest_b")
+            assertFalse(withTimeout(10_000) { first.await() }.handled)
+            assertTrue(withTimeout(10_000) { next.await() }.handled)
+        } finally {
+            control("release_suggest_b")
+            editor.handleStartInput(oldInfo)
+        }
+    }
+
+    @Test
+    fun consumedHintsRetireRequestBeforeLateMalformedReply(): Unit = runBlocking {
+        val editor by targetContext.editorInstance()
+        val oldInfo = editor.activeInfo
+        editor.handleStartInput(plainTextEditorInfo(imeOptions = 0))
+        try {
+            selectSecondProvider()
+            control("hold_suggest_b")
+            val suggestCount = snapshot().events.count { it == "B_SUGGEST" }
+            val pending = async(Dispatchers.Default) { suggestOnce(manager.captureEditorGeneration()) }
+            waitForEventCount("B_SUGGEST", suggestCount + 1)
+            val lease = requireNotNull(manager.hostStateSnapshot().pendingRequest?.lease)
+            val failuresBefore = manager.hostStateSnapshot().healthOf(lease.providerId).consecutiveFailures
+
+            manager.consumePredictionHints()
+            assertFalse(withTimeout(10_000) { pending.await() }.handled)
+            assertNull(manager.hostStateSnapshot().pendingRequest)
+            val rejectedBefore = malformedReplyRejectionCount()
+            assertTrue(sendMalformedSuggestion(requestId = null))
+            waitForMalformedReplyRejectionCount(rejectedBefore + 1)
+            val state = manager.hostStateSnapshot()
+            assertNull(state.pendingRequest)
+            assertEquals(failuresBefore, state.healthOf(lease.providerId).consecutiveFailures)
+        } finally {
+            control("release_suggest_b")
+            editor.handleStartInput(oldInfo)
+        }
+    }
+
+    @Test
+    fun callerCancellationRetiresRequestBeforeLateMalformedReply(): Unit = runBlocking {
+        val editor by targetContext.editorInstance()
+        val oldInfo = editor.activeInfo
+        editor.handleStartInput(plainTextEditorInfo(imeOptions = 0))
+        try {
+            selectSecondProvider()
+            control("hold_suggest_b")
+            val suggestCount = snapshot().events.count { it == "B_SUGGEST" }
+            val pending = async(Dispatchers.Default) { suggestOnce(manager.captureEditorGeneration()) }
+            waitForEventCount("B_SUGGEST", suggestCount + 1)
+            val lease = requireNotNull(manager.hostStateSnapshot().pendingRequest?.lease)
+            val failuresBefore = manager.hostStateSnapshot().healthOf(lease.providerId).consecutiveFailures
+
+            pending.cancelAndJoin()
+            assertNull(manager.hostStateSnapshot().pendingRequest)
+            val rejectedBefore = malformedReplyRejectionCount()
+            assertTrue(sendMalformedSuggestion(requestId = null))
+            waitForMalformedReplyRejectionCount(rejectedBefore + 1)
+            val state = manager.hostStateSnapshot()
+            assertNull(state.pendingRequest)
+            assertEquals(failuresBefore, state.healthOf(lease.providerId).consecutiveFailures)
+        } finally {
+            control("release_suggest_b")
+            editor.handleStartInput(oldInfo)
+        }
+    }
+
     private suspend fun suggestOnce(generation: Long) = withTimeout(20_000) {
         manager.suggestWithStatus(
             subtype = Subtype.DEFAULT,
@@ -541,6 +697,49 @@ class AutocorrectHostBinderAndroidTest {
     private fun staleReplyCount() = manager.diagnosticsSnapshot().records.count { record ->
         val event = record.event as? AutocorrectPluginDiagnosticEvent.ReplyRejected
         event?.error == AutocorrectPluginDiagnosticError.STALE_BINDING
+    }
+
+    private suspend fun selectSecondProvider() {
+        prefs.suggestion.autocorrectPluginComponent
+            .set(secondProviderComponent.flattenToString()).getOrThrow()
+        manager.onSelectedProviderChanged()
+        awaitStableEditorGeneration()
+    }
+
+    private fun sendMalformedSuggestion(requestId: Long?, corruptCandidates: Boolean = true): Boolean = control(
+        "send_malformed_suggestions",
+        Bundle().apply {
+            putParcelable("reply_to", currentReplyMessenger())
+            requestId?.let { putLong("request_id", it) }
+            putBoolean("corrupt_candidates", corruptCandidates)
+        },
+    ).getBoolean("sent")
+
+    private fun assertMalformedFailure(requestId: Long) {
+        assertTrue(
+            "current malformed reply did not fail its request",
+            manager.diagnosticsSnapshot().records.any { record ->
+                val event = record.event as? AutocorrectPluginDiagnosticEvent.Operation
+                event?.requestId?.value == requestId &&
+                    event.operation == AutocorrectPluginDiagnosticOperation.SUGGESTION &&
+                    event.state == AutocorrectPluginDiagnosticState.FAILED &&
+                    event.error == AutocorrectPluginDiagnosticError.MALFORMED_MESSAGE
+            },
+        )
+    }
+
+    private fun malformedReplyRejectionCount() = manager.diagnosticsSnapshot().records.count { record ->
+        val event = record.event as? AutocorrectPluginDiagnosticEvent.ReplyRejected
+        event?.operation == AutocorrectPluginDiagnosticOperation.SUGGESTION &&
+            event.error == AutocorrectPluginDiagnosticError.MALFORMED_MESSAGE
+    }
+
+    private fun waitForMalformedReplyRejectionCount(expected: Int) {
+        val deadline = SystemClock.uptimeMillis() + 10_000
+        while (malformedReplyRejectionCount() < expected && SystemClock.uptimeMillis() < deadline) {
+            SystemClock.sleep(25)
+        }
+        assertTrue("stale malformed reply was not rejected", malformedReplyRejectionCount() >= expected)
     }
 
     private fun waitForStaleReplyCount(expected: Int) {

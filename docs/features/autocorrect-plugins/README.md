@@ -115,10 +115,13 @@ typing, UI/document leases, and pending finish acknowledgements have ended.
 
 ## Failure and fallback
 
-`Unhandled`, discovery failure, bind failure, disconnection, provider death,
-send failure, malformed data, or a rejected stale reply allows the built-in
-language provider to handle ordinary suggestions. A handled empty result is
-authoritative and must stay empty.
+`Unhandled`, discovery failure, bind failure, disconnection, provider death, or
+send failure lets the built-in language provider handle ordinary suggestions.
+An authenticated malformed reply fails the matching current request; if its ID
+is missing or unreadable, it fails the current request on that binding so typing
+does not wait forever. A stale same-binding reply without an ID can therefore
+fail newer work. Replies with a recoverable stale or unknown ID leave newer work
+alone. A handled empty result is authoritative and must stay empty.
 
 A provider must answer a suggestion for a non-active session with `Unhandled`
 instead of dropping it silently. Together with request-scoped cancellation,

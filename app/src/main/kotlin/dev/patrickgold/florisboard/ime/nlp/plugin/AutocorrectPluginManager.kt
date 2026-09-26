@@ -122,6 +122,7 @@ import org.florisboard.autocorrect.host.core.BindingState
 import org.florisboard.autocorrect.host.core.ConnectionLossKind
 import org.florisboard.autocorrect.host.core.DiscoveryState
 import org.florisboard.autocorrect.host.core.EditorGeneration
+import org.florisboard.autocorrect.host.core.FallbackReason
 import org.florisboard.autocorrect.host.core.HostEffect
 import org.florisboard.autocorrect.host.core.HostEvent
 import org.florisboard.autocorrect.host.core.HostTransition
@@ -129,6 +130,7 @@ import org.florisboard.autocorrect.host.core.MonotonicMillis
 import org.florisboard.autocorrect.host.core.ProviderFailureKind
 import org.florisboard.autocorrect.host.core.ProviderId
 import org.florisboard.autocorrect.host.core.ReplyRejectionReason
+import org.florisboard.autocorrect.host.core.RequestOutcome
 import org.florisboard.autocorrect.host.core.SessionConfiguration
 import org.florisboard.autocorrect.host.core.SessionFinishLease
 import org.florisboard.autocorrect.host.core.SessionId
@@ -891,9 +893,12 @@ class AutocorrectPluginManager internal constructor(
         boostedCodePoints = emptySet()
         val requestId = latestSuggestionRequestId.takeIf { it >= 0L } ?: return
         latestSuggestionRequestId = -1L
-        val pending = pendingSuggestions.remove(requestId) ?: return
-        pending.cancel()
-        send(AutocorrectPluginContract.MSG_CANCEL, cancellationBundle(requestId))
+        val cancelled = suggestionRequestCoordinator.cancelRequest(requestId).isNotEmpty()
+        val pending = pendingSuggestions.remove(requestId)
+        pending?.cancel()
+        if (cancelled || pending != null) {
+            send(AutocorrectPluginContract.MSG_CANCEL, cancellationBundle(requestId))
+        }
     }
 
     private fun sendPluginUiMessage(what: Int, itemId: String, value: String? = null) {
@@ -1539,9 +1544,9 @@ class AutocorrectPluginManager internal constructor(
         val result = try {
             awaitProviderResult(deferred)
         } finally {
-            if (pendingSuggestions.remove(requestId, deferred)) {
-                suggestionRequestCoordinator.cancelRequest(requestId)
-                synchronized(this) {
+            synchronized(this) {
+                if (pendingSuggestions.remove(requestId, deferred)) {
+                    suggestionRequestCoordinator.cancelRequest(requestId)
                     if (
                         activeSessionId == session.sessionId &&
                         requestId == latestSuggestionRequestId
@@ -2456,16 +2461,19 @@ class AutocorrectPluginManager internal constructor(
                     suggestionResultFromBundle(message.data)
                 }
             }.getOrElse {
-                recordMalformedReply(AutocorrectPluginDiagnosticOperation.SUGGESTION)
+                failMalformedSuggestionReply(message.recoverSuggestionReplyRequestId())
                 return
             }
             val (requestId, result) = parsed
+            if (requestId <= 0L) {
+                failMalformedSuggestionReply(requestId = null)
+                return
+            }
             val replyDecision = suggestionRequestCoordinator.acceptReply(
                 requestId = requestId,
                 at = monotonicNow(),
             )
             if (replyDecision !is SuggestionReplyDecision.Accept) {
-                pendingSuggestions.remove(requestId)?.cancel()
                 diagnostics.record(
                     AutocorrectPluginDiagnosticEvent.ReplyRejected(
                         bindingEpoch = bindingEpoch,
@@ -2496,6 +2504,41 @@ class AutocorrectPluginManager internal constructor(
                 itemCount = result.candidates.size,
             )
             pendingResult.complete(result)
+        }
+
+        private fun failMalformedSuggestionReply(requestId: Long?) {
+            val lease = suggestionRequestCoordinator.currentLeaseForMalformedReply(requestId, bindingEpoch)
+                ?: return recordMalformedReply(AutocorrectPluginDiagnosticOperation.SUGGESTION)
+            val transition = dispatchHost(
+                HostEvent.RequestReply(
+                    lease = lease,
+                    outcome = RequestOutcome.Failure(ProviderFailureKind.MALFORMED_REPLY),
+                    at = monotonicNow(),
+                ),
+            )
+            if (transition.effects.none {
+                    it is HostEffect.FallbackRequired &&
+                        it.providerId == lease.providerId &&
+                        it.reason == FallbackReason.REQUEST_FAILED
+                }
+            ) {
+                recordMalformedReply(AutocorrectPluginDiagnosticOperation.SUGGESTION)
+                return
+            }
+            val failedId = lease.requestId.value
+            if (latestSuggestionRequestId == failedId) {
+                latestSuggestionRequestId = -1L
+                boostedCodePoints = emptySet()
+            }
+            diagnostics.operationFinished(
+                operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
+                bindingEpoch = bindingEpoch,
+                sessionId = lease.sessionId.value,
+                requestId = failedId,
+                state = AutocorrectPluginDiagnosticState.FAILED,
+                error = AutocorrectPluginDiagnosticError.MALFORMED_MESSAGE,
+            )
+            pendingSuggestions.remove(failedId)?.complete(AutocorrectSuggestionResult.Unhandled)
         }
 
         private fun handleRemovalReply(message: Message) {
@@ -2772,6 +2815,14 @@ internal fun SessionConfiguration.toAutocorrectSession(sessionId: SessionId) = A
 )
 
 private fun monotonicNow() = MonotonicMillis(SystemClock.elapsedRealtime())
+
+// Protocol v5's request key is pinned by the API golden snapshot; keep this peek private to the host.
+private const val SUGGESTION_REPLY_REQUEST_ID_KEY = "requestId"
+
+@Suppress("DEPRECATION")
+private fun Message.recoverSuggestionReplyRequestId(): Long? = runCatching {
+    (data.get(SUGGESTION_REPLY_REQUEST_ID_KEY) as? Long)?.takeIf { it > 0L }
+}.getOrNull()
 
 internal fun isAutocorrectReplacementInContent(
     replacementStart: Int,

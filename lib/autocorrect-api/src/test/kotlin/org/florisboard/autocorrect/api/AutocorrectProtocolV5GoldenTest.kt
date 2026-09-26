@@ -27,6 +27,16 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class AutocorrectProtocolV5GoldenTest {
     @Test
+    fun suggestionReplyKeepsItsLongRequestIdForMalformedReplyRecovery() {
+        // The host peeks at this v5 field when the rest of a reply cannot be decoded.
+        val reply = suggestionResultToBundle(11L, AutocorrectSuggestionResult.Unhandled)
+        @Suppress("DEPRECATION")
+        val requestId = reply.get("requestId")
+        assertEquals(Long::class.javaObjectType, requestId?.javaClass)
+        assertEquals(11L, requestId)
+    }
+
+    @Test
     fun currentConstantsEnumsAndWireShapesMatchTheV5Fixture() {
         val actual = buildGoldenFixture()
         writeReport("protocol-v5.golden", actual)

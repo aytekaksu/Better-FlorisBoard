@@ -108,6 +108,13 @@ internal class AutocorrectSuggestionRequestCoordinator(circuitPolicy: CircuitPol
         return SuggestionReplyDecision.Reject(rejection)
     }
 
+    /** Only a current request may be failed by a malformed, authenticated reply. */
+    @Synchronized
+    fun currentLeaseForMalformedReply(requestId: Long?, bindingEpoch: Long): RequestLease? {
+        val pending = state.pendingRequest?.lease?.takeIf { it.epoch.value == bindingEpoch } ?: return null
+        return pending.takeIf { requestId == null || it.requestId.value == requestId }
+    }
+
     @Synchronized
     fun cancelRequest(
         requestId: Long,

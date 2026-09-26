@@ -19,6 +19,7 @@ package org.florisboard.autocorrect.fixture
 import android.content.ContentProvider
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
@@ -173,6 +174,27 @@ class SyntheticAutocorrectControlProvider : ContentProvider() {
                         data = Bundle().apply {
                             putLong("requestId", requestId)
                             putBoolean("handled", false)
+                        }
+                    })
+                }.isSuccess
+                Bundle().apply { putBoolean("sent", sent) }
+            }
+            "send_malformed_suggestions" -> {
+                val input = requireNotNull(extras)
+                @Suppress("DEPRECATION")
+                val replyTo = requireNotNull(input.getParcelable<Messenger>("reply_to"))
+                val requestId = input.getLong("request_id").takeIf { input.containsKey("request_id") }
+                val sent = runCatching {
+                    replyTo.send(Message.obtain(null, AutocorrectPluginContract.MSG_SUGGESTIONS).apply {
+                        data = Bundle().apply {
+                            requestId?.let { putLong("requestId", it) }
+                            if (input.getBoolean("corrupt_candidates", true)) {
+                                // A non-Bundle entry makes the host decoder fail after reading the ID.
+                                putParcelableArrayList("candidates", arrayListOf(Intent()))
+                            } else {
+                                // Missing ID also needs to fail if the remaining payload decodes.
+                                putBoolean("handled", false)
+                            }
                         }
                     })
                 }.isSuccess
