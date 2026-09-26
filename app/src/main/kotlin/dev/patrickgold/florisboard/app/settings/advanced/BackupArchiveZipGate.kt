@@ -314,15 +314,15 @@ private class BackupArchiveZipGateInspector(
             val commentBytes = header.u16(CENTRAL_COMMENT_LENGTH_OFFSET)
             val variableBytes = nameBytes + extraBytes + commentBytes
             val nextOffset = (CENTRAL_DIRECTORY_HEADER_BYTES + variableBytes).checkedAdd(cursor)
-            centralEntryLayoutFailure(
+            val entryFailure = centralEntryLayoutFailure(
                 entryNumber = actualEntries,
                 nameBytes = nameBytes,
                 extraBytes = extraBytes,
                 commentBytes = commentBytes,
                 nextOffset = nextOffset,
                 endOffset = endOffset,
-            )?.let { return it }
-            centralEntryDiskFailure(header, cursor, nameBytes, extraBytes)?.let { return it }
+            ) ?: centralEntryDiskFailure(header, cursor, nameBytes, extraBytes)
+            if (entryFailure != null) return entryFailure
             cursor = nextOffset ?: return BackupArchiveZipGateFailure.INVALID_CENTRAL_DIRECTORY
         }
         return BackupArchiveZipGateFailure.INVALID_CENTRAL_DIRECTORY
