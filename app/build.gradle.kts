@@ -131,6 +131,54 @@ abstract class GenerateBuiltInThemeAssets : DefaultTask() {
     }
 }
 
+@CacheableTask
+abstract class GenerateNumericRowAssets : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val templateFile: RegularFileProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val zeroDigitsFile: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun generate() {
+        val digits = JsonSlurper().parse(zeroDigitsFile.get().asFile) as? Map<*, *>
+            ?: error("Numeric row digits must be a JSON object")
+        val target = outputDirectory.get().asFile.resolve(
+            "ime/keyboard/org.florisboard.layouts/layouts/numericRow",
+        )
+        check(!target.exists() || target.deleteRecursively()) { "Unable to replace generated numeric rows" }
+        check(target.mkdirs()) { "Unable to create generated numeric row directory" }
+
+        for ((nameValue, zeroValue) in digits) {
+            val name = nameValue as? String ?: error("Numeric row name must be a string")
+            check(name.matches(Regex("[a-z_]+"))) { "Invalid numeric row name: $name" }
+            val zero = (zeroValue as? Number)?.toInt() ?: error("$name needs a zero-digit code point")
+            check(Character.isValidCodePoint(zero + 9)) { "Invalid zero-digit code point for $name" }
+
+            val layout = JsonSlurper().parse(templateFile.get().asFile) as? List<*>
+                ?: error("Numeric row template must be an array")
+            val row = layout.singleOrNull() as? List<*>
+                ?: error("Numeric row template must contain one row")
+            check(row.size == 10) { "Numeric row template must contain ten keys" }
+            for ((index, value) in row.withIndex()) {
+                @Suppress("UNCHECKED_CAST")
+                val key = value as? MutableMap<String, Any?>
+                    ?: error("Numeric row template key must be an object")
+                val digit = if (index == 9) 0 else index + 1
+                val codePoint = zero + digit
+                key["code"] = codePoint
+                key["label"] = String(Character.toChars(codePoint))
+            }
+            target.resolve("$name.json").writeText(JsonOutput.toJson(layout) + "\n", Charsets.UTF_8)
+        }
+    }
+}
+
 val projectMinSdk: String by project
 val projectTargetSdk: String by project
 val projectCompileSdk: String by project
@@ -300,6 +348,17 @@ androidComponents {
         checkNotNull(variant.sources.assets).addGeneratedSourceDirectory(
             themes,
             GenerateBuiltInThemeAssets::outputDirectory,
+        )
+        val numericRows = tasks.register<GenerateNumericRowAssets>("generate${variantName}NumericRowAssets") {
+            templateFile.set(layout.projectDirectory.file(
+                "src/main/assets/ime/keyboard/org.florisboard.layouts/layouts/numericRow/bengali.json",
+            ))
+            zeroDigitsFile.set(layout.projectDirectory.file("numeric-row-zero-digits.json"))
+            outputDirectory.set(layout.buildDirectory.dir("generated/numericRowAssets/${variant.name}"))
+        }
+        checkNotNull(variant.sources.assets).addGeneratedSourceDirectory(
+            numericRows,
+            GenerateNumericRowAssets::outputDirectory,
         )
     }
 }
