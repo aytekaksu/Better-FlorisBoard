@@ -68,6 +68,9 @@ APK assets are trusted input, but their directory copy still uses staged,
 all-or-nothing publication.
 Bundled keyboard layout IDs may share one arrangement file through
 `arrangementFile`; their labels, modifiers, and subtype choices stay separate.
+Eleven digit-script numeric rows are built from the Bengali row and their
+Unicode zero-digit code points. The five structurally different rows stay as
+individual assets; the generated rows keep their existing IDs and popups.
 Both six-theme bundled families keep their manifest paths. The static day
 stylesheet is the shared base; a small day overlay supplies Material You colors.
 Night and borderless overlays build the remaining stylesheets. Generated
@@ -167,6 +170,7 @@ device tests:
   -Pandroid.testInstrumentationRunnerArguments.class=\
 dev.patrickgold.florisboard.lib.cache.CacheManagerAndroidTest,\
 dev.patrickgold.florisboard.lib.ext.ExtensionLifecycleAndroidTest,\
+dev.patrickgold.florisboard.ime.keyboard.BundledNumericRowAssetsAndroidTest,\
 dev.patrickgold.florisboard.ime.keyboard.LayoutCacheRefreshAndroidTest,\
 dev.patrickgold.florisboard.ime.theme.BundledThemeAssetsAndroidTest,\
 dev.patrickgold.florisboard.ime.theme.ThemeFontCompilationAndroidTest,\

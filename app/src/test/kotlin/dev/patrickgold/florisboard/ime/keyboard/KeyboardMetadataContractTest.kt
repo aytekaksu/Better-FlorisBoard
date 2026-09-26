@@ -84,9 +84,13 @@ class KeyboardMetadataContractTest :
                 .map { it.relativeTo(assetRoot).invariantSeparatorsPath }
                 .filter { it != "extension.json" }
                 .toList()
+            val generatedNumericRows = setOf(
+                "devanagari", "eastern_arabic", "gujarati", "gurmukhi", "kannada", "malayalam",
+                "oriya", "persian", "tamil", "telugu", "warang_citi",
+            ).mapTo(mutableSetOf()) { "layouts/numericRow/$it.json" }
             packagedFiles.size shouldBe packagedFiles.toSet().size
-            packagedFiles.toSet() shouldBe declaredFiles.toSet()
-            declaredFiles.distinct().forEach { path ->
+            (packagedFiles.toSet() + generatedNumericRows) shouldBe declaredFiles.toSet()
+            packagedFiles.forEach { path ->
                 DefaultJsonConfig.decodeFromString<LayoutArrangement>(assetRoot.resolve(path).readText())
             }
         }
