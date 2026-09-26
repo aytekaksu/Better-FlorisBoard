@@ -175,7 +175,7 @@ class FlorisApplication : Application() {
         clipboardInitializationFailure.register(
             ClipboardManager(this, lazy {
                 keyboardManager.value.inputEventDispatcher.asClipboardInputSink()
-            }),
+            }) { item, access -> editorInstance.value.commitClipboardItem(item, access) },
         )
     }
     val dictionaryManager = lazy { DictionaryManager(this) }

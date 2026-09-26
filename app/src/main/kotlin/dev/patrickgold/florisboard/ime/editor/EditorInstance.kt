@@ -577,6 +577,16 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         }
     }
 
+    /** Whether the current editor accepts this clipboard item's MIME types. */
+    internal fun canPaste(item: ClipboardItem?): Boolean {
+        if (item == null) return false
+        return item.mimeTypes.contains("text/plain") || activeInfo.contentMimeTypes.any { editorType ->
+            item.mimeTypes.any { clipType ->
+                ClipDescription.compareMimeTypes(clipType, editorType)
+            }
+        }
+    }
+
     /**
      * Executes a backward delete on this editor's text. If a text selection is active, all
      * characters inside this selection will be removed, else only the left-most character from
