@@ -58,7 +58,6 @@ import dev.patrickgold.florisboard.ime.theme.ThemeExtension
 import dev.patrickgold.florisboard.lib.cache.CacheManager
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.lib.ext.Extension
-import dev.patrickgold.florisboard.lib.io.FileRegistry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.florisboard.lib.compose.FlorisBulletSpacer
@@ -71,29 +70,19 @@ import org.florisboard.lib.android.showLongToast
 import org.florisboard.lib.kotlin.resultOk
 
 enum class ExtensionImportScreenType(
-    val id: String,
     @param:StringRes val titleResId: Int,
-    val supportedFiles: List<FileRegistry.Entry>,
 ) {
     EXT_ANY(
-        id = "ext-any",
         titleResId = R.string.ext__import__ext_any,
-        supportedFiles = listOf(FileRegistry.FlexExtension),
     ),
     EXT_KEYBOARD(
-        id = "ext-keyboard",
         titleResId = R.string.ext__import__ext_keyboard,
-        supportedFiles = listOf(FileRegistry.FlexExtension),
     ),
     EXT_THEME(
-        id = "ext-theme",
         titleResId = R.string.ext__import__ext_theme,
-        supportedFiles = listOf(FileRegistry.FlexExtension),
     ),
     EXT_LANGUAGEPACK(
-        id = "ext-languagepack",
         titleResId = R.string.ext__import__ext_languagepack,
-        supportedFiles = listOf(FileRegistry.FlexExtension),
     );
 }
 
@@ -119,9 +108,6 @@ fun ExtensionImportScreen(
     }
 
     fun getSkipReason(fileInfo: CacheManager.FileInfo): Int? {
-        if (!FileRegistry.matchesFileFilter(fileInfo, type.supportedFiles)) {
-            return R.string.ext__import__file_skip_unsupported
-        }
         val ext = fileInfo.ext ?: return R.string.ext__import__file_skip_ext_corrupted
         val installed = extensionManager.getExtensionById(ext.meta.id)
         return when {

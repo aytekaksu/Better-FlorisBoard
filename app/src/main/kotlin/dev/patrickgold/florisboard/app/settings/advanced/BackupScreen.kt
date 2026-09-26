@@ -402,7 +402,7 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                         FileProvider.getUriForFile(context, Backup.FILE_PROVIDER_AUTHORITY, backupWorkspace!!.zipFile)
                     val shareIntent = ShareCompat.IntentBuilder(context)
                         .setStream(uri)
-                        .setType(FileRegistry.BackupArchive.mediaType)
+                        .setType(FileRegistry.BACKUP_ARCHIVE_MEDIA_TYPE)
                         .createChooserIntent()
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     context.startActivity(shareIntent)
