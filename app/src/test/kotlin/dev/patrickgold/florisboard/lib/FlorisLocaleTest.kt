@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard.lib
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldEndWith
@@ -47,5 +48,24 @@ class FlorisLocaleTest :
                 listOf(english, french),
                 listOf(french, custom, english, custom),
             ) shouldBe listOf(english, french, custom)
+        }
+
+        test("capitalization and automatic spacing follow the language policy") {
+            val cases = listOf(
+                Triple(FlorisLocale.from("ja"), false, false),
+                Triple(FlorisLocale.from("ja", "JP"), false, false),
+                Triple(FlorisLocale.from("zh"), false, false),
+                Triple(FlorisLocale.from("ko"), false, false),
+                Triple(FlorisLocale.from("th"), false, false),
+                Triple(FlorisLocale.from("bn"), false, true),
+                Triple(FlorisLocale.from("hi"), false, true),
+                Triple(FlorisLocale.from("en"), true, true),
+            )
+            for ((locale, capitalization, autoSpace) in cases) {
+                withClue(locale.languageTag()) {
+                    locale.supportsCapitalization shouldBe capitalization
+                    locale.supportsAutoSpace shouldBe autoSpace
+                }
+            }
         }
     })

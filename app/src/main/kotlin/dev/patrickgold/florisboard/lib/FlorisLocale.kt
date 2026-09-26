@@ -191,7 +191,7 @@ class FlorisLocale private constructor(val base: Locale) {
      */
     val supportsCapitalization: Boolean
         get() = when (language) {
-            "zh", "ko", "th", "bn", "hi" -> false
+            "zh", "ja", "ko", "th", "bn", "hi" -> false
             else -> true
         }
 
@@ -201,7 +201,7 @@ class FlorisLocale private constructor(val base: Locale) {
      */
     val supportsAutoSpace: Boolean
         get() = when (language) {
-            "zh", "ko", "jp", "th" -> false
+            "zh", "ja", "ko", "th" -> false
             else -> true
         }
 

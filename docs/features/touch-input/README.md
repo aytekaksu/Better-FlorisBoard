@@ -62,6 +62,10 @@ Multi-pointer transitions, gesture completion, and selection dragging must
 resolve or cancel their pending editor event exactly once. A stale prediction
 hint or trace may improve neither hit testing nor suggestions.
 
+`FlorisLocale` gates automatic shift and default suggestion/phantom spacing.
+Japanese `ja`, including regional variants, disables both; explicit suggestion
+separator choices still apply.
+
 `KeyboardManager` owns keyboard state. `FlorisApplication` gives the editor a
 lazy view of that state and a synchronous shift-recheck callback. The editor
 does not construct or look up the manager. Shift rechecks remain at the
