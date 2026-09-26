@@ -19,13 +19,17 @@ package dev.patrickgold.florisboard.app.ext
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -41,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -383,24 +388,33 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
             }
         }
 
-        FileList(
-            title = stringRes(R.string.ext__editor__files__type_fonts),
-            icon = Icons.Default.TextFields,
-            files = files?.fonts.orEmpty(),
-            addEnabled = !isImportingFile && !isMutatingFile,
-        ) {
-            currentImportDest = FONTS
-            importLauncher.launch("*/*")
-        }
+        if (files == null) {
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            FileList(
+                title = stringRes(R.string.ext__editor__files__type_fonts),
+                icon = Icons.Default.TextFields,
+                files = files.fonts,
+                addEnabled = !isImportingFile && !isMutatingFile,
+            ) {
+                currentImportDest = FONTS
+                importLauncher.launch("*/*")
+            }
 
-        FileList(
-            title = stringRes(R.string.ext__editor__files__type_images),
-            icon = Icons.Default.Photo,
-            files = files?.images.orEmpty(),
-            addEnabled = !isImportingFile && !isMutatingFile,
-        ) {
-            currentImportDest = IMAGES
-            importLauncher.launch("*/*")
+            FileList(
+                title = stringRes(R.string.ext__editor__files__type_images),
+                icon = Icons.Default.Photo,
+                files = files.images,
+                addEnabled = !isImportingFile && !isMutatingFile,
+            ) {
+                currentImportDest = IMAGES
+                importLauncher.launch("*/*")
+            }
         }
 
         val dest = currentImportDest
