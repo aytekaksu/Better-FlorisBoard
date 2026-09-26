@@ -890,54 +890,26 @@ private fun ShapeValueEditor(
     var selectedCorner by rememberSaveable(value.encoder()) {
         mutableStateOf<ShapeCorner?>(null)
     }
+    val unit: String
+    val cornerSize: (ShapeCorner) -> String
+    val validationRule: ValidationRule<String>
+    val applySize: (String, ShapeCorner?) -> Unit
     when (value) {
         is SnyggDpShapeValue -> {
-            val unit = stringRes(R.string.unit__display_pixel__symbol)
-            ShapeCornerPreview(
-                shape = value.shape,
-                topStart = unit.curlyFormat("v" to value.topStart.value.toStringWithoutDotZero()),
-                topEnd = unit.curlyFormat("v" to value.topEnd.value.toStringWithoutDotZero()),
-                bottomEnd = unit.curlyFormat("v" to value.bottomEnd.value.toStringWithoutDotZero()),
-                bottomStart = unit.curlyFormat("v" to value.bottomStart.value.toStringWithoutDotZero()),
-                modifier = modifier,
-                onCornerClick = { selectedCorner = it },
-            )
-            selectedCorner?.let { corner ->
-                key(value.encoder(), corner) {
-                    ShapeCornerDialog(
-                        corner = corner,
-                        initialSize = value.cornerSize(corner).value.toStringWithoutDotZero(),
-                        validationRule = ExtensionValidation.SnyggDpShapeValue,
-                        onApply = { onValueChange(value.withCornerSize(it.toFloat().dp, corner)) },
-                        onApplyToAll = { onValueChange(value.withCornerSize(it.toFloat().dp)) },
-                        onDismiss = { selectedCorner = null },
-                    )
-                }
+            unit = stringRes(R.string.unit__display_pixel__symbol)
+            cornerSize = { value.cornerSize(it).value.toStringWithoutDotZero() }
+            validationRule = ExtensionValidation.SnyggDpShapeValue
+            applySize = { size, corner ->
+                onValueChange(value.withCornerSize(size.toFloat().dp, corner))
             }
         }
 
         is SnyggPercentShapeValue -> {
-            val unit = stringRes(R.string.unit__percent__symbol)
-            ShapeCornerPreview(
-                shape = value.shape,
-                topStart = unit.curlyFormat("v" to value.topStart),
-                topEnd = unit.curlyFormat("v" to value.topEnd),
-                bottomEnd = unit.curlyFormat("v" to value.bottomEnd),
-                bottomStart = unit.curlyFormat("v" to value.bottomStart),
-                modifier = modifier,
-                onCornerClick = { selectedCorner = it },
-            )
-            selectedCorner?.let { corner ->
-                key(value.encoder(), corner) {
-                    ShapeCornerDialog(
-                        corner = corner,
-                        initialSize = value.cornerSize(corner).toString(),
-                        validationRule = ExtensionValidation.SnyggPercentShapeValue,
-                        onApply = { onValueChange(value.withCornerSize(it.toInt(), corner)) },
-                        onApplyToAll = { onValueChange(value.withCornerSize(it.toInt())) },
-                        onDismiss = { selectedCorner = null },
-                    )
-                }
+            unit = stringRes(R.string.unit__percent__symbol)
+            cornerSize = { value.cornerSize(it).toString() }
+            validationRule = ExtensionValidation.SnyggPercentShapeValue
+            applySize = { size, corner ->
+                onValueChange(value.withCornerSize(size.toInt(), corner))
             }
         }
 
@@ -952,6 +924,25 @@ private fun ShapeValueEditor(
                         .border(1.dp, MaterialTheme.colorScheme.onBackground, value.shape),
                 )
             }
+            return
+        }
+    }
+    ShapeCornerPreview(
+        shape = value.shape,
+        cornerText = { unit.curlyFormat("v" to cornerSize(it)) },
+        modifier = modifier,
+        onCornerClick = { selectedCorner = it },
+    )
+    selectedCorner?.let { corner ->
+        key(value.encoder(), corner) {
+            ShapeCornerDialog(
+                corner = corner,
+                initialSize = cornerSize(corner),
+                validationRule = validationRule,
+                onApply = { applySize(it, corner) },
+                onApplyToAll = { applySize(it, null) },
+                onDismiss = { selectedCorner = null },
+            )
         }
     }
 }
@@ -996,18 +987,15 @@ private fun SnyggPercentShapeValue.withCornerSize(size: Int, corner: ShapeCorner
 @Composable
 private fun ShapeCornerPreview(
     shape: Shape,
-    topStart: String,
-    topEnd: String,
-    bottomEnd: String,
-    bottomStart: String,
+    cornerText: (ShapeCorner) -> String,
     modifier: Modifier,
     onCornerClick: (ShapeCorner) -> Unit,
 ) {
     @Composable
-    fun CornerChip(corner: ShapeCorner, text: String) {
+    fun CornerChip(corner: ShapeCorner) {
         FlorisChip(
             onClick = { onCornerClick(corner) },
-            text = text,
+            text = cornerText(corner),
             shape = MaterialTheme.shapes.medium,
         )
     }
@@ -1018,8 +1006,8 @@ private fun ShapeCornerPreview(
         horizontalArrangement = Arrangement.SpaceAround,
     ) {
         Column {
-            CornerChip(ShapeCorner.TOP_START, topStart)
-            CornerChip(ShapeCorner.BOTTOM_START, bottomStart)
+            CornerChip(ShapeCorner.TOP_START)
+            CornerChip(ShapeCorner.BOTTOM_START)
         }
         Box(
             modifier = Modifier
@@ -1027,8 +1015,8 @@ private fun ShapeCornerPreview(
                 .border(1.dp, MaterialTheme.colorScheme.onBackground, shape),
         )
         Column {
-            CornerChip(ShapeCorner.TOP_END, topEnd)
-            CornerChip(ShapeCorner.BOTTOM_END, bottomEnd)
+            CornerChip(ShapeCorner.TOP_END)
+            CornerChip(ShapeCorner.BOTTOM_END)
         }
     }
 }
