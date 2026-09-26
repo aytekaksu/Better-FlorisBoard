@@ -90,7 +90,11 @@ import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.jetpref.datastore.model.collectAsState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.florisboard.lib.android.AndroidKeyguardManager
 import org.florisboard.lib.android.showShortToast
 import org.florisboard.lib.android.systemService
@@ -127,6 +131,19 @@ data class EmojiMappingForView(
     val simple: List<EmojiSet>,
 )
 
+internal suspend fun filterEmojiMappings(
+    mappings: EmojiDataByCategory,
+    supports: (Emoji) -> Boolean,
+): EmojiDataByCategory {
+    val context = currentCoroutineContext()
+    return mappings.mapValues { (_, emojiSetList) ->
+        emojiSetList.mapNotNull { emojiSet ->
+            context.ensureActive()
+            emojiSet.emojis.filter(supports).takeIf { it.isNotEmpty() }?.let(::EmojiSet)
+        }
+    }.also { context.ensureActive() }
+}
+
 @Composable
 fun EmojiPaletteView(
     fullEmojiMappings: EmojiData,
@@ -138,21 +155,19 @@ fun EmojiPaletteView(
     val keyboardManager by context.keyboardManager()
 
     val activeEditorInfo by editorInstance.activeInfoFlow.collectAsState()
-    val systemFontPaint = remember(Typeface.DEFAULT) {
-        Paint().apply {
-            typeface = Typeface.DEFAULT
-        }
-    }
     val metadataVersion = activeEditorInfo.emojiCompatMetadataVersion
     val replaceAll = activeEditorInfo.emojiCompatReplaceAll
     val emojiCompatInstance by FlorisEmojiCompat.getAsFlow(replaceAll).collectAsState()
-    val emojiMappings = remember(emojiCompatInstance, fullEmojiMappings, metadataVersion, systemFontPaint) {
-        fullEmojiMappings.byCategory.mapValues { (_, emojiSetList) ->
-            emojiSetList.mapNotNull { emojiSet ->
-                emojiSet.emojis.filter { emoji ->
-                    emojiCompatInstance?.getEmojiMatch(emoji.value, metadataVersion) == EmojiCompat.EMOJI_SUPPORTED ||
-                        systemFontPaint.hasGlyph(emoji.value)
-                }.let { if (it.isEmpty()) null else EmojiSet(it) }
+    val selectedEmojiCompat = emojiCompatInstance
+    var emojiMappings: EmojiDataByCategory by remember(fullEmojiMappings, selectedEmojiCompat, metadataVersion, replaceAll) {
+        mutableStateOf(EmojiData.Fallback.byCategory)
+    }
+    LaunchedEffect(fullEmojiMappings, selectedEmojiCompat, metadataVersion, replaceAll) {
+        emojiMappings = withContext(Dispatchers.Default) {
+            val systemFontPaint = Paint().apply { typeface = Typeface.DEFAULT }
+            filterEmojiMappings(fullEmojiMappings.byCategory) { emoji ->
+                selectedEmojiCompat?.getEmojiMatch(emoji.value, metadataVersion) == EmojiCompat.EMOJI_SUPPORTED ||
+                    systemFontPaint.hasGlyph(emoji.value)
             }
         }
     }

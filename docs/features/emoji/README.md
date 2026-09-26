@@ -4,8 +4,10 @@
 `EmojiData` owns asset lookup, reading, parsing, and caching. Asset work runs on
 IO; the palette's composition owns only the current result and cancels its load
 when the keyboard leaves composition or its context changes. A cancelled load
-cannot replace the current palette. Emoji support filtering and rendering remain
-in `EmojiPaletteView`.
+cannot replace the current palette. Emoji support filtering runs in a background
+worker and is cancelled when its data, EmojiCompat instance, or editor metadata
+changes. The palette shows empty category grids until the current result is
+ready. Rendering remains in `EmojiPaletteView`.
 
 The palette's root list uses the glyphs and categories from `en.txt` but drops
 names and keywords as the old generated `root.txt` did. The root asset is no
