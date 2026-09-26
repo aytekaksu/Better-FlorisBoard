@@ -52,7 +52,6 @@ internal sealed interface SuggestionReplyDecision {
 internal class AutocorrectSuggestionRequestCoordinator(circuitPolicy: CircuitPolicy = CircuitPolicy()) {
     private val reducer = AutocorrectHostReducer(circuitPolicy)
     private var state = HostState()
-    private val knownLeases = linkedMapOf<RequestId, RequestLease>()
 
     @Synchronized
     fun snapshot(): HostState = state
@@ -75,7 +74,6 @@ internal class AutocorrectSuggestionRequestCoordinator(circuitPolicy: CircuitPol
             .filterIsInstance<HostEffect.RequestSuggestions>()
             .singleOrNull()
         if (request != null) {
-            remember(request.lease)
             return SuggestionRequestAdmission.Admitted(request.lease, cancelled)
         }
         val fallback = transition.effects
@@ -89,7 +87,10 @@ internal class AutocorrectSuggestionRequestCoordinator(circuitPolicy: CircuitPol
     @Synchronized
     fun acceptReply(requestId: Long, at: MonotonicMillis): SuggestionReplyDecision {
         if (requestId <= 0L) return SuggestionReplyDecision.Unknown
-        val lease = knownLeases[RequestId(requestId)] ?: return SuggestionReplyDecision.Unknown
+        val id = RequestId(requestId)
+        val lease = state.pendingRequest?.lease?.takeIf { it.requestId == id }
+            ?: state.retiredRequests.lastOrNull { it.lease.requestId == id }?.lease
+            ?: return SuggestionReplyDecision.Unknown
         val transition = reduce(
             HostEvent.RequestReply(
                 lease = lease,
@@ -129,12 +130,5 @@ internal class AutocorrectSuggestionRequestCoordinator(circuitPolicy: CircuitPol
 
     private fun reduce(event: HostEvent) = reducer.reduce(state, event).also {
         state = it.state
-    }
-
-    private fun remember(lease: RequestLease) {
-        knownLeases[lease.requestId] = lease
-        while (knownLeases.size > AutocorrectHostReducer.RETIRED_REQUEST_LIMIT + 1) {
-            knownLeases.keys.firstOrNull()?.let(knownLeases::remove)
-        }
     }
 }

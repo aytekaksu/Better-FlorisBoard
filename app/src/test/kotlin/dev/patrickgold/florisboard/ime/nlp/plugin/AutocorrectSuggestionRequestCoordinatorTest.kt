@@ -19,7 +19,10 @@ package dev.patrickgold.florisboard.ime.nlp.plugin
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import org.florisboard.autocorrect.host.core.AutocorrectHostReducer
+import org.florisboard.autocorrect.host.core.BindingState
 import org.florisboard.autocorrect.host.core.CircuitPolicy
+import org.florisboard.autocorrect.host.core.ConnectionLossKind
 import org.florisboard.autocorrect.host.core.FallbackReason
 import org.florisboard.autocorrect.host.core.HostEffect
 import org.florisboard.autocorrect.host.core.HostEvent
@@ -41,6 +44,58 @@ class AutocorrectSuggestionRequestCoordinatorTest :
                 SuggestionReplyDecision.Reject(ReplyRejectionReason.SUPERSEDED)
             coordinator.acceptReply(second.lease.requestId.value, time(3L)) shouldBe
                 SuggestionReplyDecision.Accept(second.lease)
+        }
+
+        test("a duplicate completed reply is rejected from reducer history") {
+            val coordinator = coordinator()
+            val lease = coordinator.issue(1L).shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>().lease
+
+            coordinator.acceptReply(lease.requestId.value, time(2L)) shouldBe SuggestionReplyDecision.Accept(lease)
+            coordinator.acceptReply(lease.requestId.value, time(3L)) shouldBe
+                SuggestionReplyDecision.Reject(ReplyRejectionReason.DUPLICATE)
+        }
+
+        test("an evicted reply cannot disturb the current request") {
+            val coordinator = coordinator()
+            val first = coordinator.issue(1L).shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>().lease
+            coordinator.acceptReply(first.requestId.value, time(2L)) shouldBe SuggestionReplyDecision.Accept(first)
+
+            repeat(AutocorrectHostReducer.RETIRED_REQUEST_LIMIT - 1) { index ->
+                val lease = coordinator.issue(index.toLong() + 3L)
+                    .shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>().lease
+                coordinator.acceptReply(lease.requestId.value, time(index.toLong() + 3L)) shouldBe
+                    SuggestionReplyDecision.Accept(lease)
+            }
+            coordinator.acceptReply(first.requestId.value, time(40L)) shouldBe
+                SuggestionReplyDecision.Reject(ReplyRejectionReason.DUPLICATE)
+
+            val lastRetired = coordinator.issue(41L).shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>().lease
+            coordinator.acceptReply(lastRetired.requestId.value, time(42L)) shouldBe
+                SuggestionReplyDecision.Accept(lastRetired)
+            coordinator.snapshot().retiredRequests.size shouldBe AutocorrectHostReducer.RETIRED_REQUEST_LIMIT
+
+            val current = coordinator.issue(43L).shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>().lease
+            coordinator.acceptReply(first.requestId.value, time(44L)) shouldBe SuggestionReplyDecision.Unknown
+            coordinator.snapshot().pendingRequest?.lease shouldBe current
+            coordinator.acceptReply(current.requestId.value, time(45L)) shouldBe
+                SuggestionReplyDecision.Accept(current)
+        }
+
+        test("an evicted reply stays unknown after editor invalidation") {
+            val coordinator = coordinator()
+            val first = coordinator.issue(1L).shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>().lease
+            coordinator.acceptReply(first.requestId.value, time(2L)) shouldBe SuggestionReplyDecision.Accept(first)
+            repeat(AutocorrectHostReducer.RETIRED_REQUEST_LIMIT) { index ->
+                val lease = coordinator.issue(index.toLong() + 3L)
+                    .shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>().lease
+                coordinator.acceptReply(lease.requestId.value, time(index.toLong() + 3L)) shouldBe
+                    SuggestionReplyDecision.Accept(lease)
+            }
+
+            coordinator.dispatchLifecycle(HostEvent.InvalidateEditor)
+            coordinator.snapshot().session shouldBe null
+            coordinator.snapshot().binding.shouldBeInstanceOf<BindingState.Connected>()
+            coordinator.acceptReply(first.requestId.value, time(40L)) shouldBe SuggestionReplyDecision.Unknown
         }
 
         test("a stale editor generation falls back without allocating a request") {
@@ -119,6 +174,29 @@ class AutocorrectSuggestionRequestCoordinatorTest :
             coordinator.dispatchLifecycle(HostEvent.SessionStartResult(start.lease, true, time(1L)))
 
             coordinator.acceptReply(old.lease.requestId.value, time(2L)) shouldBe
+                SuggestionReplyDecision.Reject(ReplyRejectionReason.CANCELLED)
+        }
+
+        test("changing provider rejects the old request from reducer history") {
+            val coordinator = coordinator()
+            val old = coordinator.issue(1L).shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>().lease
+
+            coordinator.dispatchLifecycle(HostEvent.SelectProvider(ProviderId("provider.two")))
+
+            coordinator.acceptReply(old.requestId.value, time(2L)) shouldBe
+                SuggestionReplyDecision.Reject(ReplyRejectionReason.CANCELLED)
+        }
+
+        test("losing a binding rejects the old request from reducer history") {
+            val coordinator = coordinator()
+            val old = coordinator.issue(1L).shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>().lease
+            val binding = coordinator.snapshot().binding.shouldBeInstanceOf<BindingState.Connected>().lease
+
+            coordinator.dispatchLifecycle(
+                HostEvent.ConnectionLost(binding, ConnectionLossKind.SERVICE_DISCONNECTED, time(2L)),
+            )
+
+            coordinator.acceptReply(old.requestId.value, time(3L)) shouldBe
                 SuggestionReplyDecision.Reject(ReplyRejectionReason.CANCELLED)
         }
 
