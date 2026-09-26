@@ -7,18 +7,6 @@ Protocol payloads and Android objects stay at the boundary; provider discovery,
 binding, session, request, cancellation, stale-reply, finish, and provider
 health decisions belong to the platform-neutral host core.
 
-This is an incremental replacement of imperative manager state, not a second
-host. Suggestion request identity, supersession, cancellation, reply admission,
-and provider circuit health are already reducer-owned through
-`AutocorrectSuggestionRequestCoordinator`. Android discovery, binding handles,
-wire-session materialization, finish acknowledgements, provider UI, and dictionary
-work remain in `AutocorrectPluginManager`.
-
-During migration, a rule moves only when its current behavior has a
-characterization test and the Android facade can preserve its public call
-surface. Do not describe a rule as core-owned until the manager's competing
-decision has been removed.
-
 ## Ownership
 
 | Layer | Owns | Must not own |
@@ -65,8 +53,7 @@ Effects are processed in order:
 - session/request effects serialize bounded API payloads;
 - cancellation and unbind effects are best effort and idempotent;
 - accepted replies release the separately held payload to the feature facade;
-- fallback effects let built-in NLP continue;
-- health effects update diagnostics and schedule monotonic recovery;
+- circuit recovery effects schedule a monotonic retry;
 - ignored/rejected events produce content-free diagnostics;
 - resource release cancels scopes, receivers, timers, and transport.
 
@@ -75,20 +62,7 @@ failure is converted to an event after the new state is installed.
 The Android adapter's separate monitor keeps the physical lease and final
 content check with each send, and START admission with its wire send.
 
-## Safe migration sequence
-
-1. Characterize the current facade behavior.
-2. Add or extend a pure event and its invariant tests.
-3. Translate one manager decision to the core.
-4. Execute only the effects for that decision through the adapter.
-5. Delete the replaced volatile field or derive it from core state.
-6. Run focused tests, minified compilation, and the complete quality gate.
-
-Do not mirror a migrated decision indefinitely. Temporary comparison assertions
-are acceptable in debug builds, but the reducer must become the authority
-before the migration slice is complete.
-
-## Current migration boundary
+## Current boundary
 
 The reducer now owns discovery revisions, provider selection, UI-only binding
 demand, binding epochs, editor generations, session admission, pending finishes,
@@ -113,11 +87,7 @@ not start or admit typing again until cooldown.
 
 ## Verification
 
-```shell
-./gradlew :lib:autocorrect-host-core:test
-./gradlew :app:testDebugUnitTest
-./gradlew :app:assembleBeta
-```
+Run the [feature verification commands](../features/autocorrect-plugins/README.md#verification).
 
 State-machine tests should cover table-driven examples and generated event
 sequences. The main generated invariant is that no old epoch, session, request,

@@ -6,11 +6,6 @@ Version 5 is the current external-provider contract. Its checked-in API
 signature and canonical Bundle shapes are compatibility fixtures under
 `lib/autocorrect-api/src/test/resources/api`.
 
-The host currently requires an exact protocol version during discovery.
-Unknown enum values and optional fields use documented safe defaults where
-forward-compatible decoding is possible; malformed required data and
-out-of-bounds collections are rejected or clamped before allocation.
-
 Version 5 retains the version 4 surface and adds:
 
 - request-scoped `MSG_CANCEL` payloads containing the required suggestion
