@@ -73,15 +73,16 @@ enum class ImeWindowResizeHandle(
     val top: Boolean = false,
     val right: Boolean = false,
     val bottom: Boolean = false,
+    val alignment: Alignment,
 ) {
-    LEFT(left = true),
-    TOP_LEFT(top = true, left = true),
-    TOP(top = true),
-    TOP_RIGHT(top = true, right = true),
-    RIGHT(right = true),
-    BOTTOM_RIGHT(bottom = true, right = true),
-    BOTTOM(bottom = true),
-    BOTTOM_LEFT(bottom = true, left = true);
+    LEFT(left = true, alignment = Alignment.CenterStart),
+    TOP_LEFT(top = true, left = true, alignment = Alignment.TopStart),
+    TOP(top = true, alignment = Alignment.TopCenter),
+    TOP_RIGHT(top = true, right = true, alignment = Alignment.TopEnd),
+    RIGHT(right = true, alignment = Alignment.CenterEnd),
+    BOTTOM_RIGHT(bottom = true, right = true, alignment = Alignment.BottomEnd),
+    BOTTOM(bottom = true, alignment = Alignment.BottomCenter),
+    BOTTOM_LEFT(bottom = true, left = true, alignment = Alignment.BottomStart);
 
     fun shape(thickness: Dp, cornerRadius: Dp): Shape {
         return object : Shape {
@@ -124,6 +125,18 @@ enum class ImeWindowResizeHandle(
         }
     }
 }
+
+internal val floatingResizeHandles = listOf(
+    ImeWindowResizeHandle.TOP_LEFT,
+    ImeWindowResizeHandle.TOP_RIGHT,
+    ImeWindowResizeHandle.BOTTOM_RIGHT,
+    ImeWindowResizeHandle.BOTTOM_LEFT,
+)
+
+internal fun ImeWindowResizeHandle.floatingOffset(offset: Dp): DpOffset = DpOffset(
+    x = if (left) -offset else offset,
+    y = if (top) -offset else offset,
+)
 
 @Composable
 private fun ImeWindowResizeHandle(
@@ -269,54 +282,13 @@ fun BoxScope.ImeWindowResizeHandlesFixed() {
             }
         }
 
-        ImeWindowResizeHandle(
-            handle = ImeWindowResizeHandle.LEFT,
-            modifier = Modifier
-                .align(Alignment.CenterStart),
-            alphaState = animatedAlpha,
-        )
-        ImeWindowResizeHandle(
-            handle = ImeWindowResizeHandle.TOP_LEFT,
-            modifier = Modifier
-                .align(Alignment.TopStart),
-            alphaState = animatedAlpha,
-        )
-        ImeWindowResizeHandle(
-            handle = ImeWindowResizeHandle.TOP,
-            modifier = Modifier
-                .align(Alignment.TopCenter),
-            alphaState = animatedAlpha,
-        )
-        ImeWindowResizeHandle(
-            handle = ImeWindowResizeHandle.TOP_RIGHT,
-            modifier = Modifier
-                .align(Alignment.TopEnd),
-            alphaState = animatedAlpha,
-        )
-        ImeWindowResizeHandle(
-            handle = ImeWindowResizeHandle.RIGHT,
-            modifier = Modifier
-                .align(Alignment.CenterEnd),
-            alphaState = animatedAlpha,
-        )
-        ImeWindowResizeHandle(
-            handle = ImeWindowResizeHandle.BOTTOM_RIGHT,
-            modifier = Modifier
-                .align(Alignment.BottomEnd),
-            alphaState = animatedAlpha,
-        )
-        ImeWindowResizeHandle(
-            handle = ImeWindowResizeHandle.BOTTOM,
-            modifier = Modifier
-                .align(Alignment.BottomCenter),
-            alphaState = animatedAlpha,
-        )
-        ImeWindowResizeHandle(
-            handle = ImeWindowResizeHandle.BOTTOM_LEFT,
-            modifier = Modifier
-                .align(Alignment.BottomStart),
-            alphaState = animatedAlpha,
-        )
+        for (handle in ImeWindowResizeHandle.entries) {
+            ImeWindowResizeHandle(
+                handle = handle,
+                modifier = Modifier.align(handle.alignment),
+                alphaState = animatedAlpha,
+            )
+        }
     }
 
 }
@@ -352,34 +324,16 @@ fun BoxScope.ImeWindowResizeHandlesFloating() {
 
     val offset = windowSpec.constraints.resizeHandleTouchOffsetFloating
     if (visible) {
-        ImeWindowResizeHandle(
-            handle = ImeWindowResizeHandle.TOP_LEFT,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(-offset, -offset),
-            alphaState = animatedAlpha,
-        )
-        ImeWindowResizeHandle(
-            handle = ImeWindowResizeHandle.TOP_RIGHT,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(offset, -offset),
-            alphaState = animatedAlpha,
-        )
-        ImeWindowResizeHandle(
-            handle = ImeWindowResizeHandle.BOTTOM_RIGHT,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(offset, offset),
-            alphaState = animatedAlpha,
-        )
-        ImeWindowResizeHandle(
-            handle = ImeWindowResizeHandle.BOTTOM_LEFT,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .offset(-offset, offset),
-            alphaState = animatedAlpha,
-        )
+        for (handle in floatingResizeHandles) {
+            val cornerOffset = handle.floatingOffset(offset)
+            ImeWindowResizeHandle(
+                handle = handle,
+                modifier = Modifier
+                    .align(handle.alignment)
+                    .offset(cornerOffset.x, cornerOffset.y),
+                alphaState = animatedAlpha,
+            )
+        }
     }
 }
 

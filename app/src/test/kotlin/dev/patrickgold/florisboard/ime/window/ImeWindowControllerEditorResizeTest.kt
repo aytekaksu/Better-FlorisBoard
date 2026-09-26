@@ -16,6 +16,8 @@
 
 package dev.patrickgold.florisboard.ime.window
 
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.plusOrMinus
 import dev.patrickgold.florisboard.shouldBeGreaterThanOrEqualTo
@@ -36,6 +38,26 @@ class ImeWindowControllerEditorResizeTest : FunSpec({
     val smartBarRowCount = 0
 
     coroutineTestScope = true
+
+    test("resize handles retain fixed and floating placement") {
+        ImeWindowResizeHandle.entries.map { it.alignment } shouldBe listOf(
+            Alignment.CenterStart,
+            Alignment.TopStart,
+            Alignment.TopCenter,
+            Alignment.TopEnd,
+            Alignment.CenterEnd,
+            Alignment.BottomEnd,
+            Alignment.BottomCenter,
+            Alignment.BottomStart,
+        )
+        val distance = 24.dp
+        floatingResizeHandles.map { it.alignment to it.floatingOffset(distance) } shouldBe listOf(
+            Alignment.TopStart to DpOffset(-distance, -distance),
+            Alignment.TopEnd to DpOffset(distance, -distance),
+            Alignment.BottomEnd to DpOffset(distance, distance),
+            Alignment.BottomStart to DpOffset(-distance, distance),
+        )
+    }
 
     context("for all root insets and fixed modes") {
         test("for all resizes on top handle") {
