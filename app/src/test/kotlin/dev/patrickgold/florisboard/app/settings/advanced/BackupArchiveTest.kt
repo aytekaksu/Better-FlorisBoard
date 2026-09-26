@@ -41,13 +41,10 @@ class BackupArchiveTest :
                 file(BackupArchive.CLIPBOARD_VIDEO_PATH),
                 directory(BackupArchive.CLIPBOARD_MEDIA_ROOT),
                 file("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/42"),
-                file("${BackupArchive.RETIRED_SPELLING_ROOT}/legacy.flex"),
+                file("$RETIRED_SPELLING_ROOT/legacy.flex"),
             )
 
-            archive.source shouldBe ArchiveSource.LEGACY
             archive.components.map { it.component } shouldBe BackupComponent.entries
-            archive.ignoredEntryCount shouldBe 1
-            archive.warnings shouldBe setOf(ArchiveWarning.RETIRED_COMPONENT_IGNORED)
             archive.clipboardMediaEntries.map { it.archivePath } shouldBe
                 listOf("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/42")
         }
@@ -145,28 +142,30 @@ class BackupArchiveTest :
 
             archive.availableComponents shouldBe setOf(BackupComponent.CLIPBOARD_TEXT)
             archive.clipboardMediaEntries shouldBe emptyList()
-            archive.ignoredEntryCount shouldBe 2
-            archive.warnings shouldBe setOf(
-                ArchiveWarning.UNKNOWN_ENTRIES_IGNORED,
-                ArchiveWarning.UNUSED_CLIPBOARD_MEDIA_IGNORED,
-            )
+            val plan = RestorePlanner.create(
+                archive,
+                RestoreRequest(RestoreMode.MERGE, setOf(BackupComponent.CLIPBOARD_TEXT)),
+            ) as RestorePlanResult.Valid
+            plan.plan.clipboardMediaCandidatesToStage shouldBe emptyList()
         }
 
-        test("safe unknown and retired entries are ignored with aggregate warnings") {
+        test("safe unknown and retired entries stay out of restore plans") {
             val archive = validArchive(
                 metadataEntry(),
                 file(BackupArchive.PREFERENCES_PATH),
                 file("future/data.bin"),
                 directory("future/empty"),
-                directory(BackupArchive.RETIRED_SPELLING_ROOT),
+                directory(RETIRED_SPELLING_ROOT),
+                file("$RETIRED_SPELLING_ROOT/legacy.flex"),
             )
 
             archive.availableComponents shouldBe setOf(BackupComponent.PREFERENCES)
-            archive.ignoredEntryCount shouldBe 3
-            archive.warnings shouldBe setOf(
-                ArchiveWarning.UNKNOWN_ENTRIES_IGNORED,
-                ArchiveWarning.RETIRED_COMPONENT_IGNORED,
-            )
+            val plan = RestorePlanner.create(
+                archive,
+                RestoreRequest(RestoreMode.MERGE, setOf(BackupComponent.PREFERENCES)),
+            ) as RestorePlanResult.Valid
+            plan.plan.componentsToStage.single().entries.map { it.archivePath } shouldBe
+                listOf(BackupArchive.PREFERENCES_PATH)
         }
 
         test("a matching declared manifest is authoritative") {
@@ -182,7 +181,6 @@ class BackupArchiveTest :
                 descriptor = declaredDescriptor(components),
             )
 
-            archive.source shouldBe ArchiveSource.DECLARED
             archive.availableComponents shouldBe components.toSet()
         }
 
@@ -233,10 +231,12 @@ class BackupArchiveTest :
             )
 
             archive.availableComponents shouldBe setOf(BackupComponent.PREFERENCES)
-            archive.warnings shouldBe setOf(
-                ArchiveWarning.UNKNOWN_ENTRIES_IGNORED,
-                ArchiveWarning.UNKNOWN_COMPONENTS_IGNORED,
-            )
+            val plan = RestorePlanner.create(
+                archive,
+                RestoreRequest(RestoreMode.MERGE, setOf(BackupComponent.PREFERENCES)),
+            ) as RestorePlanResult.Valid
+            plan.plan.componentsToStage.single().entries.map { it.archivePath } shouldBe
+                listOf(BackupArchive.PREFERENCES_PATH)
             archive.toString() shouldNotContain marker
         }
 
@@ -520,20 +520,13 @@ class BackupArchiveTest :
                 file("${BackupArchive.THEME_ROOT}/a.flex"),
                 file(BackupArchive.PREFERENCES_PATH),
                 file("unknown/value"),
-                file("${BackupArchive.RETIRED_SPELLING_ROOT}/legacy.flex"),
+                file("$RETIRED_SPELLING_ROOT/legacy.flex"),
             )
 
             val first = validArchive(*entries.toTypedArray())
             val second = validArchive(*entries.reversed().toTypedArray())
-            first.source shouldBe second.source
             first.components.map { it.component to it.entries.map { entry -> entry.archivePath } } shouldBe
                 second.components.map { it.component to it.entries.map { entry -> entry.archivePath } }
-            first.ignoredEntryCount shouldBe second.ignoredEntryCount
-            first.warnings shouldBe second.warnings
-            first.warnings.toList() shouldBe listOf(
-                ArchiveWarning.RETIRED_COMPONENT_IGNORED,
-                ArchiveWarning.UNKNOWN_ENTRIES_IGNORED,
-            )
         }
 
         test("merge plans stage selected components without reset operations") {
@@ -769,6 +762,7 @@ class BackupArchiveTest :
     })
 
 private const val TEST_ARCHIVE_SIZE = 1_000_000L
+private const val RETIRED_SPELLING_ROOT = "files/ime/spelling"
 
 private fun metadata(
     packageName: String = "dev.patrickgold.florisboard",

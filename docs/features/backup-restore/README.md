@@ -33,10 +33,9 @@ explicit empty `files/ime/keyboard/` or `files/ime/theme/` directory is a
 present, empty component. Extension subtrees stay opaque, and explicit parent
 directory entries are optional.
 
-The retired `files/ime/spelling/**` tree and safe unknown entries are ignored
-with aggregate warnings. They still count toward resource limits. This keeps
-old and forward-compatible archives readable without letting unknown content
-enter a restore plan.
+The retired `files/ime/spelling/**` tree and safe unknown entries are ignored.
+They still count toward resource limits. This keeps old and forward-compatible
+archives readable without letting unknown content enter a restore plan.
 
 New backups emit a version 1 `backup_manifest.json` and explicitly create the
 keyboard and theme roots when those components are selected. This preserves
@@ -47,7 +46,7 @@ When a manifest is present, it is authoritative: it must decode, use the
 supported format version, and its known components must exactly match the known
 archive entries. A malformed, unsupported, or mismatched manifest fails closed
 instead of falling back to legacy path inference. Well-formed unknown component
-IDs remain forward-compatible and are ignored with a warning.
+IDs remain forward-compatible and are ignored.
 
 ## Validation boundary
 
