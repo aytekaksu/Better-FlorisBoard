@@ -69,9 +69,10 @@ rejection before editor dispatch rolls the admission back. Once dispatch
 begins, even a false result or exception keeps the capability until it is safe
 to retire because the editor may already hold the grant. Input barriers are
 resolved, abandoned, or invalidated exactly once when the editor generation
-changes. The app lazily wires the keyboard's input queue and editor commits to
-Clipboard; it looks up neither manager itself. The editor owns MIME eligibility,
-including MIME-only input switches, while the queue preserves text/media ordering.
+changes. `KeyboardManager` supplies its input queue and editor commit for each
+paste; `ClipboardManager` retains neither dependency. The editor owns MIME
+eligibility, including MIME-only input switches, while the queue preserves
+text/media ordering.
 For keyboard cut, copy, and paste actions, `KeyboardManager` supplies the clip,
 the synchronous copy sink, and the media-paste handoff. The editor retains
 selection changes, spacing resets, and direct text commits without looking up
