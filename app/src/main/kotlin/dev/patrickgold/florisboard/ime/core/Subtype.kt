@@ -91,18 +91,7 @@ data class Subtype(
         return "$id/$languageTag/$currencySet/${layoutMap.characters}"
     }
 
-    fun equalsExcludingId(other: Subtype): Boolean {
-        if (other.primaryLocale != primaryLocale) return false
-        if (other.secondaryLocales != secondaryLocales) return false
-        if (other.nlpProviders != nlpProviders) return false
-        if (other.composer != composer) return false
-        if (other.currencySet != currencySet) return false
-        if (other.punctuationRule != punctuationRule) return false
-        if (other.popupMapping != popupMapping) return false
-        if (other.layoutMap != layoutMap) return false
-
-        return true
-    }
+    fun equalsExcludingId(other: Subtype): Boolean = copy(id = other.id) == other
 }
 
 @Serializable

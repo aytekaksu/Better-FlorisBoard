@@ -35,6 +35,7 @@
     <ID>FunctionNaming:AutocorrectPluginUiKeyboard.kt:@Composable internal fun KeyboardPluginUiPage</ID>
     <ID>FunctionNaming:AutocorrectPluginUiKeyboard.kt:@Composable private fun KeyboardPluginUiItem</ID>
     <ID>FunctionNaming:AutocorrectPluginUiPresentation.kt:@Composable internal fun PluginListItem</ID>
+    <ID>FunctionNaming:SelectSubtypePanel.kt:@Composable fun SelectSubtypePanel</ID>
     <ID>LargeClass:AutocorrectPluginManager.kt:AutocorrectPluginManager : SuggestionProvider</ID>
     <ID>LongMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized internal fun sendPluginUiDocument</ID>
     <ID>LongMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized private fun ensureSession: AutocorrectSession?</ID>
