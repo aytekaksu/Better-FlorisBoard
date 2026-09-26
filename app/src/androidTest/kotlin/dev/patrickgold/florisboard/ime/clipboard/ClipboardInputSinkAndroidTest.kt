@@ -139,6 +139,7 @@ class ClipboardInputSinkAndroidTest {
         val editor = EditorInstance(
             instrumentation.targetContext,
             lazy { ObservableKeyboardState.new() },
+            lazy { error("MIME eligibility must not need the composing policy") },
         ) { }
         fun info(vararg types: String) = FlorisEditorInfo.wrap(EditorInfo().apply {
             packageName = "test.editor"

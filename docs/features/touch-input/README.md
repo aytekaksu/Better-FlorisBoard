@@ -66,6 +66,9 @@ hint or trace may improve neither hit testing nor suggestions.
 lazy view of that state and a synchronous shift-recheck callback. The editor
 does not construct or look up the manager. Shift rechecks remain at the
 editor's existing content-publication and invalid-selection paths.
+`FlorisApplication` also supplies the editor a lazy composing policy: NLP still
+selects the active language provider, while the editor reads punctuation rules
+from its existing keyboard-extension snapshot.
 
 ## Privacy
 

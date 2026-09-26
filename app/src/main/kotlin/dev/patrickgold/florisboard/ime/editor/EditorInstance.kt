@@ -30,10 +30,12 @@ import dev.patrickgold.florisboard.ime.clipboard.ClipboardMediaPasteAccess
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.clipboard.provider.OwnedClipboardMediaUri
+import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.input.InputShiftState
 import dev.patrickgold.florisboard.ime.keyboard.IncognitoMode
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.ObservableKeyboardState
+import dev.patrickgold.florisboard.ime.nlp.PunctuationRule
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
 import dev.patrickgold.florisboard.ime.nlp.SuggestionReplacement
 import dev.patrickgold.florisboard.ime.text.composing.Appender
@@ -41,7 +43,6 @@ import dev.patrickgold.florisboard.ime.text.composing.Composer
 import dev.patrickgold.florisboard.ime.text.key.KeyVariation
 import dev.patrickgold.florisboard.keyboardExtensionRepository
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
-import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.subtypeManager
 import java.util.concurrent.atomic.AtomicInteger
 import org.florisboard.lib.android.showShortToast
@@ -143,11 +144,17 @@ internal data class SelectionDragState(
     }
 }
 
+internal fun resolvePunctuationRule(
+    subtype: Subtype,
+    punctuationRules: Map<ExtensionComponentName, PunctuationRule>,
+): PunctuationRule = punctuationRules[subtype.punctuationRule] ?: PunctuationRule.Fallback
+
 class EditorInstance(
     context: Context,
     keyboardState: Lazy<ObservableKeyboardState>,
+    composingPolicy: Lazy<EditorComposingPolicy>,
     reevaluateInputShiftState: () -> Unit,
-) : AbstractEditorInstance(context, reevaluateInputShiftState) {
+) : AbstractEditorInstance(context, composingPolicy, reevaluateInputShiftState) {
     companion object {
         private const val SPACE = " "
     }
@@ -157,9 +164,13 @@ class EditorInstance(
     private val clipboardManager by context.clipboardManager()
     private val keyboardExtensionRepository by context.keyboardExtensionRepository()
     private val subtypeManager by context.subtypeManager()
-    private val nlpManager by context.nlpManager()
 
     private val activeState by keyboardState
+    private val activePunctuationRule: PunctuationRule
+        get() = resolvePunctuationRule(
+            subtypeManager.activeSubtype,
+            keyboardExtensionRepository.snapshot.value.punctuationRules,
+        )
     val autoSpace = AutoSpaceState()
     internal val phantomSpace = PhantomSpaceState()
     val massSelection = MassSelectionState()
@@ -247,7 +258,7 @@ class EditorInstance(
     }
 
     override fun determineComposingEnabled(): Boolean {
-        return activeState.isComposingEnabled && nlpManager.isSuggestionOn()
+        return activeState.isComposingEnabled && editorComposingPolicy.isSuggestionOn()
     }
 
     override fun determineComposer(composerName: ExtensionComponentName): Composer {
@@ -333,7 +344,7 @@ class EditorInstance(
         if (activeInfo.isRawInputEditor) return false
         if (activeState.keyVariation != KeyVariation.NORMAL) return false
 
-        val punctuationRule = nlpManager.getActivePunctuationRule()
+        val punctuationRule = activePunctuationRule
         val textBefore = activeContent.getTextBeforeCursor(1)
         return textBefore.isNotEmpty() && !textBefore.last().isWhitespace() &&
             punctuationRule.symbolsFollowingAutoSpace.contains(text.first())
@@ -344,7 +355,7 @@ class EditorInstance(
         if (activeInfo.isRawInputEditor) return false
         if (activeState.keyVariation != KeyVariation.NORMAL) return false
 
-        val punctuationRule = nlpManager.getActivePunctuationRule()
+        val punctuationRule = activePunctuationRule
         val content = activeContent
         val textBefore = content.getTextBeforeCursor(3).let { textBefore ->
             if (autoSpace.isActive && textBefore.isNotEmpty() && textBefore.last() == ' ') {
@@ -811,7 +822,7 @@ class EditorInstance(
          val selection = content.selection
          if (!(isActive || forceActive) || selection.isNotValid || selection.start <= 0 || text.isEmpty()) return false
          val textBefore = content.getTextBeforeCursor(1)
-         val punctuationRule = nlpManager.getActivePunctuationRule()
+         val punctuationRule = activePunctuationRule
          if (!subtypeManager.activeSubtype.primaryLocale.supportsAutoSpace) return false;
          return textBefore.isNotEmpty() &&
              (punctuationRule.symbolsPrecedingPhantomSpace.contains(textBefore[textBefore.length - 1]) ||
