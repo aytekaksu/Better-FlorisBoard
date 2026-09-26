@@ -60,7 +60,6 @@ class BackupArchiveStagerTest :
 
             snapshot.validSession().use { session ->
                 val plan = session.validPlan(
-                    RestoreMode.REPLACE_SELECTED,
                     BackupComponent.PREFERENCES,
                     BackupComponent.KEYBOARD_EXTENSIONS,
                 )
@@ -88,7 +87,7 @@ class BackupArchiveStagerTest :
             val stagingParent = root.stagingParent("implicit-parents")
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.KEYBOARD_EXTENSIONS)
+                val plan = session.validPlan(BackupComponent.KEYBOARD_EXTENSIONS)
                 val staged = session.stageValid(plan, stagingParent)
                 try {
                     Files.readAllBytes(staged.root.resolve(keyboardPath)).contentEquals(contents) shouldBe true
@@ -108,7 +107,7 @@ class BackupArchiveStagerTest :
             val first = snapshot.validSession()
             val second = snapshot.validSession()
             try {
-                val foreignPlan = first.validPlan(RestoreMode.MERGE, BackupComponent.PREFERENCES)
+                val foreignPlan = first.validPlan(BackupComponent.PREFERENCES)
 
                 BackupArchiveStager.stage(
                     session = second,
@@ -134,7 +133,7 @@ class BackupArchiveStagerTest :
             )
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.PREFERENCES)
+                val plan = session.validPlan(BackupComponent.PREFERENCES)
                 plan.declaredComponentBytes shouldBe preferences.size.toLong()
 
                 val exactParent = root.stagingParent("budget-exact")
@@ -182,7 +181,7 @@ class BackupArchiveStagerTest :
             val stageId = UUID(0L, 1L)
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.PREFERENCES)
+                val plan = session.validPlan(BackupComponent.PREFERENCES)
                 BackupArchiveStager.stage(
                     session = session,
                     plan = plan,
@@ -207,7 +206,7 @@ class BackupArchiveStagerTest :
             val stageId = UUID(0L, 6L)
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.PREFERENCES)
+                val plan = session.validPlan(BackupComponent.PREFERENCES)
                 snapshot.overwriteStoredPayload(
                     BackupArchive.PREFERENCES_PATH,
                     "modified".encodeToByteArray(),
@@ -239,7 +238,7 @@ class BackupArchiveStagerTest :
             val stageId = UUID(0L, 2L)
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.PREFERENCES)
+                val plan = session.validPlan(BackupComponent.PREFERENCES)
                 BackupArchiveStager.stage(
                     session = session,
                     plan = plan,
@@ -266,7 +265,7 @@ class BackupArchiveStagerTest :
             Files.write(sentinel, "keep".encodeToByteArray())
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.PREFERENCES)
+                val plan = session.validPlan(BackupComponent.PREFERENCES)
                 BackupArchiveStager.stage(
                     session = session,
                     plan = plan,
@@ -294,7 +293,7 @@ class BackupArchiveStagerTest :
             Files.createSymbolicLink(collision, externalRoot)
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.PREFERENCES)
+                val plan = session.validPlan(BackupComponent.PREFERENCES)
                 BackupArchiveStager.stage(
                     session = session,
                     plan = plan,
@@ -328,7 +327,7 @@ class BackupArchiveStagerTest :
             val stagingParent = root.stagingParent("path-replacement")
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.PREFERENCES)
+                val plan = session.validPlan(BackupComponent.PREFERENCES)
                 Files.move(
                     replacement.path,
                     snapshot.path,
@@ -356,7 +355,7 @@ class BackupArchiveStagerTest :
             val stagingParent = root.stagingParent(marker)
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.PREFERENCES)
+                val plan = session.validPlan(BackupComponent.PREFERENCES)
                 val result = BackupArchiveStager.stage(
                     session = session,
                     plan = plan,
@@ -396,7 +395,7 @@ class BackupArchiveStagerTest :
             val sentinel = Files.write(externalRoot.resolve("sentinel"), "keep".encodeToByteArray())
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.PREFERENCES)
+                val plan = session.validPlan(BackupComponent.PREFERENCES)
                 val staged = session.stageValid(plan, stagingParent)
                 val innerLink = Files.createSymbolicLink(
                     staged.root.resolve("external-link"),
@@ -422,7 +421,7 @@ class BackupArchiveStagerTest :
             val stageId = UUID(0L, 5L)
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.PREFERENCES)
+                val plan = session.validPlan(BackupComponent.PREFERENCES)
                 coroutineScope {
                     val partialRootCreated = CompletableDeferred<Path>()
                     val releaseStager = CountDownLatch(1)
@@ -466,7 +465,7 @@ class BackupArchiveStagerTest :
             val stagingParent = root.stagingParent("unselected-media")
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.CLIPBOARD_TEXT)
+                val plan = session.validPlan(BackupComponent.CLIPBOARD_TEXT)
                 plan.clipboardMediaCandidatesToStage shouldBe emptyList()
                 val staged = session.stageValid(plan, stagingParent)
                 try {
@@ -506,7 +505,7 @@ class BackupArchiveStagerTest :
             val stagingParent = root.stagingParent("selected-media-references")
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.CLIPBOARD_IMAGES)
+                val plan = session.validPlan(BackupComponent.CLIPBOARD_IMAGES)
                 plan.declaredComponentBytes shouldBe imageIndex.size.toLong()
                 plan.clipboardMediaCandidatesToStage.size shouldBe 3
 
@@ -561,7 +560,6 @@ class BackupArchiveStagerTest :
             val malformedStageId = UUID(0L, 8L)
             malformedSnapshot.validSession().use { session ->
                 val plan = session.validPlan(
-                    RestoreMode.MERGE,
                     BackupComponent.CLIPBOARD_IMAGES,
                     BackupComponent.CLIPBOARD_VIDEOS,
                 )
@@ -591,7 +589,7 @@ class BackupArchiveStagerTest :
             )
             val missingParent = root.stagingParent("missing-selected-media")
             missingSnapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.CLIPBOARD_IMAGES)
+                val plan = session.validPlan(BackupComponent.CLIPBOARD_IMAGES)
                 BackupArchiveStager.stage(
                     session = session,
                     plan = plan,
@@ -638,7 +636,7 @@ class BackupArchiveStagerTest :
             }
             val invalidMimeParent = root.stagingParent("invalid-mime-before-media")
             invalidMimeSnapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.CLIPBOARD_IMAGES)
+                val plan = session.validPlan(BackupComponent.CLIPBOARD_IMAGES)
                 BackupArchiveStager.stage(
                     session = session,
                     plan = plan,
@@ -670,7 +668,6 @@ class BackupArchiveStagerTest :
             val crossTypeParent = root.stagingParent("cross-type-before-media")
             crossTypeSnapshot.validSession().use { session ->
                 val plan = session.validPlan(
-                    RestoreMode.MERGE,
                     BackupComponent.CLIPBOARD_IMAGES,
                     BackupComponent.CLIPBOARD_VIDEOS,
                 )
@@ -714,7 +711,7 @@ class BackupArchiveStagerTest :
             val stagingParent = root.stagingParent("aggregate-media-quota")
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.CLIPBOARD_IMAGES)
+                val plan = session.validPlan(BackupComponent.CLIPBOARD_IMAGES)
                 BackupArchiveStager.stage(
                     session = session,
                     plan = plan,
@@ -744,7 +741,7 @@ class BackupArchiveStagerTest :
             val stageId = UUID(0L, 7L)
 
             snapshot.validSession().use { session ->
-                val plan = session.validPlan(RestoreMode.MERGE, BackupComponent.CLIPBOARD_IMAGES)
+                val plan = session.validPlan(BackupComponent.CLIPBOARD_IMAGES)
                 BackupArchiveStager.stage(
                     session = session,
                     plan = plan,
@@ -823,11 +820,8 @@ private fun Path.storedSnapshot(name: String, vararg entries: FixtureEntry): Arc
 private suspend fun ArchiveSnapshot.validSession(): BackupArchiveSession =
     (BackupArchiveSession.open(this) as BackupArchiveSessionResult.Valid).session
 
-private fun BackupArchiveSession.validPlan(mode: RestoreMode, vararg components: BackupComponent): RestorePlan = (
-    createPlan(
-        RestoreRequest(mode, components.toSet()),
-    ) as RestorePlanResult.Valid
-    ).plan
+private fun BackupArchiveSession.validPlan(vararg components: BackupComponent): RestorePlan =
+    (createPlan(components.toSet()) as RestorePlanResult.Valid).plan
 
 private suspend fun BackupArchiveSession.stageValid(
     plan: RestorePlan,

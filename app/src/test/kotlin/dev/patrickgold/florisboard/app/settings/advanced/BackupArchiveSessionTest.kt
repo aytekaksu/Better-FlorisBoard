@@ -43,9 +43,7 @@ class BackupArchiveSessionTest :
 
             BackupArchiveSession.open(snapshot).validSession().use { session ->
                 session.archive.availableComponents shouldBe setOf(BackupComponent.PREFERENCES)
-                val plan = session.createPlan(
-                    RestoreRequest(RestoreMode.MERGE, setOf(BackupComponent.PREFERENCES)),
-                ).validPlan()
+                val plan = session.createPlan(setOf(BackupComponent.PREFERENCES)).validPlan()
                 session.owns(plan) shouldBe true
                 val entry = plan.componentsToStage.single().entries.single()
                 session.withEntry(entry) { _, zipEntry -> zipEntry.name } shouldBe
@@ -63,9 +61,7 @@ class BackupArchiveSessionTest :
 
             BackupArchiveSession.open(snapshot).validSession().use { session ->
                 session.archive.availableComponents shouldBe setOf(BackupComponent.PREFERENCES)
-                val plan = session.createPlan(
-                    RestoreRequest(RestoreMode.MERGE, setOf(BackupComponent.PREFERENCES)),
-                ).validPlan()
+                val plan = session.createPlan(setOf(BackupComponent.PREFERENCES)).validPlan()
                 session.owns(plan) shouldBe true
                 plan.componentsToStage.single().entries.single().archivePath shouldBe
                     BackupArchive.PREFERENCES_PATH
@@ -82,12 +78,7 @@ class BackupArchiveSessionTest :
 
             BackupArchiveSession.open(snapshot).validSession().use { session ->
                 session.archive.availableComponents shouldBe setOf(BackupComponent.KEYBOARD_EXTENSIONS)
-                val plan = session.createPlan(
-                    RestoreRequest(
-                        RestoreMode.REPLACE_SELECTED,
-                        setOf(BackupComponent.KEYBOARD_EXTENSIONS),
-                    ),
-                ).validPlan()
+                val plan = session.createPlan(setOf(BackupComponent.KEYBOARD_EXTENSIONS)).validPlan()
                 session.owns(plan) shouldBe true
                 plan.componentsToStage.single().entries.single().kind shouldBe ArchiveEntryKind.DIRECTORY
             }
@@ -115,9 +106,7 @@ class BackupArchiveSessionTest :
             val first = BackupArchiveSession.open(snapshot).validSession()
             val second = BackupArchiveSession.open(snapshot).validSession()
             try {
-                val firstPlan = first.createPlan(
-                    RestoreRequest(RestoreMode.MERGE, setOf(BackupComponent.PREFERENCES)),
-                ).validPlan()
+                val firstPlan = first.createPlan(setOf(BackupComponent.PREFERENCES)).validPlan()
                 val firstEntry = firstPlan.componentsToStage.single().entries.single()
 
                 first.owns(firstPlan) shouldBe true
@@ -297,9 +286,7 @@ class BackupArchiveSessionTest :
                 BackupArchive.PREFERENCES_PATH to byteArrayOf(1),
             )
             val session = BackupArchiveSession.open(snapshot).validSession()
-            val plan = session.createPlan(
-                RestoreRequest(RestoreMode.REPLACE_SELECTED, setOf(BackupComponent.PREFERENCES)),
-            ).validPlan()
+            val plan = session.createPlan(setOf(BackupComponent.PREFERENCES)).validPlan()
             val entry = plan.componentsToStage.single().entries.single()
 
             session.close()

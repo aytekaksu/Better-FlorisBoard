@@ -576,10 +576,7 @@ class ClipboardRestoreCommitAndroidTest {
             }
             sessionResult.session.use { session ->
                 val planResult = session.createPlan(
-                    RestoreRequest(
-                        mode = RestoreMode.REPLACE_SELECTED,
-                        selectedComponents = setOf(BackupComponent.CLIPBOARD_IMAGES),
-                    ),
+                    setOf(BackupComponent.CLIPBOARD_IMAGES),
                 )
                 check(planResult is RestorePlanResult.Valid) {
                     "Generated archive did not produce a restore plan."

@@ -144,7 +144,7 @@ class BackupArchiveTest :
             archive.clipboardMediaEntries shouldBe emptyList()
             val plan = RestorePlanner.create(
                 archive,
-                RestoreRequest(RestoreMode.MERGE, setOf(BackupComponent.CLIPBOARD_TEXT)),
+                setOf(BackupComponent.CLIPBOARD_TEXT),
             ) as RestorePlanResult.Valid
             plan.plan.clipboardMediaCandidatesToStage shouldBe emptyList()
         }
@@ -162,7 +162,7 @@ class BackupArchiveTest :
             archive.availableComponents shouldBe setOf(BackupComponent.PREFERENCES)
             val plan = RestorePlanner.create(
                 archive,
-                RestoreRequest(RestoreMode.MERGE, setOf(BackupComponent.PREFERENCES)),
+                setOf(BackupComponent.PREFERENCES),
             ) as RestorePlanResult.Valid
             plan.plan.componentsToStage.single().entries.map { it.archivePath } shouldBe
                 listOf(BackupArchive.PREFERENCES_PATH)
@@ -233,7 +233,7 @@ class BackupArchiveTest :
             archive.availableComponents shouldBe setOf(BackupComponent.PREFERENCES)
             val plan = RestorePlanner.create(
                 archive,
-                RestoreRequest(RestoreMode.MERGE, setOf(BackupComponent.PREFERENCES)),
+                setOf(BackupComponent.PREFERENCES),
             ) as RestorePlanResult.Valid
             plan.plan.componentsToStage.single().entries.map { it.archivePath } shouldBe
                 listOf(BackupArchive.PREFERENCES_PATH)
@@ -529,7 +529,7 @@ class BackupArchiveTest :
                 second.components.map { it.component to it.entries.map { entry -> entry.archivePath } }
         }
 
-        test("merge plans stage selected components without reset operations") {
+        test("plans stage selected components in staging order") {
             val archive = validArchive(
                 metadataEntry(),
                 file(BackupArchive.PREFERENCES_PATH, size = 3),
@@ -538,13 +538,10 @@ class BackupArchiveTest :
             )
             val result = RestorePlanner.create(
                 archive,
-                RestoreRequest(
-                    mode = RestoreMode.MERGE,
-                    selectedComponents = linkedSetOf(
-                        BackupComponent.PREFERENCES,
-                        BackupComponent.CLIPBOARD_TEXT,
-                        BackupComponent.KEYBOARD_EXTENSIONS,
-                    ),
+                linkedSetOf(
+                    BackupComponent.PREFERENCES,
+                    BackupComponent.CLIPBOARD_TEXT,
+                    BackupComponent.KEYBOARD_EXTENSIONS,
                 ),
             ) as RestorePlanResult.Valid
 
@@ -553,11 +550,10 @@ class BackupArchiveTest :
                 BackupComponent.KEYBOARD_EXTENSIONS,
                 BackupComponent.CLIPBOARD_TEXT,
             )
-            result.plan.resetComponentsOnCommit shouldBe emptyList()
             result.plan.declaredComponentBytes shouldBe 15
         }
 
-        test("replace plans reset exactly the selected present components") {
+        test("plans include only selected present components") {
             val archive = validArchive(
                 metadataEntry(),
                 directory(BackupArchive.KEYBOARD_ROOT),
@@ -566,12 +562,9 @@ class BackupArchiveTest :
             )
             val result = RestorePlanner.create(
                 archive,
-                RestoreRequest(
-                    mode = RestoreMode.REPLACE_SELECTED,
-                    selectedComponents = setOf(
-                        BackupComponent.PREFERENCES,
-                        BackupComponent.KEYBOARD_EXTENSIONS,
-                    ),
+                setOf(
+                    BackupComponent.PREFERENCES,
+                    BackupComponent.KEYBOARD_EXTENSIONS,
                 ),
             ) as RestorePlanResult.Valid
 
@@ -579,22 +572,18 @@ class BackupArchiveTest :
                 BackupComponent.PREFERENCES,
                 BackupComponent.KEYBOARD_EXTENSIONS,
             )
-            result.plan.resetComponentsOnCommit shouldBe listOf(
-                BackupComponent.PREFERENCES,
-                BackupComponent.KEYBOARD_EXTENSIONS,
-            )
         }
 
-        test("planner rejects empty and unavailable selections before producing actions") {
+        test("planner rejects empty and unavailable selections before producing a plan") {
             val archive = validArchive(metadataEntry(), file(BackupArchive.PREFERENCES_PATH))
 
             RestorePlanner.create(
                 archive,
-                RestoreRequest(RestoreMode.MERGE, emptySet()),
+                emptySet(),
             ) shouldBe RestorePlanResult.Invalid(RestorePlanFailure.EMPTY_SELECTION)
             RestorePlanner.create(
                 archive,
-                RestoreRequest(RestoreMode.REPLACE_SELECTED, setOf(BackupComponent.THEME_EXTENSIONS)),
+                setOf(BackupComponent.THEME_EXTENSIONS),
             ) shouldBe RestorePlanResult.Invalid(RestorePlanFailure.COMPONENT_UNAVAILABLE)
         }
 
@@ -608,17 +597,13 @@ class BackupArchiveTest :
             )
             val result = RestorePlanner.create(
                 archive,
-                RestoreRequest(
-                    RestoreMode.MERGE,
-                    linkedSetOf(BackupComponent.CLIPBOARD_VIDEOS, BackupComponent.CLIPBOARD_IMAGES),
-                ),
+                linkedSetOf(BackupComponent.CLIPBOARD_VIDEOS, BackupComponent.CLIPBOARD_IMAGES),
             ) as RestorePlanResult.Valid
 
             result.plan.clipboardMediaCandidatesToStage.map { it.archivePath } shouldBe listOf(
                 "${BackupArchive.CLIPBOARD_MEDIA_ROOT}/1",
                 "${BackupArchive.CLIPBOARD_MEDIA_ROOT}/2",
             )
-            result.plan.clipboardMediaPolicy shouldBe ClipboardMediaPolicy.COPY_SELECTED_REFERENCES
             result.plan.declaredComponentBytes shouldBe 5
         }
 
@@ -630,24 +615,18 @@ class BackupArchiveTest :
             )
             val first = RestorePlanner.create(
                 archive,
-                RestoreRequest(
-                    RestoreMode.REPLACE_SELECTED,
-                    linkedSetOf(BackupComponent.PREFERENCES, BackupComponent.KEYBOARD_EXTENSIONS),
-                ),
+                linkedSetOf(BackupComponent.PREFERENCES, BackupComponent.KEYBOARD_EXTENSIONS),
             )
             val second = RestorePlanner.create(
                 archive,
-                RestoreRequest(
-                    RestoreMode.REPLACE_SELECTED,
-                    linkedSetOf(BackupComponent.KEYBOARD_EXTENSIONS, BackupComponent.PREFERENCES),
-                ),
+                linkedSetOf(BackupComponent.KEYBOARD_EXTENSIONS, BackupComponent.PREFERENCES),
             )
 
             (first as RestorePlanResult.Valid).plan.toString() shouldBe
                 (second as RestorePlanResult.Valid).plan.toString()
         }
 
-        test("every component subset preserves the exact merge and replace scope") {
+        test("every component subset stages exactly its selected entries and media candidates") {
             val archive = validArchive(
                 metadataEntry(),
                 directory(BackupArchive.KEYBOARD_ROOT),
@@ -663,28 +642,18 @@ class BackupArchiveTest :
                 val selected = BackupComponent.entries
                     .filterIndexed { index, _ -> mask and (1 shl index) != 0 }
                     .toSet()
-                RestoreMode.entries.forEach { mode ->
-                    val result = RestorePlanner.create(
-                        archive,
-                        RestoreRequest(mode, selected),
-                    ) as RestorePlanResult.Valid
-                    result.plan.componentsToStage.mapTo(linkedSetOf()) { it.component } shouldBe selected
-                    result.plan.resetComponentsOnCommit.toSet() shouldBe
-                        if (mode == RestoreMode.REPLACE_SELECTED) selected else emptySet()
-                    val needsMedia = selected.any {
-                        it == BackupComponent.CLIPBOARD_IMAGES ||
-                            it == BackupComponent.CLIPBOARD_VIDEOS
-                    }
-                    result.plan.clipboardMediaPolicy shouldBe when {
-                        !needsMedia -> ClipboardMediaPolicy.NONE
-                        mode == RestoreMode.MERGE -> ClipboardMediaPolicy.COPY_SELECTED_REFERENCES
-                        else -> ClipboardMediaPolicy.RECONCILE_SELECTED_REFERENCES
-                    }
+                val result = RestorePlanner.create(archive, selected) as RestorePlanResult.Valid
+                result.plan.componentsToStage.mapTo(linkedSetOf()) { it.component } shouldBe selected
+                val needsMedia = selected.any {
+                    it == BackupComponent.CLIPBOARD_IMAGES ||
+                        it == BackupComponent.CLIPBOARD_VIDEOS
                 }
+                result.plan.clipboardMediaCandidatesToStage.map { it.archivePath } shouldBe
+                    if (needsMedia) listOf("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/1") else emptyList()
             }
         }
 
-        test("partial clipboard replacement requires reference-aware media reconciliation") {
+        test("partial clipboard selection includes one index with shared media candidates") {
             val archive = validArchive(
                 metadataEntry(),
                 file(BackupArchive.CLIPBOARD_IMAGES_PATH),
@@ -694,16 +663,13 @@ class BackupArchiveTest :
             val plan = (
                 RestorePlanner.create(
                     archive,
-                    RestoreRequest(
-                        RestoreMode.REPLACE_SELECTED,
-                        setOf(BackupComponent.CLIPBOARD_IMAGES),
-                    ),
+                    setOf(BackupComponent.CLIPBOARD_IMAGES),
                 ) as RestorePlanResult.Valid
                 ).plan
 
-            plan.resetComponentsOnCommit shouldBe listOf(BackupComponent.CLIPBOARD_IMAGES)
             plan.componentsToStage.map { it.component } shouldBe listOf(BackupComponent.CLIPBOARD_IMAGES)
-            plan.clipboardMediaPolicy shouldBe ClipboardMediaPolicy.RECONCILE_SELECTED_REFERENCES
+            plan.clipboardMediaCandidatesToStage.map { it.archivePath } shouldBe
+                listOf("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/1")
         }
 
         test("validated snapshots and plans do not expose mutable collections") {
@@ -716,15 +682,11 @@ class BackupArchiveTest :
             }
 
             val selected = mutableSetOf(BackupComponent.PREFERENCES)
-            val request = RestoreRequest(RestoreMode.REPLACE_SELECTED, selected)
+            val plan = (RestorePlanner.create(archive, selected) as RestorePlanResult.Valid).plan
             selected.clear()
+            plan.componentsToStage.map { it.component } shouldBe listOf(BackupComponent.PREFERENCES)
             shouldThrow<UnsupportedOperationException> {
-                (request.selectedComponents as MutableSet<BackupComponent>).clear()
-            }
-            val plan = (RestorePlanner.create(archive, request) as RestorePlanResult.Valid).plan
-            plan.resetComponentsOnCommit shouldBe listOf(BackupComponent.PREFERENCES)
-            shouldThrow<UnsupportedOperationException> {
-                (plan.resetComponentsOnCommit as MutableList<BackupComponent>).clear()
+                (plan.componentsToStage as MutableList<ValidatedComponent>).clear()
             }
         }
 
@@ -756,7 +718,7 @@ class BackupArchiveTest :
             valid.components.single().entries.single().toString() shouldNotContain marker
             RestorePlanner.create(
                 valid,
-                RestoreRequest(RestoreMode.MERGE, setOf(BackupComponent.KEYBOARD_EXTENSIONS)),
+                setOf(BackupComponent.KEYBOARD_EXTENSIONS),
             ).toString() shouldNotContain marker
         }
     })
