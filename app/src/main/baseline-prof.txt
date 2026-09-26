@@ -1866,7 +1866,6 @@ HSPLdev/patrickgold/florisboard/app/FlorisAppActivity;->onPause()V
 HSPLdev/patrickgold/florisboard/app/FlorisAppActivityKt;-><clinit>()V
 HSPLdev/patrickgold/florisboard/app/Routes;-><clinit>()V
 HSPLdev/patrickgold/florisboard/app/Routes;-><init>()V
-HSPLdev/patrickgold/florisboard/app/apptheme/ShapeKt;-><clinit>()V
 HSPLdev/patrickgold/florisboard/app/apptheme/ThemeKt;-><clinit>()V
 HSPLdev/patrickgold/florisboard/app/apptheme/ThemeKt;->FlorisAppTheme(Ldev/patrickgold/florisboard/app/AppTheme;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
 HSPLdev/patrickgold/florisboard/app/apptheme/TypeKt;-><clinit>()V
@@ -3327,7 +3326,6 @@ Ldev/patrickgold/florisboard/app/FlorisAppActivity$onCreate$2;
 Ldev/patrickgold/florisboard/app/FlorisAppActivity;
 Ldev/patrickgold/florisboard/app/FlorisAppActivityKt;
 Ldev/patrickgold/florisboard/app/Routes;
-Ldev/patrickgold/florisboard/app/apptheme/ShapeKt;
 Ldev/patrickgold/florisboard/app/apptheme/ThemeKt;
 Ldev/patrickgold/florisboard/app/apptheme/TypeKt;
 Ldev/patrickgold/florisboard/app/settings/theme/DisplayKbdAfterDialogs;
