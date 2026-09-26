@@ -821,9 +821,11 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             KeyCode.CHAR_WIDTH_SWITCHER -> handleCharWidthSwitch()
             KeyCode.CHAR_WIDTH_FULL -> handleCharWidthFull()
             KeyCode.CHAR_WIDTH_HALF -> handleCharWidthHalf()
-            KeyCode.CLIPBOARD_CUT -> editorInstance.performClipboardCut()
-            KeyCode.CLIPBOARD_COPY -> editorInstance.performClipboardCopy()
-            KeyCode.CLIPBOARD_PASTE -> editorInstance.performClipboardPaste()
+            KeyCode.CLIPBOARD_CUT -> editorInstance.performClipboardCut { clipboardManager.addNewPlaintext(it) }
+            KeyCode.CLIPBOARD_COPY -> editorInstance.performClipboardCopy { clipboardManager.addNewPlaintext(it) }
+            KeyCode.CLIPBOARD_PASTE -> editorInstance.performClipboardPaste(clipboardManager.primaryClip) {
+                clipboardManager.pasteItem(it)
+            }
             KeyCode.CLIPBOARD_SELECT -> handleClipboardSelect()
             KeyCode.CLIPBOARD_SELECT_ALL -> editorInstance.performClipboardSelectAll()
             KeyCode.CLIPBOARD_CLEAR_HISTORY -> clipboardManager.clearHistory()

@@ -34,14 +34,18 @@ import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.autocorrectPluginManager
+import dev.patrickgold.florisboard.clipboardManager
+import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.core.SubtypeJsonConfig
+import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -467,6 +471,69 @@ class TextKeyboardTouchE2eTest {
             durationMs = repeatObservationDuration(),
             context = "after changing layouts while n was held",
         )
+    }
+
+    @Test
+    fun clipboardCopyCutAndPasteKeepEditorSelectionAndCurrentClip() {
+        val clipboard by instrumentation.targetContext.clipboardManager()
+        val keyboardManager by instrumentation.targetContext.keyboardManager()
+        val editorInstance by instrumentation.targetContext.editorInstance()
+        runBlocking { withTimeout(10_000L) { clipboard.awaitInitialization() } }
+        val originalClip = clipboard.primaryClip
+
+        fun selectMiddle() {
+            instrumentation.runOnMainSync { editor.setSelection(1, 3) }
+            waitUntil("IME did not observe selected text") {
+                editorInstance.activeContent.selection == EditorRange(1, 3)
+            }
+        }
+
+        fun sendClipboardKey(data: TextKeyData) {
+            instrumentation.runOnMainSync { keyboardManager.inputEventDispatcher.sendDownUp(data) }
+        }
+
+        fun selection(): Pair<Int, Int> {
+            var result = 0 to 0
+            instrumentation.runOnMainSync { result = editor.selectionStart to editor.selectionEnd }
+            return result
+        }
+
+        fun clearClipboard() {
+            clipboard.updatePrimaryClip(null)
+            waitUntil("primary clip was not cleared") { clipboard.primaryClip == null }
+        }
+
+        try {
+            clearClipboard()
+            setEditorText("abcd")
+            selectMiddle()
+            sendClipboardKey(TextKeyData.CLIPBOARD_COPY)
+            waitUntil("copy did not publish the selection") { clipboard.primaryClip?.text == "bc" }
+            waitUntil("copy did not collapse the selection") { selection() == (3 to 3) }
+            assertEquals("abcd", readEditorText())
+
+            clearClipboard()
+            setEditorText("abcd")
+            selectMiddle()
+            sendClipboardKey(TextKeyData.CLIPBOARD_CUT)
+            waitForText("ad")
+            waitUntil("cut did not publish the selection") { clipboard.primaryClip?.text == "bc" }
+
+            setEditorText("")
+            sendClipboardKey(TextKeyData.CLIPBOARD_PASTE)
+            waitForText("bc")
+
+            clearClipboard()
+            setEditorText("keep")
+            sendClipboardKey(TextKeyData.CLIPBOARD_PASTE)
+            instrumentation.waitForIdleSync()
+            assertEquals("keep", readEditorText())
+        } finally {
+            clipboard.updatePrimaryClip(originalClip)
+            waitUntil("original primary clip was not restored") {
+                clipboard.primaryClip == originalClip
+            }
+        }
     }
 
     @Test

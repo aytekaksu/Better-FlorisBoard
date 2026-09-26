@@ -20,6 +20,9 @@ import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
+import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
+import dev.patrickgold.florisboard.ime.clipboard.provider.OwnedClipboardMediaUri
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.ObservableKeyboardState
 import dev.patrickgold.florisboard.ime.nlp.BreakIteratorGroup
@@ -32,6 +35,31 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class EditorKeyboardStateAndroidTest {
+    @Test
+    fun mediaPasteHandsTheCurrentItemToItsOwnerAndNullPasteDoesNothing() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val editor = EditorInstance(
+                instrumentation.targetContext,
+                lazy { ObservableKeyboardState.new() },
+                lazy { TestEditorComposingPolicy() },
+            ) { }
+            val media = ClipboardItem(
+                type = ItemType.IMAGE,
+                text = null,
+                uri = requireNotNull(OwnedClipboardMediaUri.create(1L, ItemType.IMAGE)).uri,
+                creationTimestampMs = 1L,
+                isPinned = false,
+                mimeTypes = listOf("image/png"),
+            )
+            var handedOff: ClipboardItem? = null
+            assertFalse(editor.performClipboardPaste(null) { handedOff = it })
+            assertEquals(null, handedOff)
+            assertTrue(editor.performClipboardPaste(media) { handedOff = it })
+            assertEquals(media, handedOff)
+        }
+    }
+
     @Test
     fun startInputUsesInjectedStateAndReevaluatesShiftSynchronously() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
