@@ -73,6 +73,22 @@ private fun <V : Any> resourceEntries(vararg entries: Pair<V, Int>): @Composable
     }
 }
 
+private fun <V : Any> describedResourceEntries(
+    vararg entries: Triple<V, Int, Int>,
+    showDescriptionOnlyIfSelected: Boolean = false,
+): @Composable () -> List<ListPreferenceEntry<V>> = {
+    listPrefEntries {
+        for ((key, labelRes, descriptionRes) in entries) {
+            entry(
+                key = key,
+                label = stringRes(labelRes),
+                description = stringRes(descriptionRes),
+                showDescriptionOnlyIfSelected = showDescriptionOnlyIfSelected,
+            )
+        }
+    }
+}
+
 private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable () -> List<ListPreferenceEntry<*>>>(
     AppTheme::class to DEFAULT to resourceEntries(
         AppTheme.AUTO to R.string.settings__system_default,
@@ -90,30 +106,16 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
         CapitalizationBehavior.CAPSLOCK_BY_DOUBLE_TAP to R.string.enum__capitalization_behavior__capslock_by_double_tap,
         CapitalizationBehavior.CAPSLOCK_BY_CYCLE to R.string.enum__capitalization_behavior__capslock_by_cycle,
     ),
-    ClipboardSyncBehavior::class to DEFAULT to {
-        listPrefEntries {
-            entry(
-                key = ClipboardSyncBehavior.NO_EVENTS,
-                label = stringRes(R.string.enum__clipboard_sync_behavior__no_events),
-                description = stringRes(R.string.enum__clipboard_sync_behavior__no_events__description),
-            )
-            entry(
-                key = ClipboardSyncBehavior.ONLY_CLEAR_EVENTS,
-                label = stringRes(R.string.enum__clipboard_sync_behavior__only_clear_events),
-                description = stringRes(R.string.enum__clipboard_sync_behavior__only_clear_events__description),
-            )
-            entry(
-                key = ClipboardSyncBehavior.ONLY_SET_EVENTS,
-                label = stringRes(R.string.enum__clipboard_sync_behavior__only_set_events),
-                description = stringRes(R.string.enum__clipboard_sync_behavior__only_set_events__description),
-            )
-            entry(
-                key = ClipboardSyncBehavior.ALL_EVENTS,
-                label = stringRes(R.string.enum__clipboard_sync_behavior__all_events),
-                description = stringRes(R.string.enum__clipboard_sync_behavior__all_events__description),
-            )
-        }
-    },
+    ClipboardSyncBehavior::class to DEFAULT to describedResourceEntries(
+        Triple(ClipboardSyncBehavior.NO_EVENTS, R.string.enum__clipboard_sync_behavior__no_events,
+            R.string.enum__clipboard_sync_behavior__no_events__description),
+        Triple(ClipboardSyncBehavior.ONLY_CLEAR_EVENTS, R.string.enum__clipboard_sync_behavior__only_clear_events,
+            R.string.enum__clipboard_sync_behavior__only_clear_events__description),
+        Triple(ClipboardSyncBehavior.ONLY_SET_EVENTS, R.string.enum__clipboard_sync_behavior__only_set_events,
+            R.string.enum__clipboard_sync_behavior__only_set_events__description),
+        Triple(ClipboardSyncBehavior.ALL_EVENTS, R.string.enum__clipboard_sync_behavior__all_events,
+            R.string.enum__clipboard_sync_behavior__all_events__description),
+    ),
     ColorRepresentation::class to DEFAULT to {
         listPrefEntries {
             entry(
@@ -136,68 +138,36 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
             )
         }
     },
-    DisplayKbdAfterDialogs::class to DEFAULT to {
-        listPrefEntries {
-            entry(
-                key = DisplayKbdAfterDialogs.ALWAYS,
-                label = stringRes(R.string.enum__display_kbd_after_dialogs__always),
-                description = stringRes(R.string.enum__display_kbd_after_dialogs__always__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-            entry(
-                key = DisplayKbdAfterDialogs.NEVER,
-                label = stringRes(R.string.enum__display_kbd_after_dialogs__never),
-                description = stringRes(R.string.enum__display_kbd_after_dialogs__never__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-            entry(
-                key = DisplayKbdAfterDialogs.REMEMBER,
-                label = stringRes(R.string.enum__display_kbd_after_dialogs__remember),
-                description = stringRes(R.string.enum__display_kbd_after_dialogs__remember__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-        }
-    },
-    DisplayLanguageNamesIn::class to DEFAULT to {
-        listPrefEntries {
-            entry(
-                key = DisplayLanguageNamesIn.SYSTEM_LOCALE,
-                label = stringRes(R.string.enum__display_language_names_in__system_locale),
-                description = stringRes(R.string.enum__display_language_names_in__system_locale__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-            entry(
-                key = DisplayLanguageNamesIn.NATIVE_LOCALE,
-                label = stringRes(R.string.enum__display_language_names_in__native_locale),
-                description = stringRes(R.string.enum__display_language_names_in__native_locale__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-        }
-    },
-    EmojiHistory.UpdateStrategy::class to DEFAULT to {
-        listPrefEntries {
-            entry(
-                key = EmojiHistory.UpdateStrategy.AUTO_SORT_PREPEND,
-                label = stringRes(R.string.enum__emoji_history_update_strategy__auto_sort_prepend),
-                description = stringRes(R.string.enum__emoji_history_update_strategy__auto_sort_prepend__description),
-            )
-            entry(
-                key = EmojiHistory.UpdateStrategy.AUTO_SORT_APPEND,
-                label = stringRes(R.string.enum__emoji_history_update_strategy__auto_sort_append),
-                description = stringRes(R.string.enum__emoji_history_update_strategy__auto_sort_append__description),
-            )
-            entry(
-                key = EmojiHistory.UpdateStrategy.MANUAL_SORT_PREPEND,
-                label = stringRes(R.string.enum__emoji_history_update_strategy__manual_sort_prepend),
-                description = stringRes(R.string.enum__emoji_history_update_strategy__manual_sort_prepend__description),
-            )
-            entry(
-                key = EmojiHistory.UpdateStrategy.MANUAL_SORT_APPEND,
-                label = stringRes(R.string.enum__emoji_history_update_strategy__manual_sort_append),
-                description = stringRes(R.string.enum__emoji_history_update_strategy__manual_sort_append__description),
-            )
-        }
-    },
+    DisplayKbdAfterDialogs::class to DEFAULT to describedResourceEntries(
+        Triple(DisplayKbdAfterDialogs.ALWAYS, R.string.enum__display_kbd_after_dialogs__always,
+            R.string.enum__display_kbd_after_dialogs__always__description),
+        Triple(DisplayKbdAfterDialogs.NEVER, R.string.enum__display_kbd_after_dialogs__never,
+            R.string.enum__display_kbd_after_dialogs__never__description),
+        Triple(DisplayKbdAfterDialogs.REMEMBER, R.string.enum__display_kbd_after_dialogs__remember,
+            R.string.enum__display_kbd_after_dialogs__remember__description),
+        showDescriptionOnlyIfSelected = true,
+    ),
+    DisplayLanguageNamesIn::class to DEFAULT to describedResourceEntries(
+        Triple(DisplayLanguageNamesIn.SYSTEM_LOCALE, R.string.enum__display_language_names_in__system_locale,
+            R.string.enum__display_language_names_in__system_locale__description),
+        Triple(DisplayLanguageNamesIn.NATIVE_LOCALE, R.string.enum__display_language_names_in__native_locale,
+            R.string.enum__display_language_names_in__native_locale__description),
+        showDescriptionOnlyIfSelected = true,
+    ),
+    EmojiHistory.UpdateStrategy::class to DEFAULT to describedResourceEntries(
+        Triple(EmojiHistory.UpdateStrategy.AUTO_SORT_PREPEND,
+            R.string.enum__emoji_history_update_strategy__auto_sort_prepend,
+            R.string.enum__emoji_history_update_strategy__auto_sort_prepend__description),
+        Triple(EmojiHistory.UpdateStrategy.AUTO_SORT_APPEND,
+            R.string.enum__emoji_history_update_strategy__auto_sort_append,
+            R.string.enum__emoji_history_update_strategy__auto_sort_append__description),
+        Triple(EmojiHistory.UpdateStrategy.MANUAL_SORT_PREPEND,
+            R.string.enum__emoji_history_update_strategy__manual_sort_prepend,
+            R.string.enum__emoji_history_update_strategy__manual_sort_prepend__description),
+        Triple(EmojiHistory.UpdateStrategy.MANUAL_SORT_APPEND,
+            R.string.enum__emoji_history_update_strategy__manual_sort_append,
+            R.string.enum__emoji_history_update_strategy__manual_sort_append__description),
+    ),
     EmojiSkinTone::class to DEFAULT to {
         listPrefEntries {
             entry(
@@ -244,80 +214,38 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
             )
         }
     },
-    EmojiSuggestionType::class to DEFAULT to {
-        listPrefEntries {
-            entry(
-                key = EmojiSuggestionType.LEADING_COLON,
-                label = stringRes(R.string.enum__emoji_suggestion_type__leading_colon),
-                description = stringRes(R.string.enum__emoji_suggestion_type__leading_colon__description),
-            )
-            entry(
-                key = EmojiSuggestionType.INLINE_TEXT,
-                label = stringRes(R.string.enum__emoji_suggestion_type__inline_text),
-                description = stringRes(R.string.enum__emoji_suggestion_type__inline_text__description),
-            )
-        }
-    },
-    ExtendedActionsPlacement::class to DEFAULT to {
-        listPrefEntries {
-            entry(
-                key = ExtendedActionsPlacement.ABOVE_CANDIDATES,
-                label = stringRes(R.string.enum__extended_actions_placement__above_candidates),
-                description = stringRes(R.string.enum__extended_actions_placement__above_candidates__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-            entry(
-                key = ExtendedActionsPlacement.BELOW_CANDIDATES,
-                label = stringRes(R.string.enum__extended_actions_placement__below_candidates),
-                description = stringRes(R.string.enum__extended_actions_placement__below_candidates__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-            entry(
-                key = ExtendedActionsPlacement.OVERLAY_APP_UI,
-                label = stringRes(R.string.enum__extended_actions_placement__overlay_app_ui),
-                description = stringRes(R.string.enum__extended_actions_placement__overlay_app_ui__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-        }
-    },
-    HapticVibrationMode::class to DEFAULT to {
-        listPrefEntries {
-            entry(
-                key = HapticVibrationMode.USE_VIBRATOR_DIRECTLY,
-                label = stringRes(R.string.enum__haptic_vibration_mode__use_vibrator_directly),
-                description = stringRes(R.string.enum__haptic_vibration_mode__use_vibrator_directly__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-            entry(
-                key = HapticVibrationMode.USE_HAPTIC_FEEDBACK_INTERFACE,
-                label = stringRes(R.string.enum__haptic_vibration_mode__use_haptic_feedback_interface),
-                description = stringRes(R.string.enum__haptic_vibration_mode__use_haptic_feedback_interface__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-        }
-    },
-    KeyHintMode::class to DEFAULT to {
-        listPrefEntries {
-            entry(
-                key = KeyHintMode.ACCENT_PRIORITY,
-                label = stringRes(R.string.enum__key_hint_mode__accent_priority),
-                description = stringRes(R.string.enum__key_hint_mode__accent_priority__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-            entry(
-                key = KeyHintMode.HINT_PRIORITY,
-                label = stringRes(R.string.enum__key_hint_mode__hint_priority),
-                description = stringRes(R.string.enum__key_hint_mode__hint_priority__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-            entry(
-                key = KeyHintMode.SMART_PRIORITY,
-                label = stringRes(R.string.enum__key_hint_mode__smart_priority),
-                description = stringRes(R.string.enum__key_hint_mode__smart_priority__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-        }
-    },
+    EmojiSuggestionType::class to DEFAULT to describedResourceEntries(
+        Triple(EmojiSuggestionType.LEADING_COLON, R.string.enum__emoji_suggestion_type__leading_colon,
+            R.string.enum__emoji_suggestion_type__leading_colon__description),
+        Triple(EmojiSuggestionType.INLINE_TEXT, R.string.enum__emoji_suggestion_type__inline_text,
+            R.string.enum__emoji_suggestion_type__inline_text__description),
+    ),
+    ExtendedActionsPlacement::class to DEFAULT to describedResourceEntries(
+        Triple(ExtendedActionsPlacement.ABOVE_CANDIDATES, R.string.enum__extended_actions_placement__above_candidates,
+            R.string.enum__extended_actions_placement__above_candidates__description),
+        Triple(ExtendedActionsPlacement.BELOW_CANDIDATES, R.string.enum__extended_actions_placement__below_candidates,
+            R.string.enum__extended_actions_placement__below_candidates__description),
+        Triple(ExtendedActionsPlacement.OVERLAY_APP_UI, R.string.enum__extended_actions_placement__overlay_app_ui,
+            R.string.enum__extended_actions_placement__overlay_app_ui__description),
+        showDescriptionOnlyIfSelected = true,
+    ),
+    HapticVibrationMode::class to DEFAULT to describedResourceEntries(
+        Triple(HapticVibrationMode.USE_VIBRATOR_DIRECTLY, R.string.enum__haptic_vibration_mode__use_vibrator_directly,
+            R.string.enum__haptic_vibration_mode__use_vibrator_directly__description),
+        Triple(HapticVibrationMode.USE_HAPTIC_FEEDBACK_INTERFACE,
+            R.string.enum__haptic_vibration_mode__use_haptic_feedback_interface,
+            R.string.enum__haptic_vibration_mode__use_haptic_feedback_interface__description),
+        showDescriptionOnlyIfSelected = true,
+    ),
+    KeyHintMode::class to DEFAULT to describedResourceEntries(
+        Triple(KeyHintMode.ACCENT_PRIORITY, R.string.enum__key_hint_mode__accent_priority,
+            R.string.enum__key_hint_mode__accent_priority__description),
+        Triple(KeyHintMode.HINT_PRIORITY, R.string.enum__key_hint_mode__hint_priority,
+            R.string.enum__key_hint_mode__hint_priority__description),
+        Triple(KeyHintMode.SMART_PRIORITY, R.string.enum__key_hint_mode__smart_priority,
+            R.string.enum__key_hint_mode__smart_priority__description),
+        showDescriptionOnlyIfSelected = true,
+    ),
     KeyHintPlacement::class to DEFAULT to resourceEntries(
         KeyHintPlacement.CORNER to R.string.enum__key_hint_placement__corner,
         KeyHintPlacement.INSET to R.string.enum__key_hint_placement__inset,
@@ -327,28 +255,15 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
             R.string.enum__incognito_display_mode__replace_shared_actions_toggle,
         IncognitoDisplayMode.DISPLAY_BEHIND_KEYBOARD to R.string.enum__incognito_display_mode__display_behind_keyboard,
     ),
-    IncognitoMode::class to DEFAULT to {
-        listPrefEntries {
-            entry(
-                key = IncognitoMode.FORCE_OFF,
-                label = stringRes(R.string.enum__incognito_mode__force_off),
-                description = stringRes(R.string.enum__incognito_mode__force_off__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-            entry(
-                key = IncognitoMode.DYNAMIC_ON_OFF,
-                label = stringRes(R.string.enum__incognito_mode__dynamic_on_off),
-                description = stringRes(R.string.enum__incognito_mode__dynamic_on_off__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-            entry(
-                key = IncognitoMode.FORCE_ON,
-                label = stringRes(R.string.enum__incognito_mode__force_on),
-                description = stringRes(R.string.enum__incognito_mode__force_on__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-        }
-    },
+    IncognitoMode::class to DEFAULT to describedResourceEntries(
+        Triple(IncognitoMode.FORCE_OFF, R.string.enum__incognito_mode__force_off,
+            R.string.enum__incognito_mode__force_off__description),
+        Triple(IncognitoMode.DYNAMIC_ON_OFF, R.string.enum__incognito_mode__dynamic_on_off,
+            R.string.enum__incognito_mode__dynamic_on_off__description),
+        Triple(IncognitoMode.FORCE_ON, R.string.enum__incognito_mode__force_on,
+            R.string.enum__incognito_mode__force_on__description),
+        showDescriptionOnlyIfSelected = true,
+    ),
     InputFeedbackActivationMode::class to "audio" to resourceEntries(
         InputFeedbackActivationMode.RESPECT_SYSTEM_SETTINGS to
             R.string.enum__input_feedback_activation_mode__audio_respect_system_settings,
@@ -390,30 +305,17 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
         LandscapeInputUiMode.ALWAYS_SHOW to R.string.enum__landscape_input_ui_mode__always_show,
         LandscapeInputUiMode.DYNAMICALLY_SHOW to R.string.enum__landscape_input_ui_mode__dynamically_show,
     ),
-    SmartbarLayout::class to DEFAULT to {
-        listPrefEntries {
-            entry(
-                key = SmartbarLayout.SUGGESTIONS_ONLY,
-                label = stringRes(R.string.enum__smartbar_layout__suggestions_only),
-                description = stringRes(R.string.enum__smartbar_layout__suggestions_only__description),
-            )
-            entry(
-                key = SmartbarLayout.ACTIONS_ONLY,
-                label = stringRes(R.string.enum__smartbar_layout__actions_only),
-                description = stringRes(R.string.enum__smartbar_layout__actions_only__description),
-            )
-            entry(
-                key = SmartbarLayout.SUGGESTIONS_ACTIONS_SHARED,
-                label = stringRes(R.string.enum__smartbar_layout__suggestions_action_shared),
-                description = stringRes(R.string.enum__smartbar_layout__suggestions_action_shared__description),
-            )
-            entry(
-                key = SmartbarLayout.SUGGESTIONS_ACTIONS_EXTENDED,
-                label = stringRes(R.string.enum__smartbar_layout__suggestions_actions_extended),
-                description = stringRes(R.string.enum__smartbar_layout__suggestions_actions_extended__description),
-            )
-        }
-    },
+    SmartbarLayout::class to DEFAULT to describedResourceEntries(
+        Triple(SmartbarLayout.SUGGESTIONS_ONLY, R.string.enum__smartbar_layout__suggestions_only,
+            R.string.enum__smartbar_layout__suggestions_only__description),
+        Triple(SmartbarLayout.ACTIONS_ONLY, R.string.enum__smartbar_layout__actions_only,
+            R.string.enum__smartbar_layout__actions_only__description),
+        Triple(SmartbarLayout.SUGGESTIONS_ACTIONS_SHARED, R.string.enum__smartbar_layout__suggestions_action_shared,
+            R.string.enum__smartbar_layout__suggestions_action_shared__description),
+        Triple(SmartbarLayout.SUGGESTIONS_ACTIONS_EXTENDED,
+            R.string.enum__smartbar_layout__suggestions_actions_extended,
+            R.string.enum__smartbar_layout__suggestions_actions_extended__description),
+    ),
     SharedActionsTransitionMode::class to DEFAULT to resourceEntries(
         SharedActionsTransitionMode.CURRENT to R.string.enum__shared_actions_transition_mode__current,
         SharedActionsTransitionMode.CLASSIC to R.string.enum__shared_actions_transition_mode__classic,
@@ -423,28 +325,15 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
         SmartbarMotionMode.REDUCED to R.string.enum__smartbar_motion_mode__reduced,
         SmartbarMotionMode.OFF to R.string.enum__smartbar_motion_mode__off,
     ),
-    SnyggLevel::class to DEFAULT to {
-        listPrefEntries {
-            entry(
-                key = SnyggLevel.BASIC,
-                label = stringRes(R.string.enum__snygg_level__basic),
-                description = stringRes(R.string.enum__snygg_level__basic__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-            entry(
-                key = SnyggLevel.ADVANCED,
-                label = stringRes(R.string.enum__snygg_level__advanced),
-                description = stringRes(R.string.enum__snygg_level__advanced__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-            entry(
-                key = SnyggLevel.DEVELOPER,
-                label = stringRes(R.string.enum__snygg_level__developer),
-                description = stringRes(R.string.enum__snygg_level__developer__description),
-                showDescriptionOnlyIfSelected = true,
-            )
-        }
-    },
+    SnyggLevel::class to DEFAULT to describedResourceEntries(
+        Triple(SnyggLevel.BASIC, R.string.enum__snygg_level__basic,
+            R.string.enum__snygg_level__basic__description),
+        Triple(SnyggLevel.ADVANCED, R.string.enum__snygg_level__advanced,
+            R.string.enum__snygg_level__advanced__description),
+        Triple(SnyggLevel.DEVELOPER, R.string.enum__snygg_level__developer,
+            R.string.enum__snygg_level__developer__description),
+        showDescriptionOnlyIfSelected = true,
+    ),
     SpaceBarMode::class to DEFAULT to resourceEntries(
         SpaceBarMode.NOTHING to R.string.enum__space_bar_mode__nothing,
         SpaceBarMode.CURRENT_LANGUAGE to R.string.enum__space_bar_mode__current_language,
