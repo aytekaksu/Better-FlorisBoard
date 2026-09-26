@@ -58,6 +58,29 @@ class AutocorrectSuggestionRequestCoordinatorTest :
             coordinator.cancelRequest(0L) shouldBe emptyList()
         }
 
+        test("malformed reply can fail only the current request on its binding") {
+            val coordinator = coordinator()
+            val old = coordinator.issue(1L).shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>().lease
+            val current = coordinator.issue(2L).shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>().lease
+            val epoch = current.epoch.value
+
+            coordinator.currentLeaseForMalformedReply(old.requestId.value, epoch) shouldBe null
+            coordinator.currentLeaseForMalformedReply(current.requestId.value + 100L, epoch) shouldBe null
+            coordinator.currentLeaseForMalformedReply(null, epoch + 1L) shouldBe null
+            coordinator.currentLeaseForMalformedReply(current.requestId.value, epoch) shouldBe current
+            coordinator.currentLeaseForMalformedReply(null, epoch) shouldBe current
+            coordinator.snapshot().pendingRequest?.lease shouldBe current
+        }
+
+        test("cancelled hint request is no longer a malformed-reply fallback target") {
+            val coordinator = coordinator()
+            val lease = coordinator.issue(1L).shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>().lease
+
+            coordinator.cancelRequest(lease.requestId.value) shouldBe listOf(lease)
+            coordinator.currentLeaseForMalformedReply(null, lease.epoch.value) shouldBe null
+            coordinator.snapshot().healthOf(lease.providerId).consecutiveFailures shouldBe 0
+        }
+
         test("three send failures open the circuit until its measured cooldown") {
             val coordinator = coordinator(
                 circuitPolicy = CircuitPolicy(

@@ -75,6 +75,32 @@ class AutocorrectHostFailureRecoveryTest :
             }
         }
 
+        test("a malformed suggestion degrades only the current request and asks for fallback") {
+            val host = HostTestHarness(CircuitPolicy(failureThreshold = 1, recoveryDelayMillis = 100L))
+            host.startActiveSession()
+            val old = host.issue()
+            val current = host.issue()
+
+            host.dispatch(
+                HostEvent.RequestReply(old, RequestOutcome.Failure(ProviderFailureKind.MALFORMED_REPLY), T0),
+            ).singleEffect<HostEffect.RejectReply>().reason shouldBe ReplyRejectionReason.SUPERSEDED
+            host.state.pendingRequest?.lease shouldBe current
+            host.state.healthOf(ProviderA) shouldBe ProviderHealth()
+
+            val failure = host.dispatch(
+                HostEvent.RequestReply(current, RequestOutcome.Failure(ProviderFailureKind.MALFORMED_REPLY), T0),
+            )
+            assertSoftly {
+                host.state.pendingRequest shouldBe null
+                host.state.retiredRequests.last().reason shouldBe RetiredRequestReason.FAILED
+                host.state.healthOf(ProviderA).circuit.shouldBeInstanceOf<CircuitState.Open>()
+                failure.singleEffect<HostEffect.ProviderDegraded>().cause shouldBe
+                    ProviderFailureKind.MALFORMED_REPLY
+                failure.singleEffect<HostEffect.FallbackRequired>().reason shouldBe FallbackReason.REQUEST_FAILED
+                failure.singleEffect<HostEffect.ScheduleCircuitRecovery>().providerId shouldBe ProviderA
+            }
+        }
+
         test("a failed finish send releases the pending acknowledgement demand") {
             val host = HostTestHarness()
             host.startActiveSession()
