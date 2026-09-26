@@ -73,14 +73,18 @@ data class EmojiHistory(
 }
 
 object EmojiHistoryHelper {
-    private var emojiGuard = Mutex(locked = false)
+    private val emojiGuard = Mutex(locked = false)
 
-    suspend fun markEmojiUsed(prefs: FlorisPreferenceModel, emoji: Emoji): Unit = emojiGuard.withLock {
-        if (!prefs.emoji.historyEnabled.get()) {
-            return
-        }
+    private suspend fun updateHistory(
+        prefs: FlorisPreferenceModel,
+        skipMutation: Boolean = false,
+        transform: (EmojiHistory.Editor) -> EmojiHistory,
+    ): Unit = emojiGuard.withLock {
+        if (!prefs.emoji.historyEnabled.get() || skipMutation) return@withLock
+        prefs.emoji.historyData.set(transform(prefs.emoji.historyData.get().edit()))
+    }
 
-        val dataMut = prefs.emoji.historyData.get().edit()
+    suspend fun markEmojiUsed(prefs: FlorisPreferenceModel, emoji: Emoji): Unit = updateHistory(prefs) { dataMut ->
         val pinnedUS = prefs.emoji.historyPinnedUpdateStrategy.get()
         val recentUS = prefs.emoji.historyRecentUpdateStrategy.get()
         val pinnedMaxSize = prefs.emoji.historyPinnedMaxSize.get().let { maxSize ->
@@ -91,123 +95,61 @@ object EmojiHistoryHelper {
         }
 
         val pinnedIndex = dataMut.pinned.indexOf(emoji)
-        if (pinnedIndex != -1) {
-            if (pinnedUS.isAutomatic) {
-                dataMut.pinned.removeAt(pinnedIndex)
-                dataMut.pinned.addWithStrategy(pinnedUS, emoji)
-            } else {
-                // manual sort, keep item in place
-            }
-        } else {
-            val recentIndex = dataMut.recent.indexOf(emoji)
-            if (recentIndex != -1) {
-                if (recentUS.isAutomatic) {
-                    dataMut.recent.removeAt(recentIndex)
-                    dataMut.recent.addWithStrategy(recentUS, emoji)
-                } else {
-                    // manual sort, keep item in place
-                }
-            } else {
-                dataMut.recent.addWithStrategy(recentUS, emoji)
-            }
+        val isPinned = pinnedIndex != -1
+        val target = if (isPinned) dataMut.pinned else dataMut.recent
+        val index = if (isPinned) pinnedIndex else target.indexOf(emoji)
+        val strategy = if (isPinned) pinnedUS else recentUS
+        if (index == -1 || strategy.isAutomatic) {
+            if (index != -1) target.removeAt(index)
+            target.addWithStrategy(strategy, emoji)
         }
 
-        prefs.emoji.historyData.set(
-            EmojiHistory(
-                pinned = dataMut.pinned.takeWithStrategy(pinnedUS, pinnedMaxSize),
-                recent = dataMut.recent.takeWithStrategy(recentUS, recentMaxSize),
-            )
+        EmojiHistory(
+            pinned = dataMut.pinned.takeWithStrategy(pinnedUS, pinnedMaxSize),
+            recent = dataMut.recent.takeWithStrategy(recentUS, recentMaxSize),
         )
     }
 
-    suspend fun pinEmoji(prefs: FlorisPreferenceModel, emoji: Emoji): Unit = emojiGuard.withLock {
-        if (!prefs.emoji.historyEnabled.get()) {
-            return
-        }
-
-        val dataMut = prefs.emoji.historyData.get().edit()
+    suspend fun pinEmoji(prefs: FlorisPreferenceModel, emoji: Emoji): Unit = updateHistory(prefs) { dataMut ->
         val pinnedUS = prefs.emoji.historyPinnedUpdateStrategy.get()
-
-        val recentIndex = dataMut.recent.indexOf(emoji)
-        if (recentIndex != -1) {
-            dataMut.recent.removeAt(recentIndex)
-            dataMut.pinned.addWithStrategy(pinnedUS, emoji)
-        }
-
-        prefs.emoji.historyData.set(dataMut.build())
+        dataMut.recent.transferTo(dataMut.pinned, pinnedUS, emoji)
+        dataMut.build()
     }
 
-    suspend fun unpinEmoji(prefs: FlorisPreferenceModel, emoji: Emoji): Unit = emojiGuard.withLock {
-        if (!prefs.emoji.historyEnabled.get()) {
-            return
-        }
-
-        val dataMut = prefs.emoji.historyData.get().edit()
+    suspend fun unpinEmoji(prefs: FlorisPreferenceModel, emoji: Emoji): Unit = updateHistory(prefs) { dataMut ->
         val recentUS = prefs.emoji.historyRecentUpdateStrategy.get()
-
-        val pinnedIndex = dataMut.pinned.indexOf(emoji)
-        if (pinnedIndex != -1) {
-            dataMut.pinned.removeAt(pinnedIndex)
-            dataMut.recent.addWithStrategy(recentUS, emoji)
-        }
-
-        prefs.emoji.historyData.set(dataMut.build())
+        dataMut.pinned.transferTo(dataMut.recent, recentUS, emoji)
+        dataMut.build()
     }
 
-    suspend fun moveEmoji(prefs: FlorisPreferenceModel, emoji: Emoji, offset: Int): Unit = emojiGuard.withLock {
-        if (!prefs.emoji.historyEnabled.get() || offset == 0) {
-            return
+    suspend fun moveEmoji(prefs: FlorisPreferenceModel, emoji: Emoji, offset: Int): Unit =
+        updateHistory(prefs, skipMutation = offset == 0) { dataMut ->
+            val pinnedIndex = dataMut.pinned.indexOf(emoji)
+            val target = if (pinnedIndex != -1) dataMut.pinned else dataMut.recent
+            val index = if (pinnedIndex != -1) pinnedIndex else target.indexOf(emoji)
+            if (index != -1) target.move(index, offset)
+            dataMut.build()
         }
 
-        val dataMut = prefs.emoji.historyData.get().edit()
-
-        val pinnedIndex = dataMut.pinned.indexOf(emoji)
-        if (pinnedIndex != -1) {
-            dataMut.pinned.move(pinnedIndex, offset)
-        } else {
-            val recentIndex = dataMut.recent.indexOf(emoji)
-            if (recentIndex != -1) {
-                dataMut.recent.move(recentIndex, offset)
-            }
-        }
-
-        prefs.emoji.historyData.set(dataMut.build())
+    suspend fun removeEmoji(prefs: FlorisPreferenceModel, emoji: Emoji): Unit = updateHistory(prefs) { dataMut ->
+        if (!dataMut.pinned.remove(emoji)) dataMut.recent.remove(emoji)
+        dataMut.build()
     }
 
-    suspend fun removeEmoji(prefs: FlorisPreferenceModel, emoji: Emoji): Unit = emojiGuard.withLock {
-        if (!prefs.emoji.historyEnabled.get()) {
-            return
-        }
-
-        val dataMut = prefs.emoji.historyData.get().edit()
-
-        val pinnedIndex = dataMut.pinned.indexOf(emoji)
-        if (pinnedIndex != -1) {
-            dataMut.pinned.removeAt(pinnedIndex)
-        } else {
-            val recentIndex = dataMut.recent.indexOf(emoji)
-            if (recentIndex != -1) {
-                dataMut.recent.removeAt(recentIndex)
-            }
-        }
-
-        prefs.emoji.historyData.set(dataMut.build())
+    suspend fun deleteHistory(prefs: FlorisPreferenceModel): Unit = updateHistory(prefs) { dataMut ->
+        EmojiHistory(pinned = dataMut.pinned, recent = emptyList())
     }
 
-    suspend fun deleteHistory(prefs: FlorisPreferenceModel): Unit = emojiGuard.withLock {
-        if (!prefs.emoji.historyEnabled.get()) {
-            return
-        }
-        val dataMut = prefs.emoji.historyData.get().edit()
-        prefs.emoji.historyData.set(EmojiHistory(pinned = dataMut.pinned, listOf()))
+    suspend fun deletePinned(prefs: FlorisPreferenceModel): Unit = updateHistory(prefs) { dataMut ->
+        EmojiHistory(pinned = emptyList(), recent = dataMut.recent)
     }
 
-    suspend fun deletePinned(prefs: FlorisPreferenceModel): Unit = emojiGuard.withLock {
-        if (!prefs.emoji.historyEnabled.get()) {
-            return
-        }
-        val dataMut = prefs.emoji.historyData.get().edit()
-        prefs.emoji.historyData.set(EmojiHistory(pinned = listOf(), dataMut.recent))
+    private fun MutableList<Emoji>.transferTo(
+        destination: MutableList<Emoji>,
+        strategy: EmojiHistory.UpdateStrategy,
+        emoji: Emoji,
+    ) {
+        if (remove(emoji)) destination.addWithStrategy(strategy, emoji)
     }
 
     private fun MutableList<Emoji>.addWithStrategy(strategy: EmojiHistory.UpdateStrategy, emoji: Emoji) {
