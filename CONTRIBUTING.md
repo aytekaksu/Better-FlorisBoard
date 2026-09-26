@@ -33,7 +33,8 @@ Install:
 - Java 17;
 - the Android SDK version declared by the project;
 - Git;
-- optionally Python 3.10 or newer and standard Unix command-line tools.
+- Python 3.10 or newer for `qualityGate`;
+- optionally standard Unix command-line tools.
 
 Linux, macOS, and WSL2 are the main development environments. If IntelliJ
 cannot sync the current Android Gradle Plugin, enable its support for future
@@ -97,18 +98,9 @@ fork-specific text.
 
 During this development phase, change only the English source file at
 `app/src/main/res/values/strings.xml`. Ordinary pull requests must not edit
-generated/localized `values-*/strings.xml` files. The one-time exception for
-[issue #131](https://github.com/aytekaksu/Better-FlorisBoard/issues/131) lets
-the maintainer delete its frozen set of lint-unused resources from source and
-localized XML in a single resource-only pull request while that issue is open.
-Link that pull request with `Refs #131`.
-The validator checks the full Git diff and parsed XML: no new or renamed keys,
-changed surviving values, reordered entries, or unrelated metadata. It never
-permits new translations. Run its local tests with
-`python3 .github/scripts/test_validate_translation_deletions.py`.
-Because a pull request can edit its own workflow file, this check does not
-replace maintainer review of workflow changes or current-head approval for
-outside contributions.
+generated/localized `values-*/strings.xml` files. Because a pull request can
+edit its own workflow file, this check does not replace maintainer review of
+workflow changes or current-head approval for outside contributions.
 
 Open an issue before any other translation work. This fork still needs its own
 translation source before accepting ongoing localized edits.

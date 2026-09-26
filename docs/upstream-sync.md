@@ -13,10 +13,9 @@ not mix an upstream import with feature work.
 - Keep generated translations out of the sync unless the fork has explicitly
   adopted a translation source.
 
-The issue #131 deletion exception retires only its frozen, unused key set; it
-is not a translation source. After an upstream sync, keep localized changes out
-of ordinary pull requests and reassess any newly imported keys separately.
-Do not use upstream Crowdin for fork-specific text.
+After an upstream sync, keep localized changes out of ordinary pull requests
+and reassess any newly imported keys separately. Do not use upstream Crowdin
+for fork-specific text.
 
 ## Conflict policy
 
