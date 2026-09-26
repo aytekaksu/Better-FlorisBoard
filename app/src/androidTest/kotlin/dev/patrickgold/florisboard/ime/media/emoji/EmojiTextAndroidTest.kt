@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard.ime.media.emoji
 
+import android.annotation.SuppressLint
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
@@ -24,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.emoji2.text.EmojiCompat
 import androidx.emoji2.widget.EmojiTextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -38,7 +40,20 @@ class EmojiTextAndroidTest {
     @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
+    @SuppressLint("RestrictedApi")
     fun compatibilityChangeRecreatesTheCorrectTextView() {
+        val previousEmojiCompat = if (EmojiCompat.isConfigured()) EmojiCompat.get() else null
+        val testConfig = object : EmojiCompat.Config(EmojiCompat.MetadataRepoLoader { _ -> }) {}
+            .setMetadataLoadStrategy(EmojiCompat.LOAD_STRATEGY_MANUAL)
+        EmojiCompat.reset(testConfig)
+        try {
+            assertViewRecreation()
+        } finally {
+            EmojiCompat.reset(previousEmojiCompat)
+        }
+    }
+
+    private fun assertViewRecreation() {
         var useEmojiCompatView by mutableStateOf(false)
         composeRule.setContent {
             EmojiText(text = "🙂", useEmojiCompatView = useEmojiCompatView)
