@@ -20,7 +20,6 @@ import android.content.Context
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.clipboardManager
-import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.core.Subtype
@@ -278,11 +277,22 @@ internal class SharedActionsAnimationSuppressionTracker {
     }
 }
 
-class NlpManager internal constructor(context: Context, private val isIncognitoMode: () -> Boolean) :
-    EditorComposingPolicy {
+internal fun shouldExpandSmartbarActions(
+    currentEditorContent: () -> EditorContent,
+    candidates: List<*>?,
+    inlineSuggestions: List<*>?,
+): Boolean {
+    val isSelection = currentEditorContent().selection.isSelectionMode
+    return candidates.isNullOrEmpty() && inlineSuggestions.isNullOrEmpty() || isSelection
+}
+
+class NlpManager internal constructor(
+    context: Context,
+    private val currentEditorContent: () -> EditorContent,
+    private val isIncognitoMode: () -> Boolean,
+) : EditorComposingPolicy {
     private val prefs by FlorisPreferenceStore
     private val clipboardManager by context.clipboardManager()
-    private val editorInstance by context.editorInstance()
     private val autocorrectPluginManager by context.autocorrectPluginManager()
     private val subtypeManager by context.subtypeManager()
     private val keyguardManager = context.systemService(AndroidKeyguardManager::class)
@@ -533,7 +543,7 @@ class NlpManager internal constructor(context: Context, private val isIncognitoM
                 if (candidate is ClipboardSuggestionCandidate) {
                     assembleCandidates()
                 } else {
-                    suggest(subtypeManager.activeSubtype, editorInstance.activeContent)
+                    suggest(subtypeManager.activeSubtype, currentEditorContent())
                 }
             }
         }
@@ -549,7 +559,7 @@ class NlpManager internal constructor(context: Context, private val isIncognitoM
         val revision = candidateAssemblyRevision.next()
         val candidates = when {
             isSuggestionOn() -> {
-                val content = editorInstance.activeContent
+                val content = currentEditorContent()
                 val wordCandidates = synchronized(internalSuggestionsGuard) {
                     internalSuggestions
                 }
@@ -601,10 +611,9 @@ class NlpManager internal constructor(context: Context, private val isIncognitoM
         candidates: List<*>?,
         inlineSuggestions: List<*>?,
     ) {
-        val isSelection = editorInstance.activeContent.selection.isSelectionMode
-        val isExpanded =
-            candidates.isNullOrEmpty() && inlineSuggestions.isNullOrEmpty() || isSelection
-        setSharedActionsExpanded(isExpanded)
+        setSharedActionsExpanded(
+            shouldExpandSmartbarActions(currentEditorContent, candidates, inlineSuggestions),
+        )
     }
 
     fun setSharedActionsExpandedByUser(isExpanded: Boolean) {
