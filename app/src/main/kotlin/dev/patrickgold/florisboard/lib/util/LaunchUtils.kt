@@ -19,9 +19,9 @@ package dev.patrickgold.florisboard.lib.util
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.annotation.StringRes
+import androidx.core.net.toUri
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.io.FlorisRef
@@ -31,6 +31,8 @@ import java.net.URI
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.reflect.KClass
+
+private const val MAX_TCP_PORT = 65_535
 
 fun Context.launchUrl(url: String) {
     val intent = Intent().also {
@@ -67,13 +69,13 @@ fun String.safePluginHttpsUrlOrNull(): String? {
             uri.scheme.equals("https", ignoreCase = true) &&
             !uri.host.isNullOrBlank() &&
             uri.rawUserInfo == null &&
-            (uri.port == -1 || uri.port in 1..65535)
+            (uri.port == -1 || uri.port in 1..MAX_TCP_PORT)
     }?.replaceRange(0, uri.scheme.length, "https")
 }
 
 fun Context.launchPluginHttpsUrl(url: String) {
     val target = url.safePluginHttpsUrlOrNull() ?: return
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(target)).apply {
+    val intent = Intent(Intent.ACTION_VIEW, target.toUri()).apply {
         addCategory(Intent.CATEGORY_BROWSABLE)
         flags = Intent.FLAG_ACTIVITY_NEW_TASK
     }

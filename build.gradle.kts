@@ -118,6 +118,11 @@ val autocorrectApiKotlinSources = fileTree("lib/autocorrect-api/src") {
 val autocorrectHostCoreKotlinSources = fileTree("lib/autocorrect-host-core/src") {
     include("**/*.kt")
 }
+val inheritedPlatformUtilityKotlinSources = fileTree(
+    "app/src/main/kotlin/dev/patrickgold/florisboard/lib/util",
+) {
+    include("**/*.kt")
+}
 
 val qualityKotlinSources = files(
     autocorrectPluginKotlinSources,
@@ -126,6 +131,7 @@ val qualityKotlinSources = files(
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickAction.kt"),
     backupArchiveKotlinSources,
     extensionHardeningKotlinSources,
+    inheritedPlatformUtilityKotlinSources,
     autocorrectApiKotlinSources,
     autocorrectHostCoreKotlinSources,
 )
@@ -206,6 +212,7 @@ val verifyQualitySourceScope by tasks.registering {
         "autocorrect plugins" to autocorrectPluginKotlinSources,
         "autocorrect API" to autocorrectApiKotlinSources,
         "autocorrect host core" to autocorrectHostCoreKotlinSources,
+        "inherited platform utilities" to inheritedPlatformUtilityKotlinSources,
     )
     doLast {
         val missing = sources.files.filterNot { it.isFile }
