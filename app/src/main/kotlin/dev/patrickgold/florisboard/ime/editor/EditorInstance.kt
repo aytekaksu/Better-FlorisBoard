@@ -42,7 +42,6 @@ import dev.patrickgold.florisboard.ime.text.composing.Composer
 import dev.patrickgold.florisboard.ime.text.key.KeyVariation
 import dev.patrickgold.florisboard.keyboardExtensionRepository
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
-import dev.patrickgold.florisboard.subtypeManager
 import java.util.concurrent.atomic.AtomicInteger
 import org.florisboard.lib.android.showShortToast
 
@@ -151,9 +150,10 @@ internal fun resolvePunctuationRule(
 class EditorInstance(
     context: Context,
     keyboardState: Lazy<ObservableKeyboardState>,
+    currentSubtype: () -> Subtype,
     composingPolicy: Lazy<EditorComposingPolicy>,
     reevaluateInputShiftState: () -> Unit,
-) : AbstractEditorInstance(context, composingPolicy, reevaluateInputShiftState) {
+) : AbstractEditorInstance(currentSubtype, composingPolicy, reevaluateInputShiftState) {
     companion object {
         private const val SPACE = " "
     }
@@ -161,12 +161,11 @@ class EditorInstance(
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
     private val keyboardExtensionRepository by context.keyboardExtensionRepository()
-    private val subtypeManager by context.subtypeManager()
 
     private val activeState by keyboardState
     private val activePunctuationRule: PunctuationRule
         get() = resolvePunctuationRule(
-            subtypeManager.activeSubtype,
+            currentSubtype(),
             keyboardExtensionRepository.snapshot.value.punctuationRules,
         )
     val autoSpace = AutoSpaceState()
@@ -324,13 +323,13 @@ class EditorInstance(
             breakIterators.measureLastUChars(
                 content.text.substring(0, localEndpoint),
                 stepCount,
-                subtypeManager.activeSubtype.primaryLocale,
+                currentSubtype().primaryLocale,
             )
         } else {
             breakIterators.measureUChars(
                 content.text.substring(localEndpoint),
                 stepCount,
-                subtypeManager.activeSubtype.primaryLocale,
+                currentSubtype().primaryLocale,
             )
         }
         val next = state.movedBy(steps, movement)
@@ -761,7 +760,7 @@ class EditorInstance(
     }
 
     fun tryPerformEnterCommitRaw(): Boolean {
-        return if (subtypeManager.activeSubtype.primaryLocale.language.startsWith("zh") && activeContent.composing.length > 0) {
+        return if (currentSubtype().primaryLocale.language.startsWith("zh") && activeContent.composing.length > 0) {
             finalizeComposingText(activeContent.composingText)
         } else {
             false
@@ -817,7 +816,7 @@ class EditorInstance(
          if (!(isActive || forceActive) || selection.isNotValid || selection.start <= 0 || text.isEmpty()) return false
          val textBefore = content.getTextBeforeCursor(1)
          val punctuationRule = activePunctuationRule
-         if (!subtypeManager.activeSubtype.primaryLocale.supportsAutoSpace) return false;
+         if (!currentSubtype().primaryLocale.supportsAutoSpace) return false;
          return textBefore.isNotEmpty() &&
              (punctuationRule.symbolsPrecedingPhantomSpace.contains(textBefore[textBefore.length - 1]) ||
                  textBefore[textBefore.length - 1].isLetterOrDigit()) &&

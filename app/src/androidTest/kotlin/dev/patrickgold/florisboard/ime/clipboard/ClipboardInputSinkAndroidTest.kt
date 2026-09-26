@@ -29,6 +29,7 @@ import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.InstalledClipboardMedia
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.clipboard.provider.OwnedClipboardMediaUri
+import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.editor.EditorInstance
 import dev.patrickgold.florisboard.ime.editor.FlorisEditorInfo
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
@@ -139,6 +140,7 @@ class ClipboardInputSinkAndroidTest {
         val editor = EditorInstance(
             instrumentation.targetContext,
             lazy { ObservableKeyboardState.new() },
+            { Subtype.DEFAULT },
             lazy { error("MIME eligibility must not need the composing policy") },
         ) { }
         fun info(vararg types: String) = FlorisEditorInfo.wrap(EditorInfo().apply {
