@@ -1,0 +1,20 @@
+[
+  [
+    @autoKeys("azertyuiop")
+  ],
+  [
+    @autoKeys("qsdfghjklm")
+  ],
+  [
+    @autoKeys("wxcvbn"),
+    { "code":   39, "label": "'", "popup": {
+      "relevant": [
+        { "code": 8218, "label": "‚" },
+        { "code": 8216, "label": "‘" },
+        { "code": 8217, "label": "’" },
+        { "code": 8249, "label": "‹" },
+        { "code": 8250, "label": "›" }
+      ]
+    } }
+  ]
+]

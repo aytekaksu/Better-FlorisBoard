@@ -1,0 +1,27 @@
+[
+  [
+    @autoKeys("xvlcwkhgfq"),
+    { "$": "case_selector",
+      "lower": {
+        "code":  223, "label": "ß", "popup": {
+          "relevant": [
+            { "code":  180, "label": "´" }
+          ]
+        }
+      },
+      "upper": {
+        "code": 7838, "label": "ẞ", "popup": {
+          "relevant": [
+            { "code":  180, "label": "´" }
+          ]
+        }
+      }
+    }
+  ],
+  [
+    @autoKeys("uiaeosnrtdy")
+  ],
+  [
+    @autoKeys("üöäpzbmj")
+  ]
+]

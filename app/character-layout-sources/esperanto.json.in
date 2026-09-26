@@ -1,0 +1,25 @@
+[
+  [
+    { "$": "auto_text_key", "code":  349, "label": "ŝ", "popup": {
+      "main": { "$": "auto_text_key", "code":  113, "label": "q" }
+    } },
+    { "$": "auto_text_key", "code":  285, "label": "ĝ", "popup": {
+      "main": { "$": "auto_text_key", "code":  119, "label": "w" }
+    } },
+    @autoKeys("ert"),
+    { "$": "auto_text_key", "code":  365, "label": "ŭ", "popup": {
+      "main": { "$": "auto_text_key", "code":  121, "label": "y" }
+    } },
+    @autoKeys("uiop")
+  ],
+  [
+    @autoKeys("asdfghjklĵ")
+  ],
+  [
+    { "$": "auto_text_key", "code":  122, "label": "z" },
+    { "$": "auto_text_key", "code":  265, "label": "ĉ", "popup": {
+      "main": { "$": "auto_text_key", "code":  120, "label": "x" }
+    } },
+    @autoKeys("cvbnm")
+  ]
+]

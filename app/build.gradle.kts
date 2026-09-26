@@ -186,6 +186,53 @@ abstract class GenerateNumericRowAssets : DefaultTask() {
     }
 }
 
+private class GeneratedAssetSafety {
+    companion object {
+        fun removeTreeNoFollow(root: Path) {
+            if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) return
+            Files.walkFileTree(
+                root,
+                object : SimpleFileVisitor<Path>() {
+                    override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                        Files.delete(file)
+                        return FileVisitResult.CONTINUE
+                    }
+
+                    override fun postVisitDirectory(dir: Path, failure: IOException?): FileVisitResult {
+                        if (failure != null) throw failure
+                        Files.delete(dir)
+                        return FileVisitResult.CONTINUE
+                    }
+                },
+            )
+        }
+
+        fun clearTarget(output: File, assetPath: String, label: String): File {
+            val root = output.toPath()
+            val target = root.resolve(assetPath)
+            var component = root
+            check(!Files.isSymbolicLink(component)) { "Generated $label output path is linked" }
+            for (segment in root.relativize(target)) {
+                component = component.resolve(segment)
+                check(!Files.isSymbolicLink(component)) { "Generated $label output path is linked" }
+            }
+            removeTreeNoFollow(target)
+            return target.toFile()
+        }
+
+        fun readSource(file: File, label: String): String {
+            check(Files.isRegularFile(file.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+                "$label source is missing or linked: ${file.name}"
+            }
+            return try {
+                Files.readString(file.toPath(), Charsets.UTF_8)
+            } catch (cause: CharacterCodingException) {
+                throw IllegalStateException("${file.name} contains malformed UTF-8", cause)
+            }
+        }
+    }
+}
+
 @CacheableTask
 abstract class GeneratePopupMappingAssets : DefaultTask() {
     @get:InputDirectory
@@ -288,48 +335,11 @@ abstract class GeneratePopupMappingAssets : DefaultTask() {
             }
         }
 
-        private fun clearOutput(output: File): File {
-            val root = output.toPath()
-            val target = root.resolve(ASSET_PATH)
-            var component = root
-            check(!Files.isSymbolicLink(component)) { "Generated popup mapping output path is linked" }
-            for (segment in root.relativize(target)) {
-                component = component.resolve(segment)
-                check(!Files.isSymbolicLink(component)) { "Generated popup mapping output path is linked" }
-            }
-            removeTreeNoFollow(target)
-            return target.toFile()
-        }
+        private fun clearOutput(output: File) = GeneratedAssetSafety.clearTarget(output, ASSET_PATH, "popup mapping")
 
-        fun removeTreeNoFollow(root: Path) {
-            if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) return
-            Files.walkFileTree(
-                root,
-                object : SimpleFileVisitor<Path>() {
-                    override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                        Files.delete(file)
-                        return FileVisitResult.CONTINUE
-                    }
+        fun removeTreeNoFollow(root: Path) = GeneratedAssetSafety.removeTreeNoFollow(root)
 
-                    override fun postVisitDirectory(dir: Path, failure: IOException?): FileVisitResult {
-                        if (failure != null) throw failure
-                        Files.delete(dir)
-                        return FileVisitResult.CONTINUE
-                    }
-                },
-            )
-        }
-
-        private fun readSource(file: File): String {
-            check(Files.isRegularFile(file.toPath(), LinkOption.NOFOLLOW_LINKS)) {
-                "Popup mapping source is missing or linked: ${file.name}"
-            }
-            return try {
-                Files.readString(file.toPath(), Charsets.UTF_8)
-            } catch (cause: CharacterCodingException) {
-                throw IllegalStateException("${file.name} contains malformed UTF-8", cause)
-            }
-        }
+        private fun readSource(file: File) = GeneratedAssetSafety.readSource(file, "Popup mapping")
 
         private fun jsonObject(text: String, name: String): Map<*, *> {
             val value = try {
@@ -338,6 +348,160 @@ abstract class GeneratePopupMappingAssets : DefaultTask() {
                 throw IllegalStateException("$name contains malformed JSON", cause)
             }
             return value as? Map<*, *> ?: error("$name must be a JSON object")
+        }
+    }
+}
+
+@CacheableTask
+abstract class GenerateCharacterLayoutAssets : DefaultTask() {
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sourceDirectory: DirectoryProperty
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val staticDirectory: DirectoryProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val extensionFile: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun generate() = render(
+        sourceDirectory.get().asFile,
+        staticDirectory.get().asFile,
+        extensionFile.get().asFile,
+        outputDirectory.get().asFile,
+    )
+
+    companion object {
+        private const val ASSET_PATH = "ime/keyboard/org.florisboard.layouts/layouts/characters"
+        private val MARKER = Regex("""^    @autoKeys\("([^"]+)"(?:, width=([4-7]))?\)(,?)$""")
+        private val FILE_NAME = Regex("[a-z0-9_]+\\.json")
+        private val SOURCE_NAME = Regex("[a-z0-9_]+")
+
+        fun render(sources: File, staticFiles: File, extensionFile: File, output: File) {
+            val target = GeneratedAssetSafety.clearTarget(output, ASSET_PATH, "character layout")
+            val expected = expectedFiles(extensionFile)
+            val static = listFiles(staticFiles, ".json").mapTo(mutableSetOf()) { file ->
+                validateLayout(readSource(file), file.name)
+                file.name
+            }
+            val generated = listFiles(sources, ".json.in").associate { file ->
+                val name = file.name.removeSuffix(".in")
+                name to expand(readSource(file), file.name)
+            }
+            check(static.intersect(generated.keys).isEmpty()) { "Static and generated character layouts collide" }
+            check(static + generated.keys == expected) {
+                "Character layout files differ from extension metadata: " +
+                    "missing=${expected - static - generated.keys}, " +
+                    "extra=${(static + generated.keys) - expected}"
+            }
+            try {
+                check(target.mkdirs()) { "Unable to create generated character layout directory" }
+                for ((name, text) in generated.toSortedMap()) target.resolve(name).writeText(text, Charsets.UTF_8)
+            } catch (cause: Exception) {
+                try {
+                    GeneratedAssetSafety.removeTreeNoFollow(target.toPath())
+                } catch (cleanupFailure: Exception) {
+                    cause.addSuppressed(cleanupFailure)
+                }
+                throw cause
+            }
+        }
+
+        private fun listFiles(directory: File, suffix: String): List<File> {
+            check(Files.isDirectory(directory.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+                "Character layout directory is missing or linked: ${directory.name}"
+            }
+            return (directory.listFiles() ?: error("Cannot list character layouts in ${directory.name}"))
+                .sortedBy(File::getName).onEach { file ->
+                    check(file.name.endsWith(suffix) && file.name.removeSuffix(suffix).matches(SOURCE_NAME)) {
+                        "Unexpected character layout source: ${file.name}"
+                    }
+                    check(Files.isRegularFile(file.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+                        "Character layout source is missing or linked: ${file.name}"
+                    }
+                }
+        }
+
+        private fun readSource(file: File) = GeneratedAssetSafety.readSource(file, "Character layout")
+
+        private fun expectedFiles(extensionFile: File): Set<String> {
+            val extension = jsonObject(readSource(extensionFile), extensionFile.name)
+            val layouts = extension["layouts"] as? Map<*, *> ?: error("Extension layouts are missing")
+            val characters = layouts["characters"] as? List<*> ?: error("Character layouts are missing")
+            val ids = mutableSetOf<String>()
+            return characters.map { value ->
+                val component = value as? Map<*, *> ?: error("Invalid character layout metadata")
+                val id = component["id"] as? String ?: error("Character layout needs an ID")
+                check(id.matches(Regex("[a-z0-9_]+"))) { "Invalid character layout ID: $id" }
+                check(ids.add(id)) { "Duplicate character layout ID: $id" }
+                val path = component["arrangementFile"] ?: "layouts/characters/$id.json"
+                check(
+                    path is String && path.startsWith("layouts/characters/") &&
+                        path.removePrefix("layouts/characters/").matches(FILE_NAME),
+                ) {
+                    "Unexpected character layout path for $id"
+                }
+                path.removePrefix("layouts/characters/")
+            }.toSet()
+        }
+
+        private fun expand(template: String, name: String): String {
+            check(template.endsWith('\n') && '\r' !in template) { "$name must use LF-terminated lines" }
+            var count = 0
+            val text = template.removeSuffix("\n").split('\n').joinToString("\n") { line ->
+                val marker = MARKER.matchEntire(line)
+                if (marker == null) {
+                    check("@autoKeys" !in line) { "$name contains malformed @autoKeys marker" }
+                    line
+                } else {
+                    count++
+                    val keys = marker.groupValues[1].codePoints().toArray()
+                    check(keys.size in 3..32 && keys.all(Character::isLetter)) {
+                        "$name contains invalid @autoKeys characters"
+                    }
+                    val width = marker.groupValues[2].toIntOrNull() ?: 5
+                    val trailingComma = marker.groupValues[3].isNotEmpty()
+                    keys.mapIndexed { index, codePoint ->
+                        val code = codePoint.toString()
+                        check(code.length < width) { "$name has an @autoKeys code wider than $width" }
+                        val comma = if (index < keys.lastIndex || trailingComma) "," else ""
+                        val label = String(Character.toChars(codePoint))
+                        "    { \"$\": \"auto_text_key\", \"code\":${code.padStart(
+                            width,
+                        )}, \"label\": \"$label\" }$comma"
+                    }.joinToString("\n")
+                }
+            } + "\n"
+            check(count > 0) { "$name contains no @autoKeys markers" }
+            validateLayout(text, name)
+            return text
+        }
+
+        private fun validateLayout(text: String, name: String) {
+            val rows = try {
+                JsonSlurper().parseText(text) as? List<*>
+            } catch (cause: Exception) {
+                throw IllegalStateException("$name contains malformed JSON", cause)
+            } ?: error("$name must be a JSON layout array")
+            check(
+                rows.isNotEmpty() && rows.all { row ->
+                    row is List<*> && row.isNotEmpty() && row.all { it is Map<*, *> }
+                },
+            ) {
+                "$name must contain nonempty key rows"
+            }
+        }
+
+        private fun jsonObject(text: String, name: String): Map<*, *> = try {
+            JsonSlurper().parseText(text) as? Map<*, *> ?: error("$name must be a JSON object")
+        } catch (cause: Exception) {
+            throw IllegalStateException("$name contains malformed JSON", cause)
         }
     }
 }
@@ -658,6 +822,169 @@ val testPopupMappingAssetGenerator by tasks.registering {
     }
 }
 
+val testCharacterLayoutAssetGenerator by tasks.registering {
+    group = "verification"
+    description = "Exercises character layout expansion and invalid-source rejection."
+
+    doLast {
+        val assetPath = "ime/keyboard/org.florisboard.layouts/layouts/characters"
+        val staticLayout = "[[{\"code\":0}]]\n"
+        val ascii = "[\n  [\n    @autoKeys(\"abc\")\n  ]\n]\n"
+        val warang = "[\n  [\n    @autoKeys(\"𑣀𑣂𑣃\", width=7),\n    {\"code\":0}\n  ]\n]\n"
+        var caseNumber = 0
+
+        fun exercise(
+            ids: List<String>,
+            templates: Map<String, String>,
+            static: Map<String, String> = emptyMap(),
+            failure: String? = null,
+            expectOutputAbsent: Boolean = true,
+            prepare: (File) -> Unit = {},
+        ): File {
+            val root = temporaryDir.resolve("case-${caseNumber++}")
+            GeneratePopupMappingAssets.removeTreeNoFollow(root.toPath())
+            val sources = root.resolve("sources").apply { mkdirs() }
+            val staticFiles = root.resolve("static").apply { mkdirs() }
+            templates.forEach { (name, text) -> sources.resolve(name).writeText(text, Charsets.UTF_8) }
+            static.forEach { (name, text) -> staticFiles.resolve(name).writeText(text, Charsets.UTF_8) }
+            val extension = root.resolve("extension.json").apply {
+                val components = ids.joinToString(",") { "{\"id\":\"$it\"}" }
+                writeText("{\"layouts\":{\"characters\":[$components]}}", Charsets.UTF_8)
+            }
+            val output = root.resolve("output")
+            prepare(root)
+            val error = runCatching {
+                GenerateCharacterLayoutAssets.render(sources, staticFiles, extension, output)
+            }.exceptionOrNull()
+            if (failure == null) {
+                check(error == null) { "Character layout generator unexpectedly failed: ${error?.message}" }
+            } else {
+                check(error?.message?.contains(failure) == true) {
+                    "Expected character layout failure '$failure', got '${error?.message}'"
+                }
+                if (expectOutputAbsent) {
+                    check(!output.resolve(assetPath).exists()) {
+                        "Invalid character layouts produced assets"
+                    }
+                }
+            }
+            return output.resolve(assetPath)
+        }
+
+        val generated = exercise(
+            listOf("ascii", "warang", "other"),
+            mapOf("ascii.json.in" to ascii, "warang.json.in" to warang),
+            static = mapOf("other.json" to staticLayout),
+        )
+        check(generated.listFiles().orEmpty().map(File::getName).sorted() == listOf("ascii.json", "warang.json"))
+        check(
+            generated.resolve("ascii.json").readText() ==
+                "[\n  [\n" +
+                "    { \"$\": \"auto_text_key\", \"code\":   97, \"label\": \"a\" },\n" +
+                "    { \"$\": \"auto_text_key\", \"code\":   98, \"label\": \"b\" },\n" +
+                "    { \"$\": \"auto_text_key\", \"code\":   99, \"label\": \"c\" }\n" +
+                "  ]\n]\n",
+        )
+        check(
+            generated.resolve("warang.json").readText() ==
+                "[\n  [\n" +
+                "    { \"$\": \"auto_text_key\", \"code\":  71872, \"label\": \"𑣀\" },\n" +
+                "    { \"$\": \"auto_text_key\", \"code\":  71874, \"label\": \"𑣂\" },\n" +
+                "    { \"$\": \"auto_text_key\", \"code\":  71875, \"label\": \"𑣃\" },\n" +
+                "    {\"code\":0}\n  ]\n]\n",
+        )
+
+        exercise(listOf("ascii"), emptyMap(), failure = "missing=[ascii.json]")
+        exercise(
+            listOf("ascii"),
+            mapOf("ascii.json.in" to ascii, "extra.json.in" to ascii),
+            failure = "extra=[extra.json]",
+        )
+        exercise(
+            listOf("ascii"),
+            mapOf("ascii.json.in" to ascii),
+            static = mapOf("ascii.json" to staticLayout),
+            failure = "collide",
+        )
+        exercise(listOf("ascii", "ascii"), mapOf("ascii.json.in" to ascii), failure = "Duplicate character layout ID")
+        exercise(
+            listOf("ascii"),
+            mapOf("ascii.json.in" to ascii),
+            failure = "Unexpected character layout path",
+        ) { root ->
+            root.resolve("extension.json").writeText(
+                "{\"layouts\":{\"characters\":[{\"id\":\"ascii\",\"arrangementFile\":\"../outside\"}]}}",
+            )
+        }
+        exercise(
+            listOf("ascii"),
+            mapOf("ascii.json.in" to ascii.replace("abc", "ab")),
+            failure = "invalid @autoKeys characters",
+        )
+        exercise(
+            listOf("ascii"),
+            mapOf("ascii.json.in" to ascii.replace("abc", "a:c")),
+            failure = "invalid @autoKeys characters",
+        )
+        exercise(
+            listOf("ascii"),
+            mapOf("ascii.json.in" to ascii.replace("@autoKeys", "@autoKey")),
+            failure = "contains no @autoKeys markers",
+        )
+        exercise(
+            listOf("ascii"),
+            mapOf("ascii.json.in" to ascii.replace("@autoKeys(\"abc\")", "@autoKeys(\"abc\", width=8)")),
+            failure = "malformed @autoKeys marker",
+        )
+        exercise(
+            listOf("ascii"),
+            mapOf("ascii.json.in" to "[\n  [\n    @autoKeys(\"abc\")\n"),
+            failure = "malformed JSON",
+        )
+        exercise(listOf("ascii"), mapOf("ascii.json.in" to ascii), failure = "malformed UTF-8") { root ->
+            Files.write(root.resolve("sources/ascii.json.in").toPath(), byteArrayOf(0xc3.toByte(), 0x28))
+        }
+        exercise(listOf("ascii"), emptyMap(), failure = "missing or linked") { root ->
+            val outside = root.resolve("outside.json.in").apply { writeText(ascii) }
+            Files.createSymbolicLink(root.resolve("sources/ascii.json.in").toPath(), outside.toPath())
+        }
+        exercise(listOf("ascii"), mapOf("ascii.json.in" to ascii), failure = "missing or linked") { root ->
+            val outside = root.resolve("outside.json").apply { writeText(staticLayout) }
+            Files.createSymbolicLink(root.resolve("static/other.json").toPath(), outside.toPath())
+        }
+        exercise(
+            listOf("ascii"),
+            mapOf("ascii.json.in" to "[\n  [\n    @autoKeys(\"abc\")\n"),
+            failure = "malformed JSON",
+        ) { root ->
+            root.resolve("output/$assetPath/stale.json").apply {
+                parentFile.mkdirs()
+                writeText("stale")
+            }
+        }
+        val outside = temporaryDir.resolve("outside-nested").apply { mkdirs() }
+        outside.resolve("keep.json").writeText("safe")
+        exercise(
+            listOf("ascii"),
+            mapOf("ascii.json.in" to "[\n  [\n    @autoKeys(\"abc\")\n"),
+            failure = "malformed JSON",
+        ) { root ->
+            val target = root.resolve("output/$assetPath").apply { mkdirs() }
+            Files.createSymbolicLink(target.resolve("nested").toPath(), outside.toPath())
+        }
+        check(outside.resolve("keep.json").readText() == "safe")
+        exercise(
+            listOf("ascii"),
+            mapOf("ascii.json.in" to ascii),
+            failure = "output path is linked",
+            expectOutputAbsent = false,
+        ) { root ->
+            val parent = root.resolve("elsewhere").apply { mkdirs() }
+            Files.createSymbolicLink(root.resolve("output").toPath(), parent.toPath())
+        }
+    }
+}
+
 androidComponents {
     onVariants(selector().all()) { variant ->
         val variantName = variant.name.replaceFirstChar { it.titlecase() }
@@ -713,13 +1040,45 @@ androidComponents {
             popupMappings,
             GeneratePopupMappingAssets::outputDirectory,
         )
+        val characterLayouts = tasks.register<GenerateCharacterLayoutAssets>(
+            "generate${variantName}CharacterLayoutAssets",
+        ) {
+            sourceDirectory.set(layout.projectDirectory.dir("character-layout-sources"))
+            staticDirectory.set(
+                layout.projectDirectory.dir(
+                    "src/main/assets/ime/keyboard/org.florisboard.layouts/layouts/characters",
+                ),
+            )
+            extensionFile.set(
+                layout.projectDirectory.file(
+                    "src/main/assets/ime/keyboard/org.florisboard.layouts/extension.json",
+                ),
+            )
+            outputDirectory.set(layout.buildDirectory.dir("generated/characterLayoutAssets/${variant.name}"))
+        }
+        checkNotNull(variant.sources.assets).addGeneratedSourceDirectory(
+            characterLayouts,
+            GenerateCharacterLayoutAssets::outputDirectory,
+        )
         tasks.withType<Test>().matching { it.name == "test${variantName}UnitTest" }.configureEach {
-            dependsOn(popupMappings, testPopupMappingAssetGenerator)
+            dependsOn(
+                popupMappings,
+                characterLayouts,
+                testPopupMappingAssetGenerator,
+                testCharacterLayoutAssetGenerator,
+            )
             inputs.dir(popupMappings.flatMap { it.outputDirectory })
+            inputs.dir(characterLayouts.flatMap { it.outputDirectory })
             systemProperty(
                 "florisboard.popupMappingAssetRoot",
                 layout.buildDirectory.dir(
                     "generated/popupMappingAssets/${variant.name}/ime/keyboard/org.florisboard.localization",
+                ).get().asFile.absolutePath,
+            )
+            systemProperty(
+                "florisboard.characterLayoutAssetRoot",
+                layout.buildDirectory.dir(
+                    "generated/characterLayoutAssets/${variant.name}/ime/keyboard/org.florisboard.layouts",
                 ).get().asFile.absolutePath,
             )
         }

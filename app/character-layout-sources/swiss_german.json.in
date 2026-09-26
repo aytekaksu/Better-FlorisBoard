@@ -1,0 +1,26 @@
+[
+  [
+    @autoKeys("qwertzuiop"),
+    { "$": "auto_text_key", "code":  252, "label": "ü", "popup": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  232, "label": "è" }
+      ]
+    } }
+  ],
+  [
+    @autoKeys("asdfghjkl"),
+    { "$": "auto_text_key", "code":  246, "label": "ö", "popup": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  233, "label": "é" }
+      ]
+    } },
+    { "$": "auto_text_key", "code":  228, "label": "ä", "popup": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  224, "label": "à" }
+      ]
+    } }
+  ],
+  [
+    @autoKeys("yxcvbnm")
+  ]
+]

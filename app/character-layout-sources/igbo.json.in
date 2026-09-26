@@ -1,0 +1,27 @@
+[
+  [
+    { "$": "case_selector",
+      "lower": { "code": 7909, "label": "ụ" },
+      "upper": { "code": 7908, "label": "Ụ" }
+    },
+    @autoKeys("wertyuiop")
+  ],
+  [
+    @autoKeys("asdfghjkl"),
+    { "$": "case_selector",
+      "lower": { "code": 7883, "label": "ị" },
+      "upper": { "code": 7882, "label": "Ị" }
+    }
+  ],
+  [
+    { "$": "case_selector",
+      "lower": { "code": 7749, "label": "ṅ" },
+      "upper": { "code": 7748, "label": "Ṅ" }
+    },
+    { "$": "case_selector",
+      "lower": { "code": 7885, "label": "ọ" },
+      "upper": { "code": 7884, "label": "Ọ" }
+    },
+    @autoKeys("zcvbnm")
+  ]
+]

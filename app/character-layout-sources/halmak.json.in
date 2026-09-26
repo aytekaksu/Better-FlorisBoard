@@ -1,0 +1,49 @@
+[
+  [
+    @autoKeys("wlrbz"),
+    { "$": "case_selector",
+      "lower": { "code":   59, "label": ";", "popup": {
+        "relevant": [
+          { "code":   58, "label": ":" }
+        ]
+      } },
+      "upper": { "code":   58, "label": ":", "popup": {
+        "relevant": [
+          { "code":   59, "label": ";" }
+        ]
+      } }
+    },
+    @autoKeys("qudj")
+  ],
+  [
+    @autoKeys("shnt"),
+    { "$": "case_selector",
+      "lower": { "code":   44, "label": ",", "popup": {
+        "relevant": [
+          { "code":   40, "label": "(" }
+        ]
+      } },
+      "upper": { "code":   40, "label": "(", "popup": {
+        "relevant": [
+          { "code":   44, "label": "," }
+        ]
+      } }
+    },
+    { "$": "case_selector",
+      "lower": { "code":   46, "label": ".", "popup": {
+        "relevant": [
+          { "code":   41, "label": ")" }
+        ]
+      } },
+      "upper": { "code":   41, "label": ")", "popup": {
+        "relevant": [
+          { "code":   46, "label": "." }
+        ]
+      } }
+    },
+    @autoKeys("aeoi")
+  ],
+  [
+    @autoKeys("fmvcgpxky")
+  ]
+]

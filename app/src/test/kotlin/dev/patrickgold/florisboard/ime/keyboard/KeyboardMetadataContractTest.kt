@@ -46,6 +46,12 @@ class KeyboardMetadataContractTest :
         test("bundled layout metadata points to packaged arrangements") {
             val assetRoot = sequenceOf("src/main/assets", "app/src/main/assets")
                 .map { File(it, "ime/keyboard/org.florisboard.layouts") }.first { it.isDirectory }
+            val generatedRoot = File(
+                requireNotNull(System.getProperty("florisboard.characterLayoutAssetRoot")) {
+                    "Character layout unit tests need their variant's generated asset root"
+                },
+            )
+            generatedRoot.isDirectory shouldBe true
             val extension = ExtensionJsonConfig.decodeFromString(
                 KeyboardExtension.serializer(),
                 assetRoot.resolve("extension.json").readText(),
@@ -88,10 +94,18 @@ class KeyboardMetadataContractTest :
                 "devanagari", "eastern_arabic", "gujarati", "gurmukhi", "kannada", "malayalam",
                 "oriya", "persian", "tamil", "telugu", "warang_citi",
             ).mapTo(mutableSetOf()) { "layouts/numericRow/$it.json" }
-            packagedFiles.size shouldBe packagedFiles.toSet().size
-            (packagedFiles.toSet() + generatedNumericRows) shouldBe declaredFiles.toSet()
+            val generatedCharacters = generatedRoot.resolve("layouts/characters").walkTopDown()
+                .filter(File::isFile)
+                .map { it.relativeTo(generatedRoot).invariantSeparatorsPath }
+                .toList()
+            val allFiles = packagedFiles + generatedCharacters + generatedNumericRows
+            allFiles.size shouldBe allFiles.toSet().size
+            allFiles.toSet() shouldBe declaredFiles.toSet()
             packagedFiles.forEach { path ->
                 DefaultJsonConfig.decodeFromString<LayoutArrangement>(assetRoot.resolve(path).readText())
+            }
+            generatedCharacters.forEach { path ->
+                DefaultJsonConfig.decodeFromString<LayoutArrangement>(generatedRoot.resolve(path).readText())
             }
         }
 

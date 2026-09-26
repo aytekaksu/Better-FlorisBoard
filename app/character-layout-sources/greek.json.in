@@ -1,0 +1,12 @@
+[
+  [
+    { "$": "auto_text_key", "code":  894, "label": ";" },
+    @autoKeys("ςερτυθιοπ")
+  ],
+  [
+    @autoKeys("ασδφγηξκλ")
+  ],
+  [
+    @autoKeys("ζχψωβνμ")
+  ]
+]

@@ -68,6 +68,9 @@ APK assets are trusted input, but their directory copy still uses staged,
 all-or-nothing publication.
 Bundled keyboard layout IDs may share one arrangement file through
 `arrangementFile`; their labels, modifiers, and subtype choices stay separate.
+Forty-nine character layouts use `@autoKeys("letters")` source rows, with an
+optional padding width. The build expands Unicode code points to their original
+JSON bytes; the other 24 character layouts remain static.
 Eleven digit-script numeric rows are built from the Bengali row and their
 Unicode zero-digit code points. The five structurally different rows stay as
 individual assets; the generated rows keep their existing IDs and popups.
