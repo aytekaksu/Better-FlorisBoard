@@ -40,13 +40,7 @@ inline fun FsDir.subDir(relPath: String) = FsDir(this, relPath)
 @Suppress("NOTHING_TO_INLINE")
 inline fun FsDir.subFile(relPath: String) = FsFile(this, relPath)
 
-fun FsDir.deleteContentsRecursively() {
-    this.listFiles()?.forEach { it.deleteRecursively() }
-}
-
 inline fun <reified T> FsFile.writeJson(value: T, config: StringFormat = Json) {
     val text = config.encodeToString(value)
     return this.writeText(text)
 }
-
-inline val FsFile/* and FsDir */.parentDir: FsDir? get() = this.parentFile
