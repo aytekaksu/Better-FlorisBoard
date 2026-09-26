@@ -19,6 +19,8 @@ package org.florisboard.lib.snygg.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,8 +28,11 @@ import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runInterruptible
 import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.SnyggSelector
+import org.florisboard.lib.snygg.value.SnyggAssetResolver
 
 /**
  * Simple layout composable with [content]
@@ -68,14 +73,8 @@ fun SnyggBox(
     ProvideSnyggStyle(elementName, attributes, selector) { style ->
         val assetResolver = LocalSnyggAssetResolver.current
         val context = LocalContext.current
-        val imagePath = when {
-            supportsBackgroundImage -> {
-                style.backgroundImage.uriOrNull()?.let { imageUri ->
-                    assetResolver.resolveAbsolutePath(imageUri).getOrNull()
-                }
-            }
-            else -> null
-        }
+        val imageUri = if (supportsBackgroundImage) style.backgroundImage.uriOrNull() else null
+        val imagePath = rememberBackgroundImagePath(imageUri, assetResolver)
         Box(
             modifier = modifier
                 .snyggMargin(style)
@@ -103,5 +102,17 @@ fun SnyggBox(
             }
             content()
         }
+    }
+}
+
+@Composable
+internal fun rememberBackgroundImagePath(uri: String?, resolver: SnyggAssetResolver): String? {
+    if (uri == null) return null
+    return key(resolver, uri) {
+        produceState<String?>(initialValue = null) {
+            value = runInterruptible(Dispatchers.IO) {
+                resolver.resolveAbsolutePath(uri).getOrNull()
+            }
+        }.value
     }
 }

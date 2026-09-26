@@ -141,6 +141,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui)
     debugImplementation(libs.androidx.compose.material.icons)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.coil.compose)
@@ -149,6 +150,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines)
 
     testImplementation(libs.kotlin.test.junit5)
+    androidTestImplementation(composeBom)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.runner)
 }
