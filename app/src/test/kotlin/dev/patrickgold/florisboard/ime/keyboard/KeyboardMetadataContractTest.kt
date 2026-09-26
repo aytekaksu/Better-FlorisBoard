@@ -44,6 +44,28 @@ class KeyboardMetadataContractTest :
             }
         }
 
+        test("bundled currency keys commit the symbols they display") {
+            val manifest = sequenceOf("src/main/assets", "app/src/main/assets")
+                .map { File(it, "ime/keyboard/org.florisboard.currencysets/extension.json") }
+                .first(File::isFile)
+            val extension = ExtensionJsonConfig.decodeFromString(
+                KeyboardExtension.serializer(),
+                manifest.readText(),
+            )
+            extension.validateForImport().isValid shouldBe true
+            extension.currencySets.size shouldBe 26
+            extension.currencySets.forEach { currencySet ->
+                currencySet.slotsForValidation.size shouldBe 6
+                currencySet.slotsForValidation.forEach { slot ->
+                    slot.asString(isForDisplay = false) shouldBe slot.label
+                }
+            }
+            val tenge = extension.currencySets.single { it.id == "kazakhstani_tenge" }
+                .slotsForValidation.first()
+            tenge.label shouldBe "₸"
+            tenge.asString(isForDisplay = false) shouldBe "₸"
+        }
+
         test("bundled layout metadata points to packaged arrangements") {
             val assetRoot = sequenceOf("src/main/assets", "app/src/main/assets")
                 .map { File(it, "ime/keyboard/org.florisboard.layouts") }.first { it.isDirectory }

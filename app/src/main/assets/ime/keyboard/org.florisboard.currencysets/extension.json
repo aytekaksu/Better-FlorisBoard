@@ -133,7 +133,7 @@
       "id": "kazakhstani_tenge",
       "label": "Kazakhstani tenge (₸)",
       "slots": [
-        { "code": 8380, "label": "₸" },
+        { "code": 8376, "label": "₸" },
         { "code":   36, "label": "$" },
         { "code": 8364, "label": "€" },
         { "code":  162, "label": "¢" },
