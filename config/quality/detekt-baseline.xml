@@ -81,7 +81,9 @@
     <ID>ReturnCount:AutocorrectUserDictionary.kt:fun userDictionaryRequestFromBundle: AutocorrectUserDictionaryRequest?</ID>
     <ID>ReturnCount:AutocorrectUserDictionary.kt:private fun AutocorrectUserDictionaryEntry.validated: AutocorrectUserDictionaryEntry?</ID>
     <ID>ReturnCount:AutocorrectUserDictionary.kt:private fun Bundle.toDictionaryEntry: AutocorrectUserDictionaryEntry?</ID>
+    <ID>ThrowingExceptionsWithoutMessageOrCause:Flog.kt:Flog$Throwable()</ID>
     <ID>TooGenericExceptionCaught:AutocorrectPluginService.kt:AutocorrectPluginService.IncomingHandler$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:Devtools.kt:Devtools$e: Exception</ID>
     <ID>TooManyFunctions:AutocorrectPluginContract.kt:org.florisboard.autocorrect.api.AutocorrectPluginContract.kt</ID>
     <ID>TooManyFunctions:AutocorrectPluginManager.kt:AutocorrectPluginManager : SuggestionProvider</ID>
     <ID>TooManyFunctions:AutocorrectPluginManager.kt:dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager.kt</ID>
