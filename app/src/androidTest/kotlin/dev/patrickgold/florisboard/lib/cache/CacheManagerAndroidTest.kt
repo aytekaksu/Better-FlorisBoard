@@ -47,7 +47,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.Closeable
+import java.io.IOException
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(AndroidJUnit4::class)
 class CacheManagerAndroidTest {
@@ -282,6 +285,44 @@ class CacheManagerAndroidTest {
 
         assertTrue(editor.isClosed())
         assertNull(cacheManager.themeEditor.getWorkspaceByUuid(editor.uuid))
+    }
+
+    @Test
+    fun backupWorkspaceCloseRetriesAChildThatFailsOnce() = runBlocking {
+        assertBackupWorkspaceClosesWithChildFailures { attempt -> attempt == 1 }
+    }
+
+    @Test
+    fun backupWorkspaceCloseContinuesWhenAChildAlwaysFails() = runBlocking {
+        assertBackupWorkspaceClosesWithChildFailures { true }
+    }
+
+    private suspend fun assertBackupWorkspaceClosesWithChildFailures(shouldFail: (Int) -> Boolean) {
+        val cacheManager = CacheManager(context)
+        val workspace = cacheManager.backupAndRestore.new()
+        val sibling = cacheManager.backupAndRestore.new()
+        val marker = workspace.outputDir.resolve("marker")
+        marker.writeText("test")
+        val attempts = AtomicInteger()
+        val child = Closeable {
+            if (shouldFail(attempts.incrementAndGet())) throw IOException("synthetic child failure")
+        }
+
+        try {
+            val closeJob = workspace.requestClose(child)
+            withTimeout(5_000) { closeJob.join() }
+
+            assertFalse(closeJob.isCancelled)
+            assertEquals(2, attempts.get())
+            assertFalse(marker.exists())
+            assertTrue(workspace.isClosed())
+            assertNull(cacheManager.backupAndRestore.getWorkspaceByUuid(workspace.uuid))
+            assertSame(sibling, cacheManager.backupAndRestore.getWorkspaceByUuid(sibling.uuid))
+            assertTrue(sibling.isOpen())
+        } finally {
+            workspace.close()
+            sibling.close()
+        }
     }
 
     @Test

@@ -43,6 +43,7 @@ import dev.patrickgold.florisboard.lib.io.FileRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
@@ -471,12 +472,30 @@ class CacheManager(context: Context) {
             }
         }
 
-        internal fun requestClose(child: Closeable? = null) {
-            workspaceCleanupScope.launch {
-                repeat(2) {
-                    child?.close()
-                    close()
+        internal fun requestClose(child: Closeable? = null): Job = workspaceCleanupScope.launch {
+            fun closeFailure(resource: Closeable?): Exception? = try {
+                resource?.close()
+                null
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                error
+            }
+
+            var childFailure: Exception? = null
+            var workspaceFailure: Exception? = null
+            repeat(2) {
+                try {
+                    childFailure = closeFailure(child)
+                } finally {
+                    workspaceFailure = closeFailure(this@BackupAndRestoreWorkspace)
                 }
+            }
+            childFailure?.let { error ->
+                flogError { "Backup child cleanup failed: failureClass=${error.javaClass.simpleName}" }
+            }
+            workspaceFailure?.let { error ->
+                flogError { "Backup workspace cleanup failed: failureClass=${error.javaClass.simpleName}" }
             }
         }
 
