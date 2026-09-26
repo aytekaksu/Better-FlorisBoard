@@ -57,7 +57,6 @@ import dev.patrickgold.florisboard.app.runOwnedNavigationAction
 import dev.patrickgold.florisboard.app.runOwnedNavigationActionWhenResumed
 import dev.patrickgold.florisboard.cacheManager
 import dev.patrickgold.florisboard.clipboardManager
-import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.lib.cache.CacheManager
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.lib.devtools.flogError
@@ -292,16 +291,12 @@ fun RestoreScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
     suspend fun performRestore(
         stagedRoot: File,
         metadata: BackupArchive.Metadata,
-        selection: Backup.Selection,
+        selection: Set<BackupComponent>,
         strategy: ImportStrategy,
     ) {
         val shouldReset = strategy == ImportStrategy.Erase
         val preparedClipboard = withContext(Dispatchers.IO) {
-            val clipboardTypes = buildSet {
-                if (selection.clipboardTextItems) add(ItemType.TEXT)
-                if (selection.clipboardImageItems) add(ItemType.IMAGE)
-                if (selection.clipboardVideoItems) add(ItemType.VIDEO)
-            }
+            val clipboardTypes = selection.clipboardItemTypes()
             val clipboardPayload = if (clipboardTypes.isNotEmpty()) {
                 val operationContext = currentCoroutineContext()
                 when (
@@ -349,7 +344,7 @@ fun RestoreScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
             .subDir(AndroidAppDataStorage.JETPREF_DIR_NAME)
             .subFile("${FlorisPreferenceModel.NAME}.${AndroidAppDataStorage.JETPREF_FILE_EXT}")
             .toPath()
-        val preferenceTransaction = if (selection.jetprefDatastore) {
+        val preferenceTransaction = if (BackupComponent.PREFERENCES in selection) {
             RestorePreferenceTransaction(
                 stagedSource = preferenceSource,
                 snapshot = { destination ->
@@ -386,7 +381,7 @@ fun RestoreScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
         val stagedFilesRoot = stagedRoot.toPath().resolve("files")
         val liveFilesRoot = context.filesDir.toPath()
         val directoryTransactions = buildList {
-            if (selection.imeKeyboard) {
+            if (BackupComponent.KEYBOARD_EXTENSIONS in selection) {
                 add(
                     RestoreDirectoryTransaction(
                         stagedSource = stagedFilesRoot.resolve(ExtensionManager.IME_KEYBOARD_PATH),
@@ -394,7 +389,7 @@ fun RestoreScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                     ),
                 )
             }
-            if (selection.imeTheme) {
+            if (BackupComponent.THEME_EXTENSIONS in selection) {
                 add(
                     RestoreDirectoryTransaction(
                         stagedSource = stagedFilesRoot.resolve(ExtensionManager.IME_THEME_PATH),
@@ -450,7 +445,7 @@ fun RestoreScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                             val session = workspace?.restoreSession
                                 ?: throw RestoreFlowException(RestoreFlowFailure.ARCHIVE_REJECTED)
                             val plan = when (
-                                val result = session.createPlan(selection.components())
+                                val result = session.createPlan(selection)
                             ) {
                                 is RestorePlanResult.Valid -> result.plan
                                 is RestorePlanResult.Invalid -> {
@@ -502,7 +497,7 @@ fun RestoreScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                 enabled = !isRestoreBusy &&
                     restoreFilesSelector.atLeastOneSelected() &&
                     restoreWorkspace?.restoreSession?.archive?.availableComponents?.containsAll(
-                        restoreFilesSelector.snapshot().components(),
+                        restoreFilesSelector.snapshot(),
                     ) == true,
             )
         }
