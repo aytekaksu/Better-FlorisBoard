@@ -16,9 +16,9 @@ generates XML and HTML coverage reports.
 The root `build.gradle.kts` defines the exact Detekt (`qualityKotlinSources`)
 and Spotless (`formattedKotlinSources`) scopes. Detekt covers autocorrect
 plugins/API/host core, backup archives, extension hardening, shared policies,
-and inherited platform utilities. Spotless formats a narrower set of fork-owned
-code and selected tests. Expand coverage deliberately to avoid a noisy
-repository-wide diff. Do not relax Detekt thresholds to hide old findings;
+and inherited Kotlin and Android utilities. Spotless formats a narrower set
+of fork-owned code and selected tests. Expand coverage deliberately to avoid a
+noisy repository-wide diff. Do not relax Detekt thresholds to hide old findings;
 regenerate its baseline only after reviewing each changed finding.
 
 ## Documentation links
