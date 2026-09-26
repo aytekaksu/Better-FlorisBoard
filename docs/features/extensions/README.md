@@ -68,6 +68,8 @@ APK assets are trusted input, but their directory copy still uses staged,
 all-or-nothing publication.
 Bundled keyboard layout IDs may share one arrangement file through
 `arrangementFile`; their labels, modifiers, and subtype choices stay separate.
+Bundled currency keys type the symbol shown on each key; a metadata test checks
+every built-in slot.
 Forty-nine character layouts use `@autoKeys("letters")` source rows, with an
 optional padding width. The build expands Unicode code points to their original
 JSON bytes; the other 24 character layouts remain static.
