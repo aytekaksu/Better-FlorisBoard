@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -132,13 +133,7 @@ fun FlorisErrorCard(
         backgroundColor = Color.Red,
         contentColor = Color.White,
         onClick = onClick,
-        icon = if (showIcon) ({ Icon(
-            modifier = Modifier
-                .padding(all = FlorisCardDefaults.IconSpacing)
-                .requiredSize(FlorisCardDefaults.IconRequiredSize),
-            imageVector = Icons.Default.ErrorOutline,
-            contentDescription = null,
-        ) }) else null,
+        icon = if (showIcon) ({ FlorisStatusCardIcon(Icons.Default.ErrorOutline) }) else null,
         text = text,
         contentPadding = contentPadding,
     )
@@ -157,13 +152,7 @@ fun FlorisWarningCard(
         backgroundColor = Color.Yellow,
         contentColor = Color.Black,
         onClick = onClick,
-        icon = if (showIcon) ({ Icon(
-            modifier = Modifier
-                .padding(all = FlorisCardDefaults.IconSpacing)
-                .requiredSize(FlorisCardDefaults.IconRequiredSize),
-            imageVector = Icons.Outlined.Warning,
-            contentDescription = null,
-        ) }) else null,
+        icon = if (showIcon) ({ FlorisStatusCardIcon(Icons.Outlined.Warning) }) else null,
         text = text,
         contentPadding = contentPadding,
     )
@@ -180,15 +169,20 @@ fun FlorisInfoCard(
     FlorisSimpleCard(
         modifier = modifier,
         onClick = onClick,
-        icon = if (showIcon) ({ Icon(
-            modifier = Modifier
-                .padding(all = FlorisCardDefaults.IconSpacing)
-                .requiredSize(FlorisCardDefaults.IconRequiredSize),
-            imageVector = Icons.Default.Info,
-            contentDescription = null,
-        ) }) else null,
+        icon = if (showIcon) ({ FlorisStatusCardIcon(Icons.Default.Info) }) else null,
         text = text,
         contentPadding = contentPadding,
+    )
+}
+
+@Composable
+private fun FlorisStatusCardIcon(imageVector: ImageVector) {
+    Icon(
+        modifier = Modifier
+            .padding(all = FlorisCardDefaults.IconSpacing)
+            .requiredSize(FlorisCardDefaults.IconRequiredSize),
+        imageVector = imageVector,
+        contentDescription = null,
     )
 }
 

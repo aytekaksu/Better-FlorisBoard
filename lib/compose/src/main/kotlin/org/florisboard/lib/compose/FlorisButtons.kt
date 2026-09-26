@@ -71,16 +71,7 @@ fun FlorisButton(
         contentPadding = contentPadding,
         onClick = onClick,
     ) {
-        if (icon != null) {
-            Icon(
-                modifier = Modifier
-                    .padding(end = ButtonDefaults.IconSpacing)
-                    .size(ButtonDefaults.IconSize),
-                imageVector = icon,
-                contentDescription = null,
-            )
-        }
-        Text(text = text)
+        FlorisButtonLabel(icon, text)
     }
 }
 
@@ -103,16 +94,7 @@ fun FlorisOutlinedButton(
         contentPadding = contentPadding,
         onClick = onClick,
     ) {
-        if (icon != null) {
-            Icon(
-                modifier = Modifier
-                    .padding(end = ButtonDefaults.IconSpacing)
-                    .size(ButtonDefaults.IconSize),
-                imageVector = icon,
-                contentDescription = null,
-            )
-        }
-        Text(text = text)
+        FlorisButtonLabel(icon, text)
     }
 }
 
@@ -135,17 +117,22 @@ fun FlorisTextButton(
         contentPadding = contentPadding,
         onClick = onClick,
     ) {
-        if (icon != null) {
-            Icon(
-                modifier = Modifier
-                    .padding(end = ButtonDefaults.IconSpacing)
-                    .size(ButtonDefaults.IconSize),
-                imageVector = icon,
-                contentDescription = null,
-            )
-        }
-        Text(text = text)
+        FlorisButtonLabel(icon, text)
     }
+}
+
+@Composable
+private fun FlorisButtonLabel(icon: ImageVector?, text: String) {
+    if (icon != null) {
+        Icon(
+            modifier = Modifier
+                .padding(end = ButtonDefaults.IconSpacing)
+                .size(ButtonDefaults.IconSize),
+            imageVector = icon,
+            contentDescription = null,
+        )
+    }
+    Text(text = text)
 }
 
 @Composable
