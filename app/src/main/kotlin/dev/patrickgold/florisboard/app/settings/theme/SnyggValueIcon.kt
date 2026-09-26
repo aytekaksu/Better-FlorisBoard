@@ -51,7 +51,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
@@ -122,7 +122,6 @@ internal fun SnyggValueIcon(
     spec: SnyggValueIcon.Spec = SnyggValueIcon.Normal,
 ) {
     val prefs by FlorisPreferenceStore
-    val context = LocalContext.current
     val accentColor by prefs.theme.accentColor.collectAsState()
 
     when (value) {
@@ -138,86 +137,11 @@ internal fun SnyggValueIcon(
             SnyggValueColorBox(modifier = modifier, spec = spec, backgroundColor = colorScheme.getColor(value.colorName))
         }
 
-        is SnyggGenericFontFamilyValue, is SnyggCustomFontFamilyValue -> {
-            Icon(
-                modifier = modifier.requiredSize(spec.iconSize),
-                imageVector = Icons.Default.FontDownload,
-                contentDescription = null,
-            )
-        }
-        is SnyggFontStyleValue -> {
-            Icon(
-                modifier = modifier.requiredSize(spec.iconSize),
-                imageVector = Icons.Default.FormatItalic,
-                contentDescription = null,
-            )
-        }
-        is SnyggFontWeightValue -> {
-            Icon(
-                modifier = modifier.requiredSize(spec.iconSize),
-                imageVector = Icons.Default.FormatBold,
-                contentDescription = null,
-            )
-        }
-
-        is SnyggPaddingValue -> {
-            Icon(
-                modifier = modifier.requiredSize(spec.iconSize),
-                imageVector = Icons.Default.Padding,
-                contentDescription = null,
-            )
-        }
-
         is SnyggShapeValue -> {
             Box(
                 modifier = modifier
                     .requiredSize(spec.iconSizeMinusBorder)
                     .border(spec.borderWith, MaterialTheme.colorScheme.onBackground, value.alwaysPercentShape())
-            )
-        }
-
-        is SnyggDpSizeValue -> {
-            Icon(
-                modifier = modifier.requiredSize(spec.iconSize),
-                imageVector = Icons.Default.Straighten,
-                contentDescription = null,
-            )
-        }
-        is SnyggSpSizeValue -> {
-            Icon(
-                modifier = modifier.requiredSize(spec.iconSize),
-                imageVector = Icons.Default.FormatSize,
-                contentDescription = null,
-            )
-        }
-
-        is SnyggTextAlignValue -> {
-            Icon(
-                modifier = modifier.requiredSize(spec.iconSize),
-                imageVector = when (value.textAlign) {
-                    TextAlign.Left, TextAlign.Start -> Icons.AutoMirrored.Default.FormatAlignLeft
-                    TextAlign.Right, TextAlign.End -> Icons.AutoMirrored.Default.FormatAlignRight
-                    TextAlign.Justify -> Icons.Default.FormatAlignJustify
-                    else -> Icons.Default.FormatAlignCenter
-                },
-                contentDescription = null,
-            )
-        }
-        is SnyggTextDecorationLineValue -> {
-            Icon(
-                modifier = modifier.requiredSize(spec.iconSize),
-                imageVector = when (value.textDecoration) {
-                    TextDecoration.LineThrough -> Icons.Default.FormatStrikethrough
-                    else -> Icons.Default.FormatUnderlined
-                },
-                contentDescription = null,
-            )
-        }
-        is SnyggTextOverflowValue -> {
-            Icon(
-                modifier = modifier.requiredSize(spec.iconSize),
-                imageVector = Icons.AutoMirrored.Default.WrapText,
-                contentDescription = null,
             )
         }
 
@@ -256,40 +180,40 @@ internal fun SnyggValueIcon(
             }
         }
 
-        is SnyggUriValue -> {
-            Icon(
-                modifier = modifier.requiredSize(spec.iconSize),
-                imageVector = Icons.Default.AttachFile,
-                contentDescription = null,
-            )
-        }
-        is SnyggContentScaleValue -> {
-            Icon(
-                modifier = modifier.requiredSize(spec.iconSize),
-                imageVector = Icons.Default.OpenInFull,
-                contentDescription = null,
-            )
-        }
-
-        is SnyggYesValue -> {
-            Icon(
-                modifier = modifier.requiredSize(spec.iconSize),
-                imageVector = Icons.Default.FormatBold,
-                contentDescription = null,
-            )
-        }
-        is SnyggNoValue -> {
-            Icon(
-                modifier = modifier.requiredSize(spec.iconSize),
-                imageVector = Icons.Default.CheckBoxOutlineBlank,
-                contentDescription = null,
-            )
-        }
-
         else -> {
-            // Render nothing
+            plainSnyggValueIcon(value)?.let { icon ->
+                Icon(
+                    modifier = modifier.requiredSize(spec.iconSize),
+                    imageVector = icon,
+                    contentDescription = null,
+                )
+            }
         }
     }
+}
+
+internal fun plainSnyggValueIcon(value: SnyggValue): ImageVector? = when (value) {
+    is SnyggGenericFontFamilyValue, is SnyggCustomFontFamilyValue -> Icons.Default.FontDownload
+    is SnyggFontStyleValue -> Icons.Default.FormatItalic
+    is SnyggFontWeightValue, is SnyggYesValue -> Icons.Default.FormatBold
+    is SnyggPaddingValue -> Icons.Default.Padding
+    is SnyggDpSizeValue -> Icons.Default.Straighten
+    is SnyggSpSizeValue -> Icons.Default.FormatSize
+    is SnyggTextAlignValue -> when (value.textAlign) {
+        TextAlign.Left, TextAlign.Start -> Icons.AutoMirrored.Default.FormatAlignLeft
+        TextAlign.Right, TextAlign.End -> Icons.AutoMirrored.Default.FormatAlignRight
+        TextAlign.Justify -> Icons.Default.FormatAlignJustify
+        else -> Icons.Default.FormatAlignCenter
+    }
+    is SnyggTextDecorationLineValue -> when (value.textDecoration) {
+        TextDecoration.LineThrough -> Icons.Default.FormatStrikethrough
+        else -> Icons.Default.FormatUnderlined
+    }
+    is SnyggTextOverflowValue -> Icons.AutoMirrored.Default.WrapText
+    is SnyggUriValue -> Icons.Default.AttachFile
+    is SnyggContentScaleValue -> Icons.Default.OpenInFull
+    is SnyggNoValue -> Icons.Default.CheckBoxOutlineBlank
+    else -> null
 }
 
 @Composable
