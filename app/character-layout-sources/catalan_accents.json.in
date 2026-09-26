@@ -1,0 +1,13 @@
+[
+  [
+    @autoKeys("qwertyuiop"),
+    { "$": "auto_text_key", "code":  768, "label": "◌̀" }
+  ],
+  [
+    @autoKeys("asdfghjklç"),
+    { "$": "auto_text_key", "code":  769, "label": "◌́" }
+  ],
+  [
+    @autoKeys("zxcvbnm")
+  ]
+]

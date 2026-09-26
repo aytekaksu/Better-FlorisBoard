@@ -1,0 +1,15 @@
+[
+  [
+    @autoKeys("qwertzuiopü")
+  ],
+  [
+    @autoKeys("asdfghjklöä")
+  ],
+  [
+    @autoKeys("yxcvbnm"),
+    { "$": "case_selector",
+      "lower": { "code":  223, "label": "ß" },
+      "upper": { "code": 7838, "label": "ẞ" }
+    }
+  ]
+]

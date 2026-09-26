@@ -1,0 +1,11 @@
+[
+  [
+    @autoKeys("qwertzuiop")
+  ],
+  [
+    @autoKeys("asdfghjkl")
+  ],
+  [
+    @autoKeys("yxcvbnm")
+  ]
+]

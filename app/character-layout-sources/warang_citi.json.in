@@ -1,0 +1,28 @@
+[
+  [
+    @autoKeys("𑣄𑣆𑣈𑣜𑣛𑣒𑣅𑣃𑣂𑣉𑣘", width=7)
+  ],
+  [
+    { "$": "auto_text_key", "code":  71873, "label": "𑣁" },
+    { "$": "auto_text_key", "code": 71902, "label": "𑣞", "popup": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  71901, "label": "𑣝" }
+      ]
+    } },
+    @autoKeys("𑣑𑣔𑣋𑣊𑣙𑣎𑣌𑣚", width=7)
+  ],
+  [
+    @autoKeys("𑣕𑣇𑣏𑣀𑣍𑣐", width=7),
+    { "$": "auto_text_key", "code":  71895, "label": "𑣗", "popup": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  71903, "label": "𑣟" }
+      ]
+    } },
+    { "$": "auto_text_key", "code":  71891, "label": "𑣓" },
+    { "$": "auto_text_key", "code":  71894, "label": "𑣖", "popup": {
+      "relevant": [
+        { "code":  71935, "label": "𑣿" }
+      ]
+    } }
+  ]
+]

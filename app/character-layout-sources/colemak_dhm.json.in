@@ -1,0 +1,23 @@
+[
+  [
+    @autoKeys("qwfpbjluy"),
+    { "$": "case_selector",
+      "lower": { "code":   59, "label": ";", "popup": {
+        "relevant": [
+          { "code":   58, "label": ":" }
+        ]
+      } },
+      "upper": { "code":   58, "label": ":", "popup": {
+        "relevant": [
+          { "code":   59, "label": ";" }
+        ]
+      } }
+    }
+  ],
+  [
+    @autoKeys("arstgmneio")
+  ],
+  [
+    @autoKeys("zxcdvkh")
+  ]
+]
