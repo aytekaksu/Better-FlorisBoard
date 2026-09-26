@@ -31,7 +31,6 @@ import dev.patrickgold.florisboard.ime.nlp.han.HanShapeBasedLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.latin.LatinLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginSuggestionBatch
-import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.keyboardExtensionRepository
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
 import dev.patrickgold.florisboard.subtypeManager
@@ -279,11 +278,10 @@ internal class SharedActionsAnimationSuppressionTracker {
     }
 }
 
-class NlpManager(context: Context) {
+class NlpManager internal constructor(context: Context, private val isIncognitoMode: () -> Boolean) {
     private val prefs by FlorisPreferenceStore
     private val clipboardManager by context.clipboardManager()
     private val editorInstance by context.editorInstance()
-    private val keyboardManager by context.keyboardManager()
     private val keyboardExtensionRepository by context.keyboardExtensionRepository()
     private val autocorrectPluginManager by context.autocorrectPluginManager()
     private val subtypeManager by context.subtypeManager()
@@ -458,7 +456,7 @@ class NlpManager(context: Context) {
                         content = content,
                         maxCandidateCount = prefs.emoji.suggestionCandidateMaxCount.get(),
                         allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                        isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                        isPrivateSession = isIncognitoMode(),
                     )
                 }
                 else -> emptyList()
@@ -475,7 +473,7 @@ class NlpManager(context: Context) {
                             content = content,
                             maxCandidateCount = AutocorrectPluginContract.MAX_CANDIDATES,
                             allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                            isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                            isPrivateSession = isIncognitoMode(),
                             requestEditorGeneration = requestEditorGeneration,
                         )
                     } else {
@@ -486,7 +484,7 @@ class NlpManager(context: Context) {
                                 maxCandidateCount = 8,
                                 allowPossiblyOffensive =
                                     !prefs.suggestion.blockPossiblyOffensive.get(),
-                                isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                                isPrivateSession = isIncognitoMode(),
                             ),
                             handled = true,
                         )
@@ -497,7 +495,7 @@ class NlpManager(context: Context) {
                             content = content,
                             maxCandidateCount = 8,
                             allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                            isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                            isPrivateSession = isIncognitoMode(),
                         )
                     } else {
                         externalResult.candidates
@@ -581,7 +579,7 @@ class NlpManager(context: Context) {
                     content = content,
                     maxCandidateCount = 8,
                     allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                    isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                    isPrivateSession = isIncognitoMode(),
                 )
                 val isWordBeingTyped = content.currentWordText.isNotBlank() ||
                     wordCandidates.any {
@@ -593,7 +591,7 @@ class NlpManager(context: Context) {
         }
         candidateAssemblyRevision.publishIfCurrent(revision) {
             val publishableCandidates = if (canUseClipboardSuggestions(
-                    keyboardManager.activeState.isIncognitoMode,
+                    isIncognitoMode(),
                 )
             ) {
                 candidates

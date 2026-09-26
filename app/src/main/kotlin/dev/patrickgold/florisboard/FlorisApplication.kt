@@ -190,7 +190,7 @@ class FlorisApplication : Application() {
             liveAutocorrectKeyboardTraits { keyboardManager.value.activeState },
         )
     }
-    val nlpManager = lazy { NlpManager(this) }
+    val nlpManager = lazy { NlpManager(this) { keyboardManager.value.activeState.isIncognitoMode } }
     val subtypeManager = lazy { SubtypeManager(this) }
     val themeManager = lazy { ThemeManager(this) }
 
