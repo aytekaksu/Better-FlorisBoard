@@ -29,10 +29,15 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.IOException
 import java.nio.charset.CharacterCodingException
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.BasicFileAttributes
 
 plugins {
     alias(libs.plugins.agp.application)
@@ -211,9 +216,7 @@ abstract class GeneratePopupMappingAssets : DefaultTask() {
         private const val ASSET_PATH = "ime/keyboard/org.florisboard.localization/popupMappings"
 
         fun render(sources: File, fragmentFile: File, extensionFile: File, output: File) {
-            val target = output.resolve(ASSET_PATH)
-            check(!Files.isSymbolicLink(target.toPath())) { "Generated popup mapping directory is a link" }
-            check(!target.exists() || target.deleteRecursively()) { "Unable to replace generated popup mappings" }
+            val target = clearOutput(output)
 
             val fragment = readSource(fragmentFile).removeSuffix("\n")
             check(fragment.startsWith("    \"~right\": {") && fragment.endsWith("    }")) {
@@ -283,6 +286,38 @@ abstract class GeneratePopupMappingAssets : DefaultTask() {
             for ((name, text) in rendered.toSortedMap()) {
                 target.resolve(name).writeText(text, Charsets.UTF_8)
             }
+        }
+
+        private fun clearOutput(output: File): File {
+            val root = output.toPath()
+            val target = root.resolve(ASSET_PATH)
+            var component = root
+            check(!Files.isSymbolicLink(component)) { "Generated popup mapping output path is linked" }
+            for (segment in root.relativize(target)) {
+                component = component.resolve(segment)
+                check(!Files.isSymbolicLink(component)) { "Generated popup mapping output path is linked" }
+            }
+            removeTreeNoFollow(target)
+            return target.toFile()
+        }
+
+        fun removeTreeNoFollow(root: Path) {
+            if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) return
+            Files.walkFileTree(
+                root,
+                object : SimpleFileVisitor<Path>() {
+                    override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                        Files.delete(file)
+                        return FileVisitResult.CONTINUE
+                    }
+
+                    override fun postVisitDirectory(dir: Path, failure: IOException?): FileVisitResult {
+                        if (failure != null) throw failure
+                        Files.delete(dir)
+                        return FileVisitResult.CONTINUE
+                    }
+                },
+            )
         }
 
         private fun readSource(file: File): String {
@@ -466,10 +501,11 @@ val testPopupMappingAssetGenerator by tasks.registering {
             files: Map<String, String>,
             shared: String = fragment,
             failure: String? = null,
+            expectOutputAbsent: Boolean = true,
             prepare: (File) -> Unit = {},
         ): File {
             val root = temporaryDir.resolve("case-${caseNumber++}")
-            check(!root.exists() || root.deleteRecursively()) { "Unable to reset popup test fixture" }
+            GeneratePopupMappingAssets.removeTreeNoFollow(root.toPath())
             val sources = root.resolve("sources").apply { mkdirs() }
             for ((name, text) in files) sources.resolve(name).writeText(text)
             val sharedFile = root.resolve("right.inc").apply { writeText("$shared\n") }
@@ -488,7 +524,9 @@ val testPopupMappingAssetGenerator by tasks.registering {
                 check(error?.message?.contains(failure) == true) {
                     "Expected popup generator failure '$failure', got '${error?.message}'"
                 }
-                check(!output.resolve(assetPath).exists()) { "Invalid popup data produced assets" }
+                if (expectOutputAbsent) {
+                    check(!output.resolve(assetPath).exists()) { "Invalid popup data produced assets" }
+                }
             }
             return output.resolve(assetPath)
         }
@@ -571,6 +609,50 @@ val testPopupMappingAssetGenerator by tasks.registering {
                 writeText("{}")
             }
         }
+        var nestedOutside: File? = null
+        exercise(listOf("en"), mapOf("en.json" to "{broken}"), failure = "malformed JSON") { root ->
+            val outside = root.resolve("outside").apply { mkdirs() }
+            outside.resolve("keep.json").writeText("safe")
+            val target = root.resolve("output/$assetPath").apply { mkdirs() }
+            Files.createSymbolicLink(target.resolve("nested").toPath(), outside.toPath())
+            nestedOutside = outside
+        }
+        check(nestedOutside?.resolve("keep.json")?.readText() == "safe")
+
+        var parentOutside: File? = null
+        exercise(
+            listOf("en"),
+            mapOf("en.json" to "{}"),
+            failure = "output path is linked",
+            expectOutputAbsent = false,
+        ) { root ->
+            val outside = root.resolve("outside")
+            outside.resolve("keyboard/org.florisboard.localization/popupMappings/stale.json").apply {
+                parentFile.mkdirs()
+                writeText("safe")
+            }
+            Files.createDirectories(root.resolve("output").toPath())
+            Files.createSymbolicLink(root.resolve("output/ime").toPath(), outside.toPath())
+            parentOutside = outside
+        }
+        check(
+            parentOutside?.resolve("keyboard/org.florisboard.localization/popupMappings/stale.json")?.readText() ==
+                "safe",
+        )
+
+        var rootOutside: File? = null
+        exercise(
+            listOf("en"),
+            mapOf("en.json" to "{}"),
+            failure = "output path is linked",
+            expectOutputAbsent = false,
+        ) { root ->
+            val outside = root.resolve("outside").apply { mkdirs() }
+            outside.resolve("keep.json").writeText("safe")
+            Files.createSymbolicLink(root.resolve("output").toPath(), outside.toPath())
+            rootOutside = outside
+        }
+        check(rootOutside?.resolve("keep.json")?.readText() == "safe")
         exercise(listOf("en", "en"), mapOf("en.json" to "{}"), failure = "Duplicate popup mapping ID")
         exercise(listOf("../other"), emptyMap(), failure = "Invalid popup mapping ID")
     }
