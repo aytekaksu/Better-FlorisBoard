@@ -506,63 +506,38 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
     )
 
     private val dao = object : UserDictionaryDao {
-        override fun queryAll(): List<UserDictionaryEntry> = queryResolver(
-            selection = null,
-            selectionArgs = null,
-            sortOrder = SORT_BY_FREQ_DESC,
-        )
+        override fun queryAll(): List<UserDictionaryEntry> = queryResolver(selection = null, selectionArgs = null)
 
-        override fun queryAll(locale: FlorisLocale?): List<UserDictionaryEntry> = if (locale == null) {
-            queryResolver(
-                selection = "${UserDictionary.Words.LOCALE} IS NULL",
-                selectionArgs = null,
-                sortOrder = SORT_BY_FREQ_DESC,
-            )
-        } else {
-            queryResolver(
-                selection = "${UserDictionary.Words.LOCALE} = ?",
-                selectionArgs = arrayOf(locale.localeTag()),
-                sortOrder = SORT_BY_FREQ_DESC,
-            )
-        }
+        override fun queryAll(locale: FlorisLocale?): List<UserDictionaryEntry> = queryResolver(
+            selection = "${UserDictionary.Words.LOCALE} " + (if (locale == null) "IS NULL" else "= ?"),
+            selectionArgs = locale?.let { arrayOf(it.localeTag()) },
+        )
 
         override fun queryAllRaw(locale: String): List<UserDictionaryEntry> = queryResolver(
             selection = "${UserDictionary.Words.LOCALE} = ?",
             selectionArgs = arrayOf(locale),
-            sortOrder = SORT_BY_FREQ_DESC,
         )
 
         override fun queryAllRawAliases(locale: String): List<UserDictionaryEntry> = queryResolver(
             selection = "${UserDictionary.Words.LOCALE} = ? OR ${UserDictionary.Words.LOCALE} = ?",
             selectionArgs = arrayOf(locale, locale.replace('_', '-')),
-            sortOrder = SORT_BY_FREQ_DESC,
         )
 
-        override fun queryExact(word: String, locale: FlorisLocale?): List<UserDictionaryEntry> = if (locale == null) {
-            queryResolver(
-                selection = "${UserDictionary.Words.WORD} = ? AND ${UserDictionary.Words.LOCALE} IS NULL",
-                selectionArgs = arrayOf(word),
-                sortOrder = SORT_BY_FREQ_DESC,
-            )
-        } else {
-            queryResolver(
-                selection = "${UserDictionary.Words.WORD} = ? AND ${UserDictionary.Words.LOCALE} = ?",
-                selectionArgs = arrayOf(word, locale.localeTag()),
-                sortOrder = SORT_BY_FREQ_DESC,
-            )
-        }
+        override fun queryExact(word: String, locale: FlorisLocale?): List<UserDictionaryEntry> = queryResolver(
+            selection = "${UserDictionary.Words.WORD} = ? AND ${UserDictionary.Words.LOCALE} " +
+                (if (locale == null) "IS NULL" else "= ?"),
+            selectionArgs = if (locale == null) arrayOf(word) else arrayOf(word, locale.localeTag()),
+        )
 
         override fun queryExactRawAliases(word: String, locale: String): List<UserDictionaryEntry> = queryResolver(
             selection = "${UserDictionary.Words.WORD} = ? AND " +
                 "(${UserDictionary.Words.LOCALE} = ? OR ${UserDictionary.Words.LOCALE} = ?)",
             selectionArgs = arrayOf(word, locale, locale.replace('_', '-')),
-            sortOrder = SORT_BY_FREQ_DESC,
         )
 
         override fun queryExactRaw(word: String, locale: String): List<UserDictionaryEntry> = queryResolver(
             selection = "${UserDictionary.Words.WORD} = ? AND ${UserDictionary.Words.LOCALE} = ?",
             selectionArgs = arrayOf(word, locale),
-            sortOrder = SORT_BY_FREQ_DESC,
         )
 
         override fun queryLanguageList(): List<String?> {
@@ -587,20 +562,14 @@ class SystemUserDictionaryDatabase(context: Context) : UserDictionaryDatabase {
             } ?: emptyList()
         }
 
-        private fun queryResolver(
-            selection: String?,
-            selectionArgs: Array<out String>?,
-            sortOrder: String?,
-        ): List<UserDictionaryEntry> {
-            val resolver = applicationContext.contentResolver
-            return resolver.query(
+        private fun queryResolver(selection: String?, selectionArgs: Array<out String>?): List<UserDictionaryEntry> =
+            applicationContext.contentResolver.query(
                 UserDictionary.Words.CONTENT_URI,
                 PROJECTIONS,
                 selection,
                 selectionArgs,
-                sortOrder,
+                SORT_BY_FREQ_DESC,
             )?.use(::parseEntries) ?: emptyList()
-        }
 
         private fun parseEntries(cursor: Cursor): List<UserDictionaryEntry> {
             if (cursor.count <= 0) {

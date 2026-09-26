@@ -16,9 +16,12 @@
 
 package dev.patrickgold.florisboard.ime.dictionary
 
+import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.content.ContextWrapper
 import android.net.Uri
+import android.provider.UserDictionary
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -40,6 +43,55 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class DictionaryManagerAndroidTest {
+    @Test
+    fun systemDictionaryQueriesKeepNullAndStoredLocaleSelections() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val resolver = context.contentResolver
+        val dao = SystemUserDictionaryDatabase(context).userDictionaryDao()
+        val word = "system-query-${UUID.randomUUID()}"
+        val locale = FlorisLocale.fromTag("en-US")
+        val tag = locale.localeTag()
+        val inserted = mutableListOf<Uri>()
+
+        fun add(value: String, frequency: Int, storedLocale: String?): Long {
+            val values = ContentValues().apply {
+                put(UserDictionary.Words.WORD, value)
+                put(UserDictionary.Words.FREQUENCY, frequency)
+                put(UserDictionary.Words.LOCALE, storedLocale)
+                put(UserDictionary.Words.APP_ID, 0)
+            }
+            val uri = requireNotNull(resolver.insert(UserDictionary.Words.CONTENT_URI, values))
+            inserted += uri
+            return ContentUris.parseId(uri)
+        }
+
+        try {
+            val withoutLocale = add(word, 55, null)
+            val canonical = add(word, 75, tag)
+            val hyphenated = add(word, 65, tag.replace('_', '-'))
+            val otherLocale = add(word, 45, "fr_FR")
+            val otherWord = add("$word-other", 85, tag)
+            val insertedIds = setOf(withoutLocale, canonical, hyphenated, otherLocale, otherWord)
+            fun selectedIds(entries: List<UserDictionaryEntry>) = entries.map(UserDictionaryEntry::id)
+                .filter { it in insertedIds }
+
+            assertEquals(listOf(otherWord, canonical, hyphenated, withoutLocale, otherLocale), selectedIds(dao.queryAll()))
+            assertEquals(listOf(withoutLocale), selectedIds(dao.queryAll(null)))
+            assertEquals(listOf(otherWord, canonical), selectedIds(dao.queryAll(locale)))
+            assertEquals(listOf(otherWord, canonical), selectedIds(dao.queryAllRaw(tag)))
+            assertEquals(listOf(otherWord, canonical, hyphenated), selectedIds(dao.queryAllRawAliases(tag)))
+            assertEquals(listOf(withoutLocale), selectedIds(dao.queryExact(word, null)))
+            assertEquals(listOf(canonical), selectedIds(dao.queryExact(word, locale)))
+            assertEquals(listOf(canonical), selectedIds(dao.queryExactRaw(word, tag)))
+            assertEquals(listOf(canonical, hyphenated), selectedIds(dao.queryExactRawAliases(word, tag)))
+        } finally {
+            val failedDeletes = inserted.count { uri ->
+                runCatching { resolver.delete(uri, null, null) }.getOrNull() != 1
+            }
+            assertEquals("Failed to remove synthetic system-dictionary rows", 0, failedDeletes)
+        }
+    }
+
     @Test
     fun florisDaoRejectsMainThreadQueries() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
