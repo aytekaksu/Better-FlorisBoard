@@ -141,17 +141,12 @@ one test, because an early failure prevents later behavior from being checked.
 
 ## Debugging and fault injection
 
-Use synthetic layouts and text. Exercise: down in key gaps; boundary
-hysteresis; move outside all keys; long press followed by move; popup
-selection; second pointer with an active key; pointer ID reuse; missing pointer
-index; cancellation at every action; layout replacement mid-touch; delete and
-spacebar selection drags; accessibility; and stale prediction hints.
+Use the [debugging guide](../../debugging.md) and the linked real-MotionEvent
+suite. Exercise down in key gaps, boundary hysteresis, long-press/popup
+transitions, missing pointer indexes, delete/spacebar selection drags,
+accessibility, and stale prediction hints.
 
-Useful safe observations are pointer count, opaque pointer ID, activation
-source, key code category, state transition, gesture owner, elapsed-duration
-bucket, and cancellation reason. Never include emitted text or coordinates.
-
-## Known limits and upstream hot spots
+## Known limits
 
 - Rendering, touch control, glide trail, swipe actions, selection drag, popups,
   and autocorrect trace capture still share one large source file.
@@ -159,8 +154,3 @@ bucket, and cancellation reason. Never include emitted text or coordinates.
   hard to distinguish without typed invariant reporting.
 - Full MotionEvent coverage is instrumented and therefore slower than the
   desired semantic JVM fixture.
-
-`TextKeyboardLayout`, `TextKeyboard`, `KeyboardManager`, popup controllers,
-`FlorisImeService`, preferences, and editor code are upstream conflict hot
-spots. Extract pure transition decisions first; keep Compose and Android event
-adaptation thin.

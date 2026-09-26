@@ -30,20 +30,9 @@ Cross-cutting references:
 - [Protocol version history](../protocol/version-history.md)
 - [Upstream synchronization](../upstream-sync.md)
 
-## Rules shared by every feature
-
-- Keyboard input is sensitive. Logs and diagnostics must not contain typed
-  text, candidates, clipboard contents, dictionary entries, raw touch paths, or
-  target-application content.
-- UI-thread input handling must not wait for disk, network, Binder replies, or
-  model inference.
-- Asynchronous results must prove that their editor generation, session,
-  provider, layout, and request are still current before changing UI or text.
-- Cancellation and lifecycle loss are normal states, not exceptional cleanup.
-- Tests should assert observable behavior and state invariants. Use a device
-  only when Android framework or cross-process behavior is the subject.
-- Fork-specific code should reach upstream hot spots through the narrowest
-  interface possible.
+Never block UI-thread input on disk, network, Binder replies, or model
+inference. Follow the [contribution rules](../../CONTRIBUTING.md); each
+feature defines its own freshness, cancellation, and failure checks.
 
 ## Documentation review
 
