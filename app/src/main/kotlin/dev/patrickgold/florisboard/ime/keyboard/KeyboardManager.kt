@@ -1029,10 +1029,10 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 }
                 KeyCode.CLIPBOARD_PASTE -> {
                     !isClipboardAccessLocked() &&
-                        clipboardManager.canBePasted(clipboardManager.primaryClip)
+                        editorInstance.canPaste(clipboardManager.primaryClip)
                 }
                 KeyCode.CLIPBOARD_CLEAR_PRIMARY_CLIP -> {
-                    clipboardManager.canBePasted(clipboardManager.primaryClip)
+                    editorInstance.canPaste(clipboardManager.primaryClip)
                 }
                 KeyCode.CLIPBOARD_SELECT_ALL -> {
                     editorInfo.isRichInputEditor

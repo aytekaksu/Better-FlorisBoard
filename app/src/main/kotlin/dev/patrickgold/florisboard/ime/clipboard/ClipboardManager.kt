@@ -18,7 +18,6 @@ package dev.patrickgold.florisboard.ime.clipboard
 
 import android.app.AppOpsManager
 import android.content.ClipData
-import android.content.ClipDescription
 import android.content.ClipboardManager.OnPrimaryClipChangedListener
 import android.content.Context
 import android.content.Intent
@@ -29,7 +28,6 @@ import android.os.Process
 import dev.patrickgold.florisboard.app.FlorisPreferenceModel
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
-import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaImporter
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardFileStorage
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardHistoryDao
@@ -587,10 +585,10 @@ internal fun commitSystemClipboardMediaPublication(
 class ClipboardManager internal constructor(
     context: Context,
     private val inputSink: Lazy<ClipboardInputSink>,
+    private val commitToEditor: (ClipboardItem, ClipboardMediaPasteAccess?) -> Boolean,
 ) : OnPrimaryClipChangedListener, Closeable {
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
-    private val editorInstance by context.editorInstance()
     private val systemClipboardManager = context.systemService(AndroidClipboardManager::class)
     private val appOpsManager = context.systemService(AppOpsManager::class)
     private val keyguardManager = context.systemService(AndroidKeyguardManager::class)
@@ -1148,7 +1146,7 @@ class ClipboardManager internal constructor(
         if (itemSnapshot.type == ItemType.TEXT) {
             inputSink.value.dispatchPaste {
                 reportPasteResult(
-                    editorInstance.commitClipboardItem(itemSnapshot),
+                    commitToEditor(itemSnapshot, null),
                     onResult,
                 )
             }
@@ -1196,7 +1194,7 @@ class ClipboardManager internal constructor(
                 try {
                     val preparedAccess = access.getAndSet(null)
                     val committed = if (acceptingCommands.get() && preparedAccess != null) {
-                        editorInstance.commitClipboardItem(itemSnapshot, preparedAccess)
+                        commitToEditor(itemSnapshot, preparedAccess)
                     } else {
                         preparedAccess?.commitRejected()
                         false
@@ -1243,19 +1241,6 @@ class ClipboardManager internal constructor(
         onResult(result)
         if (!result) {
             ioScope.launch(Dispatchers.Main.immediate) { appContext.showShortToast("Failed to paste item.") }
-        }
-    }
-
-    /**
-     * Returns true if the editor can accept the clip item, else false.
-     */
-    fun canBePasted(clipItem: ClipboardItem?): Boolean {
-        if (clipItem == null) return false
-
-        return clipItem.mimeTypes.contains("text/plain") || editorInstance.activeInfo.contentMimeTypes.any { editorType ->
-            clipItem.mimeTypes.any { clipType ->
-                ClipDescription.compareMimeTypes(clipType, editorType)
-            }
         }
     }
 
