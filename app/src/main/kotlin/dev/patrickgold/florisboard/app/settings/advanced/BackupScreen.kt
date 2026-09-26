@@ -234,16 +234,23 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                     failureClass = error.javaClass.simpleName
                     flogError { "Failed to save backup: failureClass=$failureClass" }
                 } finally {
-                    withContext(NonCancellable + Dispatchers.IO) {
-                        try {
-                            workspace.close()
-                        } finally {
-                            if (!workspace.isClosed()) {
-                                workspace.requestClose()
+                    try {
+                        withContext(NonCancellable + Dispatchers.IO) {
+                            try {
+                                workspace.close()
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: Exception) {
+                                flogError { "Backup workspace cleanup failed: failureClass=${error.javaClass.simpleName}" }
+                            } finally {
+                                if (!workspace.isClosed()) {
+                                    workspace.requestClose()
+                                }
                             }
                         }
+                    } finally {
+                        isBackupBusy = false
                     }
-                    isBackupBusy = false
                 }
                 if (failureClass == null) {
                     context.showLongToast(R.string.backup_and_restore__back_up__success)
