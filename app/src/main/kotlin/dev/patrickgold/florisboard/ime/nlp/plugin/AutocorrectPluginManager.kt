@@ -341,7 +341,6 @@ class AutocorrectPluginManager internal constructor(
     private val pendingSuggestions =
         ConcurrentHashMap<Long, CompletableDeferred<AutocorrectSuggestionResult>>()
     private val pendingRemovals = ConcurrentHashMap<Long, CompletableDeferred<Boolean>>()
-    private val sessionPayloads = ConcurrentHashMap<Long, AutocorrectSession>()
     private val finalRequestSnapshots = FinalRequestSnapshots()
     private val pendingHostSettingValues =
         ConcurrentHashMap<AutocorrectPluginHostSetting, Boolean>()
@@ -372,8 +371,9 @@ class AutocorrectPluginManager internal constructor(
     @Volatile private var remote: Messenger? = null
     @Volatile private var bound = false
     private val hostState get() = suggestionRequestCoordinator.snapshot()
+    private val activeSessionId: Long? get() = hostState.session?.sessionId?.value
     private val activeSession: AutocorrectSession?
-        get() = hostState.session?.let { sessionPayloads[it.sessionId.value] }
+        get() = hostState.session?.let { it.configuration.toAutocorrectSession(it.sessionId) }
     private val connectionReady = ConnectionReadySlot<Messenger>()
     @Volatile private var latestSuggestionRequestId = -1L
     @Volatile private var latestPluginUiRequestId = -1L
@@ -448,10 +448,7 @@ class AutocorrectPluginManager internal constructor(
     }
 
     @Synchronized
-    private fun dispatchHost(
-        event: HostEvent,
-        newSession: ((Long) -> AutocorrectSession)? = null,
-    ): HostTransition {
+    private fun dispatchHost(event: HostEvent): HostTransition {
         val previousSessionId = hostState.session?.sessionId
         val transition = suggestionRequestCoordinator.dispatchLifecycle(event)
         finalRequestSnapshots.onHostEvent(event, keyboardTraits().isPrivateSession)
@@ -459,20 +456,12 @@ class AutocorrectPluginManager internal constructor(
             if (transition.state.session == null) connectionReady.close()
             else connectionReady.replace()
         }
-        transition.state.session?.let { active ->
-            if (active.sessionId != previousSessionId && newSession != null) {
-                sessionPayloads[active.sessionId.value] = newSession(active.sessionId.value)
-            }
-        }
         transition.effects.forEach { effect ->
             if (effect is HostEffect.EventIgnored) return@forEach
             check(hostCommands.trySend(hostCommandFor(effect, event)).isSuccess) {
                 "Autocorrect host effect queue closed"
             }
         }
-        val retained = transition.state.pendingFinishes.keys.mapTo(mutableSetOf()) { it.value }
-        transition.state.session?.sessionId?.value?.let(retained::add)
-        sessionPayloads.keys.retainAll(retained)
         return transition
     }
 
@@ -483,10 +472,10 @@ class AutocorrectPluginManager internal constructor(
         )
         is HostEffect.StartSession -> HostCommand(
             effect,
-            session = sessionPayloads[effect.lease.sessionId.value],
+            session = effect.configuration.toAutocorrectSession(effect.lease.sessionId),
         )
         is HostEffect.FinishSession -> {
-            val session = sessionPayloads[effect.lease.sessionId.value]
+            val session = effect.configuration.toAutocorrectSession(effect.lease.sessionId)
             captureFinalSnapshot(effect, event, session)
             HostCommand(effect, session = session)
         }
@@ -496,11 +485,11 @@ class AutocorrectPluginManager internal constructor(
     private fun captureFinalSnapshot(
         effect: HostEffect.FinishSession,
         event: HostEvent,
-        session: AutocorrectSession?,
+        session: AutocorrectSession,
     ) {
-        if (session == null || event is HostEvent.Destroy || !currentEditorAllowsFinalContent(session)) return
+        if (event is HostEvent.Destroy || !currentEditorAllowsFinalContent(session)) return
         if (event is HostEvent.OpenSession &&
-            event.configuration != session.toHostSessionConfiguration()
+            event.configuration != effect.configuration
         ) return
         val content = selectFinalRequestContent(
             editorInstance.activeContent,
@@ -510,7 +499,7 @@ class AutocorrectPluginManager internal constructor(
         )
         finalRequestSnapshots.put(
             effect.lease,
-            session.toHostSessionConfiguration(),
+            effect.configuration,
             buildFinalRequest(session, effect.lease.finalRequestId.value, content),
         )
     }
@@ -866,7 +855,7 @@ class AutocorrectPluginManager internal constructor(
     @Synchronized
     internal fun leaseBoostedCodePoints(): PredictionHintLease {
         val accessibility = appContext.getSystemService(AccessibilityManager::class.java)
-        val session = activeSession
+        val sessionId = activeSessionId
         val selectedProviderId = prefs.suggestion.autocorrectPluginComponent.get()
         val editorInfo = editorInstance.activeInfo
         val isEligible =
@@ -876,8 +865,8 @@ class AutocorrectPluginManager internal constructor(
                     isPrivateSession = keyboardTraits().isPrivateSession,
                     isRawInputEditor = editorInfo.isRawInputEditor,
                 ) &&
-                session != null &&
-                admittedSessionId == session.sessionId &&
+                sessionId != null &&
+                admittedSessionId == sessionId &&
                 selectedProviderId == activeProviderId &&
                 activeProviderId == boundProviderId &&
                 currentPhysicalRemote() != null
@@ -1186,7 +1175,7 @@ class AutocorrectPluginManager internal constructor(
         val secondaryLanguageTags = subtype.secondaryLocales.map { it.languageTag() }
         val editorFlags = editorInfo.autocorrectEditorFlags()
         val preferredEmojiSkinToneModifier = prefs.emoji.preferredSkinTone.get().id
-        val previous = activeSession
+        val previousSessionId = activeSessionId
         val configuration = SessionConfiguration(
             primaryLanguageTag = subtype.primaryLocale.languageTag(),
             secondaryLanguageTags = secondaryLanguageTags,
@@ -1198,25 +1187,13 @@ class AutocorrectPluginManager internal constructor(
         )
         val transition = dispatchHost(
             HostEvent.OpenSession(configuration, EditorGeneration(editorGeneration), monotonicNow()),
-            newSession = { id ->
-                AutocorrectSession(
-                    sessionId = id,
-                    primaryLanguageTag = configuration.primaryLanguageTag,
-                    secondaryLanguageTags = configuration.secondaryLanguageTags,
-                    inputType = configuration.inputType,
-                    capsMode = configuration.capsMode,
-                    allowPersonalizedLearning = configuration.allowPersonalizedLearning,
-                    editorFlags = configuration.editorFlags,
-                    preferredEmojiSkinToneModifier = configuration.preferredEmojiSkinToneModifier,
-                )
-            },
         )
         if (transition.effects.any { it is HostEffect.FallbackRequired }) return null
         val session = activeSession ?: return null
-        if (session.sessionId != previous?.sessionId) {
+        if (session.sessionId != previousSessionId) {
             latestSuggestionRequestId = -1L
             clearInputTrace()
-            cancelPending(previous?.sessionId ?: 0L)
+            cancelPending(previousSessionId ?: 0L)
             diagnostics.record(
                 AutocorrectPluginDiagnosticEvent.Session(
                     bindingEpoch = providerBindingEpoch,
@@ -1276,23 +1253,23 @@ class AutocorrectPluginManager internal constructor(
         prefs.suggestion.autocorrectPluginComponent.get() == boundProviderId
 
     private fun endSession(event: HostEvent = HostEvent.CloseSession): Boolean {
-        val session = activeSession
+        val sessionId = activeSessionId
         dispatchHost(event)
-        if (session != null) connectionReady.close()
+        if (sessionId != null) connectionReady.close()
         latestSuggestionRequestId = -1L
         clearInputTrace()
-        cancelPending(session?.sessionId ?: 0L)
-        if (session != null) {
+        cancelPending(sessionId ?: 0L)
+        if (sessionId != null) {
             diagnostics.record(
                 AutocorrectPluginDiagnosticEvent.Session(
                     bindingEpoch = providerBindingEpoch,
-                    sessionId = AutocorrectPluginDiagnosticId.fromHostId(session.sessionId),
+                    sessionId = AutocorrectPluginDiagnosticId.fromHostId(sessionId),
                     state = AutocorrectPluginDiagnosticState.CLEARED,
                     error = AutocorrectPluginDiagnosticError.NONE,
                 ),
             )
         }
-        return session != null
+        return sessionId != null
     }
 
     private fun buildFinalRequest(
@@ -1467,14 +1444,14 @@ class AutocorrectPluginManager internal constructor(
         inputTrace: AutocorrectInputTrace,
     ): AutocorrectProviderSuggestionResult? {
         val readiness = synchronized(this) {
-            if (activeSession?.sessionId != session.sessionId) return null
+            if (activeSessionId != session.sessionId) return null
             connectionReady.current()
         }
         val service = awaitProviderResult(readiness) ?: return null
 
         val (requestId, deferred, wireContent) = synchronized(this) {
             if (
-                activeSession?.sessionId != session.sessionId ||
+                activeSessionId != session.sessionId ||
                 admittedSessionId != session.sessionId ||
                 currentPhysicalRemote() !== service ||
                 boundProviderId != activeProviderId
@@ -1566,7 +1543,7 @@ class AutocorrectPluginManager internal constructor(
                 suggestionRequestCoordinator.cancelRequest(requestId)
                 synchronized(this) {
                     if (
-                        activeSession?.sessionId == session.sessionId &&
+                        activeSessionId == session.sessionId &&
                         requestId == latestSuggestionRequestId
                     ) {
                         latestSuggestionRequestId = -1L
@@ -1614,7 +1591,7 @@ class AutocorrectPluginManager internal constructor(
             candidateSessionId = candidate.pluginSessionId,
             candidateRequestId = candidate.pluginRequestId,
             candidateEditorGeneration = candidate.editorGeneration,
-            activeSessionId = activeSession?.sessionId,
+            activeSessionId = activeSessionId,
             admittedSessionId = admittedSessionId,
             latestRequestId = latestSuggestionRequestId,
             activeEditorGeneration = editorGeneration,
@@ -1655,9 +1632,9 @@ class AutocorrectPluginManager internal constructor(
     override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
         if (candidate !is ExternalAutocorrectCandidate) return false
         val (requestId, deferred) = synchronized(this) {
-            val session = activeSession?.takeIf {
-                it.sessionId == candidate.pluginSessionId &&
-                    admittedSessionId == it.sessionId &&
+            val sessionId = activeSessionId?.takeIf {
+                it == candidate.pluginSessionId &&
+                    admittedSessionId == it &&
                     activeProviderId == boundProviderId
             } ?: return false
             val service = currentPhysicalRemote() ?: return false
@@ -1667,12 +1644,12 @@ class AutocorrectPluginManager internal constructor(
             diagnostics.operationStarted(
                 operation = AutocorrectPluginDiagnosticOperation.REMOVE_CANDIDATE,
                 bindingEpoch = providerBindingEpoch,
-                sessionId = session.sessionId,
+                sessionId = sessionId,
                 requestId = requestId,
             )
             if (!send(
                     AutocorrectPluginContract.MSG_REMOVE,
-                    removalRequestBundle(session.sessionId, requestId, candidate.pluginCandidateId),
+                    removalRequestBundle(sessionId, requestId, candidate.pluginCandidateId),
                     service,
                 )
             ) {
@@ -1680,7 +1657,7 @@ class AutocorrectPluginManager internal constructor(
                     diagnostics.operationFinished(
                         operation = AutocorrectPluginDiagnosticOperation.REMOVE_CANDIDATE,
                         bindingEpoch = providerBindingEpoch,
-                        sessionId = session.sessionId,
+                        sessionId = sessionId,
                         requestId = requestId,
                         state = AutocorrectPluginDiagnosticState.FAILED,
                         error = AutocorrectPluginDiagnosticError.SEND_FAILED,
@@ -1730,7 +1707,7 @@ class AutocorrectPluginManager internal constructor(
         acceptanceKind: AutocorrectAcceptanceKind? = null,
     ) {
         if (
-            activeSession?.sessionId != sessionId ||
+            activeSessionId != sessionId ||
             admittedSessionId != sessionId ||
             activeProviderId != boundProviderId
         ) {
@@ -1828,7 +1805,7 @@ class AutocorrectPluginManager internal constructor(
         invalidatePluginUiDocuments()
         clearPendingPluginUiOperations()
         reconcileUiBindingDemand()
-        if (activeSession != null) connectionReady.replace() else connectionReady.close()
+        if (activeSessionId != null) connectionReady.replace() else connectionReady.close()
         failPending()
         if (uiClientCount > 0) _pluginUiLoading.value = true
     }
@@ -1990,7 +1967,7 @@ class AutocorrectPluginManager internal constructor(
         )
     }
 
-    private fun cancelPending(sessionId: Long = activeSession?.sessionId ?: 0L) {
+    private fun cancelPending(sessionId: Long = activeSessionId ?: 0L) {
         latestSuggestionRequestId = -1L
         boostedCodePoints = emptySet()
         pendingSuggestions.keys.forEach { requestId ->
@@ -2020,7 +1997,7 @@ class AutocorrectPluginManager internal constructor(
     private fun failPending(bindingEpoch: Long = providerBindingEpoch) {
         latestSuggestionRequestId = -1L
         boostedCodePoints = emptySet()
-        val sessionId = activeSession?.sessionId ?: 0L
+        val sessionId = activeSessionId ?: 0L
         pendingSuggestions.keys.forEach { requestId ->
             diagnostics.operationFinished(
                 operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
@@ -2783,7 +2760,8 @@ private fun SuggestionReplyDecision.toDiagnosticError() = when (this) {
     }
 }
 
-private fun AutocorrectSession.toHostSessionConfiguration() = SessionConfiguration(
+internal fun SessionConfiguration.toAutocorrectSession(sessionId: SessionId) = AutocorrectSession(
+    sessionId = sessionId.value,
     primaryLanguageTag = primaryLanguageTag,
     secondaryLanguageTags = secondaryLanguageTags,
     inputType = inputType,

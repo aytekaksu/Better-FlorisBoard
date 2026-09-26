@@ -153,22 +153,32 @@ class AutocorrectHostLifecycleTest :
 
         test("changed session configuration finishes the admitted session and starts the new one") {
             val host = HostTestHarness()
-            host.startActiveSession()
+            val oldConfiguration = DefaultSessionConfiguration.copy(
+                secondaryLanguageTags = listOf("de-DE"),
+            )
+            val newConfiguration = oldConfiguration.copy(
+                secondaryLanguageTags = listOf("fr-FR"),
+                capsMode = 1,
+                allowPersonalizedLearning = false,
+            )
+            host.startActiveSession(configuration = oldConfiguration)
             val oldSessionId = host.state.session!!.sessionId
 
             val effects = host.dispatch(
                 HostEvent.OpenSession(
-                    DefaultSessionConfiguration.copy(capsMode = 1),
+                    newConfiguration,
                     host.state.editorGeneration,
                     T0,
                 ),
             )
 
             assertSoftly {
-                effects.filterIsInstance<HostEffect.FinishSession>().single()
-                    .lease.sessionId shouldBe oldSessionId
-                effects.filterIsInstance<HostEffect.StartSession>().single()
-                    .configuration.capsMode shouldBe 1
+                val finish = effects.filterIsInstance<HostEffect.FinishSession>().single()
+                val start = effects.filterIsInstance<HostEffect.StartSession>().single()
+                finish.lease.sessionId shouldBe oldSessionId
+                finish.configuration shouldBe oldConfiguration
+                start.configuration shouldBe newConfiguration
+                (effects.indexOf(finish) < effects.indexOf(start)) shouldBe true
                 host.state.pendingFinishes.keys shouldContainExactly listOf(oldSessionId)
                 host.state.session?.phase shouldBe SessionPhase.STARTING
             }

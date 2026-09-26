@@ -22,6 +22,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import org.florisboard.autocorrect.api.AutocorrectCapsMode
 import org.florisboard.autocorrect.api.AutocorrectPluginContract
+import org.florisboard.autocorrect.api.AutocorrectSession
 import org.florisboard.autocorrect.host.core.BindingEpoch
 import org.florisboard.autocorrect.host.core.HostEvent
 import org.florisboard.autocorrect.host.core.ProviderId
@@ -31,6 +32,27 @@ import org.florisboard.autocorrect.host.core.SessionFinishLease
 import org.florisboard.autocorrect.host.core.SessionId
 
 class AutocorrectWireRequestTest : FunSpec({
+    test("reducer session configuration becomes the provider wire session") {
+        val configuration = testConfiguration().copy(
+            secondaryLanguageTags = listOf("de-DE", "fr-FR"),
+            capsMode = 2,
+            allowPersonalizedLearning = false,
+            editorFlags = 1,
+            preferredEmojiSkinToneModifier = 0x1F3FD,
+        )
+
+        configuration.toAutocorrectSession(SessionId(7)) shouldBe AutocorrectSession(
+            sessionId = 7,
+            primaryLanguageTag = "en",
+            secondaryLanguageTags = listOf("de-DE", "fr-FR"),
+            inputType = 1,
+            capsMode = 2,
+            allowPersonalizedLearning = false,
+            editorFlags = 1,
+            preferredEmojiSkinToneModifier = 0x1F3FD,
+        )
+    }
+
     test("provider requests use a bounded editor window") {
         val content = editorContent(
             text = "a".repeat(700),

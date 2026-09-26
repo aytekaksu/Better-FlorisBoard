@@ -82,9 +82,9 @@ typing, UI/document leases, and pending finish acknowledgements have ended.
 - The editor generation changes when the editing context or provider changes.
   A result must match it before publication or commit.
 - The reducer owns binding epochs, session admission, pending finishes, and
-  request state. The manager keeps only physical Android handles and bounded
-  runtime payloads; provider UI, dictionary work, and host setting mutations
-  use their own guards.
+  request state. The manager derives session wire data from reducer state and
+  effects, and keeps physical Android handles and bounded runtime payloads;
+  provider UI, dictionary work, and host setting mutations use their own guards.
 - The reducer-issued request lease follows the reply into each visible
   candidate. Both publication and commit require the latest request ID, active
   session, admitted session, provider, and editor generation.

@@ -11,7 +11,7 @@ This is an incremental replacement of imperative manager state, not a second
 host. Suggestion request identity, supersession, cancellation, reply admission,
 and provider circuit health are already reducer-owned through
 `AutocorrectSuggestionRequestCoordinator`. Android discovery, binding handles,
-session payload transport, finish acknowledgements, provider UI, and dictionary
+wire-session materialization, finish acknowledgements, provider UI, and dictionary
 work remain in `AutocorrectPluginManager`.
 
 During migration, a rule moves only when its current behavior has a
@@ -97,7 +97,9 @@ and feeds token-bearing callbacks back to the reducer. A queued START is checked
 again before Binder send; a session that never sends START cannot emit FINISH.
 
 The manager keeps Android Binder handles, provider UI/document leases, and
-bounded wire payloads, but no second binding or session decision state. Normal
+bounded wire payloads, but no second binding or session decision state. Wire
+session DTOs come from reducer configurations; a queued FINISH effect retains
+the old configuration even after a new session opens. Normal
 session close retains the binding until FINISH is acknowledged. Changing the
 selected provider sends FINISH best-effort, then unbinds immediately so a
 provider that never acknowledges cannot block the new selection. Final editor
