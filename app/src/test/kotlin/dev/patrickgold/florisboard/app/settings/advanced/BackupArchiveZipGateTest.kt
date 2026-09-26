@@ -198,6 +198,17 @@ class BackupArchiveZipGateTest :
             ) shouldFailWith BackupArchiveZipGateFailure.CENTRAL_DIRECTORY_TOO_LARGE
         }
 
+        test("central entry layout limits precede disk validation") {
+            val fixture = classicFixture("entry").patchCentralDisk(diskNumber = 1)
+            val oversizedName = fixture.bytes.patchedU16(
+                fixture.centralDirectoryOffset + CENTRAL_NAME_LENGTH_OFFSET,
+                TEST_MAX_NAME_BYTES + 1,
+            )
+
+            gate(fixture.copy(bytes = oversizedName)) shouldFailWith
+                BackupArchiveZipGateFailure.CENTRAL_DIRECTORY_TOO_LARGE
+        }
+
         test("actual central records cannot hide behind a forged low end-record count") {
             val fixture = classicFixture("one", "two")
             val forged = fixture.bytes
