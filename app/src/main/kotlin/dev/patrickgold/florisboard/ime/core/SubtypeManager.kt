@@ -187,13 +187,7 @@ class SubtypeManager(context: Context) {
         val subtypeList = subtypes
         val indexToRemove = subtypeList.indexOf(subtypeToRemove)
         if (indexToRemove in subtypeList.indices) {
-            val newSubtypeList = subtypeList.mapIndexedNotNull { n, subtype ->
-                if (n != indexToRemove) {
-                    subtype
-                } else {
-                    null
-                }
-            }
+            val newSubtypeList = subtypeList.filterIndexed { index, _ -> index != indexToRemove }
             persistNewSubtypeList(newSubtypeList)
             evaluateActiveSubtype(newSubtypeList)
         }

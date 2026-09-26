@@ -28,6 +28,11 @@ class SubtypeSelectionTest :
         val second = Subtype.DEFAULT.copy(id = 2L)
         val third = Subtype.DEFAULT.copy(id = 3L)
 
+        test("subtype duplicate comparison ignores only the ID") {
+            first.equalsExcludingId(second) shouldBe true
+            first.equalsExcludingId(second.copy(composer = second.currencySet)) shouldBe false
+        }
+
         test("empty or missing active subtype falls back to default") {
             adjacentSubtypeInOrder(emptyList(), first) shouldBe Subtype.DEFAULT
             adjacentSubtypeInOrder(listOf(first, second), third) shouldBe Subtype.DEFAULT
