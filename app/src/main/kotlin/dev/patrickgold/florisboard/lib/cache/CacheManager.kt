@@ -71,7 +71,6 @@ class CacheManager(context: Context) {
         private const val OutputDirName = "output"
 
         private const val ImporterDirName = "importer"
-        private const val ExporterDirName = "exporter"
         private const val EditorDirName = "editor"
         private const val BackupAndRestoreDirName = "backup-and-restore"
 
@@ -123,7 +122,6 @@ class CacheManager(context: Context) {
             queueFailedImporterCleanup(it)
         },
     ) { ImporterWorkspace(it) }
-    val exporter = WorkspacesContainer(ExporterDirName) { ExporterWorkspace(it) }
     val themeEditor = WorkspacesContainer(EditorDirName) { ThemeEditorWorkspace(it) }
     val backupAndRestore = WorkspacesContainer(BackupAndRestoreDirName) { BackupAndRestoreWorkspace(it) }
     private val importerJanitor = ImportWorkspaceJanitor(workspaceCleanupScope) { directory ->
@@ -402,14 +400,6 @@ class CacheManager(context: Context) {
 
         override fun unregister() {
             importer.remove(this)
-        }
-    }
-
-    inner class ExporterWorkspace(uuid: String) : Workspace(uuid) {
-        override val dir: FsDir = exporter.dir.subDir(uuid)
-
-        override fun unregister() {
-            exporter.remove(this)
         }
     }
 

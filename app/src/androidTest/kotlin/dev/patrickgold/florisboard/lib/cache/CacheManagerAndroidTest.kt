@@ -271,22 +271,16 @@ class CacheManagerAndroidTest {
     }
 
     @Test
-    fun exporterAndEditorCloseAreIdempotentAndUnregisterTheirWorkspaces() {
+    fun editorCloseIsIdempotentAndUnregistersItsWorkspace() {
         val cacheManager = CacheManager(context)
-        val exporter = cacheManager.exporter.new()
         val editor = cacheManager.themeEditor.new()
 
-        assertSame(exporter, cacheManager.exporter.getWorkspaceByUuid(exporter.uuid))
         assertSame(editor, cacheManager.themeEditor.getWorkspaceByUuid(editor.uuid))
 
-        exporter.close()
-        exporter.close()
         editor.close()
         editor.close()
 
-        assertTrue(exporter.isClosed())
         assertTrue(editor.isClosed())
-        assertNull(cacheManager.exporter.getWorkspaceByUuid(exporter.uuid))
         assertNull(cacheManager.themeEditor.getWorkspaceByUuid(editor.uuid))
     }
 
