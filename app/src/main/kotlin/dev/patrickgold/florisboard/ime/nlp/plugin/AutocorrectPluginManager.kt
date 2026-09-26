@@ -466,40 +466,9 @@ class AutocorrectPluginManager internal constructor(
         }
         transition.effects.forEach { effect ->
             if (effect is HostEffect.EventIgnored) return@forEach
-            val command = when (effect) {
-                is HostEffect.Bind -> HostCommand(
-                    effect,
-                    descriptor = providers.value.firstOrNull { it.id == effect.lease.providerId.value },
-                )
-                is HostEffect.StartSession -> HostCommand(
-                    effect,
-                    session = sessionPayloads[effect.lease.sessionId.value],
-                )
-                is HostEffect.FinishSession -> {
-                    val session = sessionPayloads[effect.lease.sessionId.value]
-                    val mayIncludeContent = event !is HostEvent.Destroy &&
-                        (event !is HostEvent.OpenSession ||
-                            event.configuration == session?.toHostSessionConfiguration())
-                    if (session != null && mayIncludeContent && currentEditorAllowsFinalContent(session)) {
-                        val content = selectFinalRequestContent(
-                            editorInstance.activeContent,
-                            contentAllowedAtEnd = true,
-                            sameEditorGeneration = true,
-                            editorEligibleNow = true,
-                        )
-                        val snapshot = buildFinalRequest(session, effect.lease.finalRequestId.value, content)
-                        finalRequestSnapshots.put(
-                            effect.lease, session.toHostSessionConfiguration(), snapshot,
-                        )
-                    }
-                    HostCommand(
-                        effect,
-                        session = session,
-                    )
-                }
-                else -> HostCommand(effect)
+            check(hostCommands.trySend(hostCommandFor(effect, event)).isSuccess) {
+                "Autocorrect host effect queue closed"
             }
-            check(hostCommands.trySend(command).isSuccess) { "Autocorrect host effect queue closed" }
         }
         val retained = transition.state.pendingFinishes.keys.mapTo(mutableSetOf()) { it.value }
         transition.state.session?.sessionId?.value?.let(retained::add)
@@ -507,129 +476,52 @@ class AutocorrectPluginManager internal constructor(
         return transition
     }
 
+    private fun hostCommandFor(effect: HostEffect, event: HostEvent): HostCommand = when (effect) {
+        is HostEffect.Bind -> HostCommand(
+            effect,
+            descriptor = providers.value.firstOrNull { it.id == effect.lease.providerId.value },
+        )
+        is HostEffect.StartSession -> HostCommand(
+            effect,
+            session = sessionPayloads[effect.lease.sessionId.value],
+        )
+        is HostEffect.FinishSession -> {
+            val session = sessionPayloads[effect.lease.sessionId.value]
+            captureFinalSnapshot(effect, event, session)
+            HostCommand(effect, session = session)
+        }
+        else -> HostCommand(effect)
+    }
+
+    private fun captureFinalSnapshot(
+        effect: HostEffect.FinishSession,
+        event: HostEvent,
+        session: AutocorrectSession?,
+    ) {
+        if (session == null || event is HostEvent.Destroy || !currentEditorAllowsFinalContent(session)) return
+        if (event is HostEvent.OpenSession &&
+            event.configuration != session.toHostSessionConfiguration()
+        ) return
+        val content = selectFinalRequestContent(
+            editorInstance.activeContent,
+            contentAllowedAtEnd = true,
+            sameEditorGeneration = true,
+            editorEligibleNow = true,
+        )
+        finalRequestSnapshots.put(
+            effect.lease,
+            session.toHostSessionConfiguration(),
+            buildFinalRequest(session, effect.lease.finalRequestId.value, content),
+        )
+    }
+
     private suspend fun executeHostCommand(command: HostCommand) {
         when (val effect = command.effect) {
-            is HostEffect.DiscoverProviders -> {
-                val current = synchronized(this) {
-                    (hostState.discovery as? DiscoveryState.Loading)?.revision == effect.revision
-                }
-                if (!current) return
-                diagnostics.discoveryStarted()
-                val result = runCatching { discoverProviders() }
-                diagnostics.discoveryFinished(
-                    providerCount = result.getOrNull()?.size ?: 0,
-                    error = if (result.isSuccess) AutocorrectPluginDiagnosticError.NONE
-                    else AutocorrectPluginDiagnosticError.QUERY_FAILED,
-                )
-                synchronized(this) {
-                    if ((hostState.discovery as? DiscoveryState.Loading)?.revision != effect.revision) {
-                        return@synchronized
-                    }
-                    result.fold(
-                        onSuccess = { descriptors ->
-                            _providers.value = descriptors
-                            reconcileSelectedProvider(descriptors)
-                            dispatchHost(
-                                HostEvent.ProvidersDiscovered(
-                                    effect.revision,
-                                    descriptors.mapTo(mutableSetOf()) { ProviderId(it.id) },
-                                ),
-                            )
-                        },
-                        onFailure = {
-                            handleProviderQueryFailure()
-                            dispatchHost(HostEvent.ProviderDiscoveryFailed(effect.revision))
-                        },
-                    )
-                }
-            }
+            is HostEffect.DiscoverProviders -> executeDiscovery(effect)
             is HostEffect.Bind -> bindForLease(effect.lease, command.descriptor)
             is HostEffect.Unbind -> unbindForLease(effect.lease)
-            is HostEffect.StartSession -> {
-                val (current, service, readiness) = synchronized(this) {
-                    val active = hostState.session
-                    val current = active != null && active.sessionId == effect.lease.sessionId &&
-                        active.editorGeneration == effect.lease.editorGeneration &&
-                        active.phase == SessionPhase.STARTING &&
-                        bindingLease?.providerId == effect.lease.providerId &&
-                        bindingLease?.epoch == effect.lease.epoch
-                    val service = currentPhysicalRemote().takeIf { current }
-                    if (service != null) dispatchHost(HostEvent.SessionStartSending(effect.lease))
-                    Triple(current, service, connectionReady.current())
-                }
-                if (!current) return
-                val sent = service != null && command.session != null && send(
-                    AutocorrectPluginContract.MSG_START_SESSION,
-                    command.session.toBundle(),
-                    service,
-                )
-                synchronized(this) {
-                    dispatchHost(HostEvent.SessionStartResult(effect.lease, sent, monotonicNow()))
-                    if (sent && admittedSessionId == effect.lease.sessionId.value &&
-                        bindingLease?.epoch == effect.lease.epoch
-                    ) {
-                        connectionReady.completeIfCurrent(readiness, service)
-                        diagnostics.record(
-                            AutocorrectPluginDiagnosticEvent.Session(
-                                bindingEpoch = effect.lease.epoch.value,
-                                sessionId = AutocorrectPluginDiagnosticId.fromHostId(effect.lease.sessionId.value),
-                                state = AutocorrectPluginDiagnosticState.SUCCEEDED,
-                                error = AutocorrectPluginDiagnosticError.NONE,
-                            ),
-                        )
-                        if (uiClientCount > 0) requestPluginUi(service)
-                    } else if (!sent && bindingLease?.epoch == effect.lease.epoch) {
-                        connectionReady.completeIfCurrent(readiness, null)
-                    }
-                }
-            }
-            is HostEffect.FinishSession -> {
-                diagnostics.operationStarted(
-                    operation = AutocorrectPluginDiagnosticOperation.FINISH_SESSION,
-                    bindingEpoch = effect.lease.epoch.value,
-                    sessionId = effect.lease.sessionId.value,
-                )
-                val sent = synchronized(this) {
-                    val service = remote.takeIf {
-                        (serviceConnection as? LeaseServiceConnection)?.lease?.let { boundLease ->
-                            boundLease.providerId == effect.lease.providerId &&
-                                boundLease.epoch == effect.lease.epoch
-                        } == true
-                    }
-                    val captured = finalRequestSnapshots.take(effect.lease)
-                    val snapshot = captured.takeIf {
-                        command.session?.let(::currentEditorAllowsFinalContent) == true
-                    }
-                    command.session?.let { session ->
-                        val emptyData = finishSessionBundle(
-                            session.sessionId,
-                            buildFinalRequest(
-                                session, effect.lease.finalRequestId.value,
-                                EditorContent.selectionOnly(EditorRange.cursor(0)),
-                            ),
-                        )
-                        val data = snapshot?.let { finishSessionBundle(session.sessionId, it) } ?: emptyData
-                        send(
-                            AutocorrectPluginContract.MSG_FINISH_SESSION,
-                            data,
-                            service,
-                            retiredLease = BindingLease(effect.lease.providerId, effect.lease.epoch),
-                            contentSession = session,
-                            emptyFinalData = emptyData,
-                        )
-                    } ?: false
-                }
-                if (!sent) {
-                    dispatchHost(HostEvent.FinishSendFailed(effect.lease, monotonicNow()))
-                    diagnostics.operationFinished(
-                        operation = AutocorrectPluginDiagnosticOperation.FINISH_SESSION,
-                        bindingEpoch = effect.lease.epoch.value,
-                        sessionId = effect.lease.sessionId.value,
-                        state = AutocorrectPluginDiagnosticState.FAILED,
-                        error = AutocorrectPluginDiagnosticError.SEND_FAILED,
-                    )
-                }
-            }
+            is HostEffect.StartSession -> executeStartSession(effect, command.session)
+            is HostEffect.FinishSession -> executeFinishSession(effect, command.session)
             is HostEffect.ScheduleCircuitRecovery -> scope.launch {
                 delay((effect.retryAt.value - monotonicNow().value).coerceAtLeast(0L))
                 dispatchHost(HostEvent.CircuitCooldownElapsed(effect.providerId, monotonicNow()))
@@ -640,6 +532,128 @@ class AutocorrectPluginManager internal constructor(
                 scope.coroutineContext[Job]?.cancel()
             }
             else -> Unit
+        }
+    }
+
+    private suspend fun executeDiscovery(effect: HostEffect.DiscoverProviders) {
+        val current = synchronized(this) {
+            (hostState.discovery as? DiscoveryState.Loading)?.revision == effect.revision
+        }
+        if (!current) return
+        diagnostics.discoveryStarted()
+        val result = runCatching { discoverProviders() }
+        diagnostics.discoveryFinished(
+            providerCount = result.getOrNull()?.size ?: 0,
+            error = if (result.isSuccess) AutocorrectPluginDiagnosticError.NONE
+            else AutocorrectPluginDiagnosticError.QUERY_FAILED,
+        )
+        synchronized(this) {
+            if ((hostState.discovery as? DiscoveryState.Loading)?.revision != effect.revision) return
+            result.fold(
+                onSuccess = { descriptors ->
+                    _providers.value = descriptors
+                    reconcileSelectedProvider(descriptors)
+                    dispatchHost(
+                        HostEvent.ProvidersDiscovered(
+                            effect.revision,
+                            descriptors.mapTo(mutableSetOf()) { ProviderId(it.id) },
+                        ),
+                    )
+                },
+                onFailure = {
+                    handleProviderQueryFailure()
+                    dispatchHost(HostEvent.ProviderDiscoveryFailed(effect.revision))
+                },
+            )
+        }
+    }
+
+    private fun executeStartSession(effect: HostEffect.StartSession, session: AutocorrectSession?) {
+        val (current, service, readiness) = synchronized(this) {
+            val current = sessionStartIsCurrent(effect)
+            val service = currentPhysicalRemote().takeIf { current }
+            if (service != null) dispatchHost(HostEvent.SessionStartSending(effect.lease))
+            Triple(current, service, connectionReady.current())
+        }
+        if (!current) return
+        val sent = service != null && session != null && send(
+            AutocorrectPluginContract.MSG_START_SESSION,
+            session.toBundle(),
+            service,
+        )
+        synchronized(this) {
+            dispatchHost(HostEvent.SessionStartResult(effect.lease, sent, monotonicNow()))
+            if (sent && admittedSessionId == effect.lease.sessionId.value &&
+                bindingLease?.epoch == effect.lease.epoch
+            ) {
+                connectionReady.completeIfCurrent(readiness, service)
+                diagnostics.record(
+                    AutocorrectPluginDiagnosticEvent.Session(
+                        bindingEpoch = effect.lease.epoch.value,
+                        sessionId = AutocorrectPluginDiagnosticId.fromHostId(effect.lease.sessionId.value),
+                        state = AutocorrectPluginDiagnosticState.SUCCEEDED,
+                        error = AutocorrectPluginDiagnosticError.NONE,
+                    ),
+                )
+                if (uiClientCount > 0) requestPluginUi(service)
+            } else if (!sent && bindingLease?.epoch == effect.lease.epoch) {
+                connectionReady.completeIfCurrent(readiness, null)
+            }
+        }
+    }
+
+    private fun sessionStartIsCurrent(effect: HostEffect.StartSession): Boolean {
+        val active = hostState.session ?: return false
+        return active.sessionId == effect.lease.sessionId &&
+            active.editorGeneration == effect.lease.editorGeneration &&
+            active.phase == SessionPhase.STARTING &&
+            bindingLease?.providerId == effect.lease.providerId &&
+            bindingLease?.epoch == effect.lease.epoch
+    }
+
+    private fun executeFinishSession(effect: HostEffect.FinishSession, session: AutocorrectSession?) {
+        diagnostics.operationStarted(
+            operation = AutocorrectPluginDiagnosticOperation.FINISH_SESSION,
+            bindingEpoch = effect.lease.epoch.value,
+            sessionId = effect.lease.sessionId.value,
+        )
+        val sent = synchronized(this) {
+            val service = remote.takeIf {
+                (serviceConnection as? LeaseServiceConnection)?.lease?.let { boundLease ->
+                    boundLease.providerId == effect.lease.providerId &&
+                        boundLease.epoch == effect.lease.epoch
+                } == true
+            }
+            val captured = finalRequestSnapshots.take(effect.lease)
+            val snapshot = captured.takeIf { session?.let(::currentEditorAllowsFinalContent) == true }
+            session?.let { active ->
+                val emptyData = finishSessionBundle(
+                    active.sessionId,
+                    buildFinalRequest(
+                        active, effect.lease.finalRequestId.value,
+                        EditorContent.selectionOnly(EditorRange.cursor(0)),
+                    ),
+                )
+                val data = snapshot?.let { finishSessionBundle(active.sessionId, it) } ?: emptyData
+                send(
+                    AutocorrectPluginContract.MSG_FINISH_SESSION,
+                    data,
+                    service,
+                    retiredLease = BindingLease(effect.lease.providerId, effect.lease.epoch),
+                    contentSession = active,
+                    emptyFinalData = emptyData,
+                )
+            } ?: false
+        }
+        if (!sent) {
+            dispatchHost(HostEvent.FinishSendFailed(effect.lease, monotonicNow()))
+            diagnostics.operationFinished(
+                operation = AutocorrectPluginDiagnosticOperation.FINISH_SESSION,
+                bindingEpoch = effect.lease.epoch.value,
+                sessionId = effect.lease.sessionId.value,
+                state = AutocorrectPluginDiagnosticState.FAILED,
+                error = AutocorrectPluginDiagnosticError.SEND_FAILED,
+            )
         }
     }
 
@@ -1252,15 +1266,15 @@ class AutocorrectPluginManager internal constructor(
     @Synchronized
     private fun finishCurrentSession() {
         val hadSession = endSession()
-        if (!releaseBindingIfIdle() &&
-            hadSession &&
-            uiClientCount > 0 &&
-            currentPhysicalRemote() != null &&
-            prefs.suggestion.autocorrectPluginComponent.get() == boundProviderId
-        ) {
+        val released = releaseBindingIfIdle()
+        if (hadSession && !released && canRefreshSelectedPluginUi()) {
             requestPluginUi()
         }
     }
+
+    private fun canRefreshSelectedPluginUi() = uiClientCount > 0 &&
+        currentPhysicalRemote() != null &&
+        prefs.suggestion.autocorrectPluginComponent.get() == boundProviderId
 
     private fun endSession(event: HostEvent = HostEvent.CloseSession): Boolean {
         val session = activeSession
@@ -2434,101 +2448,8 @@ class AutocorrectPluginManager internal constructor(
                 return
             }
             when (message.what) {
-                AutocorrectPluginContract.MSG_SUGGESTIONS -> {
-                    val parsed = runCatching {
-                        traceAutocorrectPerformance(
-                            AutocorrectPerformanceSection.DECODE_REPLY,
-                        ) {
-                            suggestionResultFromBundle(message.data)
-                        }
-                    }.getOrElse {
-                        diagnostics.record(
-                            AutocorrectPluginDiagnosticEvent.ReplyRejected(
-                                bindingEpoch = bindingEpoch,
-                                operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                                error = AutocorrectPluginDiagnosticError.MALFORMED_MESSAGE,
-                            ),
-                        )
-                        return
-                    }
-                    val (requestId, result) = parsed
-                    val replyDecision = suggestionRequestCoordinator.acceptReply(
-                        requestId = requestId,
-                        at = monotonicNow(),
-                    )
-                    if (replyDecision !is SuggestionReplyDecision.Accept) {
-                        pendingSuggestions.remove(requestId)?.cancel()
-                        diagnostics.record(
-                            AutocorrectPluginDiagnosticEvent.ReplyRejected(
-                                bindingEpoch = bindingEpoch,
-                                operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                                error = replyDecision.toDiagnosticError(),
-                            ),
-                        )
-                        return
-                    }
-                    val pendingResult = synchronized(this@AutocorrectPluginManager) {
-                        val pending = pendingSuggestions.remove(requestId)
-                            ?: return@synchronized null
-                        boostedCodePoints = result.boostedCodePoints.takeIf {
-                            result.handled
-                        }.orEmpty()
-                        pending
-                    }
-                    if (pendingResult == null) {
-                        diagnostics.record(
-                            AutocorrectPluginDiagnosticEvent.ReplyRejected(
-                                bindingEpoch = bindingEpoch,
-                                operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                                error = AutocorrectPluginDiagnosticError.UNKNOWN_REQUEST,
-                            ),
-                        )
-                        return
-                    }
-                    diagnostics.operationFinished(
-                        operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                        bindingEpoch = bindingEpoch,
-                        sessionId = replyDecision.lease.sessionId.value,
-                        requestId = requestId,
-                        state = AutocorrectPluginDiagnosticState.SUCCEEDED,
-                        itemCount = result.candidates.size,
-                    )
-                    pendingResult.complete(result)
-                }
-                AutocorrectPluginContract.MSG_REMOVE_RESULT -> {
-                    val parsed = runCatching {
-                        removalResultFromBundle(message.data)
-                    }.getOrElse {
-                        diagnostics.record(
-                            AutocorrectPluginDiagnosticEvent.ReplyRejected(
-                                bindingEpoch = bindingEpoch,
-                                operation = AutocorrectPluginDiagnosticOperation.REMOVE_CANDIDATE,
-                                error = AutocorrectPluginDiagnosticError.MALFORMED_MESSAGE,
-                            ),
-                        )
-                        return
-                    }
-                    val (requestId, removed) = parsed
-                    val pending = pendingRemovals.remove(requestId)
-                    if (pending == null) {
-                        diagnostics.record(
-                            AutocorrectPluginDiagnosticEvent.ReplyRejected(
-                                bindingEpoch = bindingEpoch,
-                                operation = AutocorrectPluginDiagnosticOperation.REMOVE_CANDIDATE,
-                                error = AutocorrectPluginDiagnosticError.UNKNOWN_REQUEST,
-                            ),
-                        )
-                        return
-                    }
-                    diagnostics.operationFinished(
-                        operation = AutocorrectPluginDiagnosticOperation.REMOVE_CANDIDATE,
-                        bindingEpoch = bindingEpoch,
-                        requestId = requestId,
-                        state = AutocorrectPluginDiagnosticState.SUCCEEDED,
-                        itemCount = if (removed) 1 else 0,
-                    )
-                    pending.complete(removed)
-                }
+                AutocorrectPluginContract.MSG_SUGGESTIONS -> handleSuggestionReply(message)
+                AutocorrectPluginContract.MSG_REMOVE_RESULT -> handleRemovalReply(message)
                 AutocorrectPluginContract.MSG_FINISH_SESSION_RESULT -> {
                     completeSessionFinish(
                         finishSessionResultFromBundle(message.data),
@@ -2536,24 +2457,7 @@ class AutocorrectPluginManager internal constructor(
                         bindingEpoch,
                     )
                 }
-                AutocorrectPluginContract.MSG_PLUGIN_UI_RESULT -> {
-                    val result = pluginUiResultFromBundle(message.data)
-                    synchronized(this@AutocorrectPluginManager) {
-                        pendingDictionaryMutationActions.remove(result.requestId)
-                    }
-                    finishPluginUiOperation(result.requestId)
-                    if (
-                        uiClientCount > 0 &&
-                        (result.requestId == 0L || result.requestId >= latestPluginUiRequestId)
-                    ) {
-                        _pluginUiError.value = !result.successful
-                        if (result.successful || result.ui != null) {
-                            providerPluginUi = result.ui
-                            _pluginUi.value = result.ui?.withHostSettingValues()
-                        }
-                        if (result.requestId != 0L) _pluginUiLoading.value = false
-                    }
-                }
+                AutocorrectPluginContract.MSG_PLUGIN_UI_RESULT -> handlePluginUiReply(message)
                 AutocorrectPluginContract.MSG_HOST_USER_DICTIONARY_REQUEST -> {
                     handleUserDictionaryRequest(providerId, bindingEpoch, message)
                 }
@@ -2568,6 +2472,107 @@ class AutocorrectPluginManager internal constructor(
                     super.handleMessage(message)
                 }
             }
+        }
+
+        private fun handleSuggestionReply(message: Message) {
+            val parsed = runCatching {
+                traceAutocorrectPerformance(AutocorrectPerformanceSection.DECODE_REPLY) {
+                    suggestionResultFromBundle(message.data)
+                }
+            }.getOrElse {
+                recordMalformedReply(AutocorrectPluginDiagnosticOperation.SUGGESTION)
+                return
+            }
+            val (requestId, result) = parsed
+            val replyDecision = suggestionRequestCoordinator.acceptReply(
+                requestId = requestId,
+                at = monotonicNow(),
+            )
+            if (replyDecision !is SuggestionReplyDecision.Accept) {
+                pendingSuggestions.remove(requestId)?.cancel()
+                diagnostics.record(
+                    AutocorrectPluginDiagnosticEvent.ReplyRejected(
+                        bindingEpoch = bindingEpoch,
+                        operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
+                        error = replyDecision.toDiagnosticError(),
+                    ),
+                )
+                return
+            }
+            val pendingResult = pendingSuggestions.remove(requestId)
+            if (pendingResult == null) {
+                diagnostics.record(
+                    AutocorrectPluginDiagnosticEvent.ReplyRejected(
+                        bindingEpoch = bindingEpoch,
+                        operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
+                        error = AutocorrectPluginDiagnosticError.UNKNOWN_REQUEST,
+                    ),
+                )
+                return
+            }
+            boostedCodePoints = result.boostedCodePoints.takeIf { result.handled }.orEmpty()
+            diagnostics.operationFinished(
+                operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
+                bindingEpoch = bindingEpoch,
+                sessionId = replyDecision.lease.sessionId.value,
+                requestId = requestId,
+                state = AutocorrectPluginDiagnosticState.SUCCEEDED,
+                itemCount = result.candidates.size,
+            )
+            pendingResult.complete(result)
+        }
+
+        private fun handleRemovalReply(message: Message) {
+            val parsed = runCatching { removalResultFromBundle(message.data) }.getOrElse {
+                recordMalformedReply(AutocorrectPluginDiagnosticOperation.REMOVE_CANDIDATE)
+                return
+            }
+            val (requestId, removed) = parsed
+            val pending = pendingRemovals.remove(requestId)
+            if (pending == null) {
+                diagnostics.record(
+                    AutocorrectPluginDiagnosticEvent.ReplyRejected(
+                        bindingEpoch = bindingEpoch,
+                        operation = AutocorrectPluginDiagnosticOperation.REMOVE_CANDIDATE,
+                        error = AutocorrectPluginDiagnosticError.UNKNOWN_REQUEST,
+                    ),
+                )
+                return
+            }
+            diagnostics.operationFinished(
+                operation = AutocorrectPluginDiagnosticOperation.REMOVE_CANDIDATE,
+                bindingEpoch = bindingEpoch,
+                requestId = requestId,
+                state = AutocorrectPluginDiagnosticState.SUCCEEDED,
+                itemCount = if (removed) 1 else 0,
+            )
+            pending.complete(removed)
+        }
+
+        private fun handlePluginUiReply(message: Message) {
+            val result = pluginUiResultFromBundle(message.data)
+            pendingDictionaryMutationActions.remove(result.requestId)
+            finishPluginUiOperation(result.requestId)
+            if (uiClientCount > 0 &&
+                (result.requestId == 0L || result.requestId >= latestPluginUiRequestId)
+            ) {
+                _pluginUiError.value = !result.successful
+                if (result.successful || result.ui != null) {
+                    providerPluginUi = result.ui
+                    _pluginUi.value = result.ui?.withHostSettingValues()
+                }
+                if (result.requestId != 0L) _pluginUiLoading.value = false
+            }
+        }
+
+        private fun recordMalformedReply(operation: AutocorrectPluginDiagnosticOperation) {
+            diagnostics.record(
+                AutocorrectPluginDiagnosticEvent.ReplyRejected(
+                    bindingEpoch = bindingEpoch,
+                    operation = operation,
+                    error = AutocorrectPluginDiagnosticError.MALFORMED_MESSAGE,
+                ),
+            )
         }
     }
 
@@ -2658,6 +2663,10 @@ class AutocorrectPluginManager internal constructor(
 
 /** Bounded runtime-only final snapshots; editor text never enters the effect queue or diagnostics. */
 internal class FinalRequestSnapshots {
+    private companion object {
+        const val MAX_SNAPSHOTS = 8
+    }
+
     private data class Snapshot(
         val configuration: SessionConfiguration,
         val request: AutocorrectRequest,
@@ -2676,7 +2685,9 @@ internal class FinalRequestSnapshots {
 
     fun put(lease: SessionFinishLease, configuration: SessionConfiguration, request: AutocorrectRequest) {
         if (request.text.isEmpty()) return
-        if (lease !in snapshots && snapshots.size == 8) snapshots.remove(snapshots.keys.first())
+        if (lease !in snapshots && snapshots.size == MAX_SNAPSHOTS) {
+            snapshots.remove(snapshots.keys.first())
+        }
         snapshots[lease] = Snapshot(configuration, request)
     }
 
