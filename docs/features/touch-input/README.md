@@ -62,6 +62,11 @@ Multi-pointer transitions, gesture completion, and selection dragging must
 resolve or cancel their pending editor event exactly once. A stale prediction
 hint or trace may improve neither hit testing nor suggestions.
 
+`KeyboardManager` owns keyboard state. `FlorisApplication` gives the editor a
+lazy view of that state and a synchronous shift-recheck callback. The editor
+does not construct or look up the manager. Shift rechecks remain at the
+editor's existing content-publication and invalid-selection paths.
+
 ## Privacy
 
 Raw `MotionEvent` objects and physical coordinates stay inside the keyboard
@@ -115,6 +120,13 @@ multi-pointer behavior, popups, or editor integration changes:
 ```shell
 ./gradlew :app:connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboardTouchE2eTest
+```
+
+For editor-to-keyboard state wiring and shift callback ordering:
+
+```shell
+./gradlew :app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.patrickgold.florisboard.ime.editor.EditorKeyboardStateAndroidTest
 ```
 
 Keep E2E scenarios independent and named. Do not place unrelated gestures in

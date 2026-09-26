@@ -33,12 +33,12 @@ import dev.patrickgold.florisboard.ime.clipboard.provider.OwnedClipboardMediaUri
 import dev.patrickgold.florisboard.ime.input.InputShiftState
 import dev.patrickgold.florisboard.ime.keyboard.IncognitoMode
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
+import dev.patrickgold.florisboard.ime.keyboard.ObservableKeyboardState
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
 import dev.patrickgold.florisboard.ime.nlp.SuggestionReplacement
 import dev.patrickgold.florisboard.ime.text.composing.Appender
 import dev.patrickgold.florisboard.ime.text.composing.Composer
 import dev.patrickgold.florisboard.ime.text.key.KeyVariation
-import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.keyboardExtensionRepository
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
 import dev.patrickgold.florisboard.nlpManager
@@ -143,7 +143,11 @@ internal data class SelectionDragState(
     }
 }
 
-class EditorInstance(context: Context) : AbstractEditorInstance(context) {
+class EditorInstance(
+    context: Context,
+    keyboardState: Lazy<ObservableKeyboardState>,
+    reevaluateInputShiftState: () -> Unit,
+) : AbstractEditorInstance(context, reevaluateInputShiftState) {
     companion object {
         private const val SPACE = " "
     }
@@ -151,12 +155,11 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
     private val clipboardManager by context.clipboardManager()
-    private val keyboardManager by context.keyboardManager()
     private val keyboardExtensionRepository by context.keyboardExtensionRepository()
     private val subtypeManager by context.subtypeManager()
     private val nlpManager by context.nlpManager()
 
-    private val activeState get() = keyboardManager.activeState
+    private val activeState by keyboardState
     val autoSpace = AutoSpaceState()
     internal val phantomSpace = PhantomSpaceState()
     val massSelection = MassSelectionState()
@@ -572,7 +575,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
             }
         }.also {
             if (prefs.clipboard.historyHideOnPaste.get()) {
-                keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
+                activeState.imeUiMode = ImeUiMode.TEXT
             }
         }
     }
