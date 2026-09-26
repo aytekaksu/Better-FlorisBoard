@@ -113,6 +113,9 @@ private val EmojiCategoryValues = EmojiCategory.entries
 private val EmojiBaseWidth = 42.dp
 private val EmojiDefaultFontSize = 22.sp
 
+internal fun visibleEmojiCategories(historyEnabled: Boolean): List<EmojiCategory> =
+    if (historyEnabled) EmojiCategoryValues else EmojiCategoryValues.drop(1)
+
 private val VariantsTriangleShapeLtr = GenericShape { size, _ ->
     moveTo(x = size.width, y = 0f)
     lineTo(x = size.width, y = size.height)
@@ -177,6 +180,7 @@ fun EmojiPaletteView(
 
     val preferredSkinTone by prefs.emoji.preferredSkinTone.collectAsState()
     val emojiHistoryEnabled by prefs.emoji.historyEnabled.collectAsState()
+    val visibleCategories = remember(emojiHistoryEnabled) { visibleEmojiCategories(emojiHistoryEnabled) }
 
     var activeCategory by remember(emojiHistoryEnabled) {
         if (emojiHistoryEnabled) {
@@ -204,7 +208,7 @@ fun EmojiPaletteView(
     ) {
         EmojiKey(
             emojiSet = emojiSet,
-            emojiCompatInstance = emojiCompatInstance,
+            useEmojiCompatView = selectedEmojiCompat != null,
             preferredSkinTone = preferredSkinTone,
             isPinned = isPinned,
             isRecent = isRecent,
@@ -220,36 +224,13 @@ fun EmojiPaletteView(
         )
     }
 
-    fun calculatePageNumbers(): Int {
-        return when {
-            !emojiHistoryEnabled -> EmojiCategoryValues.size - 1
-            else -> EmojiCategoryValues.size
-        }
-    }
-
-    fun pageNumberToCategory(pageNumber: Int): EmojiCategory {
-        return when {
-            !emojiHistoryEnabled -> EmojiCategoryValues[pageNumber + 1]
-            else -> EmojiCategoryValues[pageNumber]
-        }
-    }
-
-    fun categoryToPageNumber(category: EmojiCategory): Int {
-        return if (emojiHistoryEnabled) {
-            EmojiCategoryValues.indexOf(category)
-        } else {
-            EmojiCategoryValues.indexOf(category) - 1
-        }
-    }
-
-
     @Composable
     fun EmojiCategoriesTabRow(
         activeCategory: EmojiCategory,
         onCategoryChange: (EmojiCategory) -> Unit,
     ) {
         val inputFeedbackController = LocalInputFeedbackController.current
-        val selectedTabIndex = categoryToPageNumber(activeCategory)
+        val selectedTabIndex = visibleCategories.indexOf(activeCategory)
         val style = rememberSnyggThemeQuery(FlorisImeUi.MediaEmojiTab.elementName)
         PrimaryTabRow(
             modifier = Modifier
@@ -270,10 +251,7 @@ fun EmojiPaletteView(
                 )
             },
         ) {
-            for (category in EmojiCategoryValues) {
-                if (category == EmojiCategory.RECENTLY_USED && !emojiHistoryEnabled) {
-                    continue
-                }
+            for (category in visibleCategories) {
                 Tab(
                     onClick = {
                         inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
@@ -295,7 +273,7 @@ fun EmojiPaletteView(
         modifier = modifier
     ) {
         val pagerState = rememberPagerState(
-            pageCount = { calculatePageNumbers() }
+            pageCount = { visibleCategories.size }
         )
 
         // Reset the pager to the first page when emojiHistory is enabled
@@ -307,23 +285,24 @@ fun EmojiPaletteView(
             activeCategory = activeCategory,
             onCategoryChange = { category ->
                 activeCategory = category
-                scope.launch { pagerState.animateScrollToPage(categoryToPageNumber(activeCategory)) }
+                scope.launch { pagerState.animateScrollToPage(visibleCategories.indexOf(activeCategory)) }
             },
         )
         HorizontalPager(pagerState, beyondViewportPageCount = 1) { page ->
             // Every page needs its own lazyGridState in order to scroll correctly
             val lazyGridState = rememberLazyGridState()
 
-            // Update the lazyGridState and active category on scroll
-            LaunchedEffect(pagerState) {
+            // Rebind when history changes so the collector uses the current page list.
+            LaunchedEffect(pagerState, visibleCategories) {
                 snapshotFlow { pagerState.currentPage }.collect { page ->
+                    val currentCategory = visibleCategories.getOrNull(page) ?: return@collect
                     lazyGridState.scrollToItem(0)
-                    activeCategory = pageNumberToCategory(page)
+                    activeCategory = currentCategory
                     recentlyUsedVersion++
                 }
             }
 
-            val category = pageNumberToCategory(page)
+            val category = visibleCategories[page]
             val emojiMapping = if (category == EmojiCategory.RECENTLY_USED) {
                 // Purposely using remember here to prevent recomposition, as this would cause rapid
                 // emoji changes for the user when in recently used category.
@@ -411,7 +390,7 @@ fun EmojiPaletteView(
 @Composable
 private fun EmojiKey(
     emojiSet: EmojiSet,
-    emojiCompatInstance: EmojiCompat?,
+    useEmojiCompatView: Boolean,
     preferredSkinTone: EmojiSkinTone,
     isPinned: Boolean,
     isRecent: Boolean,
@@ -446,7 +425,7 @@ private fun EmojiKey(
         EmojiText(
             modifier = Modifier.align(Alignment.Center),
             text = base.value,
-            emojiCompatInstance = emojiCompatInstance,
+            useEmojiCompatView = useEmojiCompatView,
         )
         if (variations.isNotEmpty() || isPinned || isRecent) {
             val style = rememberSnyggThemeQuery(FlorisImeUi.MediaEmojiKeyPopupExtendedIndicator.elementName)
@@ -480,7 +459,7 @@ private fun EmojiKey(
             EmojiVariationsPopup(
                 variations = variations,
                 visible = showVariantsBox,
-                emojiCompatInstance = emojiCompatInstance,
+                useEmojiCompatView = useEmojiCompatView,
                 onEmojiTap = { emoji ->
                     onEmojiInput(emoji)
                     showVariantsBox = false
@@ -498,7 +477,7 @@ private fun EmojiKey(
 private fun EmojiVariationsPopup(
     variations: List<Emoji>,
     visible: Boolean,
-    emojiCompatInstance: EmojiCompat?,
+    useEmojiCompatView: Boolean,
     onEmojiTap: (Emoji) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -531,7 +510,7 @@ private fun EmojiVariationsPopup(
                         EmojiText(
                             modifier = Modifier.align(Alignment.Center),
                             text = emoji.value,
-                            emojiCompatInstance = emojiCompatInstance,
+                            useEmojiCompatView = useEmojiCompatView,
                         )
                     }
                 }
@@ -645,29 +624,17 @@ private fun EmojiHistoryPopup(
 @Composable
 fun EmojiText(
     text: String,
-    emojiCompatInstance: EmojiCompat?,
+    useEmojiCompatView: Boolean,
     modifier: Modifier = Modifier,
     color: Color = Color.Black,
     fontSize: TextUnit = EmojiDefaultFontSize,
 ) {
-    if (emojiCompatInstance != null) {
+    key(useEmojiCompatView) {
         AndroidView(
             modifier = modifier,
             factory = { context ->
-                EmojiTextView(context).also {
-                    it.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize.value)
-                    it.setTextColor(color.toArgb())
-                }
-            },
-            update = { view ->
-                view.text = text
-            },
-        )
-    } else {
-        AndroidView(
-            modifier = modifier,
-            factory = { context ->
-                TextView(context).also {
+                val view = if (useEmojiCompatView) EmojiTextView(context) else TextView(context)
+                view.also {
                     it.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize.value)
                     it.setTextColor(color.toArgb())
                 }
