@@ -19,22 +19,20 @@ Import therefore follows one path:
 6. Decode and structurally validate the manifest before extracting or exposing
    package data.
 
-Import workspaces retire on app-owned I/O. Selection changes and screen disposal
-request the same cleanup; cancellation before handoff awaits it. An install
-keeps its extracted files until that install finishes, even if the screen exits.
-A failed deletion gets one delayed I/O retry. Exhausted failures reach waiters;
-one app-owned worker retains only failed workspace paths and retries them in
-bounded batches, skipping active workspaces. Persistent failures log once
-at their source without paths; steady retries are quiet. After unlock, one
-background job cleans abandoned, canonical workspace directories.
+Import workspaces retire on app-owned I/O after selection changes or screen
+disposal. Cancellation before handoff awaits cleanup; an install retains its
+extracted files until it finishes. Deletion gets one delayed retry, then an
+app-owned worker retries only failed paths in bounded batches, skipping active
+workspaces. Exhausted failures reach waiters; persistent failures log once
+without paths, and steady retries are quiet.
 
-That startup cleanup also retires known export and editor staging paths. It
-finishes before settings, sharing, or clipboard cache users start, but does not
-hold up the IME. Unknown entries and symbolic links stay put.
-Theme materializations and loaded extension runtime files are not part of this
-sweep: their managers retire stale roots on first use, without deleting live
-assets during direct-boot unlock. A failed sweep leaves the app usable and is
-retried on the next process start.
+After unlock, startup cleanup retires recognized abandoned import, export,
+editor, and backup/restore workspaces, plus provider/share-preview staging
+files, before settings, sharing, or clipboard cache users start, without
+blocking the IME. Unknown entries and symbolic links remain.
+Theme materializations and loaded runtime files are excluded; their managers
+retire stale roots on first use, protecting live assets during direct-boot
+unlock. A failed sweep leaves the app usable and retries next process start.
 
 One selection is limited to 64 files, 256 MiB of source data, 512 MiB of
 expanded data, and 16,384 entries. Reads and extraction also preserve 128 MiB
@@ -64,28 +62,21 @@ incorrect sizes, and CRC mismatches. It writes into a private sibling staging
 directory and publishes only with an atomic move. A failure leaves the previous
 destination unchanged and removes owned staging data.
 
-APK assets are trusted input, but their directory copy still uses staged,
-all-or-nothing publication.
-Bundled keyboard layout IDs may share one arrangement file through
-`arrangementFile`; their labels, modifiers, and subtype choices stay separate.
-Bundled currency keys type the symbol shown on each key; a metadata test checks
-every built-in slot.
-Forty-nine character layouts use `@autoKeys("letters")` source rows, with an
-optional padding width. The build expands Unicode code points to their original
-JSON bytes; the other 24 character layouts remain static.
-Eleven digit-script numeric rows are built from the Bengali row and their
-Unicode zero-digit code points. The five structurally different rows stay as
-individual assets; the generated rows keep their existing IDs and popups.
-Both six-theme bundled families keep their manifest paths. The static day
-stylesheet is the shared base; a small day overlay supplies Material You colors.
-Night and borderless overlays build the remaining stylesheets. Generated
-selectors replace whole rules; `@defines` merge by name.
-The bundled localization manifest keeps its 73 subtype presets in order. The
-build expands 71 compact entries; the unusual Han and Bengali entries stay
-literal. The same task expands a shared punctuation popup in 38 templates and
-copies the other 19 mappings unchanged. It rejects malformed or missing data
-before packaging. Run `./gradlew :app:testLocalizationAssetGenerator :app:testDebugUnitTest`
-to check the generated assets and their metadata.
+Trusted APK assets still use staged, all-or-nothing directory publication.
+Bundled layout IDs may share an arrangement via `arrangementFile` while keeping
+distinct labels, modifiers, and subtype choices. Currency keys output their
+visible symbol; metadata tests cover built-in slots.
+
+Build-time generators expand `@autoKeys("letters")` character rows (with optional
+padding), digit-script numeric rows from Bengali, theme stylesheets from the
+static day base and Material You/night/borderless overlays, subtype presets, and
+shared punctuation popups. Exceptional character and numeric layouts and the
+Han/Bengali presets stay literal. Generation preserves layout IDs and popups,
+theme manifest paths, preset order, and Unicode code points in JSON; missing or
+malformed input fails before packaging. Theme selectors replace whole rules, while
+`@defines` merge by name. Run
+`./gradlew :app:testLocalizationAssetGenerator :app:testDebugUnitTest` to check
+generated assets and their metadata.
 
 ## Manifest rules
 
@@ -135,35 +126,29 @@ Each loaded extension gets a random directory below `extension-runtime`.
 importer and editor workspaces are detached without being mistaken for owned
 runtime data.
 
-Theme assets use a two-entry materialization cache. The manager and every
-Compose consumer hold explicit leases, including editor previews. Retirement
-waits for the last consumer before deleting assets, and abandoned compositions
-release their lease. A failed delete gets one retry. If both attempts fail, a
-content-free warning is logged; the next installed-theme load in a new process
-cleans remaining stale assets.
-Theme styles and file fonts compile off the Compose thread before an installed
-theme is published. Editor previews hold a separate asset lease while compiling;
-obsolete work is cancelled or discarded, and the current theme stays visible
-until its replacement is ready. A damaged font falls back without breaking
-the rest of the theme.
+Theme assets use a two-entry materialization cache and explicit manager/Compose
+leases, including previews. Retirement waits for all leases; abandoned
+compositions release theirs. Deletion gets one retry; if both attempts fail, a
+content-free warning is logged. The next installed-theme load in a new process
+cleans stale assets.
+Styles and file fonts compile off Compose before publication. Preview compilation
+holds a separate lease; obsolete work is cancelled or discarded, the current
+theme stays visible until replacement is ready, and damaged fonts fall back.
 
 The Han language provider serializes refresh, query, and teardown work. It
 publishes only packs whose read-only database opened successfully, unloads
 removed or replaced packs, and never refreshes in response to a keystroke.
 
-Editor open, save, and close I/O runs off the UI thread. Save builds a bounded
-archive, and closing a preview waits until the keyboard has released its assets
-before deleting the workspace. Fonts and images selected in the editor cross
-the same disposable provider boundary before entering that workspace.
+Editor open/save/close I/O, stylesheet reads/parsing, and asset-list reloads run
+off Main. Saving builds a bounded archive; preview close waits for the keyboard
+to release assets before workspace deletion. Editor-selected fonts and images
+cross the disposable provider boundary before entering that workspace.
 
-Theme stylesheet reads and parsing also run off the UI thread. The component
-shows a loading state until its current stylesheet is ready; a stale or cancelled
-load cannot replace edits. Invalid stylesheets still offer lenient or empty retry.
-
-The file manager and property picker share one asset listing path. Both show a
-loading state while lists reload off Main; cancelled loads cannot publish stale
-files. Renames and deletes run off Main under the workspace close guard; unsafe
-names, links, and collisions leave existing files alone.
+Stylesheet and asset-list loads show loading states and discard stale or
+cancelled results; invalid stylesheets allow lenient or empty retry. The file
+manager and property picker share one listing path. Renames and deletes run off
+Main under the workspace close guard; unsafe names, links, or collisions leave
+files alone.
 
 The theme shape editor displays corners from the current property value. Changing
 shape type resets the preview and chips to the new type's value, and a corner edit
