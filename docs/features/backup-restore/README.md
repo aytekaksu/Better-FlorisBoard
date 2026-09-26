@@ -1,13 +1,9 @@
 # Backup and restore
 
-`BackupArchive` defines what a valid archive may contain and what a restore may
-change. The live restore screen now copies the selected document into private
-storage, validates the ZIP, and stages only the selected components before it
-touches live app data.
-
-This provides a structural and byte-integrity boundary plus bounded in-process
-rollback. It is not crash-safe: process death or power loss can still interrupt
-a live restore.
+`BackupArchive` validates archive contents and restore scope. The live screen
+copies the selected document into private storage, validates its ZIP, and stages
+only selected components before changing live data. Rollback handles failures
+seen by the running process, not process death or power loss.
 
 ## Stable archive layout
 
@@ -138,36 +134,26 @@ archives. New backups preserve a bounded, normalized name; restore uses the
 generic `Image` or `Video` fallback when it is absent and rejects conflicting
 names for the same media reference.
 
-## Important current limitations
+## Limitations and cleanup
 
-The transaction is limited to failures observed by the running process. It has
-no persistent journal, so process death or power loss can leave a partial
-restore. Rollback gets two bounded attempts; if both fail, the restore reports
-that live state may need manual recovery. Preferences are preflighted before
-mutation, while extension payloads keep their existing load-time semantic
-validation.
+Restore has no persistent journal: process death or power loss can leave partial
+state. Rollback gets two bounded attempts after an in-process failure and
+reports possible manual recovery if both fail. Preferences are preflighted
+before mutation; extensions retain load-time semantic validation.
 
-Clipboard restore now validates selected indexes before install, copies only
-referenced media, preserves unselected history, and holds exact install
-receipts until its Room transaction commits. A rejected clipboard commit
-attempts to remove those fresh installs. Cleanup failures are reported and
-remain queued for retry. Merge can still reject an otherwise valid archive
-when the configured history or media budget is already full; deterministic
-eviction and replacement-aware quota planning remain deferred.
+Clipboard indexes are validated before install, and only referenced media is
+copied. Unselected history is preserved; exact install receipts remain until
+the Room transaction commits. A rejected commit tries to remove fresh installs,
+reporting and retrying cleanup failures. Merge can still reject a valid archive
+when history or media budgets are full; deterministic eviction and
+replacement-aware quota planning remain deferred.
 
-Staging protects live data from malformed ZIP structure, unsafe paths, resource
-overruns, and corrupt selected entry bytes. The overall restore is
-all-or-rollback only while the process remains alive and rollback succeeds; it
-does not promise crash- or power-loss atomicity.
-
-When a backup or restore screen closes its private workspace, ordinary cleanup
-errors get two independent attempts for the staged child and workspace. A child
-error therefore does not prevent removal of the private workspace. Cancellation
-still propagates. The screen logs its first close failure; the retry worker
-logs only terminal failures. Both record only failure classes, never archive
-contents or paths. A save whose document write completed remains successful if
-the screen's first private-workspace close fails; any remaining workspace is
-retried in the background and the backup button does not remain busy.
+On close, the staged child and private workspace each get two cleanup attempts;
+child failure cannot skip workspace cleanup, and cancellation propagates. The
+screen logs its first close failure; the retry worker logs terminal failures.
+Both use failure classes only, never archive contents or paths. A completed document
+save remains successful after an initial workspace-close failure; background
+retry handles any remaining workspace without leaving the backup button busy.
 
 ## Verification
 

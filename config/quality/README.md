@@ -6,22 +6,20 @@ Run the complete local merge gate with:
 ./gradlew qualityGate
 ```
 
-The fast package lane compiles the debug app, minified beta app, benchmark APK,
-and the release autocorrect API AAR. It also checks the beta APK for INTERNET
-permission, debuggable mode, and the debug-only editor harness. These are the
-same package checks in local `qualityGate` and CI. It does not start an emulator.
-The unit-test lane also enforces the host-core Kover floors and generates XML
-and HTML coverage reports.
+`ciPackage` builds debug, beta, and profile app APKs, both benchmark APK
+variants, and checks the release autocorrect API AAR. It rejects INTERNET
+permission, debuggable mode, and the debug-only editor harness in the beta APK,
+and verifies baseline profiles. Local `qualityGate` and CI run the same checks
+without starting an emulator. `ciUnitTest` enforces host-core Kover floors and
+generates XML and HTML coverage reports.
 
-The first enforcement scope covers the fork-owned autocorrect plugin packages,
-the public autocorrect API, their tests, and the host core. Expand
-`qualityKotlinSources` in the root build file as inherited packages are cleaned
-up. Spotless covers the new host core, small fork-owned coordinators and
-policies, the split plugin UI, deterministic editor fixtures, their focused
-tests, and the Gradle files changed as part of this foundation. Add existing
-packages only as deliberate formatting cleanups, avoiding a noisy
-whole-repository diff. Do not relax Detekt thresholds to make old findings
-disappear; regenerate the baseline only after reviewing each changed finding.
+The root `build.gradle.kts` defines the exact Detekt (`qualityKotlinSources`)
+and Spotless (`formattedKotlinSources`) scopes. Detekt covers autocorrect
+plugins/API/host core, backup archives, extension hardening, shared policies,
+and inherited platform utilities. Spotless formats a narrower set of fork-owned
+code and selected tests. Expand coverage deliberately to avoid a noisy
+repository-wide diff. Do not relax Detekt thresholds to hide old findings;
+regenerate its baseline only after reviewing each changed finding.
 
 ## Documentation links
 
@@ -75,32 +73,21 @@ suppressed.
 
 ## Temporary Android lint workaround
 
-Android lint from AGP 9.0.0 currently crashes while K2/UAST resolves lambdas in
-three independent detectors:
-
-- `UElementAsPsiDetector` (`UElementAsPsi`) in `Flog.kt`.
-- `IntentDetector` (`IntentReset`) in `LaunchUtils.kt`, after the first
-  detector is disabled.
-- `ToastDetector` (`ShowToast`) in `LaunchUtils.kt`, after the preceding
-  detector is skipped.
-
-The failures can be reproduced by removing the matching entries from
-`app/lint.xml` and running:
+AGP 9.0.0 lint currently crashes in three K2/UAST detectors:
+`UElementAsPsiDetector` (`UElementAsPsi`) in `Flog.kt`, then `IntentDetector`
+(`IntentReset`) and `ToastDetector` (`ShowToast`) in `LaunchUtils.kt` as earlier
+detectors are skipped. `app/lint.xml` disables these IDs globally because lint
+initializes detectors before applying path-level ignores. To recheck after an
+AGP/lint upgrade, remove the matching suppressions and run:
 
 ```shell
 ./gradlew :app:lintDebug --stacktrace
 ```
 
-Lint still initializes a detector before applying a path-level ignore, so these
-three issue IDs must currently be disabled globally. The lint task and every
-other detector still fail the quality gate normally. When upgrading AGP/lint,
-remove the suppressions and rerun the command. Re-enable each detector as soon
-as it completes successfully.
-
-`app/lint.xml` is the detector configuration. `app/lint-baseline.xml` is the
-separate, generated record of findings present when this gate was introduced.
-The baseline is a debt ratchet, not an assertion that each finding is harmless:
-fix entries incrementally and regenerate it only to remove resolved findings.
+Re-enable each detector as soon as it completes; all others still fail the
+quality gate normally. `app/lint-baseline.xml` separately records existing
+findings as a debt ratchet: review and remove resolved findings rather than
+assuming every baseline entry is harmless.
 
 ## Dependency update checks
 
