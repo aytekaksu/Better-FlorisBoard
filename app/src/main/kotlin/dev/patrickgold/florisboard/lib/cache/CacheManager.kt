@@ -347,6 +347,11 @@ class CacheManager(context: Context) {
 
         fun isClosed() = !dir.exists()
 
+        /** Keep a short, synchronous file operation from racing workspace removal. Call off Main. */
+        internal fun <R> withOpenFileOperation(block: () -> R): R? = synchronized(closeGuard) {
+            if (dir.exists()) block() else null
+        }
+
         override fun close() {
             synchronized(closeGuard) {
                 try {

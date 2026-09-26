@@ -40,6 +40,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ManageSearch
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -72,8 +73,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isUnspecified
 import androidx.compose.ui.unit.sp
 import dev.patrickgold.florisboard.R
-import dev.patrickgold.florisboard.app.ext.FONTS
-import dev.patrickgold.florisboard.app.ext.IMAGES
+import dev.patrickgold.florisboard.app.ext.EditorAssetFile
+import dev.patrickgold.florisboard.app.ext.rememberEditorAssetFiles
 import dev.patrickgold.florisboard.lib.ValidationResult
 import dev.patrickgold.florisboard.lib.ValidationRule
 import dev.patrickgold.florisboard.lib.cache.CacheManager
@@ -88,7 +89,6 @@ import dev.patrickgold.jetpref.material.ui.JetPrefDropdown
 import dev.patrickgold.jetpref.material.ui.JetPrefListItem
 import dev.patrickgold.jetpref.material.ui.JetPrefTextField
 import dev.patrickgold.jetpref.material.ui.rememberJetPrefColorPickerState
-import java.io.File
 import org.florisboard.lib.color.ColorPalette
 import org.florisboard.lib.compose.DpSizeSaver
 import org.florisboard.lib.compose.FlorisChip
@@ -97,7 +97,6 @@ import org.florisboard.lib.compose.FlorisTextButton
 import org.florisboard.lib.compose.florisVerticalScroll
 import org.florisboard.lib.compose.stringRes
 import org.florisboard.lib.kotlin.curlyFormat
-import org.florisboard.lib.kotlin.io.subDir
 import org.florisboard.lib.kotlin.toStringWithoutDotZero
 import org.florisboard.lib.snygg.SnyggAnnotationRule
 import org.florisboard.lib.snygg.SnyggRule
@@ -628,16 +627,13 @@ private fun PropertyValueEditor(
                 mutableStateOf(value.uri)
             }
             Column(modifier) {
-                val fontFiles = remember {
-                    workspace.extDir.subDir(FONTS).listFiles { it.isFile }.orEmpty().asList()
-                }
-                val imageFiles = remember {
-                    workspace.extDir.subDir(IMAGES).listFiles { it.isFile }.orEmpty().asList()
-                }
+                val files = rememberEditorAssetFiles(workspace)
+                val fontFiles = files?.fonts.orEmpty()
+                val imageFiles = files?.images.orEmpty()
                 var showSelectFileDialog by rememberSaveable { mutableStateOf(false) }
                 if (showSelectFileDialog) {
                     @Composable
-                    fun ClickableFilesWithHeading(title: String, files: List<File>) {
+                    fun ClickableFilesWithHeading(title: String, files: List<EditorAssetFile>) {
                         ListItem(
                             headlineContent = {
                                 Text(
@@ -655,8 +651,7 @@ private fun PropertyValueEditor(
                         files.forEach { file ->
                             JetPrefListItem(
                                 modifier = Modifier.clickable {
-                                    val relPath = file.path.removePrefix(workspace.extDir.path)
-                                    inputStr = "flex:" + Uri.encode(relPath, "/")
+                                    inputStr = "flex:" + Uri.encode(file.relativePath, "/")
                                     onValueChange(SnyggUriValue(inputStr))
                                     showSelectFileDialog = false
                                 },
@@ -677,13 +672,16 @@ private fun PropertyValueEditor(
                         scrollModifier = Modifier.florisVerticalScroll(),
                     ) {
                         Column {
+                            if (files == null) {
+                                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                            }
                             if (fontFiles.isNotEmpty()) {
                                 ClickableFilesWithHeading(stringRes(R.string.ext__editor__files__type_fonts), fontFiles)
                             }
                             if (imageFiles.isNotEmpty()) {
                                 ClickableFilesWithHeading(stringRes(R.string.ext__editor__files__type_images), imageFiles)
                             }
-                            if (fontFiles.isEmpty() && imageFiles.isEmpty()) {
+                            if (files != null && fontFiles.isEmpty() && imageFiles.isEmpty()) {
                                 Text(
                                     modifier = Modifier.padding(horizontal = 16.dp),
                                     text = stringRes(R.string.settings__theme_editor__file_selector_no_files_text,

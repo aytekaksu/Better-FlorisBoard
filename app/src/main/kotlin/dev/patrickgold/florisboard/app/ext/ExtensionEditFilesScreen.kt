@@ -36,7 +36,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -76,14 +75,10 @@ import org.florisboard.lib.android.showShortToast
 import org.florisboard.lib.compose.FlorisIconButton
 import org.florisboard.lib.compose.stringRes
 import org.florisboard.lib.kotlin.io.subDir
-import org.florisboard.lib.kotlin.io.subFile
 import org.florisboard.lib.kotlin.mimeTypeFilterOf
 
 private const val EditorAssetImportTimeoutMs = 30_000L
 private const val EditorAssetImportStorageHeadroom = 128L * 1_024L * 1_024L
-
-const val FONTS = "fonts"
-const val IMAGES = "images"
 
 private class PendingEditorAsset(
     val staged: StagedExternalContent,
@@ -160,6 +155,8 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
     val importScope = rememberCoroutineScope()
     val pendingAssetOwner = remember { PendingEditorAssetOwner() }
     var isImportingFile by remember { mutableStateOf(false) }
+    var isMutatingFile by remember { mutableStateOf(false) }
+    val assetStore = remember(workspace) { EditorAssetStore(workspace.dir.toPath()) }
     val externalContentImporter = remember(context, workspace.uuid) {
         DisposableExternalContentImporter(
             context = context,
@@ -175,7 +172,7 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
     }
 
     fun handleBackPress() {
-        if (!isImportingFile) {
+        if (!isImportingFile && !isMutatingFile) {
             workspace.currentAction = null
         }
     }
@@ -183,19 +180,13 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
     navigationIcon {
         FlorisIconButton(
             onClick = { handleBackPress() },
-            enabled = !isImportingFile,
+            enabled = !isImportingFile && !isMutatingFile,
             icon = Icons.Default.Close,
         )
     }
 
     content {
-        var version by rememberSaveable { mutableIntStateOf(0) }
-        val fontFiles = remember(version) {
-            workspace.extDir.subDir(FONTS).listFiles { it.isFile }.orEmpty().asList()
-        }
-        val imageFiles = remember(version) {
-            workspace.extDir.subDir(IMAGES).listFiles { it.isFile }.orEmpty().asList()
-        }
+        val files = rememberEditorAssetFiles(workspace)
 
         var currentImportDest by remember { mutableStateOf<String?>(null) }
         var currentImportResult by remember { mutableStateOf<Result<PendingEditorAsset>?>(null) }
@@ -279,18 +270,18 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
         }
 
         BackHandler {
-            if (!isImportingFile) handleBackPress()
+            handleBackPress()
         }
 
         @Composable
         fun FileList(
             title: String,
             icon: ImageVector,
-            files: List<File>,
+            files: List<EditorAssetFile>,
             addEnabled: Boolean,
             onAdd: () -> Unit,
         ) {
-            var dialogFile by remember { mutableStateOf<File?>(null) }
+            var dialogFile by remember { mutableStateOf<EditorAssetFile?>(null) }
             ListItem(
                 headlineContent = {
                     Text(
@@ -324,46 +315,62 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
             }
 
             dialogFile?.let { file ->
-                var fileNameInput by rememberSaveable { mutableStateOf(file.name) }
+                var fileNameInput by rememberSaveable(file) { mutableStateOf(file.name) }
+
+                fun mutateFile(newName: String? = null) {
+                    if (isImportingFile || isMutatingFile) return
+                    isMutatingFile = true
+                    importScope.launch {
+                        try {
+                            val callerContext = currentCoroutineContext()
+                            val result = withContext(NonCancellable) {
+                                callerContext.ensureActive()
+                                val outcome = withContext(Dispatchers.IO) {
+                                    workspace.withOpenFileOperation {
+                                        if (newName == null) assetStore.delete(file)
+                                        else assetStore.rename(file, newName)
+                                    } ?: EditorAssetMutationResult.FAILURE
+                                }
+                                if (outcome == EditorAssetMutationResult.SUCCESS) workspace.update { }
+                                outcome
+                            }
+                            if (dialogFile !== file) return@launch
+                            when {
+                                newName == null -> {
+                                    context.showShortToast(
+                                        if (result == EditorAssetMutationResult.SUCCESS) "Successfully deleted"
+                                        else "Failed to delete",
+                                    )
+                                    dialogFile = null
+                                }
+                                result == EditorAssetMutationResult.INVALID_NAME ->
+                                    context.showLongToast("Invalid file name!")
+                                result == EditorAssetMutationResult.ALREADY_EXISTS ->
+                                    context.showShortToast("Filename already exists.")
+                                else -> {
+                                    context.showShortToast(
+                                        if (result == EditorAssetMutationResult.SUCCESS) "Successfully renamed"
+                                        else "Failed to rename the file.",
+                                    )
+                                    dialogFile = null
+                                }
+                            }
+                        } finally {
+                            isMutatingFile = false
+                        }
+                    }
+                }
+
                 JetPrefAlertDialog(
                     title = stringRes(R.string.general__properties),
                     confirmLabel = stringRes(R.string.action__apply),
                     dismissLabel = stringRes(R.string.action__cancel),
                     neutralLabel = stringRes(R.string.action__delete),
                     allowOutsideDismissal = true,
-                    onNeutral = {
-                        val message = if (file.delete()) {
-                            workspace.update { }
-                            "Successfully deleted"
-                        } else {
-                            "Failed to delete"
-                        }
-                        importScope.launch { context.showShortToast(message) }
-                        dialogFile = null
-                        version++
-                    },
-                    onConfirm = {
-                        val newFile = file.parentFile!!.subFile(fileNameInput).canonicalFile
-                        if (newFile.parentFile != file.canonicalFile.parentFile) {
-                            importScope.launch { context.showLongToast("Invalid file name!") }
-                            return@JetPrefAlertDialog
-                        }
-                        if (newFile.exists()) {
-                            importScope.launch { context.showShortToast("Filename already exists.") }
-                            return@JetPrefAlertDialog
-                        }
-                        val message = if (file.renameTo(newFile)) {
-                            workspace.update { }
-                            "Successfully renamed"
-                        } else {
-                            "Failed to rename the file."
-                        }
-                        importScope.launch { context.showShortToast(message) }
-                        dialogFile = null
-                        version++
-                    },
+                    onNeutral = { mutateFile() },
+                    onConfirm = { mutateFile(fileNameInput) },
                     onDismiss = {
-                        dialogFile = null
+                        if (!isMutatingFile) dialogFile = null
                     },
                 ) {
                     JetPrefTextField(
@@ -379,8 +386,8 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
         FileList(
             title = stringRes(R.string.ext__editor__files__type_fonts),
             icon = Icons.Default.TextFields,
-            files = fontFiles,
-            addEnabled = !isImportingFile,
+            files = files?.fonts.orEmpty(),
+            addEnabled = !isImportingFile && !isMutatingFile,
         ) {
             currentImportDest = FONTS
             importLauncher.launch("*/*")
@@ -389,8 +396,8 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
         FileList(
             title = stringRes(R.string.ext__editor__files__type_images),
             icon = Icons.Default.Photo,
-            files = imageFiles,
-            addEnabled = !isImportingFile,
+            files = files?.images.orEmpty(),
+            addEnabled = !isImportingFile && !isMutatingFile,
         ) {
             currentImportDest = IMAGES
             importLauncher.launch("*/*")
@@ -422,7 +429,6 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
                                 }
                                 if (committedResult == EditorAssetInstallResult.SUCCESS) {
                                     workspace.update { }
-                                    version++
                                     pendingAssetOwner.detach(result.staged)
                                     currentImportDest = null
                                     currentImportResult = null
