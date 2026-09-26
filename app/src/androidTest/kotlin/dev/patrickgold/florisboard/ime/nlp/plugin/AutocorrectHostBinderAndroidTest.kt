@@ -71,7 +71,7 @@ class AutocorrectHostBinderAndroidTest {
     private var oldSuggestionsEnabled: Boolean? = null
 
     @Before
-    fun selectSyntheticProvider() = runBlocking {
+    fun selectSyntheticProvider(): Unit = runBlocking {
         val application = targetContext.applicationContext as FlorisApplication
         assertEquals(
             PreferenceStoreInitializationState.READY,
@@ -106,7 +106,6 @@ class AutocorrectHostBinderAndroidTest {
         manager.refreshProviders()
         awaitStableEditorGeneration()
         control("reset")
-        Unit
     }
 
     @After
@@ -117,6 +116,7 @@ class AutocorrectHostBinderAndroidTest {
         manager.releasePluginUi()
         manager.finishSession()
         val eventsBeforeRestore = snapshot().events
+        val bindingBeforeRestore = manager.hostStateSnapshot().binding
         runBlocking {
             oldProviderId?.let {
                 prefs.suggestion.autocorrectPluginComponent.set(it).getOrThrow()
@@ -125,12 +125,14 @@ class AutocorrectHostBinderAndroidTest {
         }
         manager.onSelectedProviderChanged()
         awaitHostCommandBarrier()
-        if (eventsBeforeRestore.lastIndexOfAny("UI_REQUEST", "START") >
+        if (bindingBeforeRestore != BindingState.Unbound &&
+            eventsBeforeRestore.lastIndexOfAny("UI_REQUEST", "START") >
             eventsBeforeRestore.lastIndexOf("UNBOUND")
         ) {
             waitForEventCount("UNBOUND", eventsBeforeRestore.count { it == "UNBOUND" } + 1)
         }
-        if (eventsBeforeRestore.lastIndexOfAny("B_UI_REQUEST", "B_START") >
+        if (bindingBeforeRestore != BindingState.Unbound &&
+            eventsBeforeRestore.lastIndexOfAny("B_UI_REQUEST", "B_START") >
             eventsBeforeRestore.lastIndexOf("B_UNBOUND")
         ) {
             waitForEventCount("B_UNBOUND", eventsBeforeRestore.count { it == "B_UNBOUND" } + 1)
@@ -231,7 +233,7 @@ class AutocorrectHostBinderAndroidTest {
     }
 
     @Test
-    fun sessionStartsBeforeSuggestAndHeldFinishKeepsItsBinding() = runBlocking {
+    fun sessionStartsBeforeSuggestAndHeldFinishKeepsItsBinding(): Unit = runBlocking {
         val editor by targetContext.editorInstance()
         val oldInfo = editor.activeInfo
         editor.handleStartInput(plainTextEditorInfo(imeOptions = 0))
@@ -260,27 +262,37 @@ class AutocorrectHostBinderAndroidTest {
     }
 
     @Test
-    fun normalDoubleFinishRetainsClosureContentButPrivateFinishDoesNot() = runBlocking {
+    fun normalDoubleFinishRetainsClosureContentButPrivateFinishDoesNot(): Unit = runBlocking {
         val editor by targetContext.editorInstance()
         val keyboard by targetContext.keyboardManager()
         val oldInfo = editor.activeInfo
         val oldPrivate = keyboard.activeState.isIncognitoMode
         editor.handleStartInput(plainTextEditorInfo(imeOptions = 0))
-        val restoreContent = installSyntheticEditorContent(editor, syntheticEditorContent())
+        var restoreContent: () -> Unit = {}
         try {
             keyboard.activeState.isIncognitoMode = false
             assertTrue(suggestOnce(manager.captureEditorGeneration()).handled)
-            manager.finishSession()
-            manager.finishSession() // onFinishInputView followed by onFinishInput.
+            synchronized(manager) {
+                restoreContent = installSyntheticEditorContent(editor, syntheticEditorContent())
+                manager.finishSession()
+                manager.finishSession() // onFinishInputView followed by onFinishInput.
+                restoreContent()
+            }
             waitForEvent("FINISH_CONTENT_PRESENT")
+            keyboard.activeState.isIncognitoMode = true
+            manager.finishSession() // Stop any editor observer request started after the first close.
             waitForEvent("UNBOUND")
 
+            keyboard.activeState.isIncognitoMode = false
             control("reset")
             editor.handleStartInput(plainTextEditorInfo(imeOptions = 0))
-            installSyntheticEditorContent(editor, syntheticEditorContent())
             assertTrue(suggestOnce(manager.captureEditorGeneration()).handled)
-            keyboard.activeState.isIncognitoMode = true
-            manager.finishSession()
+            synchronized(manager) {
+                restoreContent = installSyntheticEditorContent(editor, syntheticEditorContent())
+                keyboard.activeState.isIncognitoMode = true
+                manager.finishSession()
+                restoreContent()
+            }
             waitForEvent("FINISH_CONTENT_EMPTY")
             waitForEvent("UNBOUND")
         } finally {
@@ -288,11 +300,10 @@ class AutocorrectHostBinderAndroidTest {
             restoreContent()
             editor.handleStartInput(oldInfo)
         }
-        Unit
     }
 
     @Test
-    fun learningPolicyChangeStartsANewSessionBeforeNextSuggestion() = runBlocking {
+    fun learningPolicyChangeStartsANewSessionBeforeNextSuggestion(): Unit = runBlocking {
         val editor by targetContext.editorInstance()
         val oldInfo = editor.activeInfo
         try {
@@ -315,7 +326,7 @@ class AutocorrectHostBinderAndroidTest {
     }
 
     @Test
-    fun learningPolicyFlipOrdersFinishBeforeNextStartEvenWhileAckIsHeld() = runBlocking {
+    fun learningPolicyFlipOrdersFinishBeforeNextStartEvenWhileAckIsHeld(): Unit = runBlocking {
         val editor by targetContext.editorInstance()
         val oldInfo = editor.activeInfo
         try {
@@ -328,13 +339,18 @@ class AutocorrectHostBinderAndroidTest {
             )
             val next = async(Dispatchers.Default) { suggestOnce(generation) }
             val held = waitForEvent("FINISH")
+            awaitHostCommandBarrier()
+            val pending = manager.hostStateSnapshot()
+            assertTrue(pending.pendingFinishes.isNotEmpty())
+            assertFalse(pending.session?.configuration?.allowPersonalizedLearning ?: true)
+            assertFalse("provider serializes callbacks behind FINISH", next.isCompleted)
+            assertFalse("new session must retain the binding", held.events.contains("UNBOUND"))
+            control("release_finish")
             assertTrue(withTimeout(20_000) { next.await() }.handled)
             val events = waitForEventCount("SUGGEST", 2).events
             assertTrue(events.indexOf("FINISH") > events.indexOf("SUGGEST"))
             assertTrue(events.lastIndexOf("START") > events.indexOf("FINISH"))
             assertTrue(events.lastIndexOf("SUGGEST") > events.lastIndexOf("START"))
-            assertFalse("new session must retain the binding", held.events.contains("UNBOUND"))
-            control("release_finish")
         } finally {
             control("release_finish")
             editor.handleStartInput(oldInfo)
@@ -342,7 +358,7 @@ class AutocorrectHostBinderAndroidTest {
     }
 
     @Test
-    fun providerProcessDeathReconnectsWithANewEpochBeforeSuggestingAgain() = runBlocking {
+    fun providerProcessDeathReconnectsWithANewEpochBeforeSuggestingAgain(): Unit = runBlocking {
         val editor by targetContext.editorInstance()
         val oldInfo = editor.activeInfo
         editor.handleStartInput(plainTextEditorInfo(imeOptions = 0))
@@ -369,7 +385,7 @@ class AutocorrectHostBinderAndroidTest {
     }
 
     @Test
-    fun providerSwitchWithHeldFinishRejectsOldEpochReply() = runBlocking {
+    fun providerSwitchWithHeldFinishRejectsOldEpochReply(): Unit = runBlocking {
         val editor by targetContext.editorInstance()
         val oldInfo = editor.activeInfo
         editor.handleStartInput(plainTextEditorInfo(imeOptions = 0))
@@ -413,7 +429,6 @@ class AutocorrectHostBinderAndroidTest {
             control("release_finish")
             editor.handleStartInput(oldInfo)
         }
-        Unit
     }
 
     private suspend fun suggestOnce(generation: Long) = withTimeout(20_000) {
