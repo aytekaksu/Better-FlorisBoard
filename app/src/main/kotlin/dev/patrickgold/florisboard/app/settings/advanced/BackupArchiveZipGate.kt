@@ -303,48 +303,30 @@ private class BackupArchiveZipGateInspector(
     ): BackupArchiveZipGateFailure? {
         var cursor = startOffset
         var actualEntries = 0L
-        var failure: BackupArchiveZipGateFailure? = null
-        while (cursor < endOffset && failure == null) {
-            val inspection = inspectCentralEntry(
-                headerOffset = cursor,
-                endOffset = endOffset,
-                entryNumber = actualEntries + 1L,
-            )
-            if (inspection.counted) {
-                actualEntries++
+        while (cursor < endOffset) {
+            val header = readExact(cursor, CENTRAL_DIRECTORY_HEADER_BYTES.toInt())
+            if (header == null || header.u32(0) != CENTRAL_DIRECTORY_HEADER_SIGNATURE) {
+                return BackupArchiveZipGateFailure.INVALID_CENTRAL_DIRECTORY
             }
-            failure = inspection.failure
-            inspection.nextOffset?.let { cursor = it }
+            actualEntries++
+            val nameBytes = header.u16(CENTRAL_NAME_LENGTH_OFFSET)
+            val extraBytes = header.u16(CENTRAL_EXTRA_LENGTH_OFFSET)
+            val commentBytes = header.u16(CENTRAL_COMMENT_LENGTH_OFFSET)
+            val variableBytes = nameBytes + extraBytes + commentBytes
+            val nextOffset = (CENTRAL_DIRECTORY_HEADER_BYTES + variableBytes).checkedAdd(cursor)
+            centralEntryLayoutFailure(
+                entryNumber = actualEntries,
+                nameBytes = nameBytes,
+                extraBytes = extraBytes,
+                commentBytes = commentBytes,
+                nextOffset = nextOffset,
+                endOffset = endOffset,
+            )?.let { return it }
+            centralEntryDiskFailure(header, cursor, nameBytes, extraBytes)?.let { return it }
+            cursor = nextOffset ?: return BackupArchiveZipGateFailure.INVALID_CENTRAL_DIRECTORY
         }
-        return failure ?: BackupArchiveZipGateFailure.INVALID_CENTRAL_DIRECTORY
+        return BackupArchiveZipGateFailure.INVALID_CENTRAL_DIRECTORY
             .takeIf { actualEntries != expectedEntries }
-    }
-
-    private fun inspectCentralEntry(headerOffset: Long, endOffset: Long, entryNumber: Long): CentralEntryInspection {
-        val header = readExact(headerOffset, CENTRAL_DIRECTORY_HEADER_BYTES.toInt())
-        if (header == null || header.u32(0) != CENTRAL_DIRECTORY_HEADER_SIGNATURE) {
-            return CentralEntryInspection.invalid(counted = false)
-        }
-        val nameBytes = header.u16(CENTRAL_NAME_LENGTH_OFFSET)
-        val extraBytes = header.u16(CENTRAL_EXTRA_LENGTH_OFFSET)
-        val commentBytes = header.u16(CENTRAL_COMMENT_LENGTH_OFFSET)
-        val variableBytes = nameBytes + extraBytes + commentBytes
-        val nextOffset = (CENTRAL_DIRECTORY_HEADER_BYTES + variableBytes).checkedAdd(headerOffset)
-        val layoutFailure = centralEntryLayoutFailure(
-            entryNumber = entryNumber,
-            nameBytes = nameBytes,
-            extraBytes = extraBytes,
-            commentBytes = commentBytes,
-            nextOffset = nextOffset,
-            endOffset = endOffset,
-        )
-        val failure = layoutFailure ?: centralEntryDiskFailure(
-            header = header,
-            headerOffset = headerOffset,
-            nameBytes = nameBytes,
-            extraBytes = extraBytes,
-        )
-        return CentralEntryInspection(nextOffset, failure, counted = true)
     }
 
     private fun centralEntryLayoutFailure(
@@ -548,20 +530,6 @@ private data class LocatedZip64Locator(val locatorOffset: Long, val recordOffset
 private data class LocatedZip64EndRecord(val record: Zip64EndRecord, val recordOffset: Long)
 
 private data class BoundedCentralDirectory(val layout: BackupArchiveZipLayout, val endOffset: Long)
-
-private data class CentralEntryInspection(
-    val nextOffset: Long?,
-    val failure: BackupArchiveZipGateFailure?,
-    val counted: Boolean,
-) {
-    companion object {
-        fun invalid(counted: Boolean): CentralEntryInspection = CentralEntryInspection(
-            nextOffset = null,
-            failure = BackupArchiveZipGateFailure.INVALID_CENTRAL_DIRECTORY,
-            counted = counted,
-        )
-    }
-}
 
 private data class Zip64ExtraFieldInspection(
     val nextOffset: Int,
