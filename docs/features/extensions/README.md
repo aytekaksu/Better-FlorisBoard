@@ -147,6 +147,11 @@ Theme stylesheet reads and parsing also run off the UI thread. The component
 shows a loading state until its current stylesheet is ready; a stale or cancelled
 load cannot replace edits. Invalid stylesheets still offer lenient or empty retry.
 
+The file manager and property picker share one asset listing path. Lists reload
+off Main when the workspace changes, and cancelled loads cannot publish stale
+files. Renames and deletes run off Main under the workspace close guard; unsafe
+names, links, and collisions leave existing files alone.
+
 The theme shape editor displays corners from the current property value. Changing
 shape type resets the preview and chips to the new type's value, and a corner edit
 updates that value before the property can be saved.
@@ -158,6 +163,8 @@ Run the full JVM suite and local gate:
 ```shell
 ./gradlew :app:testDebugUnitTest \
   --tests 'dev.patrickgold.florisboard.lib.ext.ExtensionExportWorkspaceTest'
+./gradlew :app:testDebugUnitTest \
+  --tests 'dev.patrickgold.florisboard.app.ext.EditorAssetFilesTest'
 ./gradlew :app:testDebugUnitTest
 ./gradlew qualityGate
 ```
