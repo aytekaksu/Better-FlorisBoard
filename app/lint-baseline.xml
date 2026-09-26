@@ -1238,15 +1238,4 @@
             column="25"/>
     </issue>
 
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(target)).apply {"
-        errorLine2="                                            ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/lib/util/LaunchUtils.kt"
-            line="76"
-            column="45"/>
-    </issue>
-
 </issues>

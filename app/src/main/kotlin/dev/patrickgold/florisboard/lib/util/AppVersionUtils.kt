@@ -22,6 +22,8 @@ import dev.patrickgold.florisboard.app.FlorisPreferenceModel
 internal const val DEFAULT_VERSION_NAME = "0.0.0"
 
 object AppVersionUtils {
+    // Package lookup failures must not interrupt startup or settings migration.
+    @Suppress("SwallowedException", "TooGenericExceptionCaught")
     private fun getRawVersionName(context: Context): String {
         return try {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName!!
