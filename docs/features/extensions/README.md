@@ -134,6 +134,8 @@ cleans stale assets.
 Styles and file fonts compile off Compose before publication. Preview compilation
 holds a separate lease; obsolete work is cancelled or discarded, the current
 theme stays visible until replacement is ready, and damaged fonts fall back.
+Background-image paths resolve off Main; changing the theme drops the old path
+while the new one resolves.
 
 The Han language provider serializes refresh, query, and teardown work. It
 publishes only packs whose read-only database opened successfully, unloads
@@ -187,5 +189,6 @@ dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaImporte
 
 ./gradlew :lib:snygg:connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=\
-org.florisboard.lib.snygg.SnyggFileFontAndroidTest
+org.florisboard.lib.snygg.SnyggFileFontAndroidTest,\
+org.florisboard.lib.snygg.ui.SnyggBackgroundImagePathAndroidTest
 ```
