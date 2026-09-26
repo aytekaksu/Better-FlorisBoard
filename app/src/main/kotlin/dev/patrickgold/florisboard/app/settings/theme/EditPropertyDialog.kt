@@ -101,7 +101,6 @@ import org.florisboard.lib.kotlin.toStringWithoutDotZero
 import org.florisboard.lib.snygg.SnyggAnnotationRule
 import org.florisboard.lib.snygg.SnyggRule
 import org.florisboard.lib.snygg.SnyggSpec
-import org.florisboard.lib.snygg.value.SnyggContentScaleValue
 import org.florisboard.lib.snygg.value.SnyggCustomFontFamilyValue
 import org.florisboard.lib.snygg.value.SnyggCutCornerDpShapeValue
 import org.florisboard.lib.snygg.value.SnyggCutCornerPercentShapeValue
@@ -112,21 +111,16 @@ import org.florisboard.lib.snygg.value.SnyggDynamicColorValue
 import org.florisboard.lib.snygg.value.SnyggDynamicDarkColorValue
 import org.florisboard.lib.snygg.value.SnyggDynamicLightColorValue
 import org.florisboard.lib.snygg.value.SnyggEnumLikeValueEncoder
-import org.florisboard.lib.snygg.value.SnyggFontStyleValue
-import org.florisboard.lib.snygg.value.SnyggFontWeightValue
-import org.florisboard.lib.snygg.value.SnyggGenericFontFamilyValue
 import org.florisboard.lib.snygg.value.SnyggPaddingValue
 import org.florisboard.lib.snygg.value.SnyggPercentShapeValue
 import org.florisboard.lib.snygg.value.SnyggPercentageSizeValue
 import org.florisboard.lib.snygg.value.SnyggRoundedCornerDpShapeValue
 import org.florisboard.lib.snygg.value.SnyggRoundedCornerPercentShapeValue
 import org.florisboard.lib.snygg.value.SnyggShapeValue
+import org.florisboard.lib.snygg.value.SnyggSizeValue
 import org.florisboard.lib.snygg.value.SnyggSpSizeValue
 import org.florisboard.lib.snygg.value.SnyggStaticColorValue
-import org.florisboard.lib.snygg.value.SnyggTextAlignValue
-import org.florisboard.lib.snygg.value.SnyggTextDecorationLineValue
 import org.florisboard.lib.snygg.value.SnyggTextMaxLinesValue
-import org.florisboard.lib.snygg.value.SnyggTextOverflowValue
 import org.florisboard.lib.snygg.value.SnyggUndefinedValue
 import org.florisboard.lib.snygg.value.SnyggUriValue
 import org.florisboard.lib.snygg.value.SnyggValue
@@ -493,20 +487,8 @@ private fun PropertyValueEditor(
             }
         }
 
-        is SnyggGenericFontFamilyValue -> {
-            EnumLikeValueEditor(value.encoder(), value, onValueChange, modifier)
-        }
-
         is SnyggCustomFontFamilyValue -> {
             CustomFontFamilyValueEditor(value, onValueChange, fontNames, isError, modifier)
-        }
-
-        is SnyggFontStyleValue -> {
-            EnumLikeValueEditor(value.encoder(), value, onValueChange, modifier)
-        }
-
-        is SnyggFontWeightValue -> {
-            EnumLikeValueEditor(value.encoder(), value, onValueChange, modifier)
         }
 
         is SnyggPaddingValue -> {
@@ -517,87 +499,45 @@ private fun PropertyValueEditor(
             ShapeValueEditor(value, onValueChange, modifier)
         }
 
-        is SnyggDpSizeValue -> {
+        is SnyggSizeValue -> key(value.encoder()) {
             var sizeStr by remember {
-                val dp = value.dp.takeUnless { it.isUnspecified } ?: SnyggDpSizeValue.defaultValue().dp
-                mutableStateOf(dp.value.toStringWithoutDotZero())
+                mutableStateOf(when (value) {
+                    is SnyggDpSizeValue -> (value.dp.takeUnless { it.isUnspecified }
+                        ?: SnyggDpSizeValue.defaultValue().dp).value.toStringWithoutDotZero()
+                    is SnyggSpSizeValue -> (value.sp.takeUnless { it.isUnspecified }
+                        ?: SnyggSpSizeValue.defaultValue().sp).value.toStringWithoutDotZero()
+                    is SnyggPercentageSizeValue -> value.percentage.toString()
+                })
             }
             Row(modifier, verticalAlignment = Alignment.CenterVertically) {
                 JetPrefTextField(
                     modifier = Modifier.weight(1f),
                     value = sizeStr,
-                    onValueChange = { value ->
-                        sizeStr = value
-                        val size = sizeStr.toFloatOrNull()?.let { SnyggDpSizeValue(it.dp) }
-                        onValueChange(size ?: SnyggDpSizeValue(Dp.Unspecified))
+                    onValueChange = { input ->
+                        sizeStr = input
+                        val size = input.toFloatOrNull()
+                        onValueChange(when (value) {
+                            is SnyggDpSizeValue -> SnyggDpSizeValue(size?.dp ?: Dp.Unspecified)
+                            is SnyggSpSizeValue -> SnyggSpSizeValue(size?.sp ?: TextUnit.Unspecified)
+                            is SnyggPercentageSizeValue -> SnyggPercentageSizeValue(size ?: 0f)
+                        })
                     },
-                    isError = value.dp.isUnspecified || value.dp.value < 0f,
+                    isError = when (value) {
+                        is SnyggDpSizeValue -> value.dp.isUnspecified || value.dp.value < 0f
+                        is SnyggSpSizeValue -> value.sp.isUnspecified || value.sp.value < 1f
+                        is SnyggPercentageSizeValue -> value.percentage < 0f || value.percentage > 1f
+                    },
                 )
                 Text(
                     modifier = Modifier.padding(start = 8.dp),
-                    text = "dp",
-                    fontFamily = FontFamily.Monospace,
-                )
-            }
-        }
-
-        is SnyggSpSizeValue -> {
-            var sizeStr by remember {
-                val sp = value.sp.takeUnless { it.isUnspecified } ?: SnyggSpSizeValue.defaultValue().sp
-                mutableStateOf(sp.value.toStringWithoutDotZero())
-            }
-            Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-                JetPrefTextField(
-                    modifier = Modifier.weight(1f),
-                    value = sizeStr,
-                    onValueChange = { value ->
-                        sizeStr = value
-                        val size = sizeStr.toFloatOrNull()?.let { SnyggSpSizeValue(it.sp) }
-                        onValueChange(size ?: SnyggSpSizeValue(TextUnit.Unspecified))
+                    text = when (value) {
+                        is SnyggDpSizeValue -> "dp"
+                        is SnyggSpSizeValue -> "sp"
+                        is SnyggPercentageSizeValue -> "%"
                     },
-                    isError = value.sp.isUnspecified || value.sp.value < 1f,
-                )
-                Text(
-                    modifier = Modifier.padding(start = 8.dp),
-                    text = "sp",
                     fontFamily = FontFamily.Monospace,
                 )
             }
-        }
-
-        is SnyggPercentageSizeValue -> {
-            var sizeStr by remember {
-                mutableStateOf(value.percentage.toString())
-            }
-            Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-                JetPrefTextField(
-                    modifier = Modifier.weight(1f),
-                    value = sizeStr,
-                    onValueChange = { value ->
-                        sizeStr = value
-                        val size = sizeStr.toFloatOrNull()?.let { SnyggPercentageSizeValue(it) }
-                        onValueChange(size ?: SnyggPercentageSizeValue(0f))
-                    },
-                    isError = value.percentage < 0f || value.percentage > 1f,
-                )
-                Text(
-                    modifier = Modifier.padding(start = 8.dp),
-                    text = "%",
-                    fontFamily = FontFamily.Monospace,
-                )
-            }
-        }
-
-        is SnyggContentScaleValue -> {
-            EnumLikeValueEditor(value.encoder(), value, onValueChange, modifier)
-        }
-
-        is SnyggTextAlignValue -> {
-            EnumLikeValueEditor(value.encoder(), value, onValueChange, modifier)
-        }
-
-        is SnyggTextDecorationLineValue -> {
-            EnumLikeValueEditor(value.encoder(), value, onValueChange, modifier)
         }
 
         is SnyggTextMaxLinesValue -> {
@@ -616,10 +556,6 @@ private fun PropertyValueEditor(
                 modifier = modifier,
                 isError = isError,
             )
-        }
-
-        is SnyggTextOverflowValue -> {
-            EnumLikeValueEditor(value.encoder(), value, onValueChange, modifier)
         }
 
         is SnyggUriValue -> {
@@ -708,7 +644,12 @@ private fun PropertyValueEditor(
         }
 
         else -> {
-            // Render nothing
+            val encoder = value.encoder()
+            if (encoder is SnyggEnumLikeValueEncoder<*>) {
+                key(encoder) {
+                    EnumLikeValueEditor(encoder, value, onValueChange, modifier)
+                }
+            }
         }
     }
 }
