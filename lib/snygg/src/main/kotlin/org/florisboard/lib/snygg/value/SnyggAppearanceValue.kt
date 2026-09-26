@@ -76,6 +76,8 @@ data class SnyggStaticColorValue(val color: Color) : SnyggAppearanceValue {
             },
         )
 
+        private val acceptedSpecs = listOf(spec) + alternativeSpecs
+
         override fun defaultValue() = SnyggStaticColorValue(Color.Black)
 
         override fun serialize(v: SnyggValue) = runCatching<String> {
@@ -91,38 +93,27 @@ data class SnyggStaticColorValue(val color: Color) : SnyggAppearanceValue {
 
         override fun deserialize(v: String) = runCatching<SnyggValue> {
             val map = snyggIdToValueMapOf()
-            runCatching { spec.parse(v, map) }.onSuccess {
-                val r = map.getInt(RgbaColor.RedId).toFloat() / RgbaColor.ColorRangeMax
-                val g = map.getInt(RgbaColor.GreenId).toFloat() / RgbaColor.ColorRangeMax
-                val b = map.getInt(RgbaColor.BlueId).toFloat() / RgbaColor.ColorRangeMax
-                val a = map.getFloat(RgbaColor.AlphaId)
-                return@runCatching SnyggStaticColorValue(Color(r, g, b, a))
+            val matchingSpec = acceptedSpecs.firstOrNull { it.parsePattern.matches(v) }
+                ?: error("No matching color spec found")
+            matchingSpec.parse(v, map)
+            val color = when {
+                RgbaColor.TransparentId in map -> Color.Transparent
+                RgbaColor.HexId in map -> {
+                    val hexStr = map.getString(RgbaColor.HexId)
+                    Color(
+                        hexStr.substring(1..2).toInt(16),
+                        hexStr.substring(3..4).toInt(16),
+                        hexStr.substring(5..6).toInt(16),
+                        if (hexStr.length == 9) hexStr.substring(7..8).toInt(16) else 255,
+                    )
+                }
+                else -> Color(
+                    map.getInt(RgbaColor.RedId),
+                    map.getInt(RgbaColor.GreenId),
+                    map.getInt(RgbaColor.BlueId),
+                ).copy(alpha = map[RgbaColor.AlphaId]?.toFloat() ?: 1.0f)
             }
-            runCatching { alternativeSpecs[0].parse(v, map) }.onSuccess {
-                val r = map.getInt(RgbaColor.RedId).toFloat() / RgbaColor.ColorRangeMax
-                val g = map.getInt(RgbaColor.GreenId).toFloat() / RgbaColor.ColorRangeMax
-                val b = map.getInt(RgbaColor.BlueId).toFloat() / RgbaColor.ColorRangeMax
-                return@runCatching SnyggStaticColorValue(Color(r, g, b, 1.0f))
-            }
-            runCatching { alternativeSpecs[1].parse(v, map) }.onSuccess {
-                return@runCatching SnyggStaticColorValue(Color(0.0f, 0.0f, 0.0f, 0.0f))
-            }
-            runCatching { alternativeSpecs[2].parse(v, map) }.onSuccess {
-                val hexStr = map.getString(RgbaColor.HexId)
-                val r = hexStr.substring(1..2).toInt(16).toFloat() / RgbaColor.ColorRangeMax
-                val g = hexStr.substring(3..4).toInt(16).toFloat() / RgbaColor.ColorRangeMax
-                val b = hexStr.substring(5..6).toInt(16).toFloat() / RgbaColor.ColorRangeMax
-                return@runCatching SnyggStaticColorValue(Color(r, g, b, 1.0f))
-            }
-            runCatching { alternativeSpecs[3].parse(v, map) }.onSuccess {
-                val hexStr = map.getString(RgbaColor.HexId)
-                val r = hexStr.substring(1..2).toInt(16).toFloat() / RgbaColor.ColorRangeMax
-                val g = hexStr.substring(3..4).toInt(16).toFloat() / RgbaColor.ColorRangeMax
-                val b = hexStr.substring(5..6).toInt(16).toFloat() / RgbaColor.ColorRangeMax
-                val a = hexStr.substring(7..8).toInt(16).toFloat() / 0xFF
-                return@runCatching SnyggStaticColorValue(Color(r, g, b, a))
-            }
-            error("No matching spec found for \"$v\"")
+            SnyggStaticColorValue(color)
         }
     }
 
