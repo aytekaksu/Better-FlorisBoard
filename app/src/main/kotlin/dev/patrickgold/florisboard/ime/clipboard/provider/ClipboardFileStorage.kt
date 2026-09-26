@@ -905,10 +905,13 @@ object ClipboardFileStorage {
         }
     }
 
-    internal fun pasteRoots(context: Context): Set<OwnedClipboardMediaUri> {
+    internal fun pasteRoots(
+        context: Context,
+        now: Long? = null,
+    ): Set<OwnedClipboardMediaUri> {
         return synchronized(mutationLock) {
             initialize(context)
-            MetadataStore.pasteRoots(System.currentTimeMillis().coerceAtLeast(0L))
+            MetadataStore.pasteRoots((now ?: System.currentTimeMillis()).coerceAtLeast(0L))
         }
     }
 
@@ -921,8 +924,7 @@ object ClipboardFileStorage {
             val now = System.currentTimeMillis().coerceAtLeast(0L)
             val observedBootCount = currentBootCount(context)
             MetadataStore.all().any { info ->
-                val type = mediaType(info.mimeTypes) ?: return@any false
-                val ownedUri = OwnedClipboardMediaUri.create(info.id, type) ?: return@any false
+                val ownedUri = ownedUriFromInfo(info) ?: return@any false
                 ownedUri !in knownRoots &&
                     info.pasteRetainedUntilMs <= now &&
                     (
@@ -985,8 +987,7 @@ object ClipboardFileStorage {
                     MetadataStore.quarantinedRoots(observedBootCount)
             val failed = linkedSetOf<OwnedClipboardMediaUri>()
             for (info in MetadataStore.all()) {
-                val type = mediaType(info.mimeTypes) ?: continue
-                val ownedUri = OwnedClipboardMediaUri.create(info.id, type) ?: continue
+                val ownedUri = ownedUriFromInfo(info) ?: continue
                 if (ownedUri in durableRetained) {
                     if (info.ownershipState != ClipboardMediaOwnershipState.ACTIVE) {
                         runCatching {
@@ -1560,6 +1561,9 @@ object ClipboardFileStorage {
     internal fun normalizePersistedMediaMimeTypes(mimeTypes: List<String>): List<String>? =
         normalizeArchiveMediaMimeTypes(mimeTypes)
 
+    private fun ownedUriFromInfo(info: ClipboardFileInfo): OwnedClipboardMediaUri? =
+        mediaType(info.mimeTypes)?.let { OwnedClipboardMediaUri.create(info.id, it) }
+
     private fun mediaType(mimeTypes: List<String>): ItemType? {
         if (mimeTypes.isEmpty() ||
             mimeTypes.size > MAX_MEDIA_MIME_TYPES ||
@@ -1970,9 +1974,7 @@ object ClipboardFileStorage {
                         if (info.pasteRetainedUntilMs in 1..now &&
                             id !in protectedIds
                         ) {
-                            mediaType(info.mimeTypes)
-                                ?.let { type -> OwnedClipboardMediaUri.create(id, type) }
-                                ?.let(expiredRoots::add)
+                            ownedUriFromInfo(info)?.let(expiredRoots::add)
                             sourceEntries[id] = info.copy(
                                 ownershipState = ClipboardMediaOwnershipState.RETIRING,
                                 pasteRetainedUntilMs = 0L,
@@ -2023,10 +2025,7 @@ object ClipboardFileStorage {
                         "Clipboard metadata is unavailable."
                     }
                     val updates = entries.values.mapNotNull { info ->
-                        val shouldBeRoot = mediaType(info.mimeTypes)
-                            ?.let { type -> OwnedClipboardMediaUri.create(info.id, type) }
-                            ?.let(ownedUris::contains)
-                            ?: false
+                        val shouldBeRoot = ownedUriFromInfo(info) in ownedUris
                         val targetState = if (shouldBeRoot) {
                             ClipboardMediaOwnershipState.ACTIVE
                         } else {
@@ -2061,39 +2060,23 @@ object ClipboardFileStorage {
         }
 
         fun systemRoots(): Set<OwnedClipboardMediaUri> =
-            entries.values
-                .asSequence()
-                .filter(ClipboardFileInfo::isSystemRoot)
-                .mapNotNull { info ->
-                    val type = mediaType(info.mimeTypes) ?: return@mapNotNull null
-                    OwnedClipboardMediaUri.create(info.id, type)
-                }
-                .toSet()
+            rootsMatching(ClipboardFileInfo::isSystemRoot)
 
         fun quarantinedRoots(currentBootCount: Int): Set<OwnedClipboardMediaUri> =
-            entries.values
-                .asSequence()
-                .filter { info ->
-                    externalCapabilityIsQuarantined(
-                        info.externalCapabilityBootCount,
-                        currentBootCount,
-                    )
-                }
-                .mapNotNull { info ->
-                    val type = mediaType(info.mimeTypes) ?: return@mapNotNull null
-                    OwnedClipboardMediaUri.create(info.id, type)
-                }
-                .toSet()
+            rootsMatching {
+                externalCapabilityIsQuarantined(it.externalCapabilityBootCount, currentBootCount)
+            }
 
         fun pasteRoots(now: Long): Set<OwnedClipboardMediaUri> =
-            entries.values
-                .asSequence()
-                .filter { it.pasteRetainedUntilMs > now }
-                .mapNotNull { info ->
-                    val type = mediaType(info.mimeTypes) ?: return@mapNotNull null
-                    OwnedClipboardMediaUri.create(info.id, type)
-                }
-                .toSet()
+            rootsMatching { it.pasteRetainedUntilMs > now }
+
+        private fun rootsMatching(
+            predicate: (ClipboardFileInfo) -> Boolean,
+        ): Set<OwnedClipboardMediaUri> = entries.values
+            .asSequence()
+            .filter(predicate)
+            .mapNotNull(::ownedUriFromInfo)
+            .toSet()
 
         fun delete(id: Long) {
             runBlocking(Dispatchers.IO) {

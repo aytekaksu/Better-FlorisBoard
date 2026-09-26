@@ -545,13 +545,16 @@ class ClipboardFileStorageAndroidTest {
         val installed = mutableListOf<InstalledClipboardMedia>()
 
         try {
-            repeat(2) {
+            for ((type, mimeType) in listOf(
+                ItemType.IMAGE to "image/png",
+                ItemType.VIDEO to "video/mp4",
+            )) {
                 installed += ClipboardFileStorage.installFromBackup(
                     context = context,
                     source = source,
                     expectedBytes = 1L,
-                    type = ItemType.IMAGE,
-                    mimeTypes = listOf("image/png"),
+                    type = type,
+                    mimeTypes = listOf(mimeType),
                 )
             }
             val systemRoot = installed[0].ownedUri
@@ -572,6 +575,13 @@ class ClipboardFileStorageAndroidTest {
                 pasteRoot,
                 observedBootCount = ACTIVE_BOOT_COUNT,
             )
+            val pasteDeadline = requireNotNull(
+                ClipboardFileStorage.fileInfo(context, pasteRoot),
+            ).pasteRetainedUntilMs
+            assertFalse(pasteRoot in ClipboardFileStorage.systemRoots(context))
+            assertTrue(pasteRoot in ClipboardFileStorage.pasteRoots(context, now = pasteDeadline - 1L))
+            assertFalse(pasteRoot in ClipboardFileStorage.pasteRoots(context, now = pasteDeadline))
+            assertFalse(systemRoot in ClipboardFileStorage.pasteRoots(context))
 
             assertFalse(
                 ClipboardFileStorage.deleteOwned(
