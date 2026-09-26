@@ -25,23 +25,9 @@ import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.SnyggSelector
 
 /**
- * Simple Icon composable, which displays a given [imageVector] annotated by the [contentDescription].
+ * Draws a theme-tinted [imageVector].
  *
- * This composable infers its style from the current [SnyggTheme][org.florisboard.lib.snygg.SnyggTheme], which is
- * required to be provided by [ProvideSnyggTheme].
- *
- * @param elementName The name of this element. If `null` the style will be inherited from the parent element.
- * @param attributes The attributes of the element used to refine the query.
- * @param selector A specific SnyggSelector to query the style for.
- * @param modifier The modifier to be applied to the Icon.
- * @param imageVector The imageVector which will be drawn as Icon.
- * @param contentDescription Text used by accessibility services to describe what this icon represents.
- * This should always be provided unless this icon is used for decorative purposes,
- * and does not represent a meaningful action that a user can take.
- *
- * @since 0.5.0-alpha01
- *
- * @see [Icon]
+ * Give meaningful icons a [contentDescription] for accessibility; leave it null only for decoration.
  */
 @Composable
 fun SnyggIcon(
@@ -63,23 +49,9 @@ fun SnyggIcon(
 }
 
 /**
- * Simple Icon composable, which displays a given [painter] annotated by the [contentDescription].
+ * Draws a theme-tinted [painter].
  *
- * This composable infers its style from the current [SnyggTheme][org.florisboard.lib.snygg.SnyggTheme], which is
- * required to be provided by [ProvideSnyggTheme].
- *
- * @param elementName The name of this element. If `null` the style will be inherited from the parent element.
- * @param attributes The attributes of the element used to refine the query.
- * @param selector A specific SnyggSelector to query the style for.
- * @param modifier The modifier to be applied to the Icon.
- * @param painter The painter which will be drawn as Icon.
- * @param contentDescription Text used by accessibility services to describe what this icon represents.
- * This should always be provided unless this icon is used for decorative purposes,
- * and does not represent a meaningful action that a user can take.
- *
- * @since 0.5.0-alpha01
- *
- * @see [Icon]
+ * Give meaningful icons a [contentDescription] for accessibility; leave it null only for decoration.
  */
 @Composable
 fun SnyggIcon(

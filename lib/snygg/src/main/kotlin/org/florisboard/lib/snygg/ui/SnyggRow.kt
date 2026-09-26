@@ -26,23 +26,9 @@ import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.SnyggSelector
 
 /**
- * Simple layout composable that places its children in a horizontal sequence.
+ * A horizontal [Row] styled by the current Snygg theme.
  *
- * This composable infers its style from the current [SnyggTheme][org.florisboard.lib.snygg.SnyggTheme], which is
- * required to be provided by [ProvideSnyggTheme].
- *
- * @param elementName The name of this element. If `null` the style will be inherited from the parent element.
- * @param attributes The attributes of the element used to refine the query.
- * @param selector A specific SnyggSelector to query the style for.
- * @param modifier The modifier to be applied to the Row.
- * @param clickAndSemanticsModifier The modifier to be applied to the layout after drawing the background.
- * @param horizontalArrangement The horizontal arrangement of the layout's children.
- * @param verticalAlignment The vertical alignment of the layout's children.
- * @param content The content of the Row
- *
- * @since 0.5.0-alpha01
- *
- * @see [Row]
+ * [clickAndSemanticsModifier] is applied after the background and before padding.
  */
 @Composable
 fun SnyggRow(

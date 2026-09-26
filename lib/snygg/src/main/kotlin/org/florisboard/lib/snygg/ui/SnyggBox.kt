@@ -35,26 +35,12 @@ import org.florisboard.lib.snygg.SnyggSelector
 import org.florisboard.lib.snygg.value.SnyggAssetResolver
 
 /**
- * Simple layout composable with [content]
+ * A [Box] styled by the current Snygg theme.
  *
- * This composable infers its style from the current [SnyggTheme][org.florisboard.lib.snygg.SnyggTheme], which is
- * required to be provided by [ProvideSnyggTheme].
- *
- * @param elementName The name of this element. If `null` the style will be inherited from the parent element.
- * @param attributes The attributes of the element used to refine the query.
- * @param selector A specific SnyggSelector to query the style for.
- * @param modifier The modifier to be applied to the layout.
- * @param clickAndSemanticsModifier The modifier to be applied to the layout after drawing the background.
- * @param contentAlignment The default alignment inside the Box.
- * @param propagateMinConstraints Whether the incoming min constraints should be passed to content.
- * @param supportsBackgroundImage controls if this Box supports background images.
- * @param backgroundImageDescription The content description of the background image.
- * @param allowClip If clipping should be allowed on this box.
- * @param content The content of the Box
- *
- * @since 0.5.0-alpha01
- *
- * @see [Box]
+ * [clickAndSemanticsModifier] is applied after the background and before padding.
+ * [supportsBackgroundImage] allows the style's image to fill the box, clipped to its shape;
+ * [backgroundImageDescription] describes that image to accessibility services.
+ * [allowClip] permits the style's clip setting to clip the box itself.
  */
 @Composable
 fun SnyggBox(

@@ -190,6 +190,12 @@ fun ProvideSnyggTheme(
     }
 }
 
+/**
+ * Queries the current theme, passes the style to [content], and provides the style,
+ * selector, and foreground color to descendants.
+ * A null [elementName] inherits the parent style; [attributes] refine the style query.
+ * A null [selector] inherits the parent selector. Requires [ProvideSnyggTheme].
+ */
 @Composable
 internal fun ProvideSnyggStyle(
     elementName: String?,

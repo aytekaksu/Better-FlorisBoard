@@ -32,21 +32,10 @@ import org.florisboard.lib.snygg.SnyggSelector
 import org.florisboard.lib.snygg.value.SnyggStaticColorValue
 
 /**
- * Simple interactive Box with integrated clickable state management.
+ * A theme-styled icon button with optional [onLongClick].
  *
- * This composable infers its style from the current [SnyggTheme][org.florisboard.lib.snygg.SnyggTheme], which is
- * required to be provided by [ProvideSnyggTheme].
- *
- * @param elementName The name of this element. If `null` the style will be inherited from the parent element.
- * @param attributes The attributes of the element used to refine the query.
- * @param modifier The modifier to be applied to the icon button.
- * @param onClick called when this icon button is clicked
- * @param enabled controls the enabled state of this icon button. When `false`, this component will not respond to user
- *    input, and it will appear visually disabled and disabled to accessibility services.
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and emitting [Interaction]s for
- *    this button. You can use this to change the button's appearance or preview the button in different states. Note
- *    that if `null` is provided, interactions will still happen internally.
- * @param content The content displayed on the icon button, expected to be icon.
+ * Disabling it blocks clicks and queries the [SnyggSelector.DISABLED] style. A static
+ * foreground color from that style is provided to the content as its local content color.
  */
 @Composable
 fun SnyggIconButton(
