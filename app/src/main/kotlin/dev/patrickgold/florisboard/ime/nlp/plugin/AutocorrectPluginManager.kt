@@ -569,19 +569,18 @@ class AutocorrectPluginManager internal constructor(
     }
 
     private fun executeStartSession(effect: HostEffect.StartSession, session: AutocorrectSession?) {
-        val (current, service, readiness) = synchronized(this) {
-            val current = sessionStartIsCurrent(effect)
-            val service = currentPhysicalRemote().takeIf { current }
-            if (service != null) dispatchHost(HostEvent.SessionStartSending(effect.lease))
-            Triple(current, service, connectionReady.current())
-        }
-        if (!current) return
-        val sent = service != null && session != null && send(
-            AutocorrectPluginContract.MSG_START_SESSION,
-            session.toBundle(),
-            service,
-        )
         synchronized(this) {
+            if (!sessionStartIsCurrent(effect)) return
+            val service = currentPhysicalRemote()
+            val readiness = connectionReady.current()
+            if (service != null && session != null) {
+                dispatchHost(HostEvent.SessionStartSending(effect.lease))
+            }
+            val sent = service != null && session != null && send(
+                AutocorrectPluginContract.MSG_START_SESSION,
+                session.toBundle(),
+                service,
+            )
             dispatchHost(HostEvent.SessionStartResult(effect.lease, sent, monotonicNow()))
             if (sent && admittedSessionId == effect.lease.sessionId.value &&
                 bindingLease?.epoch == effect.lease.epoch
