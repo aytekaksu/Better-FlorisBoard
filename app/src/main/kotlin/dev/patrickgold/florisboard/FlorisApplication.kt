@@ -183,6 +183,7 @@ class FlorisApplication : Application() {
         EditorInstance(
             this,
             lazy { keyboardManager.value.activeState },
+            { subtypeManager.value.activeSubtype },
             lazy { nlpManager.value },
         ) { keyboardManager.value.reevaluateInputShiftState() }
     }

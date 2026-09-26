@@ -16,7 +16,6 @@
 
 package dev.patrickgold.florisboard.ime.editor
 
-import android.content.Context
 import android.inputmethodservice.InputMethodService
 import android.os.SystemClock
 import android.text.TextUtils
@@ -26,10 +25,10 @@ import android.view.KeyEvent
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import dev.patrickgold.florisboard.FlorisImeService
+import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.nlp.BreakIteratorGroup
 import dev.patrickgold.florisboard.ime.text.composing.Composer
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
-import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -105,7 +104,7 @@ interface EditorComposingPolicy {
 }
 
 abstract class AbstractEditorInstance(
-    context: Context,
+    protected val currentSubtype: () -> Subtype,
     composingPolicy: Lazy<EditorComposingPolicy>,
     private val reevaluateInputShiftState: () -> Unit,
 ) {
@@ -119,7 +118,6 @@ abstract class AbstractEditorInstance(
         private const val CursorUpdateNone: Int = 0
     }
 
-    private val subtypeManager by context.subtypeManager()
     protected val editorComposingPolicy by composingPolicy
     private val scope = MainScope()
     protected val breakIterators = BreakIteratorGroup()
@@ -418,12 +416,12 @@ abstract class AbstractEditorInstance(
         val content = activeContent
         val selection = content.selection
         val isSingleChar =
-            breakIterators.measureUChars(char, 1, subtypeManager.activeSubtype.primaryLocale) == char.length
+            breakIterators.measureUChars(char, 1, currentSubtype().primaryLocale) == char.length
         if (!isSingleChar || selection.isNotValid || selection.isSelectionMode || activeInfo.isRawInputEditor) {
             return commitTextInternal(char)
         }
         val ic = currentInputConnection() ?: return false
-        val composer = determineComposer(subtypeManager.activeSubtype.composer)
+        val composer = determineComposer(currentSubtype().composer)
         val previous = content.textBeforeSelection.takeLast(composer.toRead.coerceAtLeast(if (deletePreviousSpace) 1 else 0))
         val (tempRm, tempText) = composer.getActions(previous, char)
         val rm = if (deletePreviousSpace && previous.isNotEmpty() && previous.last() == ' ') tempRm + 1 else tempRm
@@ -608,7 +606,7 @@ abstract class AbstractEditorInstance(
             }
             sendDownUpKeyEvent(keyEventCode, metaState, count = n)
         } else {
-            val locale = subtypeManager.activeSubtype.primaryLocale
+            val locale = currentSubtype().primaryLocale
             when (scope) {
                 OperationScope.BEFORE_CURSOR -> {
                     val length = when (unit) {
@@ -677,7 +675,7 @@ abstract class AbstractEditorInstance(
     fun EditorContent.getTextBeforeCursor(n: Int): String {
         if (n < 1 || text.isEmpty()) return ""
         val text = textBeforeSelection
-        val length = breakIterators.measureLastUChars(text, n, subtypeManager.activeSubtype.primaryLocale)
+        val length = breakIterators.measureLastUChars(text, n, currentSubtype().primaryLocale)
         return text.takeLast(length)
     }
 
@@ -694,7 +692,7 @@ abstract class AbstractEditorInstance(
     fun EditorContent.getTextAfterCursor(n: Int): String {
         if (n < 1 || text.isEmpty()) return ""
         val text = textAfterSelection
-        val length = breakIterators.measureUChars(text, n, subtypeManager.activeSubtype.primaryLocale)
+        val length = breakIterators.measureUChars(text, n, currentSubtype().primaryLocale)
         return text.take(length)
     }
 

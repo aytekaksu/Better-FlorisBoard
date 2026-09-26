@@ -23,10 +23,12 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.clipboard.provider.OwnedClipboardMediaUri
+import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.ObservableKeyboardState
 import dev.patrickgold.florisboard.ime.nlp.BreakIteratorGroup
 import dev.patrickgold.florisboard.ime.text.key.KeyVariation
+import dev.patrickgold.florisboard.lib.FlorisLocale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -36,12 +38,37 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class EditorKeyboardStateAndroidTest {
     @Test
+    fun subtypeSourceIsLazyAndReadsTheLatestSubtype() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val initial = Subtype.DEFAULT
+            val japanese = initial.copy(primaryLocale = FlorisLocale.from("ja"))
+            var active = initial
+            val reads = mutableListOf<Subtype>()
+            val editor = EditorInstance(
+                instrumentation.targetContext,
+                lazy { ObservableKeyboardState.new() },
+                { active.also(reads::add) },
+                lazy { TestEditorComposingPolicy() },
+            ) { }
+            val content = EditorContent("abc", 0, EditorRange.cursor(3), EditorRange.Unspecified, EditorRange.Unspecified)
+
+            assertTrue(reads.isEmpty())
+            with(editor) { assertEquals("c", content.getTextBeforeCursor(1)) }
+            active = japanese
+            with(editor) { assertEquals("c", content.getTextBeforeCursor(1)) }
+            assertEquals(listOf(initial, japanese), reads)
+        }
+    }
+
+    @Test
     fun mediaPasteHandsTheCurrentItemToItsOwnerAndNullPasteDoesNothing() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {
             val editor = EditorInstance(
                 instrumentation.targetContext,
                 lazy { ObservableKeyboardState.new() },
+                { Subtype.DEFAULT },
                 lazy { TestEditorComposingPolicy() },
             ) { }
             val media = ClipboardItem(
@@ -78,6 +105,7 @@ class EditorKeyboardStateAndroidTest {
                     stateResolutions++
                     state
                 },
+                { Subtype.DEFAULT },
                 lazy {
                     policyResolutions++
                     TestEditorComposingPolicy()
@@ -138,6 +166,7 @@ class EditorKeyboardStateAndroidTest {
             val editor = EditorInstance(
                 instrumentation.targetContext,
                 lazy { state },
+                { Subtype.DEFAULT },
                 lazy {
                     policyResolutions++
                     policy
@@ -171,6 +200,7 @@ class EditorKeyboardStateAndroidTest {
             val editor = EditorInstance(
                 instrumentation.targetContext,
                 lazy { state },
+                { Subtype.DEFAULT },
                 lazy { policy },
             ) { }
             val info = FlorisEditorInfo.wrap(EditorInfo().apply {
