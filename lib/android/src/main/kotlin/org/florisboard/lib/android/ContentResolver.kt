@@ -23,32 +23,17 @@ import android.net.Uri
 import org.florisboard.lib.kotlin.io.FsFile
 import java.io.BufferedReader
 import java.io.BufferedWriter
-import java.io.FilterInputStream
 import java.io.IOException
-import java.io.InputStream
 import java.io.OutputStream
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
-
-inline fun ContentResolver.read(uri: Uri, maxSize: Long = Long.MAX_VALUE, block: (InputStream) -> Unit) {
-    contract {
-        callsInPlace(block, InvocationKind.EXACTLY_ONCE)
-    }
-    require(maxSize > 0) { "Argument `maxSize` must be greater than 0" }
-    val inputStream = this.openInputStream(uri)
-        ?: throw ContentReadException()
-    inputStream.use {
-        block(SizeLimitedInputStream(it, maxSize))
-    }
-}
 
 inline fun ContentResolver.readText(uri: Uri, block: (BufferedReader) -> Unit) {
     contract {
         callsInPlace(block, InvocationKind.EXACTLY_ONCE)
     }
-    this.read(uri) { inStream ->
-        inStream.bufferedReader().use(block)
-    }
+    val inputStream = this.openInputStream(uri) ?: throw ContentReadException()
+    inputStream.bufferedReader().use(block)
 }
 
 inline fun ContentResolver.write(uri: Uri, block: (OutputStream) -> Unit) {
@@ -78,56 +63,3 @@ inline fun ContentResolver.writeText(uri: Uri, block: (BufferedWriter) -> Unit) 
 }
 
 class ContentReadException : IOException("Unable to read selected content.")
-
-class ContentSizeLimitExceededException :
-    IOException("Selected content exceeds the allowed size.")
-
-@PublishedApi
-internal class SizeLimitedInputStream(
-    inputStream: InputStream,
-    private val maxSize: Long,
-) : FilterInputStream(inputStream) {
-    private var readSize = 0L
-
-    override fun read(): Int {
-        return super.read().also { value ->
-            if (value >= 0) recordRead(1)
-        }
-    }
-
-    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
-        if (length == 0) return 0
-        val remaining = maxSize - readSize
-        val allowedRead = if (remaining >= length) length else (remaining + 1).toInt()
-        return super.read(buffer, offset, allowedRead).also { count ->
-            if (count > 0) recordRead(count)
-        }
-    }
-
-    override fun skip(byteCount: Long): Long {
-        if (byteCount <= 0) return 0
-        var remaining = byteCount
-        var skipped = 0L
-        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-        while (remaining > 0) {
-            val count = read(buffer, 0, minOf(buffer.size.toLong(), remaining).toInt())
-            if (count < 0) break
-            remaining -= count
-            skipped += count
-        }
-        return skipped
-    }
-
-    override fun markSupported() = false
-
-    override fun mark(readLimit: Int) = Unit
-
-    override fun reset(): Nothing = throw IOException("Stream reset is not supported.")
-
-    private fun recordRead(count: Int) {
-        if (readSize > maxSize - count) {
-            throw ContentSizeLimitExceededException()
-        }
-        readSize += count
-    }
-}
