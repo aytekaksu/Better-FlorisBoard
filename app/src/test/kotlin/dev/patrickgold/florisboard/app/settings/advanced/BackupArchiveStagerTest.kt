@@ -28,7 +28,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -855,16 +854,6 @@ private fun testBudget(maxBytes: Long = 1L shl 20) = RestoreStagingBudget(
     requiredFreeBytes = 0L,
 )
 
-private fun ArchiveSnapshot.patchCentral(
-    entryName: String,
-    patch: (bytes: ByteArray, offset: Int) -> Unit,
-): ArchiveSnapshot {
-    val bytes = Files.readAllBytes(path)
-    patch(bytes, bytes.findCentralEntry(entryName))
-    Files.write(path, bytes)
-    return ArchiveSnapshot(path, Files.size(path))
-}
-
 private fun ArchiveSnapshot.overwriteStoredPayload(entryName: String, replacement: ByteArray) {
     val bytes = Files.readAllBytes(path)
     val centralOffset = bytes.findCentralEntry(entryName)
@@ -889,59 +878,14 @@ private fun ArchiveSnapshot.overwriteStoredPayload(entryName: String, replacemen
     }
 }
 
-private fun ByteArray.findCentralEntry(entryName: String): Int {
-    var offset = findSignature(CENTRAL_SIGNATURE)
-    while (offset >= 0 && u32(offset) == CENTRAL_SIGNATURE) {
-        val nameBytes = u16(offset + CENTRAL_NAME_LENGTH_OFFSET)
-        val extraBytes = u16(offset + CENTRAL_EXTRA_LENGTH_OFFSET)
-        val commentBytes = u16(offset + CENTRAL_COMMENT_LENGTH_OFFSET)
-        val actualName = String(
-            this,
-            offset + CENTRAL_HEADER_BYTES,
-            nameBytes,
-            StandardCharsets.UTF_8,
-        )
-        if (actualName == entryName) return offset
-        offset += CENTRAL_HEADER_BYTES + nameBytes + extraBytes + commentBytes
-    }
-    error("Missing fixture entry.")
-}
-
-private fun ByteArray.findSignature(signature: Long): Int {
-    for (index in 0..size - Int.SIZE_BYTES) {
-        if (u32(index) == signature) return index
-    }
-    return -1
-}
-
-private fun ByteArray.u16(offset: Int): Int = (this[offset].toInt() and 0xff) or
-    ((this[offset + 1].toInt() and 0xff) shl 8)
-
-private fun ByteArray.u32(offset: Int): Long = u16(offset).toLong() or (u16(offset + 2).toLong() shl 16)
-
-private fun ByteArray.putU16(offset: Int, value: Int) {
-    this[offset] = value.toByte()
-    this[offset + 1] = (value ushr 8).toByte()
-}
-
-private fun ByteArray.putU32(offset: Int, value: Long) {
-    putU16(offset, value.toInt())
-    putU16(offset + 2, (value ushr 16).toInt())
-}
-
 private fun metadataJson(packageName: String = "dev.patrickgold.florisboard"): ByteArray =
     """{"package":"$packageName","versionCode":64,"versionName":"test","timestamp":1}"""
         .encodeToByteArray()
 
 private const val TEST_DECLARED_MEDIA_BYTES = 90L * 1024L * 1024L
-private const val CENTRAL_SIGNATURE = 0x02014b50L
-private const val CENTRAL_HEADER_BYTES = 46
 private const val CENTRAL_METHOD_OFFSET = 10
 private const val CENTRAL_CRC_OFFSET = 16
 private const val CENTRAL_UNCOMPRESSED_SIZE_OFFSET = 24
-private const val CENTRAL_NAME_LENGTH_OFFSET = 28
-private const val CENTRAL_EXTRA_LENGTH_OFFSET = 30
-private const val CENTRAL_COMMENT_LENGTH_OFFSET = 32
 private const val CENTRAL_LOCAL_HEADER_OFFSET_OFFSET = 42
 private const val LOCAL_SIGNATURE = 0x04034b50L
 private const val LOCAL_HEADER_BYTES = 30

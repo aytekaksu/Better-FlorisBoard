@@ -21,7 +21,6 @@ package dev.patrickgold.florisboard.app.settings.advanced
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotContain
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.ZipEntry
@@ -342,17 +341,6 @@ private fun ArchiveSnapshot.withUnixMode(entryName: String, mode: Int): ArchiveS
         bytes.putU32(offset + CENTRAL_EXTERNAL_ATTRIBUTES_OFFSET, mode.toLong() shl 16)
     }
 
-private fun ArchiveSnapshot.patchCentral(
-    entryName: String,
-    patch: (bytes: ByteArray, offset: Int) -> Unit,
-): ArchiveSnapshot {
-    val bytes = Files.readAllBytes(path)
-    val offset = bytes.findCentralEntry(entryName)
-    patch(bytes, offset)
-    Files.write(path, bytes)
-    return ArchiveSnapshot(path, Files.size(path))
-}
-
 private fun ArchiveSnapshot.patchLocal(
     entryName: String,
     patch: (bytes: ByteArray, offset: Int) -> Unit,
@@ -366,48 +354,6 @@ private fun ArchiveSnapshot.patchLocal(
     return ArchiveSnapshot(path, Files.size(path))
 }
 
-private fun ByteArray.findCentralEntry(entryName: String): Int {
-    var offset = findSignature(CENTRAL_SIGNATURE)
-    while (offset >= 0 && u32(offset) == CENTRAL_SIGNATURE) {
-        val nameBytes = u16(offset + CENTRAL_NAME_LENGTH_OFFSET)
-        val extraBytes = u16(offset + CENTRAL_EXTRA_LENGTH_OFFSET)
-        val commentBytes = u16(offset + CENTRAL_COMMENT_LENGTH_OFFSET)
-        val actualName = String(
-            this,
-            offset + CENTRAL_HEADER_BYTES,
-            nameBytes,
-            StandardCharsets.UTF_8,
-        )
-        if (actualName == entryName) {
-            return offset
-        }
-        offset += CENTRAL_HEADER_BYTES + nameBytes + extraBytes + commentBytes
-    }
-    error("Missing fixture entry.")
-}
-
-private fun ByteArray.findSignature(signature: Long): Int {
-    for (index in 0..size - Int.SIZE_BYTES) {
-        if (u32(index) == signature) return index
-    }
-    return -1
-}
-
-private fun ByteArray.u16(offset: Int): Int = (this[offset].toInt() and 0xff) or
-    ((this[offset + 1].toInt() and 0xff) shl 8)
-
-private fun ByteArray.u32(offset: Int): Long = u16(offset).toLong() or (u16(offset + 2).toLong() shl 16)
-
-private fun ByteArray.putU16(offset: Int, value: Int) {
-    this[offset] = value.toByte()
-    this[offset + 1] = (value ushr 8).toByte()
-}
-
-private fun ByteArray.putU32(offset: Int, value: Long) {
-    putU16(offset, value.toInt())
-    putU16(offset + 2, (value ushr 16).toInt())
-}
-
 private fun metadataJson(): ByteArray =
     """{"package":"dev.patrickgold.florisboard","versionCode":64,"versionName":"test","timestamp":1}"""
         .encodeToByteArray()
@@ -416,15 +362,10 @@ private fun manifestJson(vararg components: BackupComponent): ByteArray =
     """{"formatVersion":1,"components":[${components.joinToString { "\"${it.wireId}\"" }}]}"""
         .encodeToByteArray()
 
-private const val CENTRAL_SIGNATURE = 0x02014b50L
-private const val CENTRAL_HEADER_BYTES = 46
 private const val CENTRAL_VERSION_MADE_BY_OFFSET = 4
 private const val CENTRAL_FLAGS_OFFSET = 8
 private const val CENTRAL_METHOD_OFFSET = 10
 private const val CENTRAL_CRC_OFFSET = 16
-private const val CENTRAL_NAME_LENGTH_OFFSET = 28
-private const val CENTRAL_EXTRA_LENGTH_OFFSET = 30
-private const val CENTRAL_COMMENT_LENGTH_OFFSET = 32
 private const val CENTRAL_EXTERNAL_ATTRIBUTES_OFFSET = 38
 private const val CENTRAL_LOCAL_HEADER_OFFSET = 42
 private const val UNIX_PLATFORM = 3
