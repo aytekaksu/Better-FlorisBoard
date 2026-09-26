@@ -133,24 +133,11 @@ class FlorisLocale private constructor(val base: Locale) {
          *
          */
         fun extendedAvailableLocales(context: Context): List<FlorisLocale> {
-            val systemLocales = installedSystemLocales()
             val extensionManager by context.extensionManager()
-            val systemLocalesSet = buildSet {
-                for (locale in systemLocales) {
-                    add(locale.localeTag())
-                }
-            }.toSet()
-            val extraLocales = buildList {
-                for (languagePackExtension in extensionManager.languagePacks.value) {
-                    for (languagePackItem in languagePackExtension.items) {
-                        val locale = languagePackItem.locale
-                        if (from(locale.language, locale.country).localeTag() in systemLocalesSet) {
-                            add(locale.localeTag())
-                        }
-                    }
-                }
-            }.toSet()
-            return systemLocales + extraLocales.map { fromTag(it) }
+            val packLocales = extensionManager.languagePacks.value.flatMap { pack ->
+                pack.items.map { it.locale }
+            }
+            return mergeAvailableLocales(installedSystemLocales(), packLocales)
         }
     }
 
@@ -346,6 +333,14 @@ class FlorisLocale private constructor(val base: Locale) {
             return fromTag(decoder.decodeString())
         }
     }
+}
+
+internal fun mergeAvailableLocales(
+    systemLocales: List<FlorisLocale>,
+    packLocales: List<FlorisLocale>,
+): List<FlorisLocale> {
+    val seenTags = systemLocales.mapTo(mutableSetOf()) { it.localeTag() }
+    return systemLocales + packLocales.filter { seenTags.add(it.localeTag()) }
 }
 
 @Suppress("NOTHING_TO_INLINE")
