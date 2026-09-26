@@ -76,10 +76,22 @@ class FlogDiagnosticsTest :
 
             val line = Flog.diagnosticSnapshot().single()
             line shouldContain "FlogDiagnosticsTest"
-            line shouldContain "first  second third"
+            line shouldContain " - first  second third"
             line shouldNotContain "\r"
             line shouldNotContain "\n"
             line shouldNotContain "\u0000"
+        }
+
+        test("enabled empty messages keep caller tags and evaluate once") {
+            var evaluations = 0
+            flogError {
+                evaluations++
+                ""
+            }
+            evaluations shouldBe 1
+            val line = Flog.diagnosticSnapshot().single()
+            line shouldContain "E/FlogDiagnosticsTest"
+            line shouldNotContain " - "
         }
 
         test("disabled outputs do not evaluate messages") {

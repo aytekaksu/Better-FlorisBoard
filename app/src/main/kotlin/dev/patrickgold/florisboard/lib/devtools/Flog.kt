@@ -28,60 +28,37 @@ typealias FlogTopic = UInt
 /** Bit mask selecting log levels. */
 typealias FlogLevel = UInt
 
-/**
- * Logs [block] at error level when its [topic] is enabled. The block runs at most once
- * and only when the message will be written.
- */
+@PublishedApi
+internal inline fun logIfEnabled(topic: FlogTopic, level: FlogLevel, block: () -> String) {
+    contract { callsInPlace(block, InvocationKind.AT_MOST_ONCE) }
+    if (Flog.checkShouldFlog(topic, level)) {
+        // quality: allow-sensitive-log -- central wrapper; public flog call sites are source-checked
+        Flog.log(level, block())
+    }
+}
+
+/** Logs [block] at error level at most once, only when [topic] and output settings allow it. */
 inline fun flogError(topic: FlogTopic = Flog.TOPIC_OTHER, block: () -> String = { "" }) {
-    contract {
-        callsInPlace(block, InvocationKind.AT_MOST_ONCE)
-    }
-    if (Flog.checkShouldFlog(topic, Flog.LEVEL_ERROR)) {
-        // quality: allow-sensitive-log -- central wrapper; public flog call sites are source-checked
-        Flog.log(Flog.LEVEL_ERROR, block())
-    }
+    contract { callsInPlace(block, InvocationKind.AT_MOST_ONCE) }
+    logIfEnabled(topic, Flog.LEVEL_ERROR, block)
 }
 
-/**
- * Logs [block] at warning level when its [topic] is enabled. The block runs at most
- * once and only when the message will be written.
- */
+/** Logs [block] at warning level at most once, only when [topic] and output settings allow it. */
 inline fun flogWarning(topic: FlogTopic = Flog.TOPIC_OTHER, block: () -> String = { "" }) {
-    contract {
-        callsInPlace(block, InvocationKind.AT_MOST_ONCE)
-    }
-    if (Flog.checkShouldFlog(topic, Flog.LEVEL_WARNING)) {
-        // quality: allow-sensitive-log -- central wrapper; public flog call sites are source-checked
-        Flog.log(Flog.LEVEL_WARNING, block())
-    }
+    contract { callsInPlace(block, InvocationKind.AT_MOST_ONCE) }
+    logIfEnabled(topic, Flog.LEVEL_WARNING, block)
 }
 
-/**
- * Logs [block] at info level when its [topic] is enabled. The block runs at most once
- * and only when the message will be written.
- */
+/** Logs [block] at info level at most once, only when [topic] and output settings allow it. */
 inline fun flogInfo(topic: FlogTopic = Flog.TOPIC_OTHER, block: () -> String = { "" }) {
-    contract {
-        callsInPlace(block, InvocationKind.AT_MOST_ONCE)
-    }
-    if (Flog.checkShouldFlog(topic, Flog.LEVEL_INFO)) {
-        // quality: allow-sensitive-log -- central wrapper; public flog call sites are source-checked
-        Flog.log(Flog.LEVEL_INFO, block())
-    }
+    contract { callsInPlace(block, InvocationKind.AT_MOST_ONCE) }
+    logIfEnabled(topic, Flog.LEVEL_INFO, block)
 }
 
-/**
- * Logs [block] at debug level when its [topic] is enabled. The block runs at most once
- * and only when the message will be written.
- */
+/** Logs [block] at debug level at most once, only when [topic] and output settings allow it. */
 inline fun flogDebug(topic: FlogTopic = Flog.TOPIC_OTHER, block: () -> String = { "" }) {
-    contract {
-        callsInPlace(block, InvocationKind.AT_MOST_ONCE)
-    }
-    if (Flog.checkShouldFlog(topic, Flog.LEVEL_DEBUG)) {
-        // quality: allow-sensitive-log -- central wrapper; public flog call sites are source-checked
-        Flog.log(Flog.LEVEL_DEBUG, block())
-    }
+    contract { callsInPlace(block, InvocationKind.AT_MOST_ONCE) }
+    logIfEnabled(topic, Flog.LEVEL_DEBUG, block)
 }
 
 private infix fun UInt.isSet(flag: UInt) = (this and flag) == flag
@@ -167,29 +144,11 @@ object Flog {
             (flogLevels isSet level)
     }
 
-    /**
-     * Extract the tag which should be used for the message from the `element`.
-     */
-    private fun createTag(element: StackTraceElement): String {
-        var tag = element.className
-        tag = tag.substring(tag.lastIndexOf('.') + 1)
-        return tag
-    }
+    /** Extract the caller's simple class name for the log tag. */
+    private fun createTag(element: StackTraceElement): String = element.className.substringAfterLast('.')
 
-    private fun createMessage(element: StackTraceElement, msg: String): String {
-        return StringBuilder().run {
-            append(element.methodName)
-            append('(')
-            append(')')
-            if (msg.isNotBlank()) {
-                append(' ')
-                append('-')
-                append(' ')
-                append(msg)
-            }
-            toString()
-        }
-    }
+    private fun createMessage(element: StackTraceElement, msg: String): String =
+        "${element.methodName}()${if (msg.isNotBlank()) " - $msg" else ""}"
 
     private fun getStacktraceElement(): StackTraceElement {
         val stackTrace = Throwable().stackTrace
