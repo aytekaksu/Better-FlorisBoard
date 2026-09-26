@@ -36,6 +36,7 @@ import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.editorInstance
+import dev.patrickgold.florisboard.ime.clipboard.ClipboardSyncBehavior
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.core.SubtypeJsonConfig
 import dev.patrickgold.florisboard.ime.editor.EditorRange
@@ -479,7 +480,10 @@ class TextKeyboardTouchE2eTest {
         val keyboardManager by instrumentation.targetContext.keyboardManager()
         val editorInstance by instrumentation.targetContext.editorInstance()
         runBlocking { withTimeout(10_000L) { clipboard.awaitInitialization() } }
+        val prefs by FlorisPreferenceStore
         val originalClip = clipboard.primaryClip
+        val originalInternalClipboard = prefs.clipboard.useInternalClipboard.get()
+        val originalSyncToSystem = prefs.clipboard.syncToSystem.get()
 
         fun selectMiddle() {
             instrumentation.runOnMainSync { editor.setSelection(1, 3) }
@@ -504,6 +508,10 @@ class TextKeyboardTouchE2eTest {
         }
 
         try {
+            runBlocking {
+                prefs.clipboard.useInternalClipboard.set(true).getOrThrow()
+                prefs.clipboard.syncToSystem.set(ClipboardSyncBehavior.NO_EVENTS).getOrThrow()
+            }
             clearClipboard()
             setEditorText("abcd")
             selectMiddle()
@@ -529,9 +537,19 @@ class TextKeyboardTouchE2eTest {
             instrumentation.waitForIdleSync()
             assertEquals("keep", readEditorText())
         } finally {
-            clipboard.updatePrimaryClip(originalClip)
-            waitUntil("original primary clip was not restored") {
-                clipboard.primaryClip == originalClip
+            try {
+                clipboard.updatePrimaryClip(originalClip)
+                waitUntil("original primary clip was not restored") {
+                    clipboard.primaryClip == originalClip
+                }
+            } finally {
+                runBlocking {
+                    try {
+                        prefs.clipboard.syncToSystem.set(originalSyncToSystem).getOrThrow()
+                    } finally {
+                        prefs.clipboard.useInternalClipboard.set(originalInternalClipboard).getOrThrow()
+                    }
+                }
             }
         }
     }
