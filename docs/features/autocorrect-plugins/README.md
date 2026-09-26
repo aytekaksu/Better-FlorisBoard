@@ -123,10 +123,10 @@ does not wait forever. A stale same-binding reply without an ID can therefore
 fail newer work. Replies with a recoverable stale or unknown ID leave newer work
 alone. A handled empty result is authoritative and must stay empty.
 
-A provider must answer a suggestion for a non-active session with `Unhandled`
-instead of dropping it silently. Together with request-scoped cancellation,
-this guarantees that every still-admitted host request either receives a reply
-or is explicitly retired by host lifecycle state.
+The base service answers suggestions for a non-active session with `Unhandled`
+rather than silently dropping them. Request-scoped cancellation retires
+superseded work, but a provider that never answers an active request can leave
+it pending until supersession or lifecycle cleanup.
 
 Glide uses the built-in classifier when the external provider does not handle a
 gesture or its current result cannot be committed. UI mutations keep the last
@@ -173,12 +173,23 @@ Public API codecs and Robolectric service lifecycle:
 ./gradlew :lib:autocorrect-api:testDebugUnitTest
 ```
 
-Touch/provider integration when the trace or gesture path changes:
+Touch-surface integration when the trace or gesture path changes:
 
 ```shell
 ./gradlew :app:connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboardTouchE2eTest
 ```
+
+For real cross-process provider behavior, install the separate
+[Binder fixture](../../../autocorrect-provider-fixture/README.md), then run:
+
+```shell
+./gradlew :autocorrect-provider-fixture:installDebug
+./gradlew :app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectHostBinderAndroidTest
+```
+
+With multiple devices connected, set `ANDROID_SERIAL` to the intended device for both commands.
 
 Also build the minified host and API AAR after protocol or consumer-rule
 changes:
@@ -209,8 +220,6 @@ bounded, and intentionally cannot hold arbitrary text or exceptions.
   capability negotiation or supported-version range.
 - Cross-process provider failure coverage is still smaller than codec/unit
   coverage.
-- The host facade coordinates too many concerns while staged extraction is in
-  progress.
 - A provider which never acknowledges an ordinary session finish can retain
   that binding. Explicit provider selection releases it immediately; any
   watchdog for idle finishes still needs a compatibility decision.

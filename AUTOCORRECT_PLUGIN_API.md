@@ -31,10 +31,10 @@ class MyAutocorrectService : AutocorrectPluginService() {
     override suspend fun onSuggest(
         request: AutocorrectRequest,
     ): List<AutocorrectCandidate> {
-        val word = request.text.substring(
-            request.currentWordStart,
-            request.currentWordEnd,
-        )
+        val start = request.currentWordStart
+        val end = request.currentWordEnd
+        if (start < 0 || end <= start || end > request.text.length) return emptyList()
+        val word = request.text.substring(start, end)
         return myEngine.suggest(word).mapIndexed { index, suggestion ->
             AutocorrectCandidate(
                 id = suggestion.id,
@@ -42,13 +42,17 @@ class MyAutocorrectService : AutocorrectPluginService() {
                 confidence = suggestion.confidence,
                 kind = AutocorrectCandidateKind.CORRECTION,
                 autoCommit = index == 0 && suggestion.shouldAutocorrect,
-                replacementStart = request.currentWordStart,
-                replacementEnd = request.currentWordEnd,
+                replacementStart = start,
+                replacementEnd = end,
             )
         }
     }
 }
 ```
+
+The current-word offsets can be `-1/-1` when no bounded word is available. This
+example then returns a handled empty result; use `onSuggestResult` and return
+`Unhandled` if the built-in provider should take over instead.
 
 Declare the service in the provider manifest:
 
@@ -241,35 +245,14 @@ optional UI request fails or the provider disconnects.
 
 The host contract was checked against
 [FUTO Keyboard](https://github.com/futo-org/android-keyboard) at commit
-`8a099cf24692b9047872beadd9f254d093d152f1` (2026-07-22). This is a compatibility map, not an
-engine-specific dependency:
-
-| Engine capability | Generic provider mechanism |
-| --- | --- |
-| Dictionary and transformer candidates | `onSuggest`, ordered candidates, confidence and kind |
-| Autocorrect, completion and next-word UI | candidate kind, secondary text and auto-commit |
-| Emoji suggestions | emoji candidate kind with provider acceptance feedback |
-| Proximity-aware correction | normalized `inputTrace` key geometry and taps |
-| Dictionary-aware key hit testing | optional bounded valid-next-code-point hints |
-| Swipe decoding and gesture candidates | timed normalized gesture path with host fallback |
-| Swipe recognition enablement and sensitivity | optional host-owned switch settings |
-| Multilingual model selection | primary and secondary session language tags |
-| Personal history and fine-tuning input | accepted/reverted/removal and text-commit callbacks |
-| Prediction and personalization toggles | switch items |
-| Thresholds, temperature and tuning values | slider and choice items |
-| Model selection and per-language defaults | navigation pages and choices |
-| Model or dictionary import and export | host-picked `DOCUMENT_IMPORT` and `DOCUMENT_EXPORT` items |
-| Model download, deletion and default selection | actions, navigation, progress and choices |
-| Training/download status | progress items and push updates while visible |
-| Android personal dictionary | host-brokered, language-scoped bounded pages and action-scoped CRUD |
-| Provider blacklist management | text, navigation and action items; candidate removal |
-
-The provider adapter is responsible for translating these generic values into its engine's native
-types. Another provider can implement an entirely different dictionary, neural model, remote
-service, or hybrid pipeline without changing FlorisBoard. A FUTO-derived reference adapter lives
-in the separate, appropriately licensed
-[`aytekaksu/android-keyboard`](https://github.com/aytekaksu/android-keyboard) fork; FUTO source is
-not included in this Apache-licensed repository.
+`8a099cf24692b9047872beadd9f254d093d152f1` (2026-07-22). Its candidates,
+traces, learning callbacks, model controls, document flows, and personal-dictionary
+access map to the generic mechanisms above; this is compatibility evidence, not
+an engine dependency. A FUTO-derived reference adapter lives in the separate,
+appropriately licensed
+[`aytekaksu/android-keyboard`](https://github.com/aytekaksu/android-keyboard) fork;
+FUTO source is not included in this Apache-licensed repository. Other providers
+can use different engines.
 
 ## Privacy and battery contract
 
@@ -281,8 +264,7 @@ locally, including browser and code-editor behavior, are reduced to the generic 
 crossing the service boundary. Editors can independently disable persistent personalization
 without disabling suggestions.
 
-The provider is bound only while an eligible input view or an explicit provider-settings page is
-active. FlorisBoard uses a non-foreground binding, does not call `startService`, poll the provider,
+FlorisBoard uses a non-foreground binding, does not call `startService`, poll the provider,
 acquire a wake lock for it, or schedule background work. It cancels superseded suggestion requests,
 limits text context to 512 UTF-16 code units, accepts at most 16 candidates, bounds tap and gesture
 traces and UI payloads, and unbinds when neither typing, settings, nor admitted session-finalization
