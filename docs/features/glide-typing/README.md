@@ -134,19 +134,13 @@ integration changes:
 
 ## Debugging and fault injection
 
-Use a fixed synthetic layout and gesture corpus. Test: a slow undecided path;
-fast threshold crossing; start or end on an ineligible key; second pointer;
-cancel at every phase; layout/subtype/editor replacement; later input queued
-before provider completion; handled-empty and unhandled provider replies;
-provider death; stale preview; empty dictionary; multi-code-point key outputs;
-and combining-mark/locale aliases.
+Use the [debugging guide](../../debugging.md) and the linked detector and
+lifecycle tests. Exercise a slow undecided path, fast threshold crossing,
+ineligible start/end keys, input queued before provider completion,
+handled-empty versus `Unhandled`, multi-code-point key outputs, and
+combining-mark/locale aliases.
 
-Safe diagnostics are gesture generation, point count, duration bucket, layout
-revision, classifier source, candidate count, current/stale decision, fallback
-reason, and total latency bucket. They must not include path coordinates or
-words.
-
-## Known limits and upstream hot spots
+## Known limits
 
 - The built-in classifier is stateful and protected by one mutex; concurrent
   previews and completions are serialized.
@@ -157,8 +151,3 @@ words.
   work.
 - Gesture and tap arbitration still lives inside the large keyboard layout
   controller.
-
-`TextKeyboardLayout`, `KeyboardManager`, `NlpManager`, subtype/layout loading,
-preferences, and editor state are upstream conflict hot spots. Keep classifier
-math pure, pass immutable revisions, and expose only narrow commit and
-suggestion ports.

@@ -200,21 +200,13 @@ changes:
 
 ## Debugging and fault injection
 
-Use synthetic text only. A provider fixture should be able to return handled,
-empty, unhandled, malformed, oversized, duplicate, late, and out-of-order
-replies; refuse binding; return a null Binder; die mid-request; and withhold a
-finish acknowledgement. For each case inspect typed state transitions, opaque
-IDs, epoch, payload counts, duration bucket, and failure category—not payload
-contents.
+Use the [debugging guide](../../debugging.md) and the linked host/Binder tests.
+Include handled-empty versus `Unhandled`, oversized replies, and replies with
+missing or stale IDs.
+Inspect `diagnosticsSnapshot()` and, for a lingering bind, typing, UI/picker,
+document, and finish-acknowledgement demand.
 
-Inspect `diagnosticsSnapshot()` in a debugger when a candidate appears wrong.
-Check in order: editor generation, selected and bound component, binding
-epoch/UID, admitted session, latest request, decoded range, and whether the
-result was handled. When a service remains bound, check typing, UI/picker,
-document, and finish-acknowledgement demand. The diagnostic ring is in-memory,
-bounded, and intentionally cannot hold arbitrary text or exceptions.
-
-## Known limits and upstream hot spots
+## Known limits
 
 - Discovery currently requires the exact protocol version; there is no
   capability negotiation or supported-version range.
@@ -223,10 +215,3 @@ bounded, and intentionally cannot hold arbitrary text or exceptions.
 - A provider which never acknowledges an ordinary session finish can retain
   that binding. Explicit provider selection releases it immediately; any
   watchdog for idle finishes still needs a compatibility decision.
-
-Changes in
-[`FlorisImeService.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/FlorisImeService.kt),
-[`KeyboardManager.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyboardManager.kt),
-`NlpManager`, `TextKeyboardLayout`, Smartbar, preferences, and editor code have
-high upstream-conflict risk. Prefer adding behavior in the plugin/core packages
-and adapting through a narrow interface.
