@@ -16,7 +16,6 @@
 
 package dev.patrickgold.florisboard.lib.crashutility
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
 import android.app.Application.ActivityLifecycleCallbacks
@@ -29,6 +28,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Process
 import android.util.Log
+import androidx.core.content.edit
 import dev.patrickgold.florisboard.BuildConfig
 import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.R
@@ -156,13 +156,10 @@ abstract class CrashUtility private constructor() {
                 .getLong(SHARED_PREFS_LAST_CRASH_TIMESTAMP, 0)
         }
 
-        @SuppressLint("ApplySharedPref")
         private fun setLastCrashTimestamp(context: Context, value: Long) {
             // A following crash may read this value immediately, so it must be written synchronously.
             context.getSharedPreferences(SHARED_PREFS_FILE, Context.MODE_PRIVATE)
-                .edit()
-                .putLong(SHARED_PREFS_LAST_CRASH_TIMESTAMP, value)
-                .commit()
+                .edit(commit = true) { putLong(SHARED_PREFS_LAST_CRASH_TIMESTAMP, value) }
         }
 
         /** Returns the directory that stores unhandled crash reports. */

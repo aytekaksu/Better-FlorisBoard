@@ -18,6 +18,7 @@ package dev.patrickgold.florisboard.lib.io
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 import dev.patrickgold.jetpref.datastore.model.PreferenceSerializer
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
@@ -102,7 +103,7 @@ value class FlorisRef private constructor(val uri: Uri) {
             return when {
                 str.startsWith("assets:") -> assets(str.substring(7))
                 str.startsWith("internal:") -> internal(str.substring(9))
-                else -> FlorisRef(Uri.parse(str))
+                else -> FlorisRef(str.toUri())
             }
         }
 
@@ -117,8 +118,8 @@ value class FlorisRef private constructor(val uri: Uri) {
             return FlorisRef(when {
                 url.startsWith(URL_HTTP_PREFIX) ||
                     url.startsWith(URL_HTTPS_PREFIX) ||
-                    url.startsWith(URL_MAILTO_PREFIX) -> Uri.parse(url)
-                else -> Uri.parse("$URL_HTTPS_PREFIX$url").normalizeScheme()
+                    url.startsWith(URL_MAILTO_PREFIX) -> url.toUri()
+                else -> "$URL_HTTPS_PREFIX$url".toUri().normalizeScheme()
             })
         }
     }
