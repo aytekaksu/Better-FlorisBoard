@@ -24,7 +24,6 @@ import androidx.core.view.inputmethod.InputContentInfoCompat
 import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
-import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.ImeUiMode
 import dev.patrickgold.florisboard.ime.clipboard.ClipboardMediaPasteAccess
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
@@ -161,7 +160,6 @@ class EditorInstance(
 
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
-    private val clipboardManager by context.clipboardManager()
     private val keyboardExtensionRepository by context.keyboardExtensionRepository()
     private val subtypeManager by context.subtypeManager()
 
@@ -677,18 +675,23 @@ class EditorInstance(
      *
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
-    fun performClipboardCut(): Boolean {
+    fun performClipboardCut(addPlaintext: (String) -> Unit): Boolean {
+        copySelectionToClipboard("cut", addPlaintext)
+        return deleteBackwards(OperationUnit.CHARACTERS)
+    }
+
+    /** Copies the current selection before changing the editor selection. */
+    private fun copySelectionToClipboard(action: String, addPlaintext: (String) -> Unit) {
         autoSpace.setInactive()
         phantomSpace.setInactive()
         val text = activeContent.selectedText.ifBlank { currentInputConnection()?.getSelectedText(0) }
         if (text != null) {
-            clipboardManager.addNewPlaintext(text.toString())
+            addPlaintext(text.toString())
         } else {
             launchOnMain {
-                appContext.showShortToast("Failed to retrieve selected text requested to cut: Either selection state is invalid or an error occurred within the input connection.")
+                appContext.showShortToast("Failed to retrieve selected text requested to $action: Either selection state is invalid or an error occurred within the input connection.")
             }
         }
-        return deleteBackwards(OperationUnit.CHARACTERS)
     }
 
     /**
@@ -697,17 +700,8 @@ class EditorInstance(
      *
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
-    fun performClipboardCopy(): Boolean {
-        autoSpace.setInactive()
-        phantomSpace.setInactive()
-        val text = activeContent.selectedText.ifBlank { currentInputConnection()?.getSelectedText(0) }
-        if (text != null) {
-            clipboardManager.addNewPlaintext(text.toString())
-        } else {
-            launchOnMain {
-                appContext.showShortToast("Failed to retrieve selected text requested to copy: Either selection state is invalid or an error occurred within the input connection.")
-            }
-        }
+    fun performClipboardCopy(addPlaintext: (String) -> Unit): Boolean {
+        copySelectionToClipboard("copy", addPlaintext)
         val activeSelection = activeContent.selection
         return setSelection(activeSelection.end, activeSelection.end)
     }
@@ -718,12 +712,12 @@ class EditorInstance(
      *
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
-    fun performClipboardPaste(): Boolean {
+    fun performClipboardPaste(item: ClipboardItem?, pasteMedia: (ClipboardItem) -> Unit): Boolean {
         autoSpace.setInactive()
         phantomSpace.setInactive()
-        val item = clipboardManager.primaryClip ?: return false
+        if (item == null) return false
         if (item.type != ItemType.TEXT) {
-            clipboardManager.pasteItem(item)
+            pasteMedia(item)
             return true
         }
         return commitClipboardItem(item).also { result ->
