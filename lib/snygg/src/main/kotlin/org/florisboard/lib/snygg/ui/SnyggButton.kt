@@ -36,26 +36,9 @@ import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.SnyggSelector
 
 /**
- * Simple interactive Box with integrated clickable state management.
- * Children will be placed in a row.
+ * A theme-styled button with centered row content.
  *
- * This composable infers its style from the current [SnyggTheme][org.florisboard.lib.snygg.SnyggTheme], which is
- * required to be provided by [ProvideSnyggTheme].
- *
- * @param elementName The name of this element. If `null` the style will be inherited from the parent element.
- * @param attributes The attributes of the element used to refine the query.
- * @param onClick called when this button is clicked
- * @param modifier The modifier to be applied to the Button.
- * @param enabled controls the enabled state of this button. When `false`, this component will not
- * respond to user input, and it will appear visually disabled and disabled to accessibility
- * services.
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- *   emitting [Interaction]s for this button. You can use this to change the button's appearance or
- *   preview the button in different states. Note that if `null` is provided, interactions will
- *   still happen internally.
- * @param content The content displayed on the button, expected to be text, icon or image.
- *
- * @since 0.5.0-alpha01
+ * Disabling it blocks clicks and queries the [SnyggSelector.DISABLED] style.
  */
 @Composable
 fun SnyggButton(

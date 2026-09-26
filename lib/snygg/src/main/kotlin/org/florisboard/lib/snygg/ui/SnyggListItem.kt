@@ -31,23 +31,9 @@ import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.SnyggSelector
 
 /**
- * Simple list item composable.
+ * A theme-styled list item, similar to [ListItem], with optional leading and trailing icons.
  *
- * This composable infers its style from the current [SnyggTheme][org.florisboard.lib.snygg.SnyggTheme], which is
- * required to be provided by [ProvideSnyggTheme].
- *
- * @param elementName The name of this element. If `null` the style will be inherited from the parent element.
- * @param attributes The attributes of the element used to refine the query.
- * @param modifier The modifier to be applied to the [ListItem].
- * @param onClick The clickable action for this item.
- * @param text The text of the list item.
- * @param leadingImageVector The leading icon of the list item.
- * @param trailingImageVector The trailing icon of the list item.
- * @param interactionSource The interaction source for the onClick action.
- * @param indication The indication of the list item during interaction. Defaults to a ripple effect.
- * @param enabled If the clickable action is enabled or not. False will set the DISABLED selector for style querying.
- *
- * @since 0.5.0-alpha03
+ * Disabling it blocks clicks and queries the [SnyggSelector.DISABLED] style.
  */
 @Composable
 fun SnyggListItem(

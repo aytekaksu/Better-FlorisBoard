@@ -26,25 +26,9 @@ import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.SnyggSelector
 
 /**
- * Simple layout composable that places its children in a horizontal sequence.
+ * A theme-styled, clickable chip with optional [imageVector] and [text].
  *
- * This composable infers its style from the current [SnyggTheme][org.florisboard.lib.snygg.SnyggTheme], which is
- * required to be provided by [ProvideSnyggTheme].
- *
- * @param elementName The name of this element. If `null` the style will be inherited from the parent element.
- * @param attributes The attributes of the element used to refine the query.
- * @param selector A specific SnyggSelector to query the style for.
- * @param modifier The modifier to be applied to the Row.
- * @param onClick The action that is executed on click
- * @param enabled Weather the chip is enabled
- * @param imageVector Icon
- * @param text Text
- *
- * @since 0.5.0-alpha01
- *
- * @see [SnyggRow]
- * @see [SnyggText]
- * @see [SnyggIcon]
+ * [enabled] controls clicks; styling still uses [selector] when disabled.
  */
 @Composable
 fun SnyggChip(

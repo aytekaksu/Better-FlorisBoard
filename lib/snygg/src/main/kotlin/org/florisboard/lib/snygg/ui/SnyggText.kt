@@ -26,27 +26,11 @@ import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.SnyggSelector
 
 /**
- * Simple text composable, which displays the given [text].
+ * Displays [text] using the current Snygg theme.
  *
- * This composable infers its style from the current [SnyggTheme][org.florisboard.lib.snygg.SnyggTheme], which is
- * required to be provided by [ProvideSnyggTheme].
- *
- * @param elementName The name of this element. If `null` the style will be inherited from the parent element.
- * @param attributes The attributes of the element used to refine the query.
- * @param selector A specific SnyggSelector to query the style for.
- * @param modifier The modifier to be applied to the Text.
- * @param text The text of the element.
- * @param textAlign Optional text alignment override.
- * @param maxLines Optional maximum line count override.
- * @param overflow Optional text overflow override.
- * @param autoSize Optional automatic text sizing strategy.
- * @param contentStyleElementName Optional element whose foreground and font style should be used. Font size and
- * layout properties continue to come from [elementName].
- * @param fontSizeScale Scale applied to the resolved font size.
- *
- * @since 0.5.0-alpha01
- *
- * @see [Text]
+ * [contentStyleElementName] can supply the color and font styling; layout, font size,
+ * and line height still come from [elementName]. [fontSizeScale] multiplies that font size.
+ * [textAlign], [maxLines], and [overflow] override style values when provided.
  */
 @Composable
 fun SnyggText(
