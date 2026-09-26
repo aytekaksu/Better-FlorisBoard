@@ -160,6 +160,12 @@ overruns, and corrupt selected entry bytes. The overall restore is
 all-or-rollback only while the process remains alive and rollback succeeds; it
 does not promise crash- or power-loss atomicity.
 
+When a backup or restore screen closes its private workspace, ordinary cleanup
+errors get two independent attempts for the staged child and workspace. A child
+error therefore does not prevent removal of the private workspace. Cancellation
+still propagates. Only final failure types are logged, without archive contents
+or paths.
+
 ## Verification
 
 Run the archive and plan contract tests with the app JVM suite:
@@ -180,5 +186,6 @@ focused connected tests:
 dev.patrickgold.florisboard.app.settings.advanced.BackupArchiveStagerAndroidTest,\
 dev.patrickgold.florisboard.app.settings.advanced.ClipboardBackupPayloadAndroidTest,\
 dev.patrickgold.florisboard.app.settings.advanced.ClipboardRestoreCommitAndroidTest,\
-dev.patrickgold.florisboard.app.settings.advanced.ClipboardManagerBackupAndroidTest
+dev.patrickgold.florisboard.app.settings.advanced.ClipboardManagerBackupAndroidTest,\
+dev.patrickgold.florisboard.lib.cache.CacheManagerAndroidTest
 ```
