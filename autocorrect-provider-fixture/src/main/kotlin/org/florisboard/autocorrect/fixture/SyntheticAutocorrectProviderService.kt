@@ -80,6 +80,7 @@ abstract class RecordingAutocorrectProviderService(
 
     override suspend fun onInvokePluginUiAction(itemId: String): Boolean {
         record("UI_ACTION")
+        SyntheticAutocorrectFixture.awaitUiActionRelease()
         return true
     }
 
@@ -164,6 +165,49 @@ class SyntheticAutocorrectControlProvider : ContentProvider() {
                 SyntheticAutocorrectFixture.releaseSuggestB()
                 Bundle.EMPTY
             }
+            "hold_ui_action" -> {
+                SyntheticAutocorrectFixture.holdUiAction()
+                Bundle.EMPTY
+            }
+            "release_ui_action" -> {
+                SyntheticAutocorrectFixture.releaseUiAction()
+                Bundle.EMPTY
+            }
+            "send_ui_reply" -> {
+                @Suppress("DEPRECATION")
+                val replyTo = requireNotNull(extras?.getParcelable<Messenger>("reply_to"))
+                val arguments = requireNotNull(extras)
+                val requestId = arguments.getLong("request_id")
+                val mode = requireNotNull(arguments.getString("mode"))
+                val data = Bundle().apply {
+                    if (mode != "missing_id") {
+                        if (mode == "wrong_id") putString("requestId", "invalid")
+                        else putLong("requestId", requestId)
+                    }
+                    putBoolean("successful", true)
+                    if (mode == "wrong_ui") {
+                        putString("ui", "not-a-ui")
+                    } else {
+                        putBundle("ui", Bundle().apply {
+                            putString("appRoot", "injected")
+                            if (mode == "malformed_pages") {
+                                putStringArrayList("pages", arrayListOf("not-a-page"))
+                            } else {
+                                putParcelableArrayList("pages", arrayListOf(Bundle().apply {
+                                    putString("id", "injected")
+                                    putString("title", "Injected")
+                                }))
+                            }
+                        })
+                    }
+                }
+                val sent = runCatching {
+                    replyTo.send(Message.obtain(null, AutocorrectPluginContract.MSG_PLUGIN_UI_RESULT).apply {
+                        this.data = data
+                    })
+                }.isSuccess
+                Bundle().apply { putBoolean("sent", sent) }
+            }
             "send_stale_suggestions" -> {
                 @Suppress("DEPRECATION")
                 val replyTo = requireNotNull(extras?.getParcelable<Messenger>("reply_to"))
@@ -240,12 +284,14 @@ private object SyntheticAutocorrectFixture {
     private const val EVENTS = "events"
     private var finishRelease: CompletableDeferred<Unit>? = null
     private var suggestBRelease: CompletableDeferred<Unit>? = null
+    private var uiActionRelease: CompletableDeferred<Unit>? = null
     private var lastBRequestId = 0L
 
     @Synchronized
     fun reset(context: Context) {
         releaseFinish()
         releaseSuggestB()
+        releaseUiAction()
         lastBRequestId = 0L
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(EVENTS, "").commit()
@@ -291,6 +337,22 @@ private object SyntheticAutocorrectFixture {
     fun releaseSuggestB() {
         suggestBRelease?.complete(Unit)
         suggestBRelease = null
+    }
+
+    @Synchronized
+    fun holdUiAction() {
+        uiActionRelease = CompletableDeferred()
+    }
+
+    @Synchronized
+    fun releaseUiAction() {
+        uiActionRelease?.complete(Unit)
+        uiActionRelease = null
+    }
+
+    suspend fun awaitUiActionRelease() {
+        val current = synchronized(this) { uiActionRelease }
+        current?.await()
     }
 
     @Synchronized

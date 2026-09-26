@@ -132,6 +132,9 @@ Glide uses the built-in classifier when the external provider does not handle a
 gesture or its current result cannot be committed. UI mutations keep the last
 valid snapshot or expose a typed error state; they must not change typing
 state. Closing a page cancels UI-only observation and picker ownership.
+Malformed current UI replies keep that snapshot, end the affected operation and
+dictionary-action grant, and show an error. A reply without a readable ID fails
+all pending UI operations without revoking document-picker ownership.
 
 There is currently no wall-clock suggestion timeout: newer input or lifecycle
 cleanup cancels obsolete work. Do not add an arbitrary timeout. A future

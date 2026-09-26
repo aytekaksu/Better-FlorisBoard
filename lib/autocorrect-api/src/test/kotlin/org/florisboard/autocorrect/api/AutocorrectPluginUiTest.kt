@@ -16,8 +16,10 @@
 
 package org.florisboard.autocorrect.api
 
+import android.os.Bundle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -42,6 +44,112 @@ class AutocorrectPluginUiTest {
         val target = "a".repeat(257)
         assertEquals(target.take(256), roundTrip(AutocorrectPluginUiItemKind.NAVIGATION, target))
     }
+
+    @Test
+    @Suppress("DEPRECATION")
+    fun documentMimeTypesKeepValidV5OrderAndBoundRawInput() {
+        val types = (0 until 8).map { "application/x-$it" }
+        val encoded = pluginUiResultBundle(
+            1L,
+            true,
+            AutocorrectPluginUi(
+                appRootPageId = "root",
+                keyboardRootPageId = null,
+                pages = listOf(
+                    AutocorrectPluginUiPage(
+                        id = "root",
+                        title = "Root",
+                        items = listOf(
+                            AutocorrectPluginUiItem(
+                                id = "document",
+                                kind = AutocorrectPluginUiItemKind.DOCUMENT_IMPORT,
+                                title = "Document",
+                                documentMimeTypes = types,
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        assertEquals(types, decodedDocumentMimeTypes(encoded))
+
+        val item = encoded.getBundle("ui")!!
+            .getParcelableArrayList<Bundle>("pages")!![0]
+            .getParcelableArrayList<Bundle>("items")!![0]
+        item.putStringArrayList(
+            "documentMimeTypes",
+            ArrayList(types + List(1_000) { "application/ignored-$it" }),
+        )
+        assertEquals(types, decodedDocumentMimeTypes(encoded))
+    }
+
+    @Test
+    fun malformedNestedPageListFailsBeforeItCanBecomeAnEmptyUi() {
+        val reply = Bundle().apply {
+            putLong("requestId", 1L)
+            putBoolean("successful", true)
+            putBundle("ui", Bundle().apply {
+                putStringArrayList("pages", arrayListOf("not-a-page"))
+            })
+        }
+
+        assertThrows(IllegalArgumentException::class.java) {
+            pluginUiResultFromBundle(reply)
+        }
+    }
+
+    @Test
+    fun wrongTypedUiAndMissingPagesCannotReplaceTheCurrentUi() {
+        val reply = Bundle().apply {
+            putLong("requestId", 1L)
+            putBoolean("successful", true)
+            putString("ui", "not-a-ui")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            pluginUiResultFromBundle(reply)
+        }
+        reply.putBundle("ui", Bundle().apply { putString("appRoot", "root") })
+        assertThrows(IllegalArgumentException::class.java) {
+            pluginUiResultFromBundle(reply)
+        }
+    }
+
+    @Test
+    @Suppress("DEPRECATION")
+    fun wrongTypedDocumentMimeTypesCannotWidenThePicker() {
+        val reply = pluginUiResultBundle(
+            1L,
+            true,
+            AutocorrectPluginUi(
+                appRootPageId = "root",
+                keyboardRootPageId = null,
+                pages = listOf(
+                    AutocorrectPluginUiPage(
+                        id = "root",
+                        title = "Root",
+                        items = listOf(
+                            AutocorrectPluginUiItem(
+                                id = "document",
+                                kind = AutocorrectPluginUiItemKind.DOCUMENT_IMPORT,
+                                title = "Document",
+                                documentMimeTypes = listOf("application/json"),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val item = reply.getBundle("ui")!!
+            .getParcelableArrayList<Bundle>("pages")!![0]
+            .getParcelableArrayList<Bundle>("items")!![0]
+        item.putString("documentMimeTypes", "not-a-list")
+        assertThrows(IllegalArgumentException::class.java) {
+            pluginUiResultFromBundle(reply)
+        }
+    }
+
+    private fun decodedDocumentMimeTypes(bundle: Bundle) = pluginUiResultFromBundle(bundle)
+        .ui!!.pages.single().items.single().documentMimeTypes
 
     private fun roundTrip(kind: AutocorrectPluginUiItemKind, target: String): String? {
         val ui = AutocorrectPluginUi(

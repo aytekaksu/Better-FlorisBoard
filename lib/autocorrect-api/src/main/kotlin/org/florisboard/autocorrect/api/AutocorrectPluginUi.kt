@@ -175,11 +175,16 @@ internal fun pluginUiResultBundle(
     putBundle(UiKeys.UI, ui?.toBundle())
 }
 
-fun pluginUiResultFromBundle(bundle: Bundle) = AutocorrectPluginUiResult(
-    requestId = bundle.getLong(UiKeys.REQUEST_ID),
-    successful = bundle.getBoolean(UiKeys.SUCCESSFUL),
-    ui = bundle.getBundle(UiKeys.UI)?.toPluginUi(),
-)
+@Suppress("DEPRECATION")
+fun pluginUiResultFromBundle(bundle: Bundle): AutocorrectPluginUiResult {
+    val rawUi = bundle.get(UiKeys.UI)
+    require(rawUi == null || rawUi is Bundle)
+    return AutocorrectPluginUiResult(
+        requestId = bundle.getLong(UiKeys.REQUEST_ID),
+        successful = bundle.getBoolean(UiKeys.SUCCESSFUL),
+        ui = rawUi?.toPluginUi(),
+    )
+}
 
 internal fun Bundle.pluginUiRequestId() = getLong(UiKeys.REQUEST_ID)
 
@@ -278,9 +283,7 @@ private fun AutocorrectPluginUiOption.toBundle() = Bundle().apply {
 @Suppress("DEPRECATION")
 private fun Bundle.toPluginUi(): AutocorrectPluginUi {
     val budget = UiBudget()
-    val pages = getParcelableArrayList<Bundle>(UiKeys.PAGES)
-        .orEmpty()
-        .take(UiLimits.PAGES)
+    val pages = boundedBundleList(UiKeys.PAGES, UiLimits.PAGES, required = true)
         .mapNotNull { it.toPluginUiPage(budget) }
         .distinctBy(AutocorrectPluginUiPage::id)
     return AutocorrectPluginUi(
@@ -301,9 +304,7 @@ private fun Bundle.toPluginUiPage(budget: UiBudget): AutocorrectPluginUiPage? {
         ?.takeWireChars(UiLimits.TEXT_CHARS)
         ?.takeIf(String::isNotBlank)
         ?: return null
-    val itemBundles = getParcelableArrayList<Bundle>(UiKeys.ITEMS)
-        .orEmpty()
-        .take(minOf(UiLimits.ITEMS_PER_PAGE, budget.items))
+    val itemBundles = boundedBundleList(UiKeys.ITEMS, minOf(UiLimits.ITEMS_PER_PAGE, budget.items))
     budget.items -= itemBundles.size
     val pageItems = itemBundles
         .mapNotNull { it.toPluginUiItem(budget) }
@@ -339,9 +340,7 @@ private fun Bundle.toPluginUiItem(budget: UiBudget): AutocorrectPluginUiItem? {
     val minimum = if (validRange) rawMinimum else 0.0
     val maximum = if (validRange) rawMaximum else 1.0
     val floatSpan = maximum.toFloat() - minimum.toFloat()
-    val optionBundles = getParcelableArrayList<Bundle>(UiKeys.OPTIONS)
-        .orEmpty()
-        .take(minOf(UiLimits.OPTIONS_PER_ITEM, budget.options))
+    val optionBundles = boundedBundleList(UiKeys.OPTIONS, minOf(UiLimits.OPTIONS_PER_ITEM, budget.options))
     budget.options -= optionBundles.size
     val itemOptions = optionBundles
         .map {
@@ -375,11 +374,11 @@ private fun Bundle.toPluginUiItem(budget: UiBudget): AutocorrectPluginUiItem? {
         icon = enumValueOrDefault(getString(UiKeys.ICON), AutocorrectPluginUiIcon.NONE),
         enabled = getBoolean(UiKeys.ENABLED, true),
         confirmation = getString(UiKeys.CONFIRMATION)?.takeWireChars(UiLimits.TEXT_CHARS),
-        documentMimeTypes = getStringArrayList(UiKeys.DOCUMENT_MIME_TYPES)
-            .orEmpty()
+        documentMimeTypes = boundedStringList(UiKeys.DOCUMENT_MIME_TYPES, UiLimits.MIME_TYPES)
+            .asSequence()
             .map { it.takeWireChars(UiLimits.MIME_TYPE_CHARS) }
             .distinct()
-            .take(UiLimits.MIME_TYPES),
+            .toList(),
         documentSuggestedName = getString(UiKeys.DOCUMENT_SUGGESTED_NAME)
             ?.takeWireChars(UiLimits.FILE_NAME_CHARS),
         hostSetting = if (kind == AutocorrectPluginUiItemKind.SWITCH) {
@@ -391,6 +390,33 @@ private fun Bundle.toPluginUiItem(budget: UiBudget): AutocorrectPluginUiItem? {
             AutocorrectPluginHostSetting.NONE
         },
     )
+}
+
+@Suppress("DEPRECATION")
+private fun Bundle.boundedBundleList(key: String, limit: Int, required: Boolean = false): List<Bundle> {
+    if (!containsKey(key)) {
+        require(!required) { "Missing UI $key list" }
+        return emptyList()
+    }
+    val raw = requireNotNull(get(key)) { "Null UI $key list" }
+    require(raw is ArrayList<*>) { "Invalid UI $key list" }
+    val values = raw
+    return values.asSequence().take(limit).map {
+        require(it is Bundle) { "Invalid UI $key item" }
+        it
+    }.toList()
+}
+
+@Suppress("DEPRECATION")
+private fun Bundle.boundedStringList(key: String, limit: Int): List<String> {
+    if (!containsKey(key)) return emptyList()
+    val raw = get(key)
+    require(raw is ArrayList<*>) { "Invalid UI $key list" }
+    val values = raw
+    return values.asSequence().take(limit).map {
+        require(it is String) { "Invalid UI $key item" }
+        it
+    }.toList()
 }
 
 private fun Double.isFloatRepresentable() = isFinite() && toFloat().isFinite()

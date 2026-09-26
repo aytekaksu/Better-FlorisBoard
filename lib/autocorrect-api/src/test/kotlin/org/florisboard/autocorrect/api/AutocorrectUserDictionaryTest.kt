@@ -67,6 +67,25 @@ class AutocorrectUserDictionaryTest {
     }
 
     @Test
+    fun oversizedRawLanguageTagListIsRejectedBeforeDecoding() {
+        val request = userDictionaryQueryBundle(
+            requestId = 1L,
+            languageTags = emptyList(),
+            afterId = 0L,
+            limit = 1,
+        ).apply {
+            putStringArrayList(
+                "udLanguageTags",
+                ArrayList(List(AutocorrectPluginContract.MAX_USER_DICTIONARY_LANGUAGE_TAGS + 1) {
+                    "en"
+                }),
+            )
+        }
+
+        assertNull(userDictionaryRequestFromBundle(request))
+    }
+
+    @Test
     fun invalidMutationEntryIsRejected() {
         val request = userDictionaryRequestFromBundle(
             userDictionaryUpsertBundle(

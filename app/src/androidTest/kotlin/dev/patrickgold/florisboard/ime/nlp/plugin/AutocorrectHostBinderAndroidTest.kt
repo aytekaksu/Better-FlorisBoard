@@ -57,6 +57,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /** Exercises the real host against a protocol-v5 Messenger service in a separate fixture app. */
+// One fixture lifecycle serves the Binder scenarios; splitting it would duplicate mutable IME setup.
+@Suppress("LargeClass")
 @RunWith(AndroidJUnit4::class)
 class AutocorrectHostBinderAndroidTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -99,6 +101,7 @@ class AutocorrectHostBinderAndroidTest {
         manager = targetContext.autocorrectPluginManager().value
         control("release_finish")
         control("release_suggest_b")
+        control("release_ui_action")
         manager.finishSession()
         prefs.suggestion.enabled.set(true).getOrThrow()
         prefs.suggestion.autocorrectPluginComponent
@@ -114,6 +117,7 @@ class AutocorrectHostBinderAndroidTest {
         if (!::manager.isInitialized) return
         control("release_finish")
         control("release_suggest_b")
+        control("release_ui_action")
         manager.releasePluginUi()
         manager.finishSession()
         val eventsBeforeRestore = snapshot().events
@@ -153,6 +157,100 @@ class AutocorrectHostBinderAndroidTest {
         assertFalse(released.events.contains("START"))
         assertFalse(released.events.contains("SUGGEST"))
         assertTrue(released.events.indexOf("UNBOUND") > released.events.indexOf("UI_REQUEST"))
+    }
+
+    @Test
+    fun malformedCorrelatedUiReplyKeepsSnapshotAndRevokesOnlyItsActionGrant() {
+        openSecondProviderUi()
+        val snapshot = manager.pluginUi.value
+        sendRejectedUiReply(latestPluginUiRequestId(), "valid") // Completed GET has no ownership.
+        assertEquals(snapshot, manager.pluginUi.value)
+        control("hold_ui_action")
+        manager.invokePluginUiAction("fixture-b-action")
+        waitForEvent("B_UI_ACTION")
+        val staleId = latestPluginUiRequestId()
+        manager.invokePluginUiAction("fixture-b-action")
+        val latestId = latestPluginUiRequestId()
+        assertNotEquals(staleId, latestId)
+        assertEquals(setOf(staleId, latestId), dictionaryActionGrantIds())
+
+        sendRejectedUiReply(latestId + 10_000L, "valid") // A future ID is not a newer request.
+        assertEquals(snapshot, manager.pluginUi.value)
+        assertTrue(manager.pluginUiLoading.value)
+        sendMalformedUiReply(0L, "malformed_pages") // A broken push owns no action grant.
+        assertEquals(setOf(staleId, latestId), dictionaryActionGrantIds())
+        assertTrue(manager.pluginUiLoading.value)
+
+        sendMalformedUiReply(staleId, "malformed_pages")
+        assertEquals(snapshot, manager.pluginUi.value)
+        assertFalse(manager.pluginUiError.value)
+        assertTrue(manager.pluginUiLoading.value)
+        assertEquals(setOf(latestId), dictionaryActionGrantIds())
+
+        sendMalformedUiReply(latestId, "malformed_pages")
+        assertEquals(snapshot, manager.pluginUi.value)
+        assertTrue(manager.pluginUiError.value)
+        assertFalse(manager.pluginUiLoading.value)
+        assertTrue(dictionaryActionGrantIds().isEmpty())
+        assertTrue(pendingUiOperationIds().isEmpty())
+
+        sendRejectedUiReply(latestId, "valid") // Delayed duplicate cannot clear the error.
+        assertEquals(snapshot, manager.pluginUi.value)
+        assertTrue(manager.pluginUiError.value)
+        val tombstoneId = latestPluginUiRequestId()
+        assertNotEquals(latestId, tombstoneId)
+        sendRejectedUiReply(tombstoneId, "valid") // An unsent ID is not an active request.
+        assertEquals(snapshot, manager.pluginUi.value)
+        assertTrue(manager.pluginUiError.value)
+
+        sendUiReply(0L, "valid") // A legitimate push can still refresh the page.
+        val pushDeadline = SystemClock.uptimeMillis() + 10_000
+        while (manager.pluginUi.value?.appRootPageId != "injected" &&
+            SystemClock.uptimeMillis() < pushDeadline
+        ) {
+            SystemClock.sleep(25)
+        }
+        assertEquals("injected", manager.pluginUi.value?.appRootPageId)
+        assertFalse(manager.pluginUiError.value)
+        sendMalformedUiReply(latestId, "malformed_pages") // A duplicate cannot raise an error.
+        assertFalse(manager.pluginUiError.value)
+    }
+
+    @Test
+    fun missingUiReplyIdFailsPendingOperationsWithoutDroppingPickerLease() {
+        openSecondProviderUi()
+        val snapshot = manager.pluginUi.value
+        val pickerLease = requireNotNull(manager.acquirePluginUiPickerLease())
+        control("hold_ui_action")
+        manager.invokePluginUiAction("fixture-b-action")
+        waitForEvent("B_UI_ACTION")
+        val requestId = latestPluginUiRequestId()
+        assertTrue(requestId in dictionaryActionGrantIds())
+
+        sendMalformedUiReply(requestId, "missing_id")
+        assertEquals(snapshot, manager.pluginUi.value)
+        assertTrue(manager.pluginUiError.value)
+        assertFalse(manager.pluginUiLoading.value)
+        assertTrue(dictionaryActionGrantIds().isEmpty())
+        assertTrue(pendingUiOperationIds().isEmpty())
+        assertTrue(pickerLease.id in activePickerLeaseIds())
+
+        sendRejectedUiReply(requestId, "valid")
+        assertEquals(snapshot, manager.pluginUi.value)
+        assertTrue(manager.pluginUiError.value)
+
+        manager.invokePluginUiAction("fixture-b-action")
+        assertTrue(pendingUiOperationIds().isNotEmpty())
+        sendMalformedUiReply(latestPluginUiRequestId(), "wrong_id")
+        assertTrue(pendingUiOperationIds().isEmpty())
+        assertTrue(dictionaryActionGrantIds().isEmpty())
+        assertTrue(pickerLease.id in activePickerLeaseIds())
+        manager.invokePluginUiAction("fixture-b-action")
+        sendMalformedUiReply(latestPluginUiRequestId(), "wrong_ui")
+        assertEquals(snapshot, manager.pluginUi.value)
+        assertTrue(manager.pluginUiError.value)
+        assertTrue(pickerLease.id in activePickerLeaseIds())
+        manager.releasePluginUiPickerLease(pickerLease)
     }
 
     @Test
@@ -694,6 +792,94 @@ class AutocorrectHostBinderAndroidTest {
             field.get(manager) as Messenger
         }
 
+    private fun openSecondProviderUi() {
+        runBlocking {
+            prefs.suggestion.autocorrectPluginComponent
+                .set(secondProviderComponent.flattenToString()).getOrThrow()
+        }
+        manager.onSelectedProviderChanged()
+        manager.refreshProviders()
+        manager.acquirePluginUi()
+        waitForEvent("B_UI_REQUEST")
+        val deadline = SystemClock.uptimeMillis() + 10_000
+        while (manager.pluginUi.value?.appRootPageId != "fixture-b" &&
+            SystemClock.uptimeMillis() < deadline
+        ) {
+            SystemClock.sleep(25)
+        }
+        assertEquals("fixture-b", manager.pluginUi.value?.appRootPageId)
+    }
+
+    private fun sendUiReply(requestId: Long, mode: String) {
+        val result = control("send_ui_reply", Bundle().apply {
+            putParcelable("reply_to", currentReplyMessenger())
+            putLong("request_id", requestId)
+            putString("mode", mode)
+        })
+        assertTrue("fixture failed to send synthetic UI reply", result.getBoolean("sent"))
+    }
+
+    private fun latestPluginUiRequestId() = synchronized(manager) {
+        AutocorrectPluginManager::class.java.getDeclaredField("latestPluginUiRequestId").let { field ->
+            field.isAccessible = true
+            field.getLong(manager)
+        }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> managerSet(name: String): Set<T> = synchronized(manager) {
+        AutocorrectPluginManager::class.java.getDeclaredField(name).let { field ->
+            field.isAccessible = true
+            (field.get(manager) as Set<T>).toSet()
+        }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun dictionaryActionGrantIds(): Set<Long> = synchronized(manager) {
+        AutocorrectPluginManager::class.java.getDeclaredField("pendingDictionaryMutationActions")
+            .let { field ->
+                field.isAccessible = true
+                (field.get(manager) as Map<Long, String>).keys.toSet()
+            }
+    }
+
+    private fun pendingUiOperationIds(): Set<Long> = managerSet("pendingPluginUiOperations")
+
+    private fun activePickerLeaseIds(): Set<Long> = managerSet("activePluginUiPickerLeaseIds")
+
+    private fun sendMalformedUiReply(requestId: Long, mode: String) {
+        sendUiReplyWithDiagnostic(
+            requestId,
+            mode,
+            AutocorrectPluginDiagnosticError.MALFORMED_MESSAGE,
+        )
+    }
+
+    private fun sendRejectedUiReply(requestId: Long, mode: String) {
+        sendUiReplyWithDiagnostic(requestId, mode, AutocorrectPluginDiagnosticError.UNKNOWN_REQUEST)
+    }
+
+    private fun sendUiReplyWithDiagnostic(
+        requestId: Long,
+        mode: String,
+        expectedError: AutocorrectPluginDiagnosticError,
+    ) {
+        val previousSequence = manager.diagnosticsSnapshot().records.lastOrNull()?.sequence ?: 0L
+        sendUiReply(requestId, mode)
+        val deadline = SystemClock.uptimeMillis() + 10_000
+        fun hasDiagnostic() = manager.diagnosticsSnapshot().records.any { record ->
+            val event = record.event as? AutocorrectPluginDiagnosticEvent.ReplyRejected
+            record.sequence > previousSequence &&
+                event?.operation == AutocorrectPluginDiagnosticOperation.PLUGIN_UI &&
+                event.error == expectedError
+        }
+        while (!hasDiagnostic() && SystemClock.uptimeMillis() < deadline) {
+            SystemClock.sleep(25)
+        }
+        assertTrue("UI reply rejection was not reported", hasDiagnostic())
+        instrumentation.waitForIdleSync()
+    }
+
     private fun staleReplyCount() = manager.diagnosticsSnapshot().records.count { record ->
         val event = record.event as? AutocorrectPluginDiagnosticEvent.ReplyRejected
         event?.error == AutocorrectPluginDiagnosticError.STALE_BINDING
@@ -750,21 +936,22 @@ class AutocorrectHostBinderAndroidTest {
         assertTrue("old-epoch reply was not rejected", staleReplyCount() >= expected)
     }
 
-    private fun discoveryFinishCount() = manager.diagnosticsSnapshot().records.count { record ->
-        (record.event as? AutocorrectPluginDiagnosticEvent.Discovery)?.state in setOf(
-            AutocorrectPluginDiagnosticState.SUCCEEDED,
-            AutocorrectPluginDiagnosticState.FAILED,
-        )
-    }
+    private fun latestDiscoveryFinishSequence() = manager.diagnosticsSnapshot().records
+        .lastOrNull { record ->
+            (record.event as? AutocorrectPluginDiagnosticEvent.Discovery)?.state in setOf(
+                AutocorrectPluginDiagnosticState.SUCCEEDED,
+                AutocorrectPluginDiagnosticState.FAILED,
+            )
+        }?.sequence ?: 0L
 
     private fun awaitHostCommandBarrier() {
-        val previous = discoveryFinishCount()
+        val previous = latestDiscoveryFinishSequence()
         manager.refreshProviders()
         val deadline = SystemClock.uptimeMillis() + 10_000
-        while (discoveryFinishCount() == previous && SystemClock.uptimeMillis() < deadline) {
+        while (latestDiscoveryFinishSequence() <= previous && SystemClock.uptimeMillis() < deadline) {
             SystemClock.sleep(25)
         }
-        assertTrue("host command barrier did not complete", discoveryFinishCount() > previous)
+        assertTrue("host command barrier did not complete", latestDiscoveryFinishSequence() > previous)
     }
 
     private fun List<String>.lastIndexOfAny(first: String, second: String) =
