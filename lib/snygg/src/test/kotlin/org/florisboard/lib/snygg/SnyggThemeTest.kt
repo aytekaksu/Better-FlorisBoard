@@ -190,6 +190,23 @@ class SnyggThemeTest {
     }
 
     @Test
+    fun `undefined selector value removes an earlier property`() {
+        val stylesheet = SnyggStylesheet.v2 {
+            "key" {
+                background = rgbaColor(255, 0, 0)
+                foreground = rgbaColor(0, 0, 255)
+            }
+            "key"(selector = SnyggSelector.FOCUS) {
+                background = `var`("--not-existing")
+            }
+        }
+        val focused = SnyggTheme.compileFrom(stylesheet).helperQuery("key", selector = SnyggSelector.FOCUS)
+
+        assertIs<SnyggUndefinedValue>(focused.background)
+        assertEquals(Color.Blue, assertIs<SnyggStaticColorValue>(focused.foreground).color)
+    }
+
+    @Test
     fun `theme with font with zero source sets should not crash`() {
         val stylesheet = SnyggStylesheet.v2 {
             font("Comic Sans") {
@@ -268,13 +285,13 @@ class SnyggThemeTest {
             assertIs<SnyggUndefinedValue>(childImplicit.shape)
 
             val childExplicit = theme.helperQuery("child-inherits-explicitly", parentStyle = parentStyle)
-            assertIs<SnyggStaticColorValue>(childExplicit.background)
+            assertEquals(Color.Red, assertIs<SnyggStaticColorValue>(childExplicit.background).color)
             assertIs<SnyggStaticColorValue>(childExplicit.foreground)
             assertIs<SnyggStaticColorValue>(childExplicit.borderColor)
             // assertIs<>(childExplicit.borderStyle)
             assertIs<SnyggDpSizeValue>(childExplicit.borderWidth)
             // assertIs<>(childExplicit.fontFamily)
-            assertIs<SnyggSpSizeValue>(childExplicit.fontSize)
+            assertEquals(12.sp, assertIs<SnyggSpSizeValue>(childExplicit.fontSize).sp)
             assertIs<SnyggFontStyleValue>(childExplicit.fontStyle)
             assertIs<SnyggFontWeightValue>(childExplicit.fontWeight)
             assertIs<SnyggPaddingValue>(childExplicit.margin)

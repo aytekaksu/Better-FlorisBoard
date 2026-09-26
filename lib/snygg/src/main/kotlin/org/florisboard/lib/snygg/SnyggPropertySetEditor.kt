@@ -86,21 +86,14 @@ class SnyggSinglePropertySetEditor(initProperties: Map<String, SnyggValue>? = nu
         fontSizeMultiplier: Float,
     ) {
         for ((property, value) in thisStyle.properties) {
-            when {
-                value.isUndefined() -> setProperty(property, null)
-                value.isInherit() -> setProperty(property, parentStyle.properties[property])
-                else -> {
-                    val transformedValue = when (value) {
-                        is SnyggSpSizeValue if value.sp.isSpecified -> {
-                            SnyggSpSizeValue(value.sp * fontSizeMultiplier)
-                        }
-                        else -> {
-                            value
-                        }
-                    }
-                    setProperty(property, transformedValue)
-                }
+            val transformedValue = when {
+                value.isUndefined() -> null
+                value.isInherit() -> parentStyle.properties[property]
+                value is SnyggSpSizeValue && value.sp.isSpecified ->
+                    SnyggSpSizeValue(value.sp * fontSizeMultiplier)
+                else -> value
             }
+            setProperty(property, transformedValue)
         }
         inheritImplicitly(parentStyle)
     }
@@ -206,103 +199,65 @@ class SnyggSinglePropertySetEditor(initProperties: Map<String, SnyggValue>? = nu
         return SnyggStaticColorValue(Color(red, green, blue, a))
     }
 
-    fun dynamicLightColor(name: String): SnyggDynamicLightColorValue {
-        return SnyggDynamicLightColorValue(name)
-    }
+    fun dynamicLightColor(name: String): SnyggDynamicLightColorValue = SnyggDynamicLightColorValue(name)
 
-    fun dynamicDarkColor(name: String): SnyggDynamicDarkColorValue {
-        return SnyggDynamicDarkColorValue(name)
-    }
+    fun dynamicDarkColor(name: String): SnyggDynamicDarkColorValue = SnyggDynamicDarkColorValue(name)
 
-    fun genericFontFamily(fontFamily: FontFamily): SnyggGenericFontFamilyValue {
-        return SnyggGenericFontFamilyValue(fontFamily)
-    }
+    fun genericFontFamily(fontFamily: FontFamily): SnyggGenericFontFamilyValue = SnyggGenericFontFamilyValue(fontFamily)
 
-    fun fontStyle(fontStyle: FontStyle): SnyggFontStyleValue {
-        return SnyggFontStyleValue(fontStyle)
-    }
+    fun fontStyle(fontStyle: FontStyle): SnyggFontStyleValue = SnyggFontStyleValue(fontStyle)
 
-    fun fontWeight(fontWeight: FontWeight): SnyggFontWeightValue {
-        return SnyggFontWeightValue(fontWeight)
-    }
+    fun fontWeight(fontWeight: FontWeight): SnyggFontWeightValue = SnyggFontWeightValue(fontWeight)
 
-    fun textAlign(textAlign: TextAlign): SnyggTextAlignValue {
-        return SnyggTextAlignValue(textAlign)
-    }
+    fun textAlign(textAlign: TextAlign): SnyggTextAlignValue = SnyggTextAlignValue(textAlign)
 
     fun textMaxLines(maxLines: Int): SnyggTextMaxLinesValue {
         require(maxLines >= 1)
         return SnyggTextMaxLinesValue(maxLines)
     }
 
-    fun textOverflow(textOverflow: TextOverflow): SnyggTextOverflowValue {
-        return SnyggTextOverflowValue(textOverflow)
-    }
+    fun textOverflow(textOverflow: TextOverflow): SnyggTextOverflowValue = SnyggTextOverflowValue(textOverflow)
 
-    fun rectangleShape(): SnyggRectangleShapeValue {
-        return SnyggRectangleShapeValue()
-    }
+    fun rectangleShape(): SnyggRectangleShapeValue = SnyggRectangleShapeValue()
 
-    fun circleShape(): SnyggCircleShapeValue {
-        return SnyggCircleShapeValue()
-    }
+    fun circleShape(): SnyggCircleShapeValue = SnyggCircleShapeValue()
 
-    fun roundedCornerShape(cornerSize: Dp): SnyggRoundedCornerDpShapeValue {
-        return SnyggRoundedCornerDpShapeValue(cornerSize, cornerSize, cornerSize, cornerSize)
-    }
+    fun roundedCornerShape(cornerSize: Dp): SnyggRoundedCornerDpShapeValue =
+        SnyggRoundedCornerDpShapeValue(cornerSize, cornerSize, cornerSize, cornerSize)
 
     fun roundedCornerShape(
         topStart: Dp,
         topEnd: Dp,
         bottomEnd: Dp,
         bottomStart: Dp,
-    ): SnyggRoundedCornerDpShapeValue {
-        return SnyggRoundedCornerDpShapeValue(topStart, topEnd, bottomEnd, bottomStart)
-    }
+    ): SnyggRoundedCornerDpShapeValue = SnyggRoundedCornerDpShapeValue(topStart, topEnd, bottomEnd, bottomStart)
 
-    fun roundedCornerShape(cornerSize: Int): SnyggRoundedCornerPercentShapeValue {
-        return SnyggRoundedCornerPercentShapeValue(cornerSize, cornerSize, cornerSize, cornerSize)
-    }
+    fun roundedCornerShape(cornerSize: Int): SnyggRoundedCornerPercentShapeValue =
+        SnyggRoundedCornerPercentShapeValue(cornerSize, cornerSize, cornerSize, cornerSize)
 
     fun padding(
         start: Dp,
         top: Dp,
         end: Dp,
         bottom: Dp,
-    ): SnyggPaddingValue {
-        return SnyggPaddingValue(PaddingValues(start, top, end, bottom))
-    }
+    ): SnyggPaddingValue = SnyggPaddingValue(PaddingValues(start, top, end, bottom))
 
     fun padding(
         horizontal: Dp,
         vertical: Dp,
-    ): SnyggPaddingValue {
-        return SnyggPaddingValue(PaddingValues(horizontal, vertical))
-    }
+    ): SnyggPaddingValue = SnyggPaddingValue(PaddingValues(horizontal, vertical))
 
-    fun padding(all: Dp): SnyggPaddingValue {
-        return SnyggPaddingValue(PaddingValues(all))
-    }
+    fun padding(all: Dp): SnyggPaddingValue = SnyggPaddingValue(PaddingValues(all))
 
-    fun size(dp: Dp): SnyggDpSizeValue {
-        return SnyggDpSizeValue(dp)
-    }
+    fun size(dp: Dp): SnyggDpSizeValue = SnyggDpSizeValue(dp)
 
-    fun fontSize(sp: TextUnit): SnyggSpSizeValue {
-        return SnyggSpSizeValue(sp)
-    }
+    fun fontSize(sp: TextUnit): SnyggSpSizeValue = SnyggSpSizeValue(sp)
 
-    fun uri(uri: String): SnyggUriValue {
-        return SnyggUriValue(uri)
-    }
+    fun uri(uri: String): SnyggUriValue = SnyggUriValue(uri)
 
-    fun `var`(key: String): SnyggDefinedVarValue {
-        return SnyggDefinedVarValue(key)
-    }
+    fun `var`(key: String): SnyggDefinedVarValue = SnyggDefinedVarValue(key)
 
-    fun inherit(): SnyggInheritValue {
-        return SnyggInheritValue
-    }
+    fun inherit(): SnyggInheritValue = SnyggInheritValue
 }
 
 class SnyggMultiplePropertySetsEditor(initSets: List<SnyggSinglePropertySet>? = null) : SnyggPropertySetEditor {
