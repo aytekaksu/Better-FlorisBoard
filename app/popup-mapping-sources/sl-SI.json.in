@@ -1,0 +1,31 @@
+{
+  "all": {
+    "c": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  269, "label": "č" }
+      ]
+    },
+    "s": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  353, "label": "š" }
+      ]
+    },
+    "z": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  382, "label": "ž" }
+      ]
+    },
+@@COMMON_RIGHT_POPUP@@
+  },
+  "uri": {
+    "~right": {
+      "main": { "code": -255, "label": ".com" },
+      "relevant": [
+        { "code": -255, "label": ".eu" },
+        { "code": -255, "label": ".si" },
+        { "code": -255, "label": ".org" },
+        { "code": -255, "label": ".net" }
+      ]
+    }
+  }
+}

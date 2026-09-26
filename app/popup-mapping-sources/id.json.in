@@ -1,0 +1,24 @@
+{
+  "all": {
+    "e": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  234, "label": "ê" },
+        { "$": "auto_text_key", "code":  233, "label": "é" },
+        { "$": "auto_text_key", "code":  232, "label": "è" }
+      ]
+    },
+@@COMMON_RIGHT_POPUP@@
+  },
+  "uri": {
+    "~right": {
+      "main": { "code": -255, "label": ".com" },
+      "relevant": [
+        { "code": -255, "label": ".id" },
+        { "code": -255, "label": ".org" },
+        { "code": -255, "label": ".net" },
+        { "code": -255, "label": ".co.id"},
+        { "code": -255, "label": ".go.id"}
+      ]
+    }
+  }
+}

@@ -98,6 +98,9 @@ class KeyboardMetadataContractTest :
         test("bundled popup metadata exposes every packaged mapping") {
             val assetRoot = sequenceOf("src/main/assets", "app/src/main/assets")
                 .map { File(it, "ime/keyboard/org.florisboard.localization") }.first { it.isDirectory }
+            val generatedRoot = sequenceOf("build/generated", "app/build/generated")
+                .map { File(it, "popupMappingAssets/debug/ime/keyboard/org.florisboard.localization") }
+                .first { it.isDirectory }
             val extension = ExtensionJsonConfig.decodeFromString(
                 KeyboardExtension.serializer(),
                 assetRoot.resolve("extension.json").readText(),
@@ -105,13 +108,15 @@ class KeyboardMetadataContractTest :
             extension.validateForImport().isValid shouldBe true
 
             val declaredFiles = extension.popupMappings.map { it.mappingFile() }
-            val packagedFiles = assetRoot.resolve("popupMappings").walkTopDown()
+            assetRoot.resolve("popupMappings").exists() shouldBe false
+            val packagedFiles = generatedRoot.resolve("popupMappings").walkTopDown()
                 .filter(File::isFile)
-                .map { it.relativeTo(assetRoot).invariantSeparatorsPath }
+                .map { it.relativeTo(generatedRoot).invariantSeparatorsPath }
                 .toList()
+            packagedFiles.size shouldBe 57
             packagedFiles.sorted() shouldBe declaredFiles.sorted()
             packagedFiles.forEach { path ->
-                DefaultJsonConfig.decodeFromString<PopupMapping>(assetRoot.resolve(path).readText())
+                DefaultJsonConfig.decodeFromString<PopupMapping>(generatedRoot.resolve(path).readText())
             }
 
             val declaredIds = extension.popupMappings.mapTo(mutableSetOf()) { it.id }

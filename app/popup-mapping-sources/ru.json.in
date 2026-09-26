@@ -1,0 +1,26 @@
+{
+  "all": {
+    "е": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  1105, "label": "ё" }
+      ]
+    },
+    "ь": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  1098, "label": "ъ" }
+      ]
+    },
+@@COMMON_RIGHT_POPUP@@
+  },
+  "uri": {
+    "~right": {
+      "main": { "code": -255, "label": ".com" },
+      "relevant": [
+        { "code": -255, "label": ".ru" },
+        { "code": -255, "label": ".edu" },
+        { "code": -255, "label": ".org" },
+        { "code": -255, "label": ".net" }
+      ]
+    }
+  }
+}

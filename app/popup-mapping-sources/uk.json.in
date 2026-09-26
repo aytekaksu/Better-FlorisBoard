@@ -1,0 +1,36 @@
+{
+  "all": {
+    "г": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  1169, "label": "ґ" }
+      ]
+    },
+    "і": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  1111, "label": "ї" }
+      ]
+    },
+    "є": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  8212, "label": "—" }
+      ]
+    },
+    "ь": {
+      "relevant": [
+        { "$": "auto_text_key", "code":  700, "label": "ʼ" },
+        { "$": "auto_text_key", "code":  39, "label": "'" }
+      ]
+    },
+@@COMMON_RIGHT_POPUP@@
+  },
+  "uri": {
+    "~right": {
+      "main": { "code": -255, "label": ".com" },
+      "relevant": [
+        { "code": -255, "label": ".ua" },
+        { "code": -255, "label": ".org" },
+        { "code": -255, "label": ".net" }
+      ]
+    }
+  }
+}
