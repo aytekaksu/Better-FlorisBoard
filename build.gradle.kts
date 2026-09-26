@@ -199,18 +199,21 @@ val formattedKotlinSources = files(
 
 val verifyQualitySourceScope by tasks.registering {
     group = "verification"
+    val sources = qualityKotlinSources + formattedKotlinSources
+    val sourceRoot = rootDir
+    val globs = listOf(
+        "backup archives" to backupArchiveKotlinSources,
+        "autocorrect plugins" to autocorrectPluginKotlinSources,
+        "autocorrect API" to autocorrectApiKotlinSources,
+        "autocorrect host core" to autocorrectHostCoreKotlinSources,
+    )
     doLast {
-        val missing = (qualityKotlinSources.files + formattedKotlinSources.files).filterNot { it.isFile }
+        val missing = sources.files.filterNot { it.isFile }
         check(missing.isEmpty()) {
-            "Missing quality sources: ${missing.map { it.relativeTo(rootDir).path }.sorted().joinToString()}"
+            "Missing quality sources: ${missing.map { it.relativeTo(sourceRoot).path }.sorted().joinToString()}"
         }
-        listOf(
-            "backup archives" to backupArchiveKotlinSources,
-            "autocorrect plugins" to autocorrectPluginKotlinSources,
-            "autocorrect API" to autocorrectApiKotlinSources,
-            "autocorrect host core" to autocorrectHostCoreKotlinSources,
-        ).forEach { (name, sources) ->
-            check(sources.files.isNotEmpty()) { "Empty quality source glob: $name" }
+        globs.forEach { (name, files) ->
+            check(files.files.isNotEmpty()) { "Empty quality source glob: $name" }
         }
     }
 }
