@@ -193,6 +193,9 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             clipboardManager.primaryClipFlow.collectLatestIn(scope) {
                 updateActiveEvaluators()
             }
+            editorInstance.activeInfoFlow.collectLatestIn(scope) {
+                updateActiveEvaluators()
+            }
             editorInstance.activeContentFlow.collectIn(scope) { content ->
                 resetSuggestions(content)
             }

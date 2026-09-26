@@ -71,7 +71,7 @@ to retire because the editor may already hold the grant. Input barriers are
 resolved, abandoned, or invalidated exactly once when the editor generation
 changes. The app lazily wires the keyboard's input queue and editor commits to
 Clipboard; it looks up neither manager itself. The editor owns MIME eligibility,
-while the queue preserves text/media ordering.
+including MIME-only input switches, while the queue preserves text/media ordering.
 
 ## Synchronization and privacy
 
