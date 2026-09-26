@@ -199,6 +199,7 @@ class FlorisApplication : Application() {
     val nlpManager: Lazy<NlpManager> = lazy {
         NlpManager(
             this,
+            lazy { clipboardManager.value.primaryClipFlow },
             // The getter includes pending edits not yet reflected in activeContentFlow.
             { editorInstance.value.activeContent },
         ) { keyboardManager.value.activeState.isIncognitoMode }
