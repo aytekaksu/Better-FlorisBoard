@@ -183,6 +183,7 @@ class AutocorrectHostBinderAndroidTest {
     fun providerSwitchCannotRouteUiToTheOldPhysicalConnection() {
         manager.acquirePluginUi()
         waitForEvent("UI_REQUEST")
+        val oldEpoch = requireNotNull(latestConnectedBindingEpoch())
         synchronized(manager) {
             runBlocking {
                 prefs.suggestion.autocorrectPluginComponent
@@ -197,7 +198,22 @@ class AutocorrectHostBinderAndroidTest {
         assertEquals(1, switched.events.count { it == "UI_REQUEST" })
         assertFalse(switched.events.contains("UI_ACTION"))
         assertFalse(switched.events.contains("B_UI_ACTION"))
-        assertTrue(switched.events.indexOf("UNBOUND") < switched.events.indexOf("B_UI_REQUEST"))
+        val newEpoch = requireNotNull(latestConnectedBindingEpoch())
+        assertTrue(newEpoch > oldEpoch)
+        val bindingEvents = manager.diagnosticsSnapshot().records.mapNotNull { record ->
+            record.event as? AutocorrectPluginDiagnosticEvent.Binding
+        }
+        val oldDisconnect = bindingEvents.indexOfLast {
+            it.bindingEpoch == oldEpoch && it.state == AutocorrectPluginDiagnosticState.DISCONNECTED
+        }
+        val newConnect = bindingEvents.indexOfLast {
+            it.bindingEpoch == newEpoch && it.state == AutocorrectPluginDiagnosticState.CONNECTED
+        }
+        assertTrue(
+            "old physical lease must release before B connects",
+            oldDisconnect >= 0 && oldDisconnect < newConnect,
+        )
+        waitForEvent("UNBOUND") // Provider cleanup is asynchronous to the host's unbindService call.
         manager.invokePluginUiAction("switch-probe")
         waitForEvent("B_UI_ACTION")
     }
