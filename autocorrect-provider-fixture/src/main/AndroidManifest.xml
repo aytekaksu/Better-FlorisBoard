@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <permission
+        android:name="org.florisboard.autocorrect.fixture.permission.CONTROL"
+        android:protectionLevel="signature" />
+    <application
+        android:allowBackup="false"
+        android:label="Autocorrect test fixture">
+        <service
+            android:name=".SyntheticAutocorrectProviderService"
+            android:exported="true"
+            android:process=":provider">
+            <intent-filter>
+                <action android:name="org.florisboard.autocorrect.api.action.BIND_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="org.florisboard.autocorrect.api.PROTOCOL_VERSION"
+                android:value="5" />
+        </service>
+        <service
+            android:name=".SyntheticAutocorrectProviderServiceB"
+            android:exported="true"
+            android:process=":provider">
+            <intent-filter>
+                <action android:name="org.florisboard.autocorrect.api.action.BIND_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="org.florisboard.autocorrect.api.PROTOCOL_VERSION"
+                android:value="5" />
+        </service>
+        <provider
+            android:name=".SyntheticAutocorrectControlProvider"
+            android:authorities="org.florisboard.autocorrect.fixture.control"
+            android:exported="true"
+            android:permission="org.florisboard.autocorrect.fixture.permission.CONTROL"
+            android:process=":provider" />
+    </application>
+</manifest>

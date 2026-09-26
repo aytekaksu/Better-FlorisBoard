@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="org.florisboard.autocorrect.fixture.permission.CONTROL" />
+
     <application>
         <activity
             android:name="dev.patrickgold.florisboard.test.EditorHarnessActivity"
