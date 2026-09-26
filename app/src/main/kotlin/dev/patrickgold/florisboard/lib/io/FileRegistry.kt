@@ -16,64 +16,24 @@
 
 package dev.patrickgold.florisboard.lib.io
 
-import dev.patrickgold.florisboard.lib.cache.CacheManager
 import org.florisboard.lib.kotlin.io.FsFile
 
 object FileRegistry {
-    val BackupArchive = Entry(
-        type = Type.BINARY,
-        fileExt = "zip",
-        mediaType = "application/zip",
-        alternativeMediaTypes = listOf(
-            "application/octet-stream",
-        ),
-    )
-
-    val FlexExtension = Entry(
-        type = Type.BINARY,
-        fileExt = "flex",
-        mediaType = "application/vnd.florisboard.extension+zip",
-        alternativeMediaTypes = listOf(
-            "application/zip",
-            "application/octet-stream",
-        ),
+    const val BACKUP_ARCHIVE_MEDIA_TYPE = "application/zip"
+    const val FLEX_EXTENSION_MEDIA_TYPE = "application/vnd.florisboard.extension+zip"
+    private const val FLEX_EXTENSION_FILE_EXT = "flex"
+    private val FLEX_EXTENSION_ALTERNATIVE_MEDIA_TYPES = listOf(
+        "application/zip",
+        "application/octet-stream",
     )
 
     fun guessMediaType(file: FsFile, givenMediaType: String?): String? {
-        return when (file.extension) {
-            FlexExtension.fileExt -> {
-                if (FlexExtension.alternativeMediaTypes.contains(givenMediaType)) {
-                    FlexExtension.mediaType
-                } else {
-                    givenMediaType
-                }
-            }
-            else -> givenMediaType
+        return if (file.extension == FLEX_EXTENSION_FILE_EXT &&
+            FLEX_EXTENSION_ALTERNATIVE_MEDIA_TYPES.contains(givenMediaType)
+        ) {
+            FLEX_EXTENSION_MEDIA_TYPE
+        } else {
+            givenMediaType
         }
-    }
-
-    fun matchesFileFilter(fileInfo: CacheManager.FileInfo, filter: List<Entry>): Boolean {
-        val fileExt = fileInfo.file.extension
-        filter.forEach {
-            if (it.fileExt == fileExt ||
-                it.mediaType == fileInfo.mediaType ||
-                it.alternativeMediaTypes.contains(fileInfo.mediaType)
-            ) {
-                return true
-            }
-        }
-        return false
-    }
-
-    data class Entry(
-        val type: Type,
-        val fileExt: String,
-        val mediaType: String,
-        val alternativeMediaTypes: List<String> = emptyList(),
-    )
-
-    enum class Type(val id: String) {
-        BINARY("bin"),
-        TEXT("txt");
     }
 }

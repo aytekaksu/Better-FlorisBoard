@@ -61,24 +61,20 @@ import org.florisboard.lib.compose.florisScrollbar
 import org.florisboard.lib.compose.stringRes
 
 enum class ExtensionListScreenType(
-    val id: String,
     @param:StringRes val titleResId: Int,
     val getExtensionIndex: (ExtensionManager) -> ExtensionManager.ExtensionIndex<*>,
     val editorSerialType: String? = null,
 ) {
     EXT_THEME(
-        id = "ext-theme",
         titleResId = R.string.ext__list__ext_theme,
         getExtensionIndex = { it.themes },
         editorSerialType = ThemeExtension.SERIAL_TYPE,
     ),
     EXT_KEYBOARD(
-        id = "ext-keyboard",
         titleResId = R.string.ext__list__ext_keyboard,
         getExtensionIndex = { it.keyboardExtensions },
     ),
     EXT_LANGUAGEPACK(
-        id = "ext-languagepack",
         titleResId = R.string.ext__list__ext_languagepack,
         getExtensionIndex = { it.languagePacks },
     );

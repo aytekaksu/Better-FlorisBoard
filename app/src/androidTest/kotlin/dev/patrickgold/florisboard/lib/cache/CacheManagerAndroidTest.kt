@@ -83,7 +83,7 @@ class CacheManagerAndroidTest {
             assertEquals(4L, fileInfo.size)
             assertNull(fileInfo.ext)
             assertFalse(fileInfo.file.exists())
-            assertEquals(FileRegistry.FlexExtension.mediaType, fileInfo.mediaType)
+            assertEquals(FileRegistry.FLEX_EXTENSION_MEDIA_TYPE, fileInfo.mediaType)
             assertTrue(fileInfo.file.name.endsWith(".flex"))
             assertNotEquals(fileInfo.displayLabel, fileInfo.file.name)
             assertEquals(
