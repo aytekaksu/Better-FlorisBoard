@@ -20,12 +20,10 @@ import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.plusOrMinus
 import dev.patrickgold.florisboard.shouldBeGreaterThanOrEqualTo
 import dev.patrickgold.florisboard.shouldBeLessThanOrEqualTo
-import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.engine.coroutines.backgroundScope
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.enum
 import io.kotest.property.checkAll
@@ -41,30 +39,26 @@ class ImeWindowControllerEditorMoveTest : FunSpec({
                 Arb.rootInsetsWithUpwardOffset(),
                 Arb.enum<ImeWindowMode.Fixed>(),
             ) { (rootInsets, offset), fixedMode ->
-                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                runEditorGesture(
                     rootInsets, ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = fixedMode), backgroundScope,
                 ) { it.movedBy(offset, 4, 0) }
-
-                assertSoftly {
-                    val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Fixed>()
-                    val specAfter = specAfter.shouldBeInstanceOf<ImeWindowSpec.Fixed>()
-                    specCalculated.shouldBeInstanceOf<ImeWindowSpec.Fixed>().shouldBe(specAfter)
-                    withClue("move operations must not alter keyboard height") {
-                        specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                    .assertAppliedGesture<ImeWindowSpec.Fixed> { specBefore, specAfter ->
+                        withClue("move operations must not alter keyboard height") {
+                            specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations upward must not alter padding left") {
+                            specAfter.props.paddingLeft shouldBe specBefore.props.paddingLeft.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations upward must not alter padding right") {
+                            specAfter.props.paddingRight shouldBe specBefore.props.paddingRight.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations upward must not decrease padding bottom") {
+                            specAfter.props.paddingBottom.shouldBeGreaterThanOrEqualTo(specBefore.props.paddingBottom, tolerance)
+                        }
+                        withClue("move operations upward must not push window out of root bounds") {
+                            specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
+                        }
                     }
-                    withClue("move operations upward must not alter padding left") {
-                        specAfter.props.paddingLeft shouldBe specBefore.props.paddingLeft.plusOrMinus(tolerance)
-                    }
-                    withClue("move operations upward must not alter padding right") {
-                        specAfter.props.paddingRight shouldBe specBefore.props.paddingRight.plusOrMinus(tolerance)
-                    }
-                    withClue("move operations upward must not decrease padding bottom") {
-                        specAfter.props.paddingBottom.shouldBeGreaterThanOrEqualTo(specBefore.props.paddingBottom, tolerance)
-                    }
-                    withClue("move operations upward must not push window out of root bounds") {
-                        specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
-                    }
-                }
             }
         }
 
@@ -73,30 +67,26 @@ class ImeWindowControllerEditorMoveTest : FunSpec({
                 Arb.rootInsetsWithDownwardOffset(),
                 Arb.enum<ImeWindowMode.Fixed>(),
             ) { (rootInsets, offset), fixedMode ->
-                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                runEditorGesture(
                     rootInsets, ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = fixedMode), backgroundScope,
                 ) { it.movedBy(offset, 4, 0) }
-
-                assertSoftly {
-                    val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Fixed>()
-                    val specAfter = specAfter.shouldBeInstanceOf<ImeWindowSpec.Fixed>()
-                    specCalculated.shouldBeInstanceOf<ImeWindowSpec.Fixed>().shouldBe(specAfter)
-                    withClue("move operations must not alter keyboard height") {
-                        specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                    .assertAppliedGesture<ImeWindowSpec.Fixed> { specBefore, specAfter ->
+                        withClue("move operations must not alter keyboard height") {
+                            specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations downward must not alter padding left") {
+                            specAfter.props.paddingLeft shouldBe specBefore.props.paddingLeft.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations downward must not alter padding right") {
+                            specAfter.props.paddingRight shouldBe specBefore.props.paddingRight.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations downward must not increase padding bottom") {
+                            specAfter.props.paddingBottom.shouldBeLessThanOrEqualTo(specBefore.props.paddingBottom, tolerance)
+                        }
+                        withClue("move operations downward must not push window out of root bounds") {
+                            specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
+                        }
                     }
-                    withClue("move operations downward must not alter padding left") {
-                        specAfter.props.paddingLeft shouldBe specBefore.props.paddingLeft.plusOrMinus(tolerance)
-                    }
-                    withClue("move operations downward must not alter padding right") {
-                        specAfter.props.paddingRight shouldBe specBefore.props.paddingRight.plusOrMinus(tolerance)
-                    }
-                    withClue("move operations downward must not increase padding bottom") {
-                        specAfter.props.paddingBottom.shouldBeLessThanOrEqualTo(specBefore.props.paddingBottom, tolerance)
-                    }
-                    withClue("move operations downward must not push window out of root bounds") {
-                        specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
-                    }
-                }
             }
         }
 
@@ -105,30 +95,26 @@ class ImeWindowControllerEditorMoveTest : FunSpec({
                 Arb.rootInsetsWithLeftwardOffset(),
                 Arb.enum<ImeWindowMode.Fixed>(),
             ) { (rootInsets, offset), fixedMode ->
-                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                runEditorGesture(
                     rootInsets, ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = fixedMode), backgroundScope,
                 ) { it.movedBy(offset, 4, 0) }
-
-                assertSoftly {
-                    val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Fixed>()
-                    val specAfter = specAfter.shouldBeInstanceOf<ImeWindowSpec.Fixed>()
-                    specCalculated.shouldBeInstanceOf<ImeWindowSpec.Fixed>().shouldBe(specAfter)
-                    withClue("move operations must not alter keyboard height") {
-                        specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                    .assertAppliedGesture<ImeWindowSpec.Fixed> { specBefore, specAfter ->
+                        withClue("move operations must not alter keyboard height") {
+                            specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations leftward must not increase padding left") {
+                            specAfter.props.paddingLeft.shouldBeLessThanOrEqualTo(specBefore.props.paddingLeft, tolerance)
+                        }
+                        withClue("move operations leftward must not decrease padding right") {
+                            specAfter.props.paddingRight.shouldBeGreaterThanOrEqualTo(specBefore.props.paddingRight, tolerance)
+                        }
+                        withClue("move operations leftward must not alter padding bottom") {
+                            specAfter.props.paddingBottom shouldBe specBefore.props.paddingBottom.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations leftward must not push window out of root bounds") {
+                            specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
+                        }
                     }
-                    withClue("move operations leftward must not increase padding left") {
-                        specAfter.props.paddingLeft.shouldBeLessThanOrEqualTo(specBefore.props.paddingLeft, tolerance)
-                    }
-                    withClue("move operations leftward must not decrease padding right") {
-                        specAfter.props.paddingRight.shouldBeGreaterThanOrEqualTo(specBefore.props.paddingRight, tolerance)
-                    }
-                    withClue("move operations leftward must not alter padding bottom") {
-                        specAfter.props.paddingBottom shouldBe specBefore.props.paddingBottom.plusOrMinus(tolerance)
-                    }
-                    withClue("move operations leftward must not push window out of root bounds") {
-                        specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
-                    }
-                }
             }
         }
 
@@ -137,30 +123,26 @@ class ImeWindowControllerEditorMoveTest : FunSpec({
                 Arb.rootInsetsWithRightwardOffset(),
                 Arb.enum<ImeWindowMode.Fixed>(),
             ) { (rootInsets, offset), fixedMode ->
-                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                runEditorGesture(
                     rootInsets, ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = fixedMode), backgroundScope,
                 ) { it.movedBy(offset, 4, 0) }
-
-                assertSoftly {
-                    val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Fixed>()
-                    val specAfter = specAfter.shouldBeInstanceOf<ImeWindowSpec.Fixed>()
-                    specCalculated.shouldBeInstanceOf<ImeWindowSpec.Fixed>().shouldBe(specAfter)
-                    withClue("move operations must not alter keyboard height") {
-                        specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                    .assertAppliedGesture<ImeWindowSpec.Fixed> { specBefore, specAfter ->
+                        withClue("move operations must not alter keyboard height") {
+                            specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations rightward must not decrease padding left") {
+                            specAfter.props.paddingLeft.shouldBeGreaterThanOrEqualTo(specBefore.props.paddingLeft, tolerance)
+                        }
+                        withClue("move operations rightward must not increase padding right") {
+                            specAfter.props.paddingRight.shouldBeLessThanOrEqualTo(specBefore.props.paddingRight, tolerance)
+                        }
+                        withClue("move operations rightward must not alter padding bottom") {
+                            specAfter.props.paddingBottom shouldBe specBefore.props.paddingBottom.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations rightward must not push window out of root bounds") {
+                            specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
+                        }
                     }
-                    withClue("move operations rightward must not decrease padding left") {
-                        specAfter.props.paddingLeft.shouldBeGreaterThanOrEqualTo(specBefore.props.paddingLeft, tolerance)
-                    }
-                    withClue("move operations rightward must not increase padding right") {
-                        specAfter.props.paddingRight.shouldBeLessThanOrEqualTo(specBefore.props.paddingRight, tolerance)
-                    }
-                    withClue("move operations rightward must not alter padding bottom") {
-                        specAfter.props.paddingBottom shouldBe specBefore.props.paddingBottom.plusOrMinus(tolerance)
-                    }
-                    withClue("move operations rightward must not push window out of root bounds") {
-                        specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
-                    }
-                }
             }
         }
     }
@@ -171,30 +153,26 @@ class ImeWindowControllerEditorMoveTest : FunSpec({
                 Arb.rootInsetsWithUpwardOffset(),
                 Arb.enum<ImeWindowMode.Floating>(),
             ) { (rootInsets, offset), floatingMode ->
-                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                runEditorGesture(
                     rootInsets, ImeWindowConfig(ImeWindowMode.FLOATING, floatingMode = floatingMode), backgroundScope,
                 ) { it.movedBy(offset, 4, 0) }
-
-                assertSoftly {
-                    val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Floating>()
-                    val specAfter = specAfter.shouldBeInstanceOf<ImeWindowSpec.Floating>()
-                    specCalculated.shouldBeInstanceOf<ImeWindowSpec.Floating>().shouldBe(specAfter)
-                    withClue("move operations must not alter keyboard height") {
-                        specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                    .assertAppliedGesture<ImeWindowSpec.Floating> { specBefore, specAfter ->
+                        withClue("move operations must not alter keyboard height") {
+                            specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations must not alter keyboard width") {
+                            specAfter.props.keyboardWidth shouldBe specBefore.props.keyboardWidth.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations upward must not alter offset left") {
+                            specAfter.props.offsetLeft shouldBe specBefore.props.offsetLeft.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations upward must not decrease offset bottom") {
+                            specAfter.props.offsetBottom.shouldBeGreaterThanOrEqualTo(specBefore.props.offsetBottom, tolerance)
+                        }
+                        withClue("move operations upward must not push window out of root bounds") {
+                            specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
+                        }
                     }
-                    withClue("move operations must not alter keyboard width") {
-                        specAfter.props.keyboardWidth shouldBe specBefore.props.keyboardWidth.plusOrMinus(tolerance)
-                    }
-                    withClue("move operations upward must not alter offset left") {
-                        specAfter.props.offsetLeft shouldBe specBefore.props.offsetLeft.plusOrMinus(tolerance)
-                    }
-                    withClue("move operations upward must not decrease offset bottom") {
-                        specAfter.props.offsetBottom.shouldBeGreaterThanOrEqualTo(specBefore.props.offsetBottom, tolerance)
-                    }
-                    withClue("move operations upward must not push window out of root bounds") {
-                        specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
-                    }
-                }
             }
         }
 
@@ -203,30 +181,26 @@ class ImeWindowControllerEditorMoveTest : FunSpec({
                 Arb.rootInsetsWithDownwardOffset(),
                 Arb.enum<ImeWindowMode.Floating>(),
             ) { (rootInsets, offset), floatingMode ->
-                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                runEditorGesture(
                     rootInsets, ImeWindowConfig(ImeWindowMode.FLOATING, floatingMode = floatingMode), backgroundScope,
                 ) { it.movedBy(offset, 4, 0) }
-
-                assertSoftly {
-                    val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Floating>()
-                    val specAfter = specAfter.shouldBeInstanceOf<ImeWindowSpec.Floating>()
-                    specCalculated.shouldBeInstanceOf<ImeWindowSpec.Floating>().shouldBe(specAfter)
-                    withClue("move operations must not alter keyboard height") {
-                        specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                    .assertAppliedGesture<ImeWindowSpec.Floating> { specBefore, specAfter ->
+                        withClue("move operations must not alter keyboard height") {
+                            specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations must not alter keyboard width") {
+                            specAfter.props.keyboardWidth shouldBe specBefore.props.keyboardWidth.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations downward must not alter offset left") {
+                            specAfter.props.offsetLeft shouldBe specBefore.props.offsetLeft.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations downward must not increase offset bottom") {
+                            specAfter.props.offsetBottom.shouldBeLessThanOrEqualTo(specBefore.props.offsetBottom, tolerance)
+                        }
+                        withClue("move operations downward must not push window out of root bounds") {
+                            specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
+                        }
                     }
-                    withClue("move operations must not alter keyboard width") {
-                        specAfter.props.keyboardWidth shouldBe specBefore.props.keyboardWidth.plusOrMinus(tolerance)
-                    }
-                    withClue("move operations downward must not alter offset left") {
-                        specAfter.props.offsetLeft shouldBe specBefore.props.offsetLeft.plusOrMinus(tolerance)
-                    }
-                    withClue("move operations downward must not increase offset bottom") {
-                        specAfter.props.offsetBottom.shouldBeLessThanOrEqualTo(specBefore.props.offsetBottom, tolerance)
-                    }
-                    withClue("move operations downward must not push window out of root bounds") {
-                        specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
-                    }
-                }
             }
         }
 
@@ -235,30 +209,26 @@ class ImeWindowControllerEditorMoveTest : FunSpec({
                 Arb.rootInsetsWithLeftwardOffset(),
                 Arb.enum<ImeWindowMode.Floating>(),
             ) { (rootInsets, offset), floatingMode ->
-                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                runEditorGesture(
                     rootInsets, ImeWindowConfig(ImeWindowMode.FLOATING, floatingMode = floatingMode), backgroundScope,
                 ) { it.movedBy(offset, 4, 0) }
-
-                assertSoftly {
-                    val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Floating>()
-                    val specAfter = specAfter.shouldBeInstanceOf<ImeWindowSpec.Floating>()
-                    specCalculated.shouldBeInstanceOf<ImeWindowSpec.Floating>().shouldBe(specAfter)
-                    withClue("move operations must not alter keyboard height") {
-                        specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                    .assertAppliedGesture<ImeWindowSpec.Floating> { specBefore, specAfter ->
+                        withClue("move operations must not alter keyboard height") {
+                            specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations must not alter keyboard width") {
+                            specAfter.props.keyboardWidth shouldBe specBefore.props.keyboardWidth.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations leftward must not increase offset left") {
+                            specAfter.props.offsetLeft.shouldBeLessThanOrEqualTo(specBefore.props.offsetLeft, tolerance)
+                        }
+                        withClue("move operations leftward must not alter offset bottom") {
+                            specAfter.props.offsetBottom shouldBe specBefore.props.offsetBottom.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations leftward must not push window out of root bounds") {
+                            specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
+                        }
                     }
-                    withClue("move operations must not alter keyboard width") {
-                        specAfter.props.keyboardWidth shouldBe specBefore.props.keyboardWidth.plusOrMinus(tolerance)
-                    }
-                    withClue("move operations leftward must not increase offset left") {
-                        specAfter.props.offsetLeft.shouldBeLessThanOrEqualTo(specBefore.props.offsetLeft, tolerance)
-                    }
-                    withClue("move operations leftward must not alter offset bottom") {
-                        specAfter.props.offsetBottom shouldBe specBefore.props.offsetBottom.plusOrMinus(tolerance)
-                    }
-                    withClue("move operations leftward must not push window out of root bounds") {
-                        specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
-                    }
-                }
             }
         }
 
@@ -267,30 +237,26 @@ class ImeWindowControllerEditorMoveTest : FunSpec({
                 Arb.rootInsetsWithRightwardOffset(),
                 Arb.enum<ImeWindowMode.Floating>(),
             ) { (rootInsets, offset), floatingMode ->
-                val (specBefore, specCalculated, specAfter) = runEditorGesture(
+                runEditorGesture(
                     rootInsets, ImeWindowConfig(ImeWindowMode.FLOATING, floatingMode = floatingMode), backgroundScope,
                 ) { it.movedBy(offset, 4, 0) }
-
-                assertSoftly {
-                    val specBefore = specBefore.shouldBeInstanceOf<ImeWindowSpec.Floating>()
-                    val specAfter = specAfter.shouldBeInstanceOf<ImeWindowSpec.Floating>()
-                    specCalculated.shouldBeInstanceOf<ImeWindowSpec.Floating>().shouldBe(specAfter)
-                    withClue("move operations must not alter keyboard height") {
-                        specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                    .assertAppliedGesture<ImeWindowSpec.Floating> { specBefore, specAfter ->
+                        withClue("move operations must not alter keyboard height") {
+                            specAfter.props.keyboardHeight shouldBe specBefore.props.keyboardHeight.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations must not alter keyboard width") {
+                            specAfter.props.keyboardWidth shouldBe specBefore.props.keyboardWidth.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations rightward must not decrease offset left") {
+                            specAfter.props.offsetLeft.shouldBeGreaterThanOrEqualTo(specBefore.props.offsetLeft, tolerance)
+                        }
+                        withClue("move operations rightward must not alter offset bottom") {
+                            specAfter.props.offsetBottom shouldBe specBefore.props.offsetBottom.plusOrMinus(tolerance)
+                        }
+                        withClue("move operations rightward must not push window out of root bounds") {
+                            specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
+                        }
                     }
-                    withClue("move operations must not alter keyboard width") {
-                        specAfter.props.keyboardWidth shouldBe specBefore.props.keyboardWidth.plusOrMinus(tolerance)
-                    }
-                    withClue("move operations rightward must not decrease offset left") {
-                        specAfter.props.offsetLeft.shouldBeGreaterThanOrEqualTo(specBefore.props.offsetLeft, tolerance)
-                    }
-                    withClue("move operations rightward must not alter offset bottom") {
-                        specAfter.props.offsetBottom shouldBe specBefore.props.offsetBottom.plusOrMinus(tolerance)
-                    }
-                    withClue("move operations rightward must not push window out of root bounds") {
-                        specAfter.props.shouldBeConstrainedTo(specAfter.constraints, tolerance)
-                    }
-                }
             }
         }
     }

@@ -18,6 +18,9 @@ package dev.patrickgold.florisboard.ime.window
 
 import dev.patrickgold.florisboard.app.FlorisPreferenceModel
 import dev.patrickgold.jetpref.datastore.jetprefDataStoreOf
+import io.kotest.assertions.assertSoftly
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 
@@ -26,6 +29,15 @@ internal data class EditorGestureResult(
     val calculated: ImeWindowSpec,
     val after: ImeWindowSpec,
 )
+
+internal inline fun <reified T : ImeWindowSpec> EditorGestureResult.assertAppliedGesture(
+    crossinline check: (T, T) -> Unit,
+) = assertSoftly {
+    val typedBefore = before.shouldBeInstanceOf<T>()
+    val typedAfter = after.shouldBeInstanceOf<T>()
+    calculated.shouldBeInstanceOf<T>().shouldBe(typedAfter)
+    check(typedBefore, typedAfter)
+}
 
 internal suspend fun runEditorGesture(
     rootInsets: ImeInsets.Root,
