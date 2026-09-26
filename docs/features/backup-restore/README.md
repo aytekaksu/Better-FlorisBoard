@@ -163,8 +163,11 @@ does not promise crash- or power-loss atomicity.
 When a backup or restore screen closes its private workspace, ordinary cleanup
 errors get two independent attempts for the staged child and workspace. A child
 error therefore does not prevent removal of the private workspace. Cancellation
-still propagates. Only final failure types are logged, without archive contents
-or paths.
+still propagates. The screen logs its first close failure; the retry worker
+logs only terminal failures. Both record only failure classes, never archive
+contents or paths. A save whose document write completed remains successful if
+the screen's first private-workspace close fails; any remaining workspace is
+retried in the background and the backup button does not remain busy.
 
 ## Verification
 
