@@ -738,67 +738,6 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         )
     }
 
-    /**
-     * Handles a [KeyCode.KANA_SWITCHER] event
-     */
-    private fun handleKanaSwitch() {
-        activeState.batchEdit {
-            it.isKanaKata = !it.isKanaKata
-            it.isCharHalfWidth = false
-        }
-    }
-
-    /**
-     * Handles a [KeyCode.KANA_HIRA] event
-     */
-    private fun handleKanaHira() {
-        activeState.batchEdit {
-            it.isKanaKata = false
-            it.isCharHalfWidth = false
-        }
-    }
-
-    /**
-     * Handles a [KeyCode.KANA_KATA] event
-     */
-    private fun handleKanaKata() {
-        activeState.batchEdit {
-            it.isKanaKata = true
-            it.isCharHalfWidth = false
-        }
-    }
-
-    /**
-     * Handles a [KeyCode.KANA_HALF_KATA] event
-     */
-    private fun handleKanaHalfKata() {
-        activeState.batchEdit {
-            it.isKanaKata = true
-            it.isCharHalfWidth = true
-        }
-    }
-
-    /**
-     * Handles a [KeyCode.CHAR_WIDTH_SWITCHER] event
-     */
-    private fun handleCharWidthSwitch() {
-        activeState.isCharHalfWidth = !activeState.isCharHalfWidth
-    }
-
-    /**
-     * Handles a [KeyCode.CHAR_WIDTH_SWITCHER] event
-     */
-    private fun handleCharWidthFull() {
-        activeState.isCharHalfWidth = false
-    }
-
-    /**
-     * Handles a [KeyCode.CHAR_WIDTH_SWITCHER] event
-     */
-    private fun handleCharWidthHalf() {
-        activeState.isCharHalfWidth = true
-    }
-
     override fun onInputKeyDown(data: KeyData) {
         val windowController = FlorisImeService.windowControllerOrNull()
         windowController?.editor?.disableIfNoGestureInProgress()
@@ -818,9 +757,9 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 handleArrow(data.code)
             }
             KeyCode.CAPS_LOCK -> handleCapsLock()
-            KeyCode.CHAR_WIDTH_SWITCHER -> handleCharWidthSwitch()
-            KeyCode.CHAR_WIDTH_FULL -> handleCharWidthFull()
-            KeyCode.CHAR_WIDTH_HALF -> handleCharWidthHalf()
+            KeyCode.CHAR_WIDTH_SWITCHER -> activeState.isCharHalfWidth = !activeState.isCharHalfWidth
+            KeyCode.CHAR_WIDTH_FULL -> activeState.isCharHalfWidth = false
+            KeyCode.CHAR_WIDTH_HALF -> activeState.isCharHalfWidth = true
             KeyCode.CLIPBOARD_CUT -> editorInstance.performClipboardCut { clipboardManager.addNewPlaintext(it) }
             KeyCode.CLIPBOARD_COPY -> editorInstance.performClipboardCopy { clipboardManager.addNewPlaintext(it) }
             KeyCode.CLIPBOARD_PASTE -> editorInstance.performClipboardPaste(clipboardManager.primaryClip) {
@@ -857,10 +796,14 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             KeyCode.IME_UI_MODE_MEDIA -> activeState.imeUiMode = ImeUiMode.MEDIA
             KeyCode.IME_UI_MODE_CLIPBOARD -> activeState.imeUiMode = ImeUiMode.CLIPBOARD
             KeyCode.VOICE_INPUT -> FlorisImeService.switchToVoiceInputMethod()
-            KeyCode.KANA_SWITCHER -> handleKanaSwitch()
-            KeyCode.KANA_HIRA -> handleKanaHira()
-            KeyCode.KANA_KATA -> handleKanaKata()
-            KeyCode.KANA_HALF_KATA -> handleKanaHalfKata()
+            KeyCode.KANA_SWITCHER, KeyCode.KANA_HIRA, KeyCode.KANA_KATA, KeyCode.KANA_HALF_KATA -> {
+                activeState.isKanaKata = when (data.code) {
+                    KeyCode.KANA_SWITCHER -> !activeState.isKanaKata
+                    KeyCode.KANA_HIRA -> false
+                    else -> true
+                }
+                activeState.isCharHalfWidth = data.code == KeyCode.KANA_HALF_KATA
+            }
             KeyCode.LANGUAGE_SWITCH -> handleLanguageSwitch()
             KeyCode.REDO -> editorInstance.performRedo()
             KeyCode.SETTINGS -> FlorisImeService.launchSettings()

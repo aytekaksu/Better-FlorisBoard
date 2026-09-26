@@ -43,6 +43,7 @@ import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
+import dev.patrickgold.florisboard.ime.text.key.KeyType
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.runBlocking
@@ -601,6 +602,46 @@ class TextKeyboardTouchE2eTest {
                 keyboardManager.activeState.isManualSelectionMode = previousFlags.first
                 keyboardManager.activeState.isManualSelectionModeStart = previousFlags.second
                 keyboardManager.activeState.isManualSelectionModeEnd = previousFlags.third
+            }
+        }
+    }
+
+    @Test
+    fun kanaAndCharacterWidthKeysKeepTheirStateTransitions() {
+        val keyboardManager by instrumentation.targetContext.keyboardManager()
+        var previousFlags = false to false
+        instrumentation.runOnMainSync {
+            previousFlags = keyboardManager.activeState.let { it.isKanaKata to it.isCharHalfWidth }
+        }
+
+        fun assertTransition(code: Int, fromKana: Boolean, fromHalf: Boolean, toKana: Boolean, toHalf: Boolean) {
+            instrumentation.runOnMainSync {
+                keyboardManager.activeState.batchEdit {
+                    it.isKanaKata = fromKana
+                    it.isCharHalfWidth = fromHalf
+                }
+                keyboardManager.onInputKeyUp(TextKeyData(type = KeyType.SYSTEM_GUI, code = code))
+                assertEquals("Kana state after key $code", toKana, keyboardManager.activeState.value.isKanaKata)
+                assertEquals("width state after key $code", toHalf, keyboardManager.activeState.value.isCharHalfWidth)
+            }
+        }
+
+        try {
+            assertTransition(KeyCode.KANA_SWITCHER, false, true, true, false)
+            assertTransition(KeyCode.KANA_SWITCHER, true, true, false, false)
+            assertTransition(KeyCode.KANA_HIRA, true, true, false, false)
+            assertTransition(KeyCode.KANA_KATA, false, true, true, false)
+            assertTransition(KeyCode.KANA_HALF_KATA, false, false, true, true)
+            assertTransition(KeyCode.CHAR_WIDTH_SWITCHER, true, false, true, true)
+            assertTransition(KeyCode.CHAR_WIDTH_SWITCHER, false, true, false, false)
+            assertTransition(KeyCode.CHAR_WIDTH_FULL, true, true, true, false)
+            assertTransition(KeyCode.CHAR_WIDTH_HALF, false, false, false, true)
+        } finally {
+            instrumentation.runOnMainSync {
+                keyboardManager.activeState.batchEdit {
+                    it.isKanaKata = previousFlags.first
+                    it.isCharHalfWidth = previousFlags.second
+                }
             }
         }
     }
