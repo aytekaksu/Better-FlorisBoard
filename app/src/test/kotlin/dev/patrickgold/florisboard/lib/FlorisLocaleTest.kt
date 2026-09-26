@@ -19,10 +19,30 @@ package dev.patrickgold.florisboard.lib
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldEndWith
 
 class FlorisLocaleTest :
     FunSpec({
+        test("equivalent locales compare equal and share a hash") {
+            val english = FlorisLocale.from("en", "US")
+            val same = FlorisLocale.fromTag("en-US")
+
+            english shouldBe same
+            same shouldBe english
+            english.hashCode() shouldBe same.hashCode()
+            english shouldNotBe FlorisLocale.from("en", "GB")
+            english shouldNotBe FlorisLocale.from("en", "US", "pack")
+            english.equals("en-US") shouldBe false
+            english.equals(null) shouldBe false
+        }
+
+        test("tag parsing accepts both separators and ignores later parts") {
+            val expected = FlorisLocale.from("en", "US", "pack")
+            FlorisLocale.fromTag("en-US-pack-extra") shouldBe expected
+            FlorisLocale.fromTag("en_US_pack_extra") shouldBe expected
+        }
+
         test("variant labels use the requested display locale") {
             val locale = FlorisLocale.from("en", "US", "idi")
             val turkish = FlorisLocale.from("tr", "TR")
