@@ -582,11 +582,7 @@ internal fun commitSystemClipboardMediaPublication(
  * State-changing work runs through one FIFO actor so Room writes and media
  * ownership changes cannot overtake each other.
  */
-class ClipboardManager internal constructor(
-    context: Context,
-    private val inputSink: Lazy<ClipboardInputSink>,
-    private val commitToEditor: (ClipboardItem, ClipboardMediaPasteAccess?) -> Boolean,
-) : OnPrimaryClipChangedListener, Closeable {
+class ClipboardManager internal constructor(context: Context) : OnPrimaryClipChangedListener, Closeable {
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
     private val systemClipboardManager = context.systemService(AndroidClipboardManager::class)
@@ -1138,13 +1134,15 @@ class ClipboardManager internal constructor(
         }
     }
 
-    fun pasteItem(
+    internal fun pasteItem(
         item: ClipboardItem,
+        inputSink: ClipboardInputSink,
+        commitToEditor: (ClipboardItem, ClipboardMediaPasteAccess?) -> Boolean,
         onResult: (Boolean) -> Unit = {},
     ) {
         val itemSnapshot = item.copy(mimeTypes = item.mimeTypes.toList())
         if (itemSnapshot.type == ItemType.TEXT) {
-            inputSink.value.dispatchPaste {
+            inputSink.dispatchPaste {
                 reportPasteResult(
                     commitToEditor(itemSnapshot, null),
                     onResult,
@@ -1206,7 +1204,7 @@ class ClipboardManager internal constructor(
                 }
             }
         }
-        inputSink.value.deferMediaPaste(
+        inputSink.deferMediaPaste(
             onLaterInputQueued = ::abandon,
             onInvalidated = ::abandon,
             start = { onResolved ->

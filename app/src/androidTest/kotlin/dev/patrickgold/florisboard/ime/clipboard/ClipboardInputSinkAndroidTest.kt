@@ -73,10 +73,9 @@ class ClipboardInputSinkAndroidTest {
     }
 
     @Test
-    fun constructionDefersSinkAndBothPasteTypesUseTheInjectedSink() {
+    fun bothPasteTypesUsePortsProvidedForEachCall() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
-        var sinkResolutions = 0
         var textDispatches = 0
         var mediaDeferrals = 0
         var editorCommits = 0
@@ -97,18 +96,9 @@ class ClipboardInputSinkAndroidTest {
         }
         lateinit var manager: ClipboardManager
         instrumentation.runOnMainSync {
-            manager = ClipboardManager(context, lazy {
-                sinkResolutions++
-                fakeSink
-            }) { item, access ->
-                assertEquals(ItemType.TEXT, item.type)
-                assertEquals(null, access)
-                editorCommits++
-                true
-            }
+            manager = ClipboardManager(context)
         }
         try {
-            assertEquals(0, sinkResolutions)
             assertEquals(0, editorCommits)
             val owned = requireNotNull(OwnedClipboardMediaUri.create(1L, ItemType.IMAGE))
             val image = ClipboardItem(
@@ -119,12 +109,19 @@ class ClipboardInputSinkAndroidTest {
                 isPinned = false,
                 mimeTypes = listOf("image/png"),
             )
+            val commitToEditor: (ClipboardItem, ClipboardMediaPasteAccess?) -> Boolean = { item, access ->
+                assertEquals(ItemType.TEXT, item.type)
+                assertEquals(null, access)
+                editorCommits++
+                true
+            }
             instrumentation.runOnMainSync {
-                manager.pasteItem(ClipboardItem.text("synthetic paste")) { textResult = it }
-                manager.pasteItem(image)
+                manager.pasteItem(ClipboardItem.text("synthetic paste"), fakeSink, commitToEditor) {
+                    textResult = it
+                }
+                manager.pasteItem(image, fakeSink, commitToEditor)
             }
 
-            assertEquals(1, sinkResolutions)
             assertEquals(1, textDispatches)
             assertEquals(1, mediaDeferrals)
             assertEquals(1, editorCommits)

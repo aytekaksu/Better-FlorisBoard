@@ -499,7 +499,7 @@ fun ClipboardInputLayout(
                     popupItem = item
                 },
                 onClick = {
-                    clipboardManager.pasteItem(item)
+                    keyboardManager.pasteClipboardItem(item)
                 },
             ),
         ) {
@@ -742,7 +742,7 @@ fun ClipboardInputLayout(
                                 icon = Icons.Outlined.ContentPasteGo,
                                 text = stringRes(R.string.clip__paste_item),
                             ) {
-                                clipboardManager.pasteItem(popupItem!!)
+                                keyboardManager.pasteClipboardItem(popupItem!!)
                                 popupItem = null
                             }
                         }

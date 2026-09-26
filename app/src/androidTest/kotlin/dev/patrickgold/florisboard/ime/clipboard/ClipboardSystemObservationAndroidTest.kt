@@ -61,9 +61,7 @@ class ClipboardSystemObservationAndroidTest {
         val context = instrumentation.targetContext
         lateinit var manager: ClipboardManager
         instrumentation.runOnMainSync {
-            manager = ClipboardManager(context, lazy { error("Paste input is not used") }) { _, _ ->
-                error("Editor commit is not used")
-            }
+            manager = ClipboardManager(context)
         }
         val media = checkNotNull(OwnedClipboardMediaUri.create(1L, ItemType.IMAGE))
 

@@ -33,6 +33,8 @@ import dev.patrickgold.florisboard.keyboardExtensionRepository
 import dev.patrickgold.florisboard.ime.ImeUiMode
 import dev.patrickgold.florisboard.ime.core.DisplayLanguageNamesIn
 import dev.patrickgold.florisboard.ime.core.Subtype
+import dev.patrickgold.florisboard.ime.clipboard.asClipboardInputSink
+import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.editor.EditorEditResult
 import dev.patrickgold.florisboard.ime.editor.FlorisEditorInfo
@@ -148,6 +150,16 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         it.keyRepeatFeedbackReceiver = { data ->
             FlorisImeService.inputFeedbackController()?.keyRepeatedAction(data)
         }
+    }
+    private val clipboardInputSink = inputEventDispatcher.asClipboardInputSink()
+
+    fun pasteClipboardItem(item: ClipboardItem, onResult: (Boolean) -> Unit = {}) {
+        clipboardManager.pasteItem(
+            item,
+            clipboardInputSink,
+            { clip, access -> editorInstance.commitClipboardItem(clip, access) },
+            onResult,
+        )
     }
 
     init {
@@ -348,7 +360,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         if (candidate is ClipboardSuggestionCandidate &&
             candidate.clipboardItem.type != ItemType.TEXT
         ) {
-            clipboardManager.pasteItem(candidate.clipboardItem) { committed ->
+            pasteClipboardItem(candidate.clipboardItem) { committed ->
                 if (committed) {
                     autocorrectPluginManager.clearInputTrace()
                     notifyCandidateAccepted(candidate, acceptanceKind)
@@ -763,7 +775,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             KeyCode.CLIPBOARD_CUT -> editorInstance.performClipboardCut { clipboardManager.addNewPlaintext(it) }
             KeyCode.CLIPBOARD_COPY -> editorInstance.performClipboardCopy { clipboardManager.addNewPlaintext(it) }
             KeyCode.CLIPBOARD_PASTE -> editorInstance.performClipboardPaste(clipboardManager.primaryClip) {
-                clipboardManager.pasteItem(it)
+                pasteClipboardItem(it)
             }
             KeyCode.CLIPBOARD_SELECT -> handleClipboardSelect()
             KeyCode.CLIPBOARD_SELECT_ALL -> editorInstance.performClipboardSelectAll()
