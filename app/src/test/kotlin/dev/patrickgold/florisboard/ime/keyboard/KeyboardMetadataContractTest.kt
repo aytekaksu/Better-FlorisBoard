@@ -24,6 +24,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.decodeFromString
 import java.io.File
+import java.security.MessageDigest
 
 class KeyboardMetadataContractTest :
     FunSpec({
@@ -109,23 +110,35 @@ class KeyboardMetadataContractTest :
             }
         }
 
-        test("bundled popup metadata exposes every generated mapping") {
-            val assetRoot = sequenceOf("src/main/assets", "app/src/main/assets")
-                .map { File(it, "ime/keyboard/org.florisboard.localization") }.first { it.isDirectory }
+        test("bundled localization metadata exposes its presets and mappings") {
+            val sourceRoot = sequenceOf("src/main/assets", "app/src/main/assets")
+                .map(::File).first { it.isDirectory }
+                .resolve("ime/keyboard/org.florisboard.localization")
             val generatedRoot = File(
-                requireNotNull(System.getProperty("florisboard.popupMappingAssetRoot")) {
-                    "Popup mapping unit tests need their variant's generated asset root"
+                requireNotNull(System.getProperty("florisboard.localizationAssetRoot")) {
+                    "Localization unit tests need their variant's generated asset root"
                 },
             )
             generatedRoot.isDirectory shouldBe true
+            val manifestBytes = generatedRoot.resolve("extension.json").readBytes()
+            // Pin the inherited preset order and the exact packaged manifest bytes.
+            MessageDigest.getInstance("SHA-256").digest(manifestBytes)
+                .joinToString("") { "%02x".format(it.toInt() and 0xff) } shouldBe
+                "3d8e4e54849e30b5da865d6ca5ed541d110e1664dd93bf027637873659ac855b"
             val extension = ExtensionJsonConfig.decodeFromString(
                 KeyboardExtension.serializer(),
-                assetRoot.resolve("extension.json").readText(),
+                manifestBytes.toString(Charsets.UTF_8),
             )
             extension.validateForImport().isValid shouldBe true
+            extension.subtypePresets.size shouldBe 73
+            extension.subtypePresets.count { it.locale.languageTag() == "fa-FA" } shouldBe 3
+            extension.subtypePresets.count { it.locale.languageTag() == "hy" } shouldBe 3
+            extension.subtypePresets.first { it.locale.languageTag() == "hy" }
+                .popupMapping.componentId shouldBe "hy-am"
 
             val declaredFiles = extension.popupMappings.map { it.mappingFile() }
-            assetRoot.resolve("popupMappings").exists() shouldBe false
+            sourceRoot.resolve("extension.json").exists() shouldBe false
+            sourceRoot.resolve("popupMappings").exists() shouldBe false
             val packagedFiles = generatedRoot.resolve("popupMappings").walkTopDown()
                 .filter(File::isFile)
                 .map { it.relativeTo(generatedRoot).invariantSeparatorsPath }

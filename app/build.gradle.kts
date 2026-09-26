@@ -220,6 +220,16 @@ private class GeneratedAssetSafety {
             return target.toFile()
         }
 
+        fun clearOutputRoot(output: File, label: String): File {
+            val root = output.toPath().toAbsolutePath().normalize()
+            // Check the variant root and its task-owned localizationAssets/generated/build parents.
+            generateSequence(root) { it.parent }.take(4).forEach { component ->
+                check(!Files.isSymbolicLink(component)) { "Generated $label output path is linked" }
+            }
+            removeTreeNoFollow(root)
+            return output
+        }
+
         fun readSource(file: File, label: String): String {
             check(Files.isRegularFile(file.toPath(), LinkOption.NOFOLLOW_LINKS)) {
                 "$label source is missing or linked: ${file.name}"
@@ -233,8 +243,74 @@ private class GeneratedAssetSafety {
     }
 }
 
+private object SubtypePresetManifest {
+    private val MARKER = Regex("""^    @preset\((\{.*\})\)(,?)$""")
+    private val FIELD = Regex("\"([A-Za-z][A-Za-z0-9]*)\": \"([A-Za-z0-9_-]+)\"")
+    private val PREFERRED = listOf("characters", "symbols", "symbols2", "numericRow", "numericAdvanced")
+    private val ALLOWED = (PREFERRED + listOf("tag", "currency", "popup", "composer")).toSet()
+
+    fun expand(template: File): String {
+        val source = GeneratedAssetSafety.readSource(template, "Subtype preset")
+        check(source.endsWith('\n') && '\r' !in source) { "Subtype preset source must use LF-terminated lines" }
+        var count = 0
+        val rendered = source.removeSuffix("\n").split('\n').joinToString("\n") { line ->
+            val marker = MARKER.matchEntire(line)
+            if (marker == null) {
+                check("@preset" !in line) { "Malformed @preset marker" }
+                line
+            } else {
+                count++
+                renderPreset(marker.groupValues[1], marker.groupValues[2])
+            }
+        } + "\n"
+        check(count == 71) { "Expected 71 @preset markers, found $count" }
+        val manifest = try {
+            JsonSlurper().parseText(rendered) as? Map<*, *>
+        } catch (cause: Exception) {
+            throw IllegalStateException("Generated subtype preset manifest is malformed JSON", cause)
+        } ?: error("Generated subtype preset manifest must be an object")
+        check((manifest["meta"] as? Map<*, *>)?.get("id") == "org.florisboard.localization") {
+            "Generated subtype preset manifest has the wrong extension ID"
+        }
+        val presets = manifest["subtypePresets"] as? List<*>
+            ?: error("Generated subtype preset manifest has no preset list")
+        check(presets.size == 73) { "Expected 73 subtype presets, found ${presets.size}" }
+        check(presets.all { it is Map<*, *> }) { "Generated subtype preset manifest has invalid presets" }
+        check(presets.toSet().size == presets.size) { "Duplicate subtype preset record" }
+        return rendered
+    }
+
+    private fun renderPreset(data: String, trailingComma: String): String {
+        val fields = FIELD.findAll(data).toList()
+        check(fields.isNotEmpty() && "{${fields.joinToString(", ") { it.value }}}" == data) {
+            "Invalid @preset fields"
+        }
+        val values = fields.associate { it.groupValues[1] to it.groupValues[2] }
+        check(values.size == fields.size) { "Duplicate @preset field" }
+        check(values.keys.all(ALLOWED::contains)) { "Unknown @preset field" }
+        val tag = values["tag"] ?: error("@preset needs tag")
+        val currency = values["currency"] ?: error("@preset needs currency")
+        check("characters" in values) { "@preset needs characters" }
+        val preferred = PREFERRED.mapNotNull { key -> values[key]?.let { key to it } }
+        return buildList {
+            add("    {")
+            add("      \"languageTag\": \"$tag\",")
+            add("      \"composer\": \"org.florisboard.composers:${values["composer"] ?: "appender"}\",")
+            add("      \"currencySet\": \"org.florisboard.currencysets:$currency\",")
+            values["popup"]?.let { add("      \"popupMapping\": \"org.florisboard.localization:$it\",") }
+            add("      \"preferred\": {")
+            preferred.forEachIndexed { index, (key, value) ->
+                val comma = if (index < preferred.lastIndex) "," else ""
+                add("        \"$key\": \"org.florisboard.layouts:$value\"$comma")
+            }
+            add("      }")
+            add("    }$trailingComma")
+        }.joinToString("\n")
+    }
+}
+
 @CacheableTask
-abstract class GeneratePopupMappingAssets : DefaultTask() {
+abstract class GenerateLocalizationAssets : DefaultTask() {
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val sourceDirectory: DirectoryProperty
@@ -245,7 +321,7 @@ abstract class GeneratePopupMappingAssets : DefaultTask() {
 
     @get:InputFile
     @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val extensionFile: RegularFileProperty
+    abstract val manifestTemplateFile: RegularFileProperty
 
     @get:OutputDirectory
     abstract val outputDirectory: DirectoryProperty
@@ -254,15 +330,15 @@ abstract class GeneratePopupMappingAssets : DefaultTask() {
     fun generate() = render(
         sourceDirectory.get().asFile,
         fragmentFile.get().asFile,
-        extensionFile.get().asFile,
+        manifestTemplateFile.get().asFile,
         outputDirectory.get().asFile,
     )
 
     companion object {
         private const val MARKER = "@@COMMON_RIGHT_POPUP@@"
-        private const val ASSET_PATH = "ime/keyboard/org.florisboard.localization/popupMappings"
+        private const val ASSET_PATH = "ime/keyboard/org.florisboard.localization"
 
-        fun render(sources: File, fragmentFile: File, extensionFile: File, output: File) {
+        fun render(sources: File, fragmentFile: File, manifestTemplateFile: File, output: File) {
             val target = clearOutput(output)
 
             val fragment = readSource(fragmentFile).removeSuffix("\n")
@@ -279,7 +355,8 @@ abstract class GeneratePopupMappingAssets : DefaultTask() {
             val sharedRight = fragmentObject["~right"]
             check(sharedRight is Map<*, *>) { "Shared popup fragment must contain a ~right object" }
 
-            val manifest = jsonObject(readSource(extensionFile), extensionFile.name)
+            val expandedManifest = SubtypePresetManifest.expand(manifestTemplateFile)
+            val manifest = jsonObject(expandedManifest, manifestTemplateFile.name)
             val components = manifest["popupMappings"] as? List<*>
                 ?: error("Popup mappings are missing from extension metadata")
             val expected = components.map { component ->
@@ -329,13 +406,26 @@ abstract class GeneratePopupMappingAssets : DefaultTask() {
                     "missing=${expected.toSet() - rendered.keys}, extra=${rendered.keys - expected.toSet()}"
             }
 
-            check(target.mkdirs()) { "Unable to create generated popup mapping directory" }
-            for ((name, text) in rendered.toSortedMap()) {
-                target.resolve(name).writeText(text, Charsets.UTF_8)
+            try {
+                check(target.mkdirs()) { "Unable to create generated localization directory" }
+                target.resolve("extension.json").writeText(expandedManifest, Charsets.UTF_8)
+                val popupTarget = target.resolve("popupMappings")
+                check(popupTarget.mkdirs()) { "Unable to create generated popup mapping directory" }
+                for ((name, text) in rendered.toSortedMap()) {
+                    popupTarget.resolve(name).writeText(text, Charsets.UTF_8)
+                }
+            } catch (cause: Exception) {
+                try {
+                    GeneratedAssetSafety.removeTreeNoFollow(target.toPath())
+                } catch (cleanupFailure: Exception) {
+                    cause.addSuppressed(cleanupFailure)
+                }
+                throw cause
             }
         }
 
-        private fun clearOutput(output: File) = GeneratedAssetSafety.clearTarget(output, ASSET_PATH, "popup mapping")
+        private fun clearOutput(output: File) =
+            GeneratedAssetSafety.clearOutputRoot(output, "localization").resolve(ASSET_PATH)
 
         fun removeTreeNoFollow(root: Path) = GeneratedAssetSafety.removeTreeNoFollow(root)
 
@@ -650,14 +740,26 @@ configure<ApplicationExtension> {
     }
 }
 
-val testPopupMappingAssetGenerator by tasks.registering {
+val testLocalizationAssetGenerator by tasks.registering {
     group = "verification"
-    description = "Exercises bundled popup generation with synthetic valid and invalid sources."
+    description = "Exercises bundled manifest and popup generation with synthetic sources."
 
     doLast {
         val marker = "@@COMMON_RIGHT_POPUP@@"
         val fragment = "    \"~right\": {\n      \"main\": {\"code\": 44}\n    }"
         val assetPath = "ime/keyboard/org.florisboard.localization/popupMappings"
+        val firstPreset = "    @preset({\"tag\": \"en-US\", \"currency\": \"dollar\", \"characters\": \"qwerty\"})"
+        val secondPreset = "    @preset({\"tag\": \"en-US\", \"currency\": \"euro\", " +
+            "\"popup\": \"en\", \"characters\": \"qwertz\", \"symbols\": \"western\"})"
+        val extraPresets = (2 until 71).joinToString(",\n") { index ->
+            "    @preset({\"tag\": \"case-$index\", \"currency\": \"dollar\", \"characters\": \"qwerty\"})"
+        }
+        val literalPreset = "{\"languageTag\":\"fr\",\"composer\":\"org.florisboard.composers:appender\"," +
+            "\"currencySet\":\"org.florisboard.currencysets:euro\",\"preferred\":{" +
+            "\"characters\":\"org.florisboard.layouts:azerty\"}}"
+        val secondLiteral = "{\"languageTag\":\"de\",\"composer\":\"org.florisboard.composers:appender\"," +
+            "\"currencySet\":\"org.florisboard.currencysets:euro\",\"preferred\":{" +
+            "\"characters\":\"org.florisboard.layouts:qwertz\"}}"
         var caseNumber = 0
 
         fun exercise(
@@ -666,35 +768,46 @@ val testPopupMappingAssetGenerator by tasks.registering {
             shared: String = fragment,
             failure: String? = null,
             expectOutputAbsent: Boolean = true,
+            outputPath: String = "output",
             prepare: (File) -> Unit = {},
         ): File {
             val root = temporaryDir.resolve("case-${caseNumber++}")
-            GeneratePopupMappingAssets.removeTreeNoFollow(root.toPath())
+            GenerateLocalizationAssets.removeTreeNoFollow(root.toPath())
             val sources = root.resolve("sources").apply { mkdirs() }
             for ((name, text) in files) sources.resolve(name).writeText(text)
             val sharedFile = root.resolve("right.inc").apply { writeText("$shared\n") }
             val extension = root.resolve("extension.json").apply {
                 val entries = ids.joinToString { "{\"id\":\"$it\"}" }
-                writeText("{\"popupMappings\":[$entries]}")
+                writeText(
+                    "{\"meta\":{\"id\":\"org.florisboard.localization\"},\"popupMappings\":[$entries]," +
+                        "\"subtypePresets\":[\n" +
+                        "$firstPreset,\n$secondPreset,\n$extraPresets,\n" +
+                        "    $literalPreset,\n    $secondLiteral\n]}\n",
+                )
             }
-            val output = root.resolve("output")
+            val output = root.resolve(outputPath)
             prepare(root)
             val error = runCatching {
-                GeneratePopupMappingAssets.render(sources, sharedFile, extension, output)
+                GenerateLocalizationAssets.render(sources, sharedFile, extension, output)
             }.exceptionOrNull()
             if (failure == null) {
-                check(error == null) { "Popup generator unexpectedly failed: ${error?.message}" }
+                check(error == null) { "Localization generator unexpectedly failed: ${error?.message}" }
             } else {
                 check(error?.message?.contains(failure) == true) {
-                    "Expected popup generator failure '$failure', got '${error?.message}'"
+                    "Expected localization generator failure '$failure', got '${error?.message}'"
                 }
                 if (expectOutputAbsent) {
-                    check(!output.resolve(assetPath).exists()) { "Invalid popup data produced assets" }
+                    check(!output.resolve(assetPath).exists()) { "Invalid localization data produced popups" }
+                    check(!output.resolve("ime/keyboard/org.florisboard.localization/extension.json").exists()) {
+                        "Invalid localization data produced a manifest"
+                    }
                 }
             }
             return output.resolve(assetPath)
         }
 
+        var siblingOutside: File? = null
+        var generatedOutput: File? = null
         val generated = exercise(
             listOf("en", "fr", "ar"),
             mapOf(
@@ -702,7 +815,17 @@ val testPopupMappingAssetGenerator by tasks.registering {
                 "fr.json.in" to "{\"all\":{\n$marker\n},\"uri\":{}}\n",
                 "ar.json" to "{\"all\":{\"a\":{}}}\n",
             ),
-        )
+        ) { root ->
+            val output = root.resolve("output").apply { mkdirs() }
+            output.resolve("stale.json").writeText("stale")
+            val outside = root.resolve("outside").apply { mkdirs() }
+            outside.resolve("keep.json").writeText("safe")
+            Files.createSymbolicLink(output.resolve("stale-link").toPath(), outside.toPath())
+            siblingOutside = outside
+            generatedOutput = output
+        }
+        check(generatedOutput?.listFiles().orEmpty().map(File::getName) == listOf("ime"))
+        check(siblingOutside?.resolve("keep.json")?.readText() == "safe")
         check(
             generated.listFiles().orEmpty().map(File::getName).sorted() ==
                 listOf("ar.json", "en.json", "fr.json"),
@@ -710,6 +833,88 @@ val testPopupMappingAssetGenerator by tasks.registering {
         check(generated.resolve("ar.json").readText() == "{\"all\":{\"a\":{}}}\n")
         check(generated.resolve("en.json").readText() == "{\"all\":{\n$fragment\n}}\n")
         check(generated.resolve("fr.json").readText() == "{\"all\":{\n$fragment\n},\"uri\":{}}\n")
+        val generatedManifest = generated.parentFile.resolve("extension.json").readText()
+        check(
+            generatedManifest.startsWith(
+                "{\"meta\":{\"id\":\"org.florisboard.localization\"},\"popupMappings\":[" +
+                    "{\"id\":\"en\"}, {\"id\":\"fr\"}, {\"id\":\"ar\"}],\"subtypePresets\":[\n" +
+                    "    {\n      \"languageTag\": \"en-US\",\n" +
+                    "      \"composer\": \"org.florisboard.composers:appender\",\n" +
+                    "      \"currencySet\": \"org.florisboard.currencysets:dollar\",\n" +
+                    "      \"preferred\": {\n        \"characters\": \"org.florisboard.layouts:qwerty\"\n" +
+                    "      }\n    },\n" +
+                    "    {\n      \"languageTag\": \"en-US\",\n" +
+                    "      \"composer\": \"org.florisboard.composers:appender\",\n" +
+                    "      \"currencySet\": \"org.florisboard.currencysets:euro\",\n" +
+                    "      \"popupMapping\": \"org.florisboard.localization:en\",\n" +
+                    "      \"preferred\": {\n        \"characters\": \"org.florisboard.layouts:qwertz\",\n" +
+                    "        \"symbols\": \"org.florisboard.layouts:western\"\n      }\n    },\n",
+            ),
+        )
+        check(generatedManifest.endsWith("    $literalPreset,\n    $secondLiteral\n]}\n"))
+        val generatedPresets = (JsonSlurper().parseText(generatedManifest) as Map<*, *>)["subtypePresets"] as List<*>
+        check(generatedPresets.size == 73)
+        check(
+            generatedPresets.map { (it as Map<*, *>)["languageTag"] } ==
+                listOf("en-US", "en-US") + (2 until 71).map { "case-$it" } + listOf("fr", "de"),
+        )
+
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Expected 71 @preset markers, found 0") { root ->
+            val template = root.resolve("extension.json")
+            template.writeText(template.readText().replace("@preset", "@preseT"))
+        }
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Expected 71 @preset markers, found 70") { root ->
+            val template = root.resolve("extension.json")
+            template.writeText(template.readText().replaceFirst("$firstPreset,\n", ""))
+        }
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Expected 71 @preset markers, found 72") { root ->
+            val template = root.resolve("extension.json")
+            template.writeText(template.readText().replaceFirst("$firstPreset,\n", "$firstPreset,\n$firstPreset,\n"))
+        }
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Expected 73 subtype presets, found 72") { root ->
+            val template = root.resolve("extension.json")
+            template.writeText(template.readText().replace("    $literalPreset,\n", ""))
+        }
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Duplicate subtype preset record") { root ->
+            val template = root.resolve("extension.json")
+            template.writeText(template.readText().replaceFirst(secondPreset, firstPreset))
+        }
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Malformed @preset marker") { root ->
+            val template = root.resolve("extension.json")
+            template.writeText(template.readText().replace("@preset(", "@preset!("))
+        }
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Duplicate @preset field") { root ->
+            val template = root.resolve("extension.json")
+            template.writeText(
+                template.readText().replaceFirst("\"tag\": \"en-US\"", "\"tag\": \"en-US\", \"tag\": \"hy\""),
+            )
+        }
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Unknown @preset field") { root ->
+            val template = root.resolve("extension.json")
+            template.writeText(
+                template.readText().replaceFirst(
+                    "\"currency\": \"dollar\"",
+                    "\"currency\": \"dollar\", \"extra\": \"x\"",
+                ),
+            )
+        }
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "@preset needs characters") { root ->
+            val template = root.resolve("extension.json")
+            template.writeText(template.readText().replaceFirst(", \"characters\": \"qwerty\"", ""))
+        }
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "malformed JSON") { root ->
+            val template = root.resolve("extension.json")
+            template.writeText(template.readText().replace("]}\n", "]\n"))
+        }
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "malformed UTF-8") { root ->
+            Files.write(root.resolve("extension.json").toPath(), byteArrayOf(0xc3.toByte(), 0x28))
+        }
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "missing or linked") { root ->
+            val template = root.resolve("extension.json")
+            val outside = root.resolve("outside.json")
+            Files.move(template.toPath(), outside.toPath())
+            Files.createSymbolicLink(template.toPath(), outside.toPath())
+        }
 
         exercise(listOf("en"), emptyMap(), failure = "missing=[en.json]")
         exercise(listOf("en"), mapOf("en.json" to "{}", "extra.json" to "{}"), failure = "extra=[extra.json]")
@@ -787,8 +992,6 @@ val testPopupMappingAssetGenerator by tasks.registering {
         exercise(
             listOf("en"),
             mapOf("en.json" to "{}"),
-            failure = "output path is linked",
-            expectOutputAbsent = false,
         ) { root ->
             val outside = root.resolve("outside")
             outside.resolve("keyboard/org.florisboard.localization/popupMappings/stale.json").apply {
@@ -817,6 +1020,20 @@ val testPopupMappingAssetGenerator by tasks.registering {
             rootOutside = outside
         }
         check(rootOutside?.resolve("keep.json")?.readText() == "safe")
+        var parentLinkOutside: File? = null
+        exercise(
+            listOf("en"),
+            mapOf("en.json" to "{}"),
+            failure = "output path is linked",
+            expectOutputAbsent = false,
+            outputPath = "linked/debug",
+        ) { root ->
+            val outside = root.resolve("outside").apply { mkdirs() }
+            outside.resolve("keep.json").writeText("safe")
+            Files.createSymbolicLink(root.resolve("linked").toPath(), outside.toPath())
+            parentLinkOutside = outside
+        }
+        check(parentLinkOutside?.resolve("keep.json")?.readText() == "safe")
         exercise(listOf("en", "en"), mapOf("en.json" to "{}"), failure = "Duplicate popup mapping ID")
         exercise(listOf("../other"), emptyMap(), failure = "Invalid popup mapping ID")
     }
@@ -842,7 +1059,7 @@ val testCharacterLayoutAssetGenerator by tasks.registering {
             prepare: (File) -> Unit = {},
         ): File {
             val root = temporaryDir.resolve("case-${caseNumber++}")
-            GeneratePopupMappingAssets.removeTreeNoFollow(root.toPath())
+            GenerateLocalizationAssets.removeTreeNoFollow(root.toPath())
             val sources = root.resolve("sources").apply { mkdirs() }
             val staticFiles = root.resolve("static").apply { mkdirs() }
             templates.forEach { (name, text) -> sources.resolve(name).writeText(text, Charsets.UTF_8) }
@@ -1024,21 +1241,17 @@ androidComponents {
             numericRows,
             GenerateNumericRowAssets::outputDirectory,
         )
-        val popupMappings = tasks.register<GeneratePopupMappingAssets>(
-            "generate${variantName}PopupMappingAssets",
+        val localization = tasks.register<GenerateLocalizationAssets>(
+            "generate${variantName}LocalizationAssets",
         ) {
             sourceDirectory.set(layout.projectDirectory.dir("popup-mapping-sources"))
             fragmentFile.set(layout.projectDirectory.file("popup-mapping-right-punctuation.inc"))
-            extensionFile.set(
-                layout.projectDirectory.file(
-                    "src/main/assets/ime/keyboard/org.florisboard.localization/extension.json",
-                ),
-            )
-            outputDirectory.set(layout.buildDirectory.dir("generated/popupMappingAssets/${variant.name}"))
+            manifestTemplateFile.set(layout.projectDirectory.file("subtype-preset-manifest.json.in"))
+            outputDirectory.set(layout.buildDirectory.dir("generated/localizationAssets/${variant.name}"))
         }
         checkNotNull(variant.sources.assets).addGeneratedSourceDirectory(
-            popupMappings,
-            GeneratePopupMappingAssets::outputDirectory,
+            localization,
+            GenerateLocalizationAssets::outputDirectory,
         )
         val characterLayouts = tasks.register<GenerateCharacterLayoutAssets>(
             "generate${variantName}CharacterLayoutAssets",
@@ -1062,17 +1275,17 @@ androidComponents {
         )
         tasks.withType<Test>().matching { it.name == "test${variantName}UnitTest" }.configureEach {
             dependsOn(
-                popupMappings,
+                localization,
                 characterLayouts,
-                testPopupMappingAssetGenerator,
+                testLocalizationAssetGenerator,
                 testCharacterLayoutAssetGenerator,
             )
-            inputs.dir(popupMappings.flatMap { it.outputDirectory })
+            inputs.dir(localization.flatMap { it.outputDirectory })
             inputs.dir(characterLayouts.flatMap { it.outputDirectory })
             systemProperty(
-                "florisboard.popupMappingAssetRoot",
+                "florisboard.localizationAssetRoot",
                 layout.buildDirectory.dir(
-                    "generated/popupMappingAssets/${variant.name}/ime/keyboard/org.florisboard.localization",
+                    "generated/localizationAssets/${variant.name}/ime/keyboard/org.florisboard.localization",
                 ).get().asFile.absolutePath,
             )
             systemProperty(
