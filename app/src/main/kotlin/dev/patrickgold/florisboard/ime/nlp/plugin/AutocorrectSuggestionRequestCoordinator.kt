@@ -130,5 +130,4 @@ internal class AutocorrectSuggestionRequestCoordinator(circuitPolicy: CircuitPol
             knownLeases.keys.firstOrNull()?.let(knownLeases::remove)
         }
     }
-
 }

@@ -111,8 +111,11 @@ private fun sessionStartedFor(state: HostState, at: MonotonicMillis): HostEvent 
         sessionId = session.sessionId,
         editorGeneration = session.editorGeneration,
     )
-    return if (session.phase == SessionPhase.STARTING) HostEvent.SessionStartSending(lease)
-    else HostEvent.SessionStartResult(lease, successful = true, at = at)
+    return if (session.phase == SessionPhase.STARTING) {
+        HostEvent.SessionStartSending(lease)
+    } else {
+        HostEvent.SessionStartResult(lease, successful = true, at = at)
+    }
 }
 
 private fun requestReplyFor(state: HostState, at: MonotonicMillis): HostEvent {

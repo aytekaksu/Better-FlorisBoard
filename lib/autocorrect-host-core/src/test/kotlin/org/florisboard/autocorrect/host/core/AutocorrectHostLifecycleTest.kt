@@ -357,8 +357,10 @@ class AutocorrectHostLifecycleTest :
             val finish = effects.singleEffect<HostEffect.FinishSession>().lease
             val newStart = effects.singleEffect<HostEffect.StartSession>().lease
             finish.sessionId shouldBe oldStart.sessionId
-            (effects.indexOfFirst { it is HostEffect.FinishSession } <
-                effects.indexOfFirst { it is HostEffect.StartSession }) shouldBe true
+            (
+                effects.indexOfFirst { it is HostEffect.FinishSession } <
+                    effects.indexOfFirst { it is HostEffect.StartSession }
+                ) shouldBe true
             host.dispatch(HostEvent.SessionStartResult(oldStart, true, T0))
                 .singleEffect<HostEffect.EventIgnored>().reason shouldBe IgnoredReason.STALE_SESSION
             host.dispatch(HostEvent.SessionStartSending(newStart)) shouldBe emptyList()
@@ -435,8 +437,10 @@ class AutocorrectHostLifecycleTest :
 
             effects.filterIsInstance<HostEffect.FinishSession>().size shouldBe 1
             effects.filterIsInstance<HostEffect.Unbind>().size shouldBe 1
-            (effects.indexOfFirst { it is HostEffect.FinishSession } <
-                effects.indexOfFirst { it is HostEffect.Unbind }) shouldBe true
+            (
+                effects.indexOfFirst { it is HostEffect.FinishSession } <
+                    effects.indexOfFirst { it is HostEffect.Unbind }
+                ) shouldBe true
             effects.filterIsInstance<HostEffect.Bind>().size shouldBe 1
             host.state.pendingFinishes shouldBe emptyMap()
         }
@@ -466,8 +470,10 @@ class AutocorrectHostLifecycleTest :
             val switchEffects = host.dispatch(HostEvent.SelectProvider(ProviderB))
             switchEffects.filterIsInstance<HostEffect.FinishSession>().single().lease.sessionId shouldBe oldSession
             switchEffects.filterIsInstance<HostEffect.Unbind>().single().lease shouldBe oldBinding
-            (switchEffects.indexOfFirst { it is HostEffect.FinishSession } <
-                switchEffects.indexOfFirst { it is HostEffect.Unbind }) shouldBe true
+            (
+                switchEffects.indexOfFirst { it is HostEffect.FinishSession } <
+                    switchEffects.indexOfFirst { it is HostEffect.Unbind }
+                ) shouldBe true
             host.state.pendingFinishes shouldBe emptyMap()
 
             val openEffects = host.dispatch(
