@@ -22,6 +22,7 @@ import dev.patrickgold.florisboard.ime.keyboard.KeyData
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyType
+import dev.patrickgold.florisboard.lib.FlorisRect
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
@@ -297,6 +298,37 @@ class TextKeyboardHitTestTest : FunSpec({
 
         original.keys.single().left shouldBe 0f
         updated.keys.single().left shouldBe 0.1f
+    }
+
+    test("layout preserves grow shrink and edge touch bounds") {
+        fun key(width: Float, grow: Float = 0f, shrink: Float = 0f) =
+            TextKey(TextKeyData.UNSPECIFIED).apply {
+                flayWidthFactor = width
+                flayGrow = grow
+                flayShrink = shrink
+            }
+        val rows = arrayOf(
+            arrayOf(key(1.5f), key(1.5f)),
+            arrayOf(key(1.5f, grow = 1f), key(1.5f, grow = 3f)),
+            arrayOf(key(2f, shrink = 1f), key(2f, shrink = 2f), key(2f, shrink = 1f)),
+            arrayOf(key(3f)),
+        )
+        val desired = key(0f)
+        desired.setTestBounds(0f, 0f, 10f, 10f)
+        desired.visibleBounds.deflateBy(1f, 1f)
+        TextKeyboard(rows, KeyboardMode.CHARACTERS, null, null)
+            .layout(42f, 70f, desired, extendTouchBoundariesDownwards = true)
+
+        rows.flatMap { row -> row.map { it.touchBounds to it.visibleBounds } } shouldBe listOf(
+            FlorisRect.new(0f, 0f, 21f, 10f) to FlorisRect.new(7f, 1f, 20f, 9f),
+            FlorisRect.new(21f, 0f, 42f, 10f) to FlorisRect.new(22f, 1f, 35f, 9f),
+            FlorisRect.new(0f, 20f, 18.5f, 30f) to FlorisRect.new(2f, 21f, 17.5f, 29f),
+            FlorisRect.new(18.5f, 20f, 42f, 30f) to FlorisRect.new(19.5f, 21f, 40f, 29f),
+            FlorisRect.new(0f, 40f, 16f, 50f) to FlorisRect.new(2f, 41f, 15f, 49f),
+            FlorisRect.new(16f, 40f, 26f, 50f) to FlorisRect.new(17f, 41f, 25f, 49f),
+            FlorisRect.new(26f, 40f, 42f, 50f) to FlorisRect.new(27f, 41f, 40f, 49f),
+            FlorisRect.new(0f, 60f, 36f, 80f) to FlorisRect.new(7f, 61f, 30f, 69f),
+        )
     }
 })
 
