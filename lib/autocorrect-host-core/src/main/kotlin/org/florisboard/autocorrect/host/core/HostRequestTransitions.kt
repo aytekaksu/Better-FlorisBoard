@@ -155,12 +155,9 @@ internal fun HostReduction.circuitCooldownElapsed(event: HostEvent.CircuitCooldo
         health.copy(circuit = CircuitState.HalfOpen(probeInFlight = false)),
     )
     effects += HostEffect.CircuitHalfOpened(event.providerId)
-    state.session
-        ?.takeIf {
-            it.providerId == event.providerId &&
-                it.phase == SessionPhase.AWAITING_BINDING
-        }
-        ?.let { ensureBinding(event.providerId, event.at) }
+    if (desiredBindingProvider() == event.providerId) {
+        ensureBinding(event.providerId, event.at)
+    }
 }
 
 internal fun HostReduction.recordFailure(providerId: ProviderId, kind: ProviderFailureKind, at: MonotonicMillis) {

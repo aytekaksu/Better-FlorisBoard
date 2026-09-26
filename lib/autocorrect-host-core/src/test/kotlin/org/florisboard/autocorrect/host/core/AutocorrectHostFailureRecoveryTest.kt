@@ -75,6 +75,142 @@ class AutocorrectHostFailureRecoveryTest :
             }
         }
 
+        test("a failed finish send releases the pending acknowledgement demand") {
+            val host = HostTestHarness()
+            host.startActiveSession()
+            val binding = (host.state.binding as BindingState.Connected).lease
+            val finish = host.dispatch(HostEvent.CloseSession)
+                .singleEffect<HostEffect.FinishSession>().lease
+
+            host.dispatch(
+                HostEvent.FinishSendFailed(
+                    finish.copy(epoch = BindingEpoch(finish.epoch.value + 1L)),
+                    T0,
+                ),
+            ).singleEffect<HostEffect.EventIgnored>().reason shouldBe IgnoredReason.STALE_BINDING
+            host.state.pendingFinishes.keys shouldBe setOf(finish.sessionId)
+
+            val effects = host.dispatch(HostEvent.FinishSendFailed(finish, T0))
+
+            host.state.pendingFinishes shouldBe emptyMap()
+            host.state.binding shouldBe BindingState.Unbound
+            effects.singleEffect<HostEffect.ProviderDegraded>().cause shouldBe ProviderFailureKind.SEND_FAILED
+            effects.singleEffect<HostEffect.Unbind>().lease shouldBe binding
+            host.dispatch(HostEvent.FinishSendFailed(finish, T0))
+                .singleEffect<HostEffect.EventIgnored>().reason shouldBe IgnoredReason.UNKNOWN_FINISH
+        }
+
+        test("a suggestion circuit does not make provider settings unavailable") {
+            val host = HostTestHarness(CircuitPolicy(failureThreshold = 1, recoveryDelayMillis = 100L))
+            host.startActiveSession()
+            val request = host.issue()
+            host.dispatch(HostEvent.RequestSendFailed(request, at = T0))
+            val old = (host.state.binding as BindingState.Connected).lease
+            host.dispatch(HostEvent.CloseSession)
+            val finish = host.state.pendingFinishes.values.single().lease
+            host.dispatch(HostEvent.FinishAcknowledged(ProviderA, old.epoch, finish.sessionId, T0))
+            host.dispatch(HostEvent.SetUiBindingDemand(true))
+                .singleEffect<HostEffect.Bind>().lease.providerId shouldBe ProviderA
+        }
+
+        test("UI demand can bind during an open circuit without starting typing") {
+            val host = HostTestHarness(CircuitPolicy(failureThreshold = 1, recoveryDelayMillis = 100L))
+            host.startActiveSession()
+            val old = (host.state.binding as BindingState.Connected).lease
+            host.dispatch(HostEvent.ConnectionLost(old, ConnectionLossKind.SERVICE_DISCONNECTED, T0))
+
+            val uiBinding = host.dispatch(HostEvent.SetUiBindingDemand(true))
+                .singleEffect<HostEffect.Bind>().lease
+            host.dispatch(HostEvent.OpenSession(DefaultSessionConfiguration, host.state.editorGeneration, T0))
+                .singleEffect<HostEffect.FallbackRequired>().reason shouldBe FallbackReason.CIRCUIT_OPEN
+            host.dispatch(HostEvent.BindingConnected(uiBinding))
+                .filterIsInstance<HostEffect.StartSession>() shouldBe emptyList()
+            host.state.session?.phase shouldBe SessionPhase.AWAITING_BINDING
+            host.state.binding shouldBe BindingState.Connected(uiBinding)
+
+            val recovery = host.dispatch(
+                HostEvent.CircuitCooldownElapsed(ProviderA, MonotonicMillis(T0.value + 100L)),
+            )
+            recovery.singleEffect<HostEffect.StartSession>().lease.epoch shouldBe uiBinding.epoch
+        }
+
+        test("configuration change retires an old session even while its circuit is open") {
+            val host = HostTestHarness(CircuitPolicy(failureThreshold = 1, recoveryDelayMillis = 100L))
+            val old = host.startActiveSession()
+            host.dispatch(HostEvent.SetUiBindingDemand(true))
+            host.dispatch(HostEvent.RequestSendFailed(host.issue(), at = T0))
+            val noLearning = DefaultSessionConfiguration.copy(allowPersonalizedLearning = false)
+
+            val rejected = host.dispatch(HostEvent.OpenSession(noLearning, host.state.editorGeneration, T0))
+            rejected.singleEffect<HostEffect.FallbackRequired>().reason shouldBe FallbackReason.CIRCUIT_OPEN
+            val finish = rejected.singleEffect<HostEffect.FinishSession>().lease
+            finish.sessionId shouldBe old.sessionId
+            host.state.session shouldBe null
+            val binding = (host.state.binding as BindingState.Connected).lease
+            host.dispatch(HostEvent.FinishAcknowledged(ProviderA, binding.epoch, finish.sessionId, T0))
+
+            host.dispatch(HostEvent.CircuitCooldownElapsed(ProviderA, MonotonicMillis(T0.value + 100L)))
+                .filterIsInstance<HostEffect.StartSession>() shouldBe emptyList()
+            val resumed = host.dispatch(
+                HostEvent.OpenSession(noLearning, host.state.editorGeneration, MonotonicMillis(T0.value + 100L)),
+            ).singleEffect<HostEffect.StartSession>().lease
+            resumed.sessionId shouldBe host.state.session?.sessionId
+            host.state.session?.configuration shouldBe noLearning
+            host.dispatch(HostEvent.SessionStartSending(resumed))
+            host.dispatch(HostEvent.SessionStartResult(resumed, true, MonotonicMillis(T0.value + 100L)))
+            host.issue(MonotonicMillis(T0.value + 100L)).sessionId shouldBe resumed.sessionId
+        }
+
+        test("repeated UI-only transport loss waits for circuit recovery instead of rebinding in a loop") {
+            val host = HostTestHarness(CircuitPolicy(failureThreshold = 1, recoveryDelayMillis = 100L))
+            host.discover(setOf(ProviderA))
+            host.dispatch(HostEvent.SelectProvider(ProviderA))
+            val binding = host.dispatch(HostEvent.SetUiBindingDemand(true))
+                .singleEffect<HostEffect.Bind>().lease
+            host.dispatch(HostEvent.BindingConnected(binding))
+
+            val loss = host.dispatch(
+                HostEvent.ConnectionLost(binding, ConnectionLossKind.SERVICE_DISCONNECTED, T0),
+            )
+            loss.filterIsInstance<HostEffect.Bind>() shouldBe emptyList()
+            host.state.binding shouldBe BindingState.Unbound
+
+            val recovery = host.dispatch(
+                HostEvent.CircuitCooldownElapsed(ProviderA, MonotonicMillis(T0.value + 100L)),
+            )
+            recovery.singleEffect<HostEffect.Bind>().lease.epoch.value shouldBe binding.epoch.value + 1L
+        }
+
+        test("provider switch discards old finish work before checking the new circuit") {
+            val oldBinding = BindingLease(ProviderA, BindingEpoch(1L))
+            val oldFinish = SessionFinishLease(ProviderA, oldBinding.epoch, SessionId(1L), RequestId(2L))
+            val initial = HostState(
+                discovery = DiscoveryState.Ready(DiscoveryRevision(1L), setOf(ProviderA, ProviderB)),
+                selectedProvider = ProviderA,
+                binding = BindingState.Connected(oldBinding),
+                pendingFinishes = mapOf(oldFinish.sessionId to PendingFinish(oldFinish)),
+                health = mapOf(
+                    ProviderB to ProviderHealth(1, CircuitState.Open(MonotonicMillis(T0.value + 100L))),
+                ),
+                nextId = 3L,
+                nextBindingEpoch = 2L,
+                nextDiscoveryRevision = 2L,
+            ).requireValid()
+
+            val reducer = AutocorrectHostReducer()
+            val switched = reducer.reduce(initial, HostEvent.SelectProvider(ProviderB))
+            switched.state.binding shouldBe BindingState.Unbound
+            switched.state.pendingFinishes shouldBe emptyMap()
+            switched.effects.singleEffect<HostEffect.Unbind>().lease shouldBe oldBinding
+
+            val opened = reducer.reduce(
+                switched.state,
+                HostEvent.OpenSession(DefaultSessionConfiguration, switched.state.editorGeneration, T0),
+            )
+            opened.state.binding shouldBe BindingState.Unbound
+            opened.effects.singleEffect<HostEffect.FallbackRequired>().reason shouldBe FallbackReason.CIRCUIT_OPEN
+        }
+
         test("service disconnection preserves the session but invalidates every transport lease") {
             val host = HostTestHarness()
             val session = host.startActiveSession()

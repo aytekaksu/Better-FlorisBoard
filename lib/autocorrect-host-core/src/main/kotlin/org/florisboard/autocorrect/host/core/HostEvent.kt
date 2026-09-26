@@ -23,7 +23,11 @@ sealed interface HostEvent {
 
     data class ProviderDiscoveryFailed(val revision: DiscoveryRevision) : HostEvent
 
-    data class SelectProvider(val providerId: ProviderId?) : HostEvent
+    /** A selection change abandons the old binding after sending a best-effort finish. */
+    data class SelectProvider(val providerId: ProviderId?, val forceRebind: Boolean = false) : HostEvent
+
+    /** Whether provider UI, a document picker, or an in-flight UI operation still needs a binding. */
+    data class SetUiBindingDemand(val required: Boolean) : HostEvent
 
     data class OpenSession(
         val configuration: SessionConfiguration,
@@ -32,6 +36,9 @@ sealed interface HostEvent {
     ) : HostEvent
 
     data object InvalidateEditor : HostEvent
+
+    /** End typing without claiming that the editor itself changed. */
+    data object CloseSession : HostEvent
 
     data class BindingConnected(val lease: BindingLease) : HostEvent
 
@@ -43,6 +50,9 @@ sealed interface HostEvent {
 
     data class ConnectionLost(val lease: BindingLease, val kind: ConnectionLossKind, val at: MonotonicMillis) :
         HostEvent
+
+    /** The adapter is about to send START after checking the current lease. */
+    data class SessionStartSending(val lease: SessionLease) : HostEvent
 
     data class SessionStartResult(val lease: SessionLease, val successful: Boolean, val at: MonotonicMillis) :
         HostEvent
@@ -68,6 +78,8 @@ sealed interface HostEvent {
         val sessionId: SessionId,
         val at: MonotonicMillis,
     ) : HostEvent
+
+    data class FinishSendFailed(val lease: SessionFinishLease, val at: MonotonicMillis) : HostEvent
 
     data class CircuitCooldownElapsed(val providerId: ProviderId, val at: MonotonicMillis) : HostEvent
 

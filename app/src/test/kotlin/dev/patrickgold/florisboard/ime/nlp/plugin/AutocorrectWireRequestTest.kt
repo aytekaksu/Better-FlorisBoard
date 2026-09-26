@@ -22,6 +22,13 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import org.florisboard.autocorrect.api.AutocorrectCapsMode
 import org.florisboard.autocorrect.api.AutocorrectPluginContract
+import org.florisboard.autocorrect.host.core.BindingEpoch
+import org.florisboard.autocorrect.host.core.HostEvent
+import org.florisboard.autocorrect.host.core.ProviderId
+import org.florisboard.autocorrect.host.core.RequestId
+import org.florisboard.autocorrect.host.core.SessionConfiguration
+import org.florisboard.autocorrect.host.core.SessionFinishLease
+import org.florisboard.autocorrect.host.core.SessionId
 
 class AutocorrectWireRequestTest : FunSpec({
     test("provider requests use a bounded editor window") {
@@ -115,7 +122,69 @@ class AutocorrectWireRequestTest : FunSpec({
 
         wire.request.capsMode shouldBe AutocorrectCapsMode.CAPS_LOCK
     }
+
+    test("normal finish keeps eligible content from the same editor") {
+        val content = editorContent(text = "abc", offset = 0, cursor = 3)
+        selectFinalRequestContent(content, true, true, true) shouldBe content
+    }
+
+    test("finish sends no content after a configuration or privacy change") {
+        val content = editorContent(text = "abc", offset = 0, cursor = 3)
+        selectFinalRequestContent(content, false, true, true).text shouldBe ""
+        selectFinalRequestContent(content, true, true, false).text shouldBe ""
+    }
+
+    test("a later editor cannot contribute content to an earlier session finish") {
+        val laterEditor = editorContent(text = "later editor", offset = 0, cursor = 12)
+        selectFinalRequestContent(laterEditor, true, false, true).text shouldBe ""
+    }
+
+    test("a queued finish keeps the closure snapshot when the same editor changes") {
+        val atClose = editorContent(text = "abc", offset = 0, cursor = 3)
+        val finalRequest = selectFinalRequestContent(atClose, true, true, true)
+            .wireRequest().request
+        val afterClose = editorContent(text = "abcd", offset = 0, cursor = 4)
+
+        finalRequest.text shouldBe "abc"
+        afterClose.text shouldBe "abcd"
+    }
+
+    test("a second editor invalidation preserves the queued closure snapshot") {
+        val lease = SessionFinishLease(ProviderId("provider"), BindingEpoch(1), SessionId(1), RequestId(2))
+        val snapshot = editorContent(text = "abc", offset = 0, cursor = 3).wireRequest().request
+        val snapshots = FinalRequestSnapshots()
+        snapshots.put(lease, testConfiguration(), snapshot)
+
+        snapshots.onHostEvent(HostEvent.InvalidateEditor, isPrivateSession = false)
+        snapshots.onHostEvent(HostEvent.InvalidateEditor, isPrivateSession = false)
+
+        snapshots.take(lease)?.text shouldBe "abc"
+        snapshots.take(lease) shouldBe null
+    }
+
+    test("private mode clears a queued final snapshot before send") {
+        val lease = SessionFinishLease(ProviderId("provider"), BindingEpoch(1), SessionId(1), RequestId(2))
+        val snapshots = FinalRequestSnapshots()
+        snapshots.put(
+            lease,
+            testConfiguration(),
+            editorContent(text = "abc", offset = 0, cursor = 3).wireRequest().request,
+        )
+
+        snapshots.onHostEvent(HostEvent.InvalidateEditor, isPrivateSession = true)
+
+        snapshots.take(lease) shouldBe null
+    }
 })
+
+private fun testConfiguration() = SessionConfiguration(
+    primaryLanguageTag = "en",
+    inputType = 1,
+    capsMode = 0,
+    allowPersonalizedLearning = true,
+    editorFlags = 0,
+    preferredEmojiSkinToneModifier = 0,
+)
 
 private fun editorContent(
     text: String,

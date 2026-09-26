@@ -48,7 +48,7 @@ internal fun HostReduction.providersDiscovered(event: HostEvent.ProvidersDiscove
             providerId = selected,
             reason = FallbackReason.PROVIDER_UNAVAILABLE,
         )
-    } else if (state.session?.providerId == selected) {
+    } else if (desiredBindingProvider() == selected) {
         ensureBinding(selected, at = null)
     }
 }
@@ -73,25 +73,44 @@ internal fun HostReduction.providerDiscoveryFailed(event: HostEvent.ProviderDisc
 }
 
 internal fun HostReduction.selectProvider(event: HostEvent.SelectProvider) {
-    if (event.providerId == state.selectedProvider) {
+    if (event.providerId == state.selectedProvider && !event.forceRebind) {
         ignore(event, IgnoredReason.NO_CHANGE)
         return
     }
     state = state.copy(editorGeneration = state.editorGeneration.next())
     endActiveSession(
         cancellationReason = RequestCancellationReason.PROVIDER_CHANGED,
-        retainFinish = true,
+        retainFinish = false,
     )
+    forceUnbind()
     state = state.copy(
         selectedProvider = event.providerId,
-        queuedProvider = null,
     )
+    settleBinding(at = null)
+}
+
+internal fun HostReduction.setUiBindingDemand(event: HostEvent.SetUiBindingDemand) {
+    if (state.uiBindingDemand == event.required) {
+        ignore(event, IgnoredReason.NO_CHANGE)
+        return
+    }
+    state = state.copy(uiBindingDemand = event.required)
     settleBinding(at = null)
 }
 
 internal fun HostReduction.openSession(event: HostEvent.OpenSession) {
     val fallback = sessionOpenFallback(event)
     if (fallback != null) {
+        val active = state.session
+        if (fallback == FallbackReason.CIRCUIT_OPEN &&
+            active != null && active.configuration != event.configuration
+        ) {
+            endActiveSession(
+                cancellationReason = RequestCancellationReason.SESSION_FINISHED,
+                retainFinish = true,
+            )
+            settleBinding(event.at)
+        }
         effects += HostEffect.FallbackRequired(state.selectedProvider, fallback)
         return
     }
@@ -130,6 +149,10 @@ private fun HostReduction.sessionOpenFallback(event: HostEvent.OpenSession): Fal
         return FallbackReason.GENERATION_INVALIDATED
     }
     val selected = state.selectedProvider ?: return FallbackReason.NO_PROVIDER_SELECTED
+    val open = state.healthOf(selected).circuit as? CircuitState.Open
+    if (open != null && event.at.value < open.retryAt.value) {
+        return FallbackReason.CIRCUIT_OPEN
+    }
     val ready = state.discovery as? DiscoveryState.Ready
     return if (ready != null && selected !in ready.providers) {
         FallbackReason.PROVIDER_UNAVAILABLE
@@ -142,6 +165,14 @@ internal fun HostReduction.invalidateEditor() {
     state = state.copy(editorGeneration = state.editorGeneration.next())
     endActiveSession(
         cancellationReason = RequestCancellationReason.EDITOR_INVALIDATED,
+        retainFinish = true,
+    )
+    settleBinding(at = null)
+}
+
+internal fun HostReduction.closeSession() {
+    endActiveSession(
+        cancellationReason = RequestCancellationReason.SESSION_FINISHED,
         retainFinish = true,
     )
     settleBinding(at = null)

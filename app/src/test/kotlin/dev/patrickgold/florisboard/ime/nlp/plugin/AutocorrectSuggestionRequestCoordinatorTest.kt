@@ -21,7 +21,11 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.florisboard.autocorrect.host.core.CircuitPolicy
 import org.florisboard.autocorrect.host.core.FallbackReason
+import org.florisboard.autocorrect.host.core.HostEffect
+import org.florisboard.autocorrect.host.core.HostEvent
 import org.florisboard.autocorrect.host.core.MonotonicMillis
+import org.florisboard.autocorrect.host.core.ProviderFailureKind
+import org.florisboard.autocorrect.host.core.ProviderId
 import org.florisboard.autocorrect.host.core.ReplyRejectionReason
 import org.florisboard.autocorrect.host.core.SessionConfiguration
 
@@ -64,30 +68,60 @@ class AutocorrectSuggestionRequestCoordinatorTest :
             repeat(3) { index ->
                 val admission = coordinator.issue(index.toLong())
                     .shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>()
-                coordinator.requestSendFailed(admission.lease, time(index.toLong()))
+                coordinator.dispatchLifecycle(
+                    HostEvent.RequestSendFailed(
+                        admission.lease,
+                        ProviderFailureKind.SEND_FAILED,
+                        time(index.toLong()),
+                    ),
+                )
             }
 
-            coordinator.issueRequest(0L, time(99L)) shouldBe
+            coordinator.issueRequest(coordinator.snapshot().editorGeneration.value, time(99L)) shouldBe
                 SuggestionRequestAdmission.Fallback(FallbackReason.CIRCUIT_OPEN)
 
-            coordinator.issueRequest(0L, time(102L))
+            coordinator.issueRequest(coordinator.snapshot().editorGeneration.value, time(102L))
                 .shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>()
         }
 
-        test("ending a session rejects the old lease after a new session is admitted") {
+        test("ending a session rejects the old lease after a new session starts") {
             val coordinator = coordinator()
             val old = coordinator.issue(1L).shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>()
-            coordinator.endSession(editorGeneration = 1L)
-            coordinator.admitSession(
-                providerId = "provider.two",
-                bindingEpoch = 2L,
-                sessionId = 20L,
-                editorGeneration = 1L,
-                configuration = configuration,
-            )
+            coordinator.dispatchLifecycle(HostEvent.InvalidateEditor)
+            val generation = coordinator.snapshot().editorGeneration
+            val start = coordinator.dispatchLifecycle(
+                HostEvent.OpenSession(configuration, generation, time(1L)),
+            ).effects.filterIsInstance<HostEffect.StartSession>().single()
+            coordinator.dispatchLifecycle(HostEvent.SessionStartSending(start.lease))
+            coordinator.dispatchLifecycle(HostEvent.SessionStartResult(start.lease, true, time(1L)))
 
             coordinator.acceptReply(old.lease.requestId.value, time(2L)) shouldBe
                 SuggestionReplyDecision.Reject(ReplyRejectionReason.CANCELLED)
+        }
+
+        test("lifecycle events and suggestion admission use the same reducer state") {
+            val coordinator = AutocorrectSuggestionRequestCoordinator()
+            val provider = ProviderId("provider.one")
+            val discovery = coordinator.dispatchLifecycle(HostEvent.RefreshProviders).effects
+                .filterIsInstance<HostEffect.DiscoverProviders>().single()
+            coordinator.dispatchLifecycle(
+                HostEvent.ProvidersDiscovered(discovery.revision, setOf(provider)),
+            )
+            coordinator.dispatchLifecycle(HostEvent.SelectProvider(provider))
+            val generation = coordinator.snapshot().editorGeneration
+            val binding = coordinator.dispatchLifecycle(
+                HostEvent.OpenSession(configuration, generation, time(0L)),
+            ).effects.filterIsInstance<HostEffect.Bind>().single().lease
+            val start = coordinator.dispatchLifecycle(HostEvent.BindingConnected(binding)).effects
+                .filterIsInstance<HostEffect.StartSession>().single()
+            coordinator.dispatchLifecycle(HostEvent.SessionStartSending(start.lease))
+            coordinator.dispatchLifecycle(HostEvent.SessionStartResult(start.lease, true, time(0L)))
+
+            val request = coordinator.issueRequest(generation.value, time(1L))
+                .shouldBeInstanceOf<SuggestionRequestAdmission.Admitted>().lease
+            request.providerId shouldBe provider
+            request.epoch shouldBe binding.epoch
+            request.sessionId shouldBe start.lease.sessionId
         }
     })
 
@@ -102,15 +136,21 @@ private val configuration = SessionConfiguration(
 
 private fun coordinator(circuitPolicy: CircuitPolicy = CircuitPolicy()) =
     AutocorrectSuggestionRequestCoordinator(circuitPolicy).also {
-        it.admitSession(
-            providerId = "provider.one",
-            bindingEpoch = 1L,
-            sessionId = 10L,
-            editorGeneration = 0L,
-            configuration = configuration,
-        )
+        val provider = ProviderId("provider.one")
+        val discovery = it.dispatchLifecycle(HostEvent.RefreshProviders).effects
+            .filterIsInstance<HostEffect.DiscoverProviders>().single()
+        it.dispatchLifecycle(HostEvent.ProvidersDiscovered(discovery.revision, setOf(provider)))
+        it.dispatchLifecycle(HostEvent.SelectProvider(provider))
+        val binding = it.dispatchLifecycle(
+            HostEvent.OpenSession(configuration, it.snapshot().editorGeneration, time(0L)),
+        ).effects.filterIsInstance<HostEffect.Bind>().single().lease
+        val start = it.dispatchLifecycle(HostEvent.BindingConnected(binding)).effects
+            .filterIsInstance<HostEffect.StartSession>().single()
+        it.dispatchLifecycle(HostEvent.SessionStartSending(start.lease))
+        it.dispatchLifecycle(HostEvent.SessionStartResult(start.lease, true, time(0L)))
     }
 
-private fun AutocorrectSuggestionRequestCoordinator.issue(at: Long) = issueRequest(editorGeneration = 0L, at = time(at))
+private fun AutocorrectSuggestionRequestCoordinator.issue(at: Long) =
+    issueRequest(editorGeneration = snapshot().editorGeneration.value, at = time(at))
 
 private fun time(value: Long) = MonotonicMillis(value)

@@ -62,6 +62,7 @@ internal class HostTestHarness(policy: CircuitPolicy = CircuitPolicy()) {
         val session = dispatch(HostEvent.BindingConnected(binding))
             .singleEffect<HostEffect.StartSession>()
             .lease
+        dispatch(HostEvent.SessionStartSending(session))
         dispatch(HostEvent.SessionStartResult(session, successful = true, at))
         return session
     }

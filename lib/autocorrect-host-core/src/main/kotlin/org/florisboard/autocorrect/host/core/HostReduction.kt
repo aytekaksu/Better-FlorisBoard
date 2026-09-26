@@ -66,7 +66,6 @@ internal class HostReduction(initialState: HostState, val circuitPolicy: Circuit
         state = state.copy(
             binding = BindingState.Unbound,
             pendingFinishes = emptyMap(),
-            queuedProvider = null,
         )
     }
 }

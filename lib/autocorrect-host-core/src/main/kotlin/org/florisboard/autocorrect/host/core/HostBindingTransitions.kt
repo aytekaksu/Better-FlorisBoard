@@ -60,7 +60,7 @@ internal fun HostReduction.connectionLost(event: HostEvent.ConnectionLost) {
         providerId = event.lease.providerId,
         reason = FallbackReason.PROVIDER_LOST,
     )
-    state.session?.let { ensureBinding(it.providerId, event.at) }
+    desiredBindingProvider()?.let { ensureBinding(it, event.at, allowUiCircuitBypass = false) }
 }
 
 private fun HostReduction.discardProviderConnection(lease: BindingLease, preserveSession: Boolean) {
@@ -79,7 +79,6 @@ private fun HostReduction.discardProviderConnection(lease: BindingLease, preserv
         pendingFinishes = state.pendingFinishes.filterValues {
             it.lease.providerId != lease.providerId
         },
-        queuedProvider = null,
     )
     effects += HostEffect.Unbind(lease)
 }
@@ -91,8 +90,18 @@ private fun ConnectionLossKind.toFailureKind() = when (this) {
     ConnectionLossKind.NULL_BINDING -> ProviderFailureKind.NULL_BINDING
 }
 
+internal fun HostReduction.sessionStartSending(event: HostEvent.SessionStartSending) {
+    if (!isCurrentSessionStart(event.lease, SessionPhase.STARTING)) {
+        ignore(event, if (!isCurrentBinding(event.lease)) IgnoredReason.STALE_BINDING else IgnoredReason.STALE_SESSION)
+        return
+    }
+    state = state.copy(session = requireNotNull(state.session).copy(phase = SessionPhase.SENDING_START))
+}
+
 internal fun HostReduction.sessionStartResult(event: HostEvent.SessionStartResult) {
-    if (!isCurrentSessionStart(event.lease)) {
+    if (!isCurrentSessionStart(event.lease, SessionPhase.SENDING_START) &&
+        !(!event.successful && isCurrentSessionStart(event.lease, SessionPhase.STARTING))
+    ) {
         val reason = if (!isCurrentBinding(event.lease)) {
             IgnoredReason.STALE_BINDING
         } else {
@@ -115,13 +124,13 @@ internal fun HostReduction.sessionStartResult(event: HostEvent.SessionStartResul
     }
 }
 
-private fun HostReduction.isCurrentSessionStart(lease: SessionLease): Boolean {
+private fun HostReduction.isCurrentSessionStart(lease: SessionLease, phase: SessionPhase): Boolean {
     val active = state.session
     return isCurrentBinding(lease) &&
         active?.sessionId == lease.sessionId &&
         active.providerId == lease.providerId &&
         active.editorGeneration == lease.editorGeneration &&
-        active.phase == SessionPhase.STARTING
+        active.phase == phase
 }
 
 private fun HostReduction.isCurrentBinding(lease: SessionLease): Boolean {
@@ -147,6 +156,17 @@ internal fun HostReduction.finishAcknowledged(event: HostEvent.FinishAcknowledge
     settleBinding(event.at)
 }
 
+internal fun HostReduction.finishSendFailed(event: HostEvent.FinishSendFailed) {
+    val pending = state.pendingFinishes[event.lease.sessionId]
+    if (pending?.lease != event.lease) {
+        ignore(event, if (pending == null) IgnoredReason.UNKNOWN_FINISH else IgnoredReason.STALE_BINDING)
+        return
+    }
+    state = state.copy(pendingFinishes = state.pendingFinishes - event.lease.sessionId)
+    recordFailure(event.lease.providerId, ProviderFailureKind.SEND_FAILED, event.at)
+    settleBinding(event.at)
+}
+
 internal fun HostReduction.destroy() {
     cancelPendingRequest(
         RequestCancellationReason.HOST_DESTROYED,
@@ -163,15 +183,22 @@ internal fun HostReduction.destroy() {
         session = null,
         pendingRequest = null,
         pendingFinishes = emptyMap(),
-        queuedProvider = null,
+        uiBindingDemand = false,
     )
     effects += HostEffect.ReleaseOwnedResources
 }
 
-internal fun HostReduction.ensureBinding(providerId: ProviderId, at: MonotonicMillis?) {
-    if (state.session?.providerId != providerId) return
+internal fun HostReduction.ensureBinding(
+    providerId: ProviderId,
+    at: MonotonicMillis?,
+    allowUiCircuitBypass: Boolean = true,
+) {
+    if (desiredBindingProvider() != providerId) return
     if (at != null) advanceCircuitIfReady(providerId, at)
-    if (state.healthOf(providerId).circuit is CircuitState.Open) {
+    if (
+        state.healthOf(providerId).circuit is CircuitState.Open &&
+        !(allowUiCircuitBypass && state.uiBindingDemand)
+    ) {
         effects += HostEffect.FallbackRequired(providerId, FallbackReason.CIRCUIT_OPEN)
         return
     }
@@ -188,6 +215,9 @@ internal fun HostReduction.ensureBinding(providerId: ProviderId, at: MonotonicMi
         ProviderAvailability.AVAILABLE -> alignBinding(providerId)
     }
 }
+
+internal fun HostReduction.desiredBindingProvider(): ProviderId? =
+    state.session?.providerId ?: state.selectedProvider.takeIf { state.uiBindingDemand }
 
 private enum class ProviderAvailability {
     DISCOVER,
@@ -218,13 +248,9 @@ private fun HostReduction.alignBinding(providerId: ProviderId) {
 
 private fun HostReduction.alignConnecting(current: BindingLease, providerId: ProviderId) {
     if (current.providerId == providerId) return
-    if (hasPendingFinish(current.providerId)) {
-        state = state.copy(queuedProvider = providerId)
-    } else {
-        effects += HostEffect.Unbind(current)
-        state = state.copy(binding = BindingState.Unbound)
-        beginBinding(providerId)
-    }
+    effects += HostEffect.Unbind(current)
+    state = state.copy(binding = BindingState.Unbound)
+    beginBinding(providerId)
 }
 
 private fun HostReduction.alignConnected(current: BindingLease, providerId: ProviderId) {
@@ -232,8 +258,6 @@ private fun HostReduction.alignConnected(current: BindingLease, providerId: Prov
         state.session
             ?.takeIf { it.phase == SessionPhase.AWAITING_BINDING }
             ?.let { startSession(it, current) }
-    } else if (hasPendingFinish(current.providerId)) {
-        state = state.copy(queuedProvider = providerId)
     } else {
         effects += HostEffect.Unbind(current)
         state = state.copy(binding = BindingState.Unbound)
@@ -248,13 +272,14 @@ private fun HostReduction.beginBinding(providerId: ProviderId) {
     )
     state = state.copy(
         binding = BindingState.Connecting(lease),
-        queuedProvider = null,
         nextBindingEpoch = Math.addExact(state.nextBindingEpoch, 1L),
     )
     effects += HostEffect.Bind(lease)
 }
 
 private fun HostReduction.startSession(session: HostSession, binding: BindingLease) {
+    // Settings may keep a provider bound while its typing circuit is open.
+    if (state.healthOf(session.providerId).circuit is CircuitState.Open) return
     val lease = SessionLease(
         providerId = session.providerId,
         epoch = binding.epoch,
@@ -270,12 +295,12 @@ internal fun HostReduction.endActiveSession(cancellationReason: RequestCancellat
     val active = state.session ?: return
     val connected = state.binding as? BindingState.Connected
     if (
-        active.phase == SessionPhase.ACTIVE &&
+        (active.phase == SessionPhase.SENDING_START || active.phase == SessionPhase.ACTIVE) &&
         connected?.lease?.providerId == active.providerId
     ) {
         emitFinish(active, connected.lease, retainFinish)
     }
-    state = state.copy(session = null, queuedProvider = null)
+    state = state.copy(session = null)
 }
 
 private fun HostReduction.emitFinish(session: HostSession, binding: BindingLease, retainFinish: Boolean) {
@@ -295,40 +320,32 @@ private fun HostReduction.emitFinish(session: HostSession, binding: BindingLease
 }
 
 internal fun HostReduction.settleBinding(at: MonotonicMillis?) {
-    val active = state.session
+    val desired = desiredBindingProvider()
     val current = bindingLease()
-    if (active != null) {
-        settleBindingForSession(active, current, at)
-    } else if (current != null && !hasPendingFinish(current.providerId)) {
-        effects += HostEffect.Unbind(current)
-        state = state.copy(binding = BindingState.Unbound, queuedProvider = null)
-    } else if (current == null) {
-        state = state.copy(queuedProvider = null)
+    if (desired != null) {
+        settleBindingForDemand(desired, current, at)
+    } else {
+        if (current != null && !hasPendingFinish(current.providerId)) {
+            effects += HostEffect.Unbind(current)
+            state = state.copy(binding = BindingState.Unbound)
+        }
     }
 }
 
-private fun HostReduction.settleBindingForSession(session: HostSession, current: BindingLease?, at: MonotonicMillis?) {
+private fun HostReduction.settleBindingForDemand(providerId: ProviderId, current: BindingLease?, at: MonotonicMillis?) {
     when {
-        current == null -> ensureBinding(session.providerId, at)
+        current == null -> ensureBinding(providerId, at)
 
-        current.providerId == session.providerId -> {
-            if (
-                state.binding is BindingState.Connected &&
-                session.phase == SessionPhase.AWAITING_BINDING
-            ) {
-                startSession(session, current)
-            }
-            state = state.copy(queuedProvider = null)
-        }
-
-        hasPendingFinish(current.providerId) -> {
-            state = state.copy(queuedProvider = session.providerId)
+        current.providerId == providerId -> {
+            state.session
+                ?.takeIf { state.binding is BindingState.Connected && it.phase == SessionPhase.AWAITING_BINDING }
+                ?.let { startSession(it, current) }
         }
 
         else -> {
             effects += HostEffect.Unbind(current)
             state = state.copy(binding = BindingState.Unbound)
-            ensureBinding(session.providerId, at)
+            ensureBinding(providerId, at)
         }
     }
 }

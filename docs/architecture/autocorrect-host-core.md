@@ -88,19 +88,24 @@ before the migration slice is complete.
 
 ## Current migration boundary
 
-The production request coordinator installs the active Android session as a
-typed core snapshot, then asks the reducer to issue, cancel, fail, and accept
-suggestion requests. Its lease is carried through the wire response and the
-rendered candidate, so both publication and commit reject a superseded request.
-Malformed or unknown IDs are rejected before typed-ID construction. Repeated
-send or connection failures update the per-provider circuit policy using a
-monotonic clock.
+The reducer now owns discovery revisions, provider selection, UI-only binding
+demand, binding epochs, editor generations, session admission, pending finishes,
+request leases, and the provider circuit. Android executes its ordered effects
+and feeds token-bearing callbacks back to the reducer. A queued START is checked
+again before Binder send; a session that never sends START cannot emit FINISH.
 
-The coordinator deliberately does not bind services, serialize payloads, hold
-candidate text, or mutate editors. The next worthwhile migration slice is
-binding/session effect execution. It should replace the matching manager state
-in one tested slice; merely copying those fields into the reducer would create
-two authorities and reduce safety.
+The manager keeps Android Binder handles, provider UI/document leases, and
+bounded wire payloads, but no second binding or session decision state. Normal
+session close retains the binding until FINISH is acknowledged. Changing the
+selected provider sends FINISH best-effort, then unbinds immediately so a
+provider that never acknowledges cannot block the new selection. Final editor
+content is captured at session close in a small runtime-only map, never in the
+effect queue or diagnostics. Repeated non-private editor teardown keeps that
+closure snapshot. A private or ineligible editor observed at the manager-locked
+send decision gets an empty final request; privacy, connection loss, and
+incompatible session events clear queued snapshots.
+An open typing circuit can still bind for a visible provider page, but it does
+not start or admit typing again until cooldown.
 
 ## Verification
 
