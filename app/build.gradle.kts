@@ -350,9 +350,11 @@ androidComponents {
             GenerateBuiltInThemeAssets::outputDirectory,
         )
         val numericRows = tasks.register<GenerateNumericRowAssets>("generate${variantName}NumericRowAssets") {
-            templateFile.set(layout.projectDirectory.file(
-                "src/main/assets/ime/keyboard/org.florisboard.layouts/layouts/numericRow/bengali.json",
-            ))
+            templateFile.set(
+                layout.projectDirectory.file(
+                    "src/main/assets/ime/keyboard/org.florisboard.layouts/layouts/numericRow/bengali.json",
+                ),
+            )
             zeroDigitsFile.set(layout.projectDirectory.file("numeric-row-zero-digits.json"))
             outputDirectory.set(layout.buildDirectory.dir("generated/numericRowAssets/${variant.name}"))
         }
