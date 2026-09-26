@@ -27,4 +27,5 @@ tags through this format.
 
 Run the focused host and Android tests for state ordering, Room's Main-thread
 guard, and an import/export round trip, then run `./gradlew qualityGate`. Device
-tests must target a dedicated emulator because they touch app dictionary data.
+tests must target a dedicated emulator: they touch app dictionary data, and the
+system-provider query test writes and deletes synthetic system words.
