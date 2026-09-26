@@ -821,6 +821,38 @@ val verifyPackagedPrivacy by tasks.registering(Exec::class) {
     }
 }
 
+val testBaselineProfileVerifier by tasks.registering(Exec::class) {
+    group = "verification"
+    description = "Tests baseline profile verification with synthetic APK inputs."
+    inputs.files(
+        "config/quality/verify-baseline-profile.py",
+        "config/quality/test-verify-baseline-profile.py",
+    )
+    commandLine("python3", file("config/quality/test-verify-baseline-profile.py").absolutePath)
+}
+
+val verifyBaselineProfile by tasks.registering(Exec::class) {
+    group = "verification"
+    description = "Checks source profile rules against the profile and minified beta APKs."
+    dependsOn(":app:assembleProfile", ":app:assembleBeta", testBaselineProfileVerifier)
+
+    val profileApk = layout.projectDirectory.file("app/build/outputs/apk/profile/app-profile.apk")
+    val betaApk = layout.projectDirectory.file("app/build/outputs/apk/beta/app-beta-unsigned.apk")
+    val profile = layout.projectDirectory.file("app/src/main/baseline-prof.txt")
+    val checker = layout.projectDirectory.file("config/quality/verify-baseline-profile.py")
+    inputs.files(profileApk, betaApk, profile, checker)
+    commandLine(
+        "python3",
+        checker.asFile.absolutePath,
+        "--apk",
+        profileApk.asFile.absolutePath,
+        "--apk",
+        betaApk.asFile.absolutePath,
+        "--profile",
+        profile.asFile.absolutePath,
+    )
+}
+
 val ciPackage by tasks.registering {
     group = "verification"
     description = "Builds artifacts and checks the beta APK's privacy invariants."
@@ -832,6 +864,7 @@ val ciPackage by tasks.registering {
         ":benchmark:assembleProfile",
         ":lib:autocorrect-api:checkAutocorrectApi",
         verifyPackagedPrivacy,
+        verifyBaselineProfile,
     )
 }
 
