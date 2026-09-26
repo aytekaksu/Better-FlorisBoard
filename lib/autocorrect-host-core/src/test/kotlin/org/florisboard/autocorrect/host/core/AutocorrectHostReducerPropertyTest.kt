@@ -29,7 +29,7 @@ class AutocorrectHostReducerPropertyTest :
         test("all generated transition histories remain valid and deterministic") {
             checkAll(
                 iterations = 300,
-                Arb.list(Arb.int(0..15), 1..120),
+                Arb.list(Arb.int(0..19), 1..120),
             ) { actions ->
                 val reducer = AutocorrectHostReducer(
                     CircuitPolicy(failureThreshold = 2, recoveryDelayMillis = 20L),
@@ -73,7 +73,11 @@ private fun eventFor(action: Int, state: HostState, at: MonotonicMillis): HostEv
     12 -> finishAcknowledgedFor(state, at)
     13 -> circuitRecoveryFor(state, at)
     14 -> HostEvent.CancelRequest()
-    else -> discoveryFailureFor(state)
+    15 -> discoveryFailureFor(state)
+    16 -> HostEvent.SetUiBindingDemand(true)
+    17 -> HostEvent.SetUiBindingDemand(false)
+    18 -> HostEvent.CloseSession
+    else -> finishSendFailedFor(state, at)
 }
 
 private fun discoveryResultFor(state: HostState): HostEvent {
@@ -95,20 +99,20 @@ private fun bindingConnectedFor(state: HostState): HostEvent {
 }
 
 private fun sessionStartedFor(state: HostState, at: MonotonicMillis): HostEvent {
-    val session = state.session?.takeIf { it.phase == SessionPhase.STARTING }
+    val session = state.session?.takeIf {
+        it.phase == SessionPhase.STARTING || it.phase == SessionPhase.SENDING_START
+    }
         ?: return HostEvent.IssueRequest(state.editorGeneration, at)
     val binding = (state.binding as? BindingState.Connected)?.lease
         ?: return HostEvent.RefreshProviders
-    return HostEvent.SessionStartResult(
-        SessionLease(
-            providerId = session.providerId,
-            epoch = binding.epoch,
-            sessionId = session.sessionId,
-            editorGeneration = session.editorGeneration,
-        ),
-        successful = true,
-        at = at,
+    val lease = SessionLease(
+        providerId = session.providerId,
+        epoch = binding.epoch,
+        sessionId = session.sessionId,
+        editorGeneration = session.editorGeneration,
     )
+    return if (session.phase == SessionPhase.STARTING) HostEvent.SessionStartSending(lease)
+    else HostEvent.SessionStartResult(lease, successful = true, at = at)
 }
 
 private fun requestReplyFor(state: HostState, at: MonotonicMillis): HostEvent {
@@ -141,6 +145,12 @@ private fun finishAcknowledgedFor(state: HostState, at: MonotonicMillis): HostEv
         sessionId = finish.sessionId,
         at = at,
     )
+}
+
+private fun finishSendFailedFor(state: HostState, at: MonotonicMillis): HostEvent {
+    val finish = state.pendingFinishes.values.firstOrNull()?.lease
+        ?: return HostEvent.CloseSession
+    return HostEvent.FinishSendFailed(finish, at)
 }
 
 private fun circuitRecoveryFor(state: HostState, at: MonotonicMillis): HostEvent {

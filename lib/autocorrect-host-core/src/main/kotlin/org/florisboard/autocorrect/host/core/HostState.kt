@@ -42,6 +42,7 @@ sealed interface BindingState {
 enum class SessionPhase {
     AWAITING_BINDING,
     STARTING,
+    SENDING_START,
     ACTIVE,
 }
 
@@ -81,11 +82,11 @@ data class HostState(
     val lifecycle: HostLifecycle = HostLifecycle.RUNNING,
     val discovery: DiscoveryState = DiscoveryState.Idle,
     val selectedProvider: ProviderId? = null,
+    val uiBindingDemand: Boolean = false,
     val binding: BindingState = BindingState.Unbound,
     val session: HostSession? = null,
     val pendingRequest: PendingRequest? = null,
     val pendingFinishes: Map<SessionId, PendingFinish> = emptyMap(),
-    val queuedProvider: ProviderId? = null,
     val health: Map<ProviderId, ProviderHealth> = emptyMap(),
     val editorGeneration: EditorGeneration = EditorGeneration.Initial,
     val retiredRequests: List<RetiredRequest> = emptyList(),
@@ -110,8 +111,15 @@ data class HostState(
             require(session == null)
             require(pendingRequest == null)
             require(pendingFinishes.isEmpty())
-            require(queuedProvider == null)
+            require(!uiBindingDemand)
         }
+
+        val boundProvider = when (val current = binding) {
+            BindingState.Unbound -> null
+            is BindingState.Connecting -> current.lease.providerId
+            is BindingState.Connected -> current.lease.providerId
+        }
+        require(boundProvider == null || boundProvider == selectedProvider)
 
         session?.let { active ->
             require(active.providerId == selectedProvider)
@@ -133,15 +141,6 @@ data class HostState(
             require(request.providerId == connected.lease.providerId)
         }
 
-        queuedProvider?.let { queued ->
-            require(session?.providerId == queued)
-            val boundProvider = when (val current = binding) {
-                BindingState.Unbound -> null
-                is BindingState.Connecting -> current.lease.providerId
-                is BindingState.Connected -> current.lease.providerId
-            }
-            require(boundProvider != null && boundProvider != queued)
-        }
         return this
     }
 }

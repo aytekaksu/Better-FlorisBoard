@@ -206,8 +206,9 @@ bounded, and intentionally cannot hold arbitrary text or exceptions.
   coverage.
 - The host facade coordinates too many concerns while staged extraction is in
   progress.
-- A provider which never acknowledges session finish can retain binding demand;
-  watchdog behavior needs an explicit compatibility decision.
+- A provider which never acknowledges an ordinary session finish can retain
+  that binding. Explicit provider selection releases it immediately; any
+  watchdog for idle finishes still needs a compatibility decision.
 
 Changes in
 [`FlorisImeService.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/FlorisImeService.kt),
