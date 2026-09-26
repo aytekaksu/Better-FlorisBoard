@@ -155,6 +155,21 @@ class SnyggAppearanceValueTest {
         }
 
         @Test
+        fun `all static color forms retain outer whitespace and trailing alpha byte`() {
+            val pairs = listOf(
+                " rgba(18,52,86,0.5) " to helperMakeColor(0x12, 0x34, 0x56, 0.5f),
+                " rgb(18,52,86) " to helperMakeColor(0x12, 0x34, 0x56),
+                " transparent " to helperMakeColor(0, 0, 0, 0),
+                " #123456 " to helperMakeColor(0x12, 0x34, 0x56),
+                " #12345678 " to helperMakeColor(0x12, 0x34, 0x56, 0x78),
+            )
+            assertAll(pairs.map { (raw, expected) -> {
+                assertEquals(expected, encoder.deserialize(raw).getOrNull(), "deserialize $raw")
+            } })
+            assertTrue(encoder.deserialize(" #123456789 ").isFailure)
+        }
+
+        @Test
         fun `serialize colors`() {
             val pairs = listOf(
                 // valid
