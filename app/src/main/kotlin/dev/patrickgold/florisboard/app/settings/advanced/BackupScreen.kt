@@ -58,6 +58,7 @@ import dev.patrickgold.florisboard.lib.io.ZipUtils
 import dev.patrickgold.jetpref.datastore.runtime.AndroidAppDataStorage
 import dev.patrickgold.jetpref.datastore.runtime.FileBasedStorage
 import dev.patrickgold.jetpref.material.ui.JetPrefListItem
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -260,9 +261,13 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
     suspend fun prepareBackupWorkspace(
         selection: Backup.Selection,
     ): CacheManager.BackupAndRestoreWorkspace {
-        val workspace = cacheManager.backupAndRestore.new()
+        // Keep cleanup ownership if cancellation happens during the dispatcher handoff.
+        val pendingWorkspace = AtomicReference<CacheManager.BackupAndRestoreWorkspace?>()
         var accepted = false
         try {
+            val workspace = withContext(Dispatchers.IO) {
+                cacheManager.backupAndRestore.new().also(pendingWorkspace::set)
+            }
             withContext(Dispatchers.IO) {
                 val operationContext = currentCoroutineContext()
                 val archiveLimits = ArchiveLimits.Default
@@ -364,11 +369,12 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                 }
             }
             accepted = true
+            pendingWorkspace.set(null)
             return workspace
         } finally {
             if (!accepted) {
                 withContext(NonCancellable + Dispatchers.IO) {
-                    workspace.close()
+                    pendingWorkspace.getAndSet(null)?.close()
                 }
             }
         }

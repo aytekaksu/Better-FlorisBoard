@@ -73,6 +73,7 @@ import java.io.File
 import java.nio.file.Path
 import java.text.DateFormat
 import java.util.*
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -213,9 +214,13 @@ fun RestoreScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
 
     suspend fun prepareRestoreWorkspace(uri: Uri): CacheManager.BackupAndRestoreWorkspace {
         closeRestoreWorkspace()
-        val workspace = cacheManager.backupAndRestore.new()
+        // Keep cleanup ownership if cancellation happens during the dispatcher handoff.
+        val pendingWorkspace = AtomicReference<CacheManager.BackupAndRestoreWorkspace?>()
         var accepted = false
         try {
+            val workspace = withContext(Dispatchers.IO) {
+                cacheManager.backupAndRestore.new().also(pendingWorkspace::set)
+            }
             val destination = workspace.inputDir.subFile(Restore.BACKUP_ARCHIVE_FILE_NAME)
             val snapshot = when (
                 val result = BackupArchiveSnapshot.capture(
@@ -250,10 +255,11 @@ fun RestoreScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
             }
             restoreFilesSelector.resetForRestore(session.archive.availableComponents)
             accepted = true
+            pendingWorkspace.set(null)
             return workspace
         } finally {
             if (!accepted) {
-                closeRestoreWorkspace(workspace)
+                closeRestoreWorkspace(pendingWorkspace.getAndSet(null))
             }
         }
     }
