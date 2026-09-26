@@ -348,6 +348,7 @@ class AutocorrectPluginManager internal constructor(
         ConcurrentHashMap<AutocorrectPluginHostSetting, Boolean>()
     private val pendingPluginUiOperations = mutableSetOf<Long>()
     private val pendingPluginUiDocumentOperations = mutableSetOf<Long>()
+    private var pendingPluginUiReadRequestId: Long? = null
     private val pendingDictionaryMutationActions =
         mutableMapOf<Long, String>()
     private val hostSettingMutationGuard = Mutex()
@@ -935,6 +936,7 @@ class AutocorrectPluginManager internal constructor(
             return null
         }
         val requestId = nextId.getAndIncrement()
+        pendingPluginUiReadRequestId = null
         latestPluginUiRequestId = requestId
         _pluginUiError.value = false
         _pluginUiLoading.value = true
@@ -962,6 +964,7 @@ class AutocorrectPluginManager internal constructor(
             prefs.suggestion.autocorrectPluginComponent.get() != boundProviderId
         ) return
         val requestId = nextId.getAndIncrement()
+        pendingPluginUiReadRequestId = requestId
         latestPluginUiRequestId = requestId
         _pluginUiError.value = false
         _pluginUiLoading.value = true
@@ -971,6 +974,7 @@ class AutocorrectPluginManager internal constructor(
                 service,
             )
         ) {
+            pendingPluginUiReadRequestId = null
             _pluginUiError.value = true
             _pluginUiLoading.value = false
         }
@@ -1020,6 +1024,7 @@ class AutocorrectPluginManager internal constructor(
     }
 
     private fun clearPendingPluginUiOperations() {
+        pendingPluginUiReadRequestId = null
         pendingPluginUiOperations.clear()
         pendingPluginUiDocumentOperations.clear()
         pendingDictionaryMutationActions.clear()
@@ -2569,20 +2574,85 @@ class AutocorrectPluginManager internal constructor(
         }
 
         private fun handlePluginUiReply(message: Message) {
-            val result = pluginUiResultFromBundle(message.data)
-            pendingDictionaryMutationActions.remove(result.requestId)
-            finishPluginUiOperation(result.requestId)
+            val data = try {
+                message.data
+            } catch (_: Exception) {
+                rejectMalformedPluginUiReply(null)
+                return
+            }
+            // Read identity before decoding nested provider-controlled UI data.
+            @Suppress("DEPRECATION")
+            val requestId = try {
+                (data.get("requestId") as? Long)?.takeIf { it >= 0L }
+            } catch (_: Exception) {
+                null
+            }
+            if (requestId == null) {
+                rejectMalformedPluginUiReply(null)
+                return
+            }
+            val result = try {
+                pluginUiResultFromBundle(data)
+            } catch (_: Exception) {
+                rejectMalformedPluginUiReply(requestId)
+                return
+            }
+            if (requestId != 0L && !ownsPluginUiReply(requestId)) {
+                diagnostics.record(
+                    AutocorrectPluginDiagnosticEvent.ReplyRejected(
+                        bindingEpoch = bindingEpoch,
+                        operation = AutocorrectPluginDiagnosticOperation.PLUGIN_UI,
+                        error = AutocorrectPluginDiagnosticError.UNKNOWN_REQUEST,
+                    ),
+                )
+                return
+            }
+            if (pendingPluginUiReadRequestId == requestId) pendingPluginUiReadRequestId = null
+            pendingDictionaryMutationActions.remove(requestId)
+            finishPluginUiOperation(requestId)
+            if (requestId == latestPluginUiRequestId) _pluginUiLoading.value = false
             if (uiClientCount > 0 &&
-                (result.requestId == 0L || result.requestId >= latestPluginUiRequestId)
+                (requestId == 0L || requestId == latestPluginUiRequestId)
             ) {
                 _pluginUiError.value = !result.successful
                 if (result.successful || result.ui != null) {
                     providerPluginUi = result.ui
                     _pluginUi.value = result.ui?.withHostSettingValues()
                 }
-                if (result.requestId != 0L) _pluginUiLoading.value = false
             }
         }
+
+        private fun rejectMalformedPluginUiReply(requestId: Long?) {
+            recordMalformedReply(AutocorrectPluginDiagnosticOperation.PLUGIN_UI)
+            if (requestId == 0L) return // An unsolicited push owns no pending operation.
+            if (requestId == null) {
+                val wasLoading = _pluginUiLoading.value
+                if (!wasLoading && pendingPluginUiReadRequestId == null &&
+                    pendingPluginUiOperations.isEmpty()
+                ) return
+                clearPendingPluginUiOperations()
+                latestPluginUiRequestId = nextId.getAndIncrement()
+                if (uiClientCount > 0) _pluginUiError.value = true
+                _pluginUiLoading.value = false
+                if (!closePluginUiIfIdle()) releaseBindingIfIdle()
+                return
+            }
+            if (!ownsPluginUiReply(requestId)) return
+            val wasLatest = requestId == latestPluginUiRequestId
+            if (pendingPluginUiReadRequestId == requestId) pendingPluginUiReadRequestId = null
+            pendingDictionaryMutationActions.remove(requestId)
+            finishPluginUiOperation(requestId)
+            if (wasLatest) {
+                latestPluginUiRequestId = nextId.getAndIncrement()
+                _pluginUiLoading.value = false
+                if (uiClientCount > 0) {
+                    _pluginUiError.value = true
+                }
+            }
+        }
+
+        private fun ownsPluginUiReply(requestId: Long) =
+            requestId == pendingPluginUiReadRequestId || requestId in pendingPluginUiOperations
 
         private fun recordMalformedReply(operation: AutocorrectPluginDiagnosticOperation) {
             diagnostics.record(

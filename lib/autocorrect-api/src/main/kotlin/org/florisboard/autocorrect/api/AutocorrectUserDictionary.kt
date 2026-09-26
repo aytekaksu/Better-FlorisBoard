@@ -173,12 +173,13 @@ fun userDictionaryRequestFromBundle(bundle: Bundle): AutocorrectUserDictionaryRe
         it.name == bundle.raw(DictionaryKeys.OPERATION)
     } ?: return null
     val rawLanguageTags = (bundle.raw(DictionaryKeys.LANGUAGE_TAGS) as? ArrayList<*>)
-        ?.map { it as? String ?: return null }
         ?: return null
     if (rawLanguageTags.size > AutocorrectPluginContract.MAX_USER_DICTIONARY_LANGUAGE_TAGS) {
         return null
     }
-    val languageTags = rawLanguageTags.map { it.canonicalLanguageTag() ?: return null }.distinct()
+    val languageTags = rawLanguageTags
+        .map { (it as? String)?.canonicalLanguageTag() ?: return null }
+        .distinct()
     val originUiRequestId = (bundle.raw(DictionaryKeys.ORIGIN_UI_REQUEST_ID) as? Long)
         ?.coerceAtLeast(0L) ?: return null
     val entryId = (bundle.raw(DictionaryKeys.ID) as? Long)
