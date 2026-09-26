@@ -138,7 +138,9 @@ runtime data.
 Theme assets use a two-entry materialization cache. The manager and every
 Compose consumer hold explicit leases, including editor previews. Retirement
 waits for the last consumer before deleting assets, and abandoned compositions
-release their lease.
+release their lease. A failed delete gets one retry. If both attempts fail, a
+content-free warning is logged; the next installed-theme load in a new process
+cleans remaining stale assets.
 Theme styles and file fonts compile off the Compose thread before an installed
 theme is published. Editor previews hold a separate asset lease while compiling;
 obsolete work is cancelled or discarded, and the current theme stays visible

@@ -19,9 +19,11 @@ package dev.patrickgold.florisboard.ime.theme
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
+import java.io.IOException
 import java.nio.file.Files
 
 class ThemeMaterializationTest :
@@ -31,7 +33,7 @@ class ThemeMaterializationTest :
             var disposalCount = 0
             val materialization = ThemeMaterialization(directory) {
                 disposalCount++
-                it.deleteRecursively()
+                deleteRetiredThemeAssets(it) shouldBe true
             }
             val first = materialization.acquire()
             val second = materialization.acquire()
@@ -52,6 +54,59 @@ class ThemeMaterializationTest :
             disposalCount shouldBe 1
             shouldThrow<IllegalStateException> {
                 materialization.acquire()
+            }
+        }
+
+        test("retired theme deletion retries an exception") {
+            withTestThemeDirectory { directory ->
+                var attempts = 0
+                deleteRetiredThemeAssets(directory) {
+                    if (++attempts == 1) throw IOException("synthetic first failure")
+                    it.deleteRecursively()
+                } shouldBe true
+
+                attempts shouldBe 2
+                directory.exists() shouldBe false
+            }
+        }
+
+        test("retired theme deletion retries an unsuccessful result") {
+            withTestThemeDirectory { directory ->
+                var attempts = 0
+                deleteRetiredThemeAssets(directory) {
+                    if (++attempts == 1) false else it.deleteRecursively()
+                } shouldBe true
+
+                attempts shouldBe 2
+                directory.exists() shouldBe false
+            }
+        }
+
+        test("retired theme deletion reports exhausted attempts without hiding a live directory") {
+            withTestThemeDirectory { directory ->
+                var attempts = 0
+                deleteRetiredThemeAssets(directory) {
+                    if (++attempts == 1) throw IOException("synthetic first failure")
+                    false
+                } shouldBe false
+
+                attempts shouldBe 2
+                directory.exists() shouldBe true
+            }
+        }
+
+        test("retired theme deletion preserves cancellation") {
+            withTestThemeDirectory { directory ->
+                var attempts = 0
+                shouldThrow<CancellationException> {
+                    deleteRetiredThemeAssets(directory) {
+                        attempts++
+                        throw CancellationException("synthetic cancellation")
+                    }
+                }
+
+                attempts shouldBe 1
+                directory.exists() shouldBe true
             }
         }
 
@@ -138,3 +193,12 @@ class ThemeMaterializationTest :
             failure.toString() shouldBe "LoadFailure(type=IllegalStateException)"
         }
     })
+
+private inline fun withTestThemeDirectory(block: (java.io.File) -> Unit) {
+    val directory = Files.createTempDirectory("theme-materialization-retry-test").toFile()
+    try {
+        block(directory)
+    } finally {
+        directory.deleteRecursively()
+    }
+}
