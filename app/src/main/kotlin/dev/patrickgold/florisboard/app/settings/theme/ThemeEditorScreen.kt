@@ -128,6 +128,7 @@ import org.florisboard.lib.snygg.SnyggSpecDecl
 import org.florisboard.lib.snygg.SnyggStylesheet
 import org.florisboard.lib.snygg.SnyggStylesheetEditor
 import org.florisboard.lib.snygg.ui.Saver
+import org.florisboard.lib.snygg.value.SnyggValue
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -257,6 +258,17 @@ fun ThemeEditorScreen(
             },
         )
     }
+}
+
+internal fun confirmThemePropertyEdit(
+    propertyToEdit: PropertyInfo,
+    properties: Map<String, SnyggValue>,
+    name: String,
+    apply: () -> Unit,
+): Boolean {
+    if (propertyToEdit.name == SnyggEmptyPropertyInfoForAdding.name && name in properties) return false
+    apply()
+    return true
 }
 
 @Composable
@@ -677,14 +689,10 @@ private fun ThemeEditorReadyScreen(
                 workspace = workspace,
                 onConfirmNewValue = { name, value ->
                     val properties = snyggPropertySetForEditing?.properties ?: return@EditPropertyDialog false
-                    if (propertyToEdit == SnyggEmptyPropertyInfoForAdding && properties.containsKey(name)) {
-                        return@EditPropertyDialog false
+                    confirmThemePropertyEdit(propertyToEdit, properties, name) {
+                        workspace.update { properties[name] = value }
+                        snyggPropertyToEdit = null
                     }
-                    workspace.update {
-                        properties[name] = value
-                    }
-                    snyggPropertyToEdit = null
-                    true
                 },
                 onDelete = {
                     workspace.update {
