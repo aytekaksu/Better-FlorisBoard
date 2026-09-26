@@ -58,6 +58,7 @@ import dev.patrickgold.florisboard.lib.io.ZipUtils
 import dev.patrickgold.jetpref.datastore.runtime.AndroidAppDataStorage
 import dev.patrickgold.jetpref.datastore.runtime.FileBasedStorage
 import dev.patrickgold.jetpref.material.ui.JetPrefListItem
+import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
@@ -81,55 +82,33 @@ import org.florisboard.lib.kotlin.io.writeJson
 object Backup {
     const val FILE_PROVIDER_AUTHORITY = "${BuildConfig.APPLICATION_ID}.provider.file"
 
-    internal data class Selection(
-        val jetprefDatastore: Boolean,
-        val imeKeyboard: Boolean,
-        val imeTheme: Boolean,
-        val clipboardTextItems: Boolean,
-        val clipboardImageItems: Boolean,
-        val clipboardVideoItems: Boolean,
-    ) {
-        fun provideClipboardItems(): Boolean =
-            clipboardTextItems || clipboardImageItems || clipboardVideoItems
-
-        internal fun components(): Set<BackupComponent> = buildSet {
-            if (jetprefDatastore) add(BackupComponent.PREFERENCES)
-            if (imeKeyboard) add(BackupComponent.KEYBOARD_EXTENSIONS)
-            if (imeTheme) add(BackupComponent.THEME_EXTENSIONS)
-            if (clipboardTextItems) add(BackupComponent.CLIPBOARD_TEXT)
-            if (clipboardImageItems) add(BackupComponent.CLIPBOARD_IMAGES)
-            if (clipboardVideoItems) add(BackupComponent.CLIPBOARD_VIDEOS)
-        }
-    }
-
     enum class Destination {
         FILE_SYS,
         SHARE_INTENT;
     }
 
     class FilesSelector {
-        var jetprefDatastore by mutableStateOf(true)
-        var imeKeyboard by mutableStateOf(true)
-        var imeTheme by mutableStateOf(true)
-        var clipboardTextItems by mutableStateOf(false)
-        var clipboardImageItems by mutableStateOf(false)
-        var clipboardVideoItems by mutableStateOf(false)
+        private var selectedComponents by mutableStateOf(DEFAULT_COMPONENTS)
+
+        internal fun isSelected(component: BackupComponent): Boolean = component in selectedComponents
+
+        internal fun toggle(component: BackupComponent) {
+            selectedComponents = if (isSelected(component)) {
+                selectedComponents - component
+            } else {
+                selectedComponents + component
+            }
+        }
 
         internal fun resetForRestore(availableComponents: Set<BackupComponent>) {
-            jetprefDatastore = BackupComponent.PREFERENCES in availableComponents
-            imeKeyboard = BackupComponent.KEYBOARD_EXTENSIONS in availableComponents
-            imeTheme = BackupComponent.THEME_EXTENSIONS in availableComponents
-            clipboardTextItems = false
-            clipboardImageItems = false
-            clipboardVideoItems = false
+            selectedComponents = DEFAULT_COMPONENTS.intersect(availableComponents)
         }
 
         internal fun clipboardState(availableComponents: Set<BackupComponent>? = null): ToggleableState {
             val available = clipboardComponents.filter { availableComponents == null || it in availableComponents }
-            val selected = snapshot().components()
             return when {
-                available.none { it in selected } -> ToggleableState.Off
-                available.all { it in selected } -> ToggleableState.On
+                available.none(::isSelected) -> ToggleableState.Off
+                available.all(::isSelected) -> ToggleableState.On
                 else -> ToggleableState.Indeterminate
             }
         }
@@ -138,36 +117,34 @@ object Backup {
             selected: Boolean,
             availableComponents: Set<BackupComponent>? = null,
         ) {
-            if (availableComponents == null || BackupComponent.CLIPBOARD_TEXT in availableComponents) {
-                clipboardTextItems = selected
-            }
-            if (availableComponents == null || BackupComponent.CLIPBOARD_IMAGES in availableComponents) {
-                clipboardImageItems = selected
-            }
-            if (availableComponents == null || BackupComponent.CLIPBOARD_VIDEOS in availableComponents) {
-                clipboardVideoItems = selected
-            }
+            val affected = clipboardComponents.filter { availableComponents == null || it in availableComponents }
+            selectedComponents = if (selected) selectedComponents + affected else selectedComponents - affected
         }
 
-        fun atLeastOneSelected(): Boolean {
-            return jetprefDatastore || imeKeyboard || imeTheme || clipboardTextItems || clipboardImageItems || clipboardVideoItems
-        }
+        fun atLeastOneSelected(): Boolean = selectedComponents.isNotEmpty()
 
-        internal fun snapshot() = Selection(
-            jetprefDatastore = jetprefDatastore,
-            imeKeyboard = imeKeyboard,
-            imeTheme = imeTheme,
-            clipboardTextItems = clipboardTextItems,
-            clipboardImageItems = clipboardImageItems,
-            clipboardVideoItems = clipboardVideoItems,
-        )
+        internal fun snapshot(): Set<BackupComponent> = Collections.unmodifiableSet(selectedComponents.toSet())
 
         private val clipboardComponents = listOf(
             BackupComponent.CLIPBOARD_TEXT,
             BackupComponent.CLIPBOARD_IMAGES,
             BackupComponent.CLIPBOARD_VIDEOS,
         )
+
+        private companion object {
+            val DEFAULT_COMPONENTS = setOf(
+                BackupComponent.PREFERENCES,
+                BackupComponent.KEYBOARD_EXTENSIONS,
+                BackupComponent.THEME_EXTENSIONS,
+            )
+        }
     }
+}
+
+internal fun Set<BackupComponent>.clipboardItemTypes(): Set<ItemType> = buildSet {
+    if (BackupComponent.CLIPBOARD_TEXT in this@clipboardItemTypes) add(ItemType.TEXT)
+    if (BackupComponent.CLIPBOARD_IMAGES in this@clipboardItemTypes) add(ItemType.IMAGE)
+    if (BackupComponent.CLIPBOARD_VIDEOS in this@clipboardItemTypes) add(ItemType.VIDEO)
 }
 
 @Composable
@@ -185,7 +162,7 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
     var backupWorkspace by remember {
         mutableStateOf<CacheManager.BackupAndRestoreWorkspace?>(null)
     }
-    var preparedSelection by remember { mutableStateOf<Backup.Selection?>(null) }
+    var preparedSelection by remember { mutableStateOf<Set<BackupComponent>?>(null) }
     var isBackupBusy by remember { mutableStateOf(false) }
 
     fun takeBackupWorkspace() = backupWorkspace.also {
@@ -266,7 +243,7 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
     )
 
     suspend fun prepareBackupWorkspace(
-        selection: Backup.Selection,
+        selection: Set<BackupComponent>,
     ): CacheManager.BackupAndRestoreWorkspace {
         // Keep cleanup ownership if cancellation happens during the dispatcher handoff.
         val pendingWorkspace = AtomicReference<CacheManager.BackupAndRestoreWorkspace?>()
@@ -284,7 +261,7 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                     maxFileBytes = archiveLimits.maxEntryBytes,
                     checkCancelled = { operationContext.ensureActive() },
                 )
-                if (selection.jetprefDatastore) {
+                if (BackupComponent.PREFERENCES in selection) {
                     val fileBasedStorage = workspace.inputDir
                         .subDir(AndroidAppDataStorage.JETPREF_DIR_NAME)
                         .subFile("${FlorisPreferenceModel.NAME}.${AndroidAppDataStorage.JETPREF_FILE_EXT}")
@@ -293,7 +270,7 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                 }
                 val workspaceFilesDir = workspace.inputDir.subDir("files")
                 ExtensionManager.withStorageMutation {
-                    if (selection.imeKeyboard) {
+                    if (BackupComponent.KEYBOARD_EXTENSIONS in selection) {
                         ZipUtils.copyDirectoryNoFollow(
                             srcDir = context.filesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH),
                             dstDir = workspaceFilesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH),
@@ -301,7 +278,7 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                             budget = transferBudget,
                         )
                     }
-                    if (selection.imeTheme) {
+                    if (BackupComponent.THEME_EXTENSIONS in selection) {
                         ZipUtils.copyDirectoryNoFollow(
                             srcDir = context.filesDir.subDir(ExtensionManager.IME_THEME_PATH),
                             dstDir = workspaceFilesDir.subDir(ExtensionManager.IME_THEME_PATH),
@@ -311,13 +288,9 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                     }
                 }
 
-                if (selection.provideClipboardItems()) {
+                val selectedTypes = selection.clipboardItemTypes()
+                if (selectedTypes.isNotEmpty()) {
                     val clipboardManager by context.clipboardManager()
-                    val selectedTypes = buildSet {
-                        if (selection.clipboardTextItems) add(ItemType.TEXT)
-                        if (selection.clipboardImageItems) add(ItemType.IMAGE)
-                        if (selection.clipboardVideoItems) add(ItemType.VIDEO)
-                    }
                     val snapshot = withContext(NonCancellable) {
                         clipboardManager.acquireBackupSnapshot(selectedTypes)
                     }
@@ -349,7 +322,7 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                     BackupArchive.Manifest(
                         formatVersion = BackupArchive.CURRENT_MANIFEST_VERSION,
                         components = BackupComponent.entries
-                            .filter { it in selection.components() }
+                            .filter { it in selection }
                             .map { it.wireId },
                     ),
                 )
@@ -500,20 +473,20 @@ internal fun BackupFilesSelector(
         title = title,
     ) {
         CheckboxListItem(
-            onClick = { filesSelector.jetprefDatastore = !filesSelector.jetprefDatastore },
-            checked = filesSelector.jetprefDatastore,
+            onClick = { filesSelector.toggle(BackupComponent.PREFERENCES) },
+            checked = filesSelector.isSelected(BackupComponent.PREFERENCES),
             text = stringRes(R.string.backup_and_restore__back_up__files_jetpref_datastore),
             enabled = isAvailable(BackupComponent.PREFERENCES),
         )
         CheckboxListItem(
-            onClick = { filesSelector.imeKeyboard = !filesSelector.imeKeyboard },
-            checked = filesSelector.imeKeyboard,
+            onClick = { filesSelector.toggle(BackupComponent.KEYBOARD_EXTENSIONS) },
+            checked = filesSelector.isSelected(BackupComponent.KEYBOARD_EXTENSIONS),
             text = stringRes(R.string.backup_and_restore__back_up__files_ime_keyboard),
             enabled = isAvailable(BackupComponent.KEYBOARD_EXTENSIONS),
         )
         CheckboxListItem(
-            onClick = { filesSelector.imeTheme = !filesSelector.imeTheme },
-            checked = filesSelector.imeTheme,
+            onClick = { filesSelector.toggle(BackupComponent.THEME_EXTENSIONS) },
+            checked = filesSelector.isSelected(BackupComponent.THEME_EXTENSIONS),
             text = stringRes(R.string.backup_and_restore__back_up__files_ime_theme),
             enabled = isAvailable(BackupComponent.THEME_EXTENSIONS),
         )
@@ -532,35 +505,27 @@ internal fun BackupFilesSelector(
             enabled = clipboardAvailable,
         )
 
-
         CheckboxListItem(
-            onClick = {
-                filesSelector.clipboardTextItems = !filesSelector.clipboardTextItems
-            },
-            checked = filesSelector.clipboardTextItems,
+            onClick = { filesSelector.toggle(BackupComponent.CLIPBOARD_TEXT) },
+            checked = filesSelector.isSelected(BackupComponent.CLIPBOARD_TEXT),
             text = stringRes(R.string.backup_and_restore__back_up__files_clipboard_history__clipboard_text_items),
             isSecondaryListItem = true,
             enabled = isAvailable(BackupComponent.CLIPBOARD_TEXT),
         )
         CheckboxListItem(
-            onClick = {
-                filesSelector.clipboardImageItems = !filesSelector.clipboardImageItems
-            },
-            checked = filesSelector.clipboardImageItems,
+            onClick = { filesSelector.toggle(BackupComponent.CLIPBOARD_IMAGES) },
+            checked = filesSelector.isSelected(BackupComponent.CLIPBOARD_IMAGES),
             text = stringRes(R.string.backup_and_restore__back_up__files_clipboard_history__clipboard_image_items),
             isSecondaryListItem = true,
             enabled = isAvailable(BackupComponent.CLIPBOARD_IMAGES),
         )
         CheckboxListItem(
-            onClick = {
-                filesSelector.clipboardVideoItems = !filesSelector.clipboardVideoItems
-            },
-            checked = filesSelector.clipboardVideoItems,
+            onClick = { filesSelector.toggle(BackupComponent.CLIPBOARD_VIDEOS) },
+            checked = filesSelector.isSelected(BackupComponent.CLIPBOARD_VIDEOS),
             text = stringRes(R.string.backup_and_restore__back_up__files_clipboard_history__clipboard_video_items),
             isSecondaryListItem = true,
             enabled = isAvailable(BackupComponent.CLIPBOARD_VIDEOS),
         )
-
     }
 }
 
