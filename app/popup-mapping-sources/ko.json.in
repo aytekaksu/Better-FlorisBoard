@@ -1,0 +1,51 @@
+{
+  "all": {
+    "ㅂ": {
+      "relevant": [
+        { "$": "auto_text_key", "code": 12611, "label": "ㅃ" }
+      ]
+    },
+    "ㅈ": {
+      "relevant": [
+        { "$": "auto_text_key", "code": 12617, "label": "ㅉ" }
+      ]
+    },
+    "ㄷ": {
+      "relevant": [
+        { "$": "auto_text_key", "code": 12600, "label": "ㄸ" }
+      ]
+    },
+    "ㄱ": {
+      "relevant": [
+        { "$": "auto_text_key", "code": 12594, "label": "ㄲ" }
+      ]
+    },
+    "ㅅ": {
+      "relevant": [
+        { "$": "auto_text_key", "code": 12614, "label": "ㅆ" }
+      ]
+    },
+    "ㅐ": {
+      "relevant": [
+        { "$": "auto_text_key", "code": 12626, "label": "ㅒ" }
+      ]
+    },
+    "ㅔ": {
+      "relevant": [
+        { "$": "auto_text_key", "code": 12630, "label": "ㅖ" }
+      ]
+    },
+@@COMMON_RIGHT_POPUP@@
+  },
+  "uri": {
+    "~right": {
+      "main": { "code": -255, "label": ".com" },
+      "relevant": [
+        { "code": -255, "label": ".gov" },
+        { "code": -255, "label": ".edu" },
+        { "code": -255, "label": ".org" },
+        { "code": -255, "label": ".net" }
+      ]
+    }
+  }
+}

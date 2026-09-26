@@ -1,0 +1,21 @@
+{
+  "all": {
+    "и": {
+      "relevant": [
+        { "$": "auto_text_key", "code": 1117, "label": "ѝ" }
+      ]
+    },
+@@COMMON_RIGHT_POPUP@@
+  },
+  "uri": {
+    "~right": {
+      "main": { "code": -255, "label": ".com" },
+      "relevant": [
+        { "code": -255, "label": ".bg" },
+        { "code": -255, "label": ".edu" },
+        { "code": -255, "label": ".org" },
+        { "code": -255, "label": ".net" }
+      ]
+    }
+  }
+}
