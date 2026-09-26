@@ -14,5 +14,7 @@ names and keywords as the old generated `root.txt` did. The root asset is no
 longer stored twice. A golden hash test guards the exact original root rows.
 
 The same loader serves emoji suggestions, so callers do not need to choose a
-dispatcher. The root data and IO contracts are covered by
+dispatcher. Suggestion ranking runs on Default and stops scoring when a newer
+input cancels the request; equal scores keep asset order. The root data, IO,
+and ranking contracts are covered by
 `./gradlew :app:testDebugUnitTest`.
