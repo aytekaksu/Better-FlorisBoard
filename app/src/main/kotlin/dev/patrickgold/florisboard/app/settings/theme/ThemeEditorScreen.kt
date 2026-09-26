@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -79,7 +80,6 @@ import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
-import dev.patrickgold.florisboard.app.apptheme.Shapes
 import dev.patrickgold.florisboard.app.ext.ExtensionComponentView
 import dev.patrickgold.florisboard.app.ext.ThemeEditorAction
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
@@ -848,6 +848,8 @@ private fun ComponentMetaEditorDialog(
     }
 }
 
+private val RuleSelectorShape = RoundedCornerShape(4.dp)
+
 @Composable
 private fun SnyggRuleRow(
     rule: SnyggRule,
@@ -863,7 +865,7 @@ private fun SnyggRuleRow(
         Text(
             modifier = Modifier
                 .padding(end = 8.dp)
-                .background(MaterialTheme.colorScheme.primaryContainer, shape = Shapes.small),
+                .background(MaterialTheme.colorScheme.primaryContainer, shape = RuleSelectorShape),
             text = text,
             style = MaterialTheme.typography.bodyMedium,
             fontFamily = FontFamily.Monospace,
