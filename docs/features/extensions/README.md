@@ -138,6 +138,8 @@ theme stays visible until replacement is ready, and damaged fonts fall back.
 The Han language provider serializes refresh, query, and teardown work. It
 publishes only packs whose read-only database opened successfully, unloads
 removed or replaced packs, and never refreshes in response to a keystroke.
+The locale chooser appends language-pack locales absent from Android's list,
+deduplicating by exact locale tag while keeping system entries first.
 
 Editor open/save/close I/O, stylesheet reads/parsing, and asset-list reloads run
 off Main. Saving builds a bounded archive; preview close waits for the keyboard

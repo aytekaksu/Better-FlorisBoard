@@ -17,6 +17,7 @@
 package dev.patrickgold.florisboard.lib
 
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldEndWith
 
 class FlorisLocaleTest :
@@ -26,5 +27,25 @@ class FlorisLocaleTest :
             val turkish = FlorisLocale.from("tr", "TR")
 
             locale.displayName(turkish) shouldEndWith "[İDİ]"
+        }
+
+        test("language-pack locales missing from Android stay available") {
+            val english = FlorisLocale.from("en", "US")
+            val custom = FlorisLocale.from("zz", "ZZ")
+            val variant = FlorisLocale.from("en", "US", "pack")
+
+            mergeAvailableLocales(listOf(english), listOf(custom, variant)) shouldBe
+                listOf(english, custom, variant)
+        }
+
+        test("system locales win exact duplicates and pack order stays stable") {
+            val english = FlorisLocale.from("en", "US")
+            val french = FlorisLocale.from("fr", "FR")
+            val custom = FlorisLocale.from("zz", "ZZ")
+
+            mergeAvailableLocales(
+                listOf(english, french),
+                listOf(french, custom, english, custom),
+            ) shouldBe listOf(english, french, custom)
         }
     })
