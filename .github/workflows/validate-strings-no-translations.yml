@@ -6,10 +6,9 @@ on:
 
 permissions:
   contents: read
-  issues: read
 
 jobs:
-  # Keep this job id unchanged: branch protection currently requires "validate".
+  # Governance checks the "validate" run for outside contributions.
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -23,7 +22,6 @@ jobs:
 
       - name: Validate changed resource files
         env:
-          GH_TOKEN: ${{ github.token }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -37,15 +35,14 @@ jobs:
             exit 1
           fi
 
-          # Execute only code from the base commit. The policy's first PR has no
-          # base-side script yet, so it remains subject to the old blanket ban.
-          if [[ -f .github/scripts/validate_translation_deletions.py ]]; then
-            python3 .github/scripts/validate_translation_deletions.py \
-              --base "$BASE_SHA" --head "$HEAD_SHA" --event "$GITHUB_EVENT_PATH"
-          elif git diff --name-only --no-renames "$BASE_SHA" "$HEAD_SHA" -- | \
-            grep -Eq '^app/src/main/res/values-[^/]+/strings\.xml$'; then
-            echo "::error::Localized strings.xml files are not allowed before the issue #131 policy lands."
-            exit 1
-          else
-            echo "No localized strings.xml files were changed."
-          fi
+          # NUL-delimited paths avoid Git's quoting for unusual file names.
+          git diff --name-only --no-renames -z "$BASE_SHA" "$HEAD_SHA" -- | python3 -c '
+          import re
+          import sys
+
+          paths = sys.stdin.buffer.read().split(b"\0")
+          if any(re.fullmatch(rb"app/src/main/res/values-[^/]+/strings\.xml", path) for path in paths):
+              print("::error::Localized strings.xml files are not allowed.", file=sys.stderr)
+              sys.exit(1)
+          print("No localized strings.xml files were changed.")
+          '
