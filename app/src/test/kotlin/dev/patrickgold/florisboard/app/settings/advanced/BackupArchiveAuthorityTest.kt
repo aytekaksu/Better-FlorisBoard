@@ -59,8 +59,6 @@ class BackupArchiveAuthorityTest :
                     authority = Any(),
                     components = preflight.components,
                     clipboardMediaEntries = preflight.clipboardMediaEntries,
-                    ignoredEntryCount = preflight.ignoredEntryCount,
-                    warnings = preflight.warnings,
                     metadataEntry = preflight.metadataEntry,
                     manifestEntry = preflight.manifestEntry,
                 )
@@ -70,8 +68,6 @@ class BackupArchiveAuthorityTest :
                     authority = Any(),
                     preflight = preflight,
                     metadata = archive.metadata,
-                    source = archive.source,
-                    extraWarnings = emptySet(),
                 )
             }
             shouldThrow<IllegalStateException> {

@@ -47,7 +47,6 @@ internal object BackupArchive {
     internal const val PREFERENCES_PATH = "jetpref_datastore/florisboard-app-prefs.jetpref"
     internal const val KEYBOARD_ROOT = "files/ime/keyboard"
     internal const val THEME_ROOT = "files/ime/theme"
-    internal const val RETIRED_SPELLING_ROOT = "files/ime/spelling"
     internal const val CLIPBOARD_ROOT = "clipboard"
     internal const val CLIPBOARD_MEDIA_ROOT = "$CLIPBOARD_ROOT/clipboard_files"
     internal const val CLIPBOARD_TEXT_PATH = "$CLIPBOARD_ROOT/$CLIPBOARD_TEXT_ITEMS_JSON_NAME"
@@ -227,18 +226,6 @@ internal enum class ArchiveFailure {
     NOTHING_TO_RESTORE,
 }
 
-internal enum class ArchiveWarning {
-    RETIRED_COMPONENT_IGNORED,
-    UNKNOWN_ENTRIES_IGNORED,
-    UNKNOWN_COMPONENTS_IGNORED,
-    UNUSED_CLIPBOARD_MEDIA_IGNORED,
-}
-
-internal enum class ArchiveSource {
-    LEGACY,
-    DECLARED,
-}
-
 internal sealed interface ArchiveValidation<out T> {
     data class Valid<T>(val value: T) : ArchiveValidation<T>
 
@@ -266,8 +253,6 @@ internal class ValidatedComponent private constructor(
 internal class ArchivePreflight private constructor(
     val components: List<ValidatedComponent>,
     internal val clipboardMediaEntries: List<ValidatedArchiveEntry>,
-    val ignoredEntryCount: Int,
-    val warnings: Set<ArchiveWarning>,
     internal val metadataEntry: ValidatedArchiveEntry,
     internal val manifestEntry: ValidatedArchiveEntry?,
 ) {
@@ -278,15 +263,13 @@ internal class ArchivePreflight private constructor(
 
     override fun toString(): String =
         "ArchivePreflight(componentCount=${components.size}, mediaEntryCount=${clipboardMediaEntries.size}, " +
-            "ignoredEntryCount=$ignoredEntryCount, hasManifest=$hasManifest, warnings=$warnings)"
+            "hasManifest=$hasManifest)"
 
     companion object {
         fun create(
             authority: Any,
             components: List<ValidatedComponent>,
             clipboardMediaEntries: List<ValidatedArchiveEntry>,
-            ignoredEntryCount: Int,
-            warnings: Set<ArchiveWarning>,
             metadataEntry: ValidatedArchiveEntry,
             manifestEntry: ValidatedArchiveEntry?,
         ): ArchivePreflight {
@@ -294,8 +277,6 @@ internal class ArchivePreflight private constructor(
             return ArchivePreflight(
                 components = components.immutableList(),
                 clipboardMediaEntries = clipboardMediaEntries.immutableList(),
-                ignoredEntryCount = ignoredEntryCount,
-                warnings = warnings.immutableSet(),
                 metadataEntry = metadataEntry,
                 manifestEntry = manifestEntry,
             )
@@ -305,36 +286,23 @@ internal class ArchivePreflight private constructor(
 
 internal class ValidatedArchive private constructor(
     val metadata: BackupArchive.Metadata,
-    val source: ArchiveSource,
     val components: List<ValidatedComponent>,
     internal val clipboardMediaEntries: List<ValidatedArchiveEntry>,
-    val ignoredEntryCount: Int,
-    val warnings: Set<ArchiveWarning>,
 ) {
     val availableComponents = components.map { it.component }.immutableSet()
 
     internal fun component(id: BackupComponent): ValidatedComponent? = components.firstOrNull { it.component == id }
 
-    override fun toString(): String =
-        "ValidatedArchive(metadata=$metadata, source=$source, componentCount=${components.size}, " +
-            "mediaEntryCount=${clipboardMediaEntries.size}, ignoredEntryCount=$ignoredEntryCount, warnings=$warnings)"
+    override fun toString(): String = "ValidatedArchive(metadata=$metadata, componentCount=${components.size}, " +
+        "mediaEntryCount=${clipboardMediaEntries.size})"
 
     companion object {
-        fun create(
-            authority: Any,
-            preflight: ArchivePreflight,
-            metadata: BackupArchive.Metadata,
-            source: ArchiveSource,
-            extraWarnings: Set<ArchiveWarning>,
-        ): ValidatedArchive {
+        fun create(authority: Any, preflight: ArchivePreflight, metadata: BackupArchive.Metadata): ValidatedArchive {
             authority.requireArchiveValidationAuthority()
             return ValidatedArchive(
                 metadata = metadata,
-                source = source,
                 components = preflight.components,
                 clipboardMediaEntries = preflight.clipboardMediaEntries,
-                ignoredEntryCount = preflight.ignoredEntryCount,
-                warnings = (preflight.warnings + extraWarnings).immutableSet(),
             )
         }
     }
@@ -680,24 +648,14 @@ private class ArchivePreflightInspector(
             val component = entry.component()
             when {
                 entry.isControlFile() || entry.isInfrastructureDirectory() -> Unit
-
                 component != null -> inventory.add(component, entry)
-
                 entry.isClipboardMedia() -> inventory.clipboardMediaEntries += entry
-
-                entry.isAtOrBelow(BackupArchive.RETIRED_SPELLING_ROOT) -> {
-                    inventory.ignore(ArchiveWarning.RETIRED_COMPONENT_IGNORED)
-                }
-
-                else -> inventory.ignore(ArchiveWarning.UNKNOWN_ENTRIES_IGNORED)
             }
         }
         if (inventory.clipboardMediaEntries.isNotEmpty() &&
             BackupComponent.CLIPBOARD_IMAGES !in inventory.components &&
             BackupComponent.CLIPBOARD_VIDEOS !in inventory.components
         ) {
-            inventory.ignoredEntryCount += inventory.clipboardMediaEntries.size
-            inventory.warnings += ArchiveWarning.UNUSED_CLIPBOARD_MEDIA_IGNORED
             inventory.clipboardMediaEntries.clear()
         }
         return inventory
@@ -739,14 +697,11 @@ private class ArchiveDescriptorInspector(
         if (preflight.components.isEmpty()) {
             return ArchiveValidation.Invalid(ArchiveFailure.NOTHING_TO_RESTORE)
         }
-        manifest as ManifestResult.Valid
         return ArchiveValidation.Valid(
             ValidatedArchive.create(
                 authority = ArchiveValidationAuthority,
                 preflight = preflight,
                 metadata = metadata,
-                source = manifest.source,
-                extraWarnings = manifest.warnings,
             ),
         )
     }
@@ -767,7 +722,7 @@ private class ArchiveDescriptorInspector(
             if (preflight.hasManifest) {
                 ManifestResult.Invalid(ArchiveFailure.INVALID_MANIFEST)
             } else {
-                ManifestResult.Valid(ArchiveSource.LEGACY)
+                ManifestResult.Valid
             }
         }
 
@@ -788,12 +743,7 @@ private class ArchiveDescriptorInspector(
         if (declared != preflight.availableComponents) {
             return ManifestResult.Invalid(ArchiveFailure.MANIFEST_MISMATCH)
         }
-        val warnings = if (manifest.components.size > declared.size) {
-            setOf(ArchiveWarning.UNKNOWN_COMPONENTS_IGNORED)
-        } else {
-            emptySet()
-        }
-        return ManifestResult.Valid(ArchiveSource.DECLARED, warnings)
+        return ManifestResult.Valid
     }
 
     private fun validComponentIds(ids: List<String>): Boolean {
@@ -802,7 +752,7 @@ private class ArchiveDescriptorInspector(
     }
 
     private sealed interface ManifestResult {
-        data class Valid(val source: ArchiveSource, val warnings: Set<ArchiveWarning> = emptySet()) : ManifestResult
+        data object Valid : ManifestResult
 
         data class Invalid(val failure: ArchiveFailure) : ManifestResult
     }
@@ -841,16 +791,9 @@ private class ArchiveDescriptorInspector(
 private class ArchiveInventory {
     val components = linkedMapOf<BackupComponent, MutableList<ValidatedArchiveEntry>>()
     val clipboardMediaEntries = mutableListOf<ValidatedArchiveEntry>()
-    val warnings = linkedSetOf<ArchiveWarning>()
-    var ignoredEntryCount = 0
 
     fun add(component: BackupComponent, entry: ValidatedArchiveEntry) {
         components.getOrPut(component) { mutableListOf() } += entry
-    }
-
-    fun ignore(warning: ArchiveWarning) {
-        ignoredEntryCount++
-        warnings += warning
     }
 
     fun toPreflight(metadataEntry: ValidatedArchiveEntry, manifestEntry: ValidatedArchiveEntry?): ArchivePreflight {
@@ -867,8 +810,6 @@ private class ArchiveInventory {
             authority = ArchiveValidationAuthority,
             components = payloads,
             clipboardMediaEntries = clipboardMediaEntries.sortedBy { it.archivePath },
-            ignoredEntryCount = ignoredEntryCount,
-            warnings = ArchiveWarning.entries.filterTo(linkedSetOf()) { it in warnings },
             metadataEntry = metadataEntry,
             manifestEntry = manifestEntry,
         )
@@ -902,9 +843,6 @@ private fun ValidatedArchiveEntry.component(): BackupComponent? = when {
 private fun ValidatedArchiveEntry.isComponentTree(root: String): Boolean =
     (archivePath == root && kind == ArchiveEntryKind.DIRECTORY) ||
         archivePath.startsWith("$root/")
-
-private fun ValidatedArchiveEntry.isAtOrBelow(root: String): Boolean =
-    archivePath == root || archivePath.startsWith("$root/")
 
 private fun ValidatedArchiveEntry.isControlFile(): Boolean = archivePath == BackupArchive.METADATA_JSON_NAME ||
     archivePath == BackupArchive.MANIFEST_JSON_NAME

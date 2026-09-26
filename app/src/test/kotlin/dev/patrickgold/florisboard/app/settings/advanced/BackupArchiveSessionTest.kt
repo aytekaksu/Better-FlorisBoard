@@ -43,7 +43,6 @@ class BackupArchiveSessionTest :
             )
 
             BackupArchiveSession.open(snapshot).validSession().use { session ->
-                session.archive.source shouldBe ArchiveSource.LEGACY
                 session.archive.availableComponents shouldBe setOf(BackupComponent.PREFERENCES)
                 val plan = session.createPlan(
                     RestoreRequest(RestoreMode.MERGE, setOf(BackupComponent.PREFERENCES)),
@@ -64,8 +63,13 @@ class BackupArchiveSessionTest :
             )
 
             BackupArchiveSession.open(snapshot).validSession().use { session ->
-                session.archive.source shouldBe ArchiveSource.DECLARED
                 session.archive.availableComponents shouldBe setOf(BackupComponent.PREFERENCES)
+                val plan = session.createPlan(
+                    RestoreRequest(RestoreMode.MERGE, setOf(BackupComponent.PREFERENCES)),
+                ).validPlan()
+                session.owns(plan) shouldBe true
+                plan.componentsToStage.single().entries.single().archivePath shouldBe
+                    BackupArchive.PREFERENCES_PATH
             }
         }
 
