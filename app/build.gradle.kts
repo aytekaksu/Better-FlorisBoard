@@ -29,7 +29,9 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.nio.charset.CharacterCodingException
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.StandardCopyOption
 
 plugins {
@@ -209,14 +211,25 @@ abstract class GeneratePopupMappingAssets : DefaultTask() {
         private const val ASSET_PATH = "ime/keyboard/org.florisboard.localization/popupMappings"
 
         fun render(sources: File, fragmentFile: File, extensionFile: File, output: File) {
-            val fragment = fragmentFile.readText(Charsets.UTF_8).removeSuffix("\n")
+            val target = output.resolve(ASSET_PATH)
+            check(!Files.isSymbolicLink(target.toPath())) { "Generated popup mapping directory is a link" }
+            check(!target.exists() || target.deleteRecursively()) { "Unable to replace generated popup mappings" }
+
+            val fragment = readSource(fragmentFile).removeSuffix("\n")
             check(fragment.startsWith("    \"~right\": {") && fragment.endsWith("    }")) {
                 "Shared popup fragment must be one ~right entry"
             }
-            val sharedRight = jsonObject("{\n$fragment\n}", fragmentFile.name)["~right"]
+            val fragmentObject = jsonObject("{\n$fragment\n}", fragmentFile.name)
+            check(
+                fragmentObject.keys == setOf("~right") &&
+                    Regex("\"~right\"\\s*:").findAll(fragment).count() == 1,
+            ) {
+                "Shared popup fragment must contain only one ~right entry"
+            }
+            val sharedRight = fragmentObject["~right"]
             check(sharedRight is Map<*, *>) { "Shared popup fragment must contain a ~right object" }
 
-            val manifest = jsonObject(extensionFile.readText(Charsets.UTF_8), extensionFile.name)
+            val manifest = jsonObject(readSource(extensionFile), extensionFile.name)
             val components = manifest["popupMappings"] as? List<*>
                 ?: error("Popup mappings are missing from extension metadata")
             val expected = components.map { component ->
@@ -230,17 +243,18 @@ abstract class GeneratePopupMappingAssets : DefaultTask() {
             }
             check(expected.size == expected.toSet().size) { "Duplicate popup mapping ID" }
 
-            val files = sources.listFiles()?.sortedBy(File::getName)
-                ?: error("Popup mapping source directory is missing")
+            check(Files.isDirectory(sources.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+                "Popup mapping source directory is missing or linked"
+            }
+            val files = sources.listFiles()?.sortedBy(File::getName) ?: error("Cannot list popup mapping sources")
             val rendered = mutableMapOf<String, String>()
             for (file in files) {
-                check(file.isFile) { "Unexpected popup mapping source: ${file.name}" }
                 val template = file.name.endsWith(".json.in")
                 check(template || file.name.endsWith(".json")) {
                     "Unexpected popup mapping source: ${file.name}"
                 }
                 val name = if (template) file.name.removeSuffix(".in") else file.name
-                val input = file.readText(Charsets.UTF_8)
+                val input = readSource(file)
                 val firstMarker = input.indexOf(MARKER)
                 val markerCount = when {
                     firstMarker < 0 -> 0
@@ -265,11 +279,20 @@ abstract class GeneratePopupMappingAssets : DefaultTask() {
                     "missing=${expected.toSet() - rendered.keys}, extra=${rendered.keys - expected.toSet()}"
             }
 
-            val target = output.resolve(ASSET_PATH)
-            check(!target.exists() || target.deleteRecursively()) { "Unable to replace generated popup mappings" }
             check(target.mkdirs()) { "Unable to create generated popup mapping directory" }
             for ((name, text) in rendered.toSortedMap()) {
                 target.resolve(name).writeText(text, Charsets.UTF_8)
+            }
+        }
+
+        private fun readSource(file: File): String {
+            check(Files.isRegularFile(file.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+                "Popup mapping source is missing or linked: ${file.name}"
+            }
+            return try {
+                Files.readString(file.toPath(), Charsets.UTF_8)
+            } catch (cause: CharacterCodingException) {
+                throw IllegalStateException("${file.name} contains malformed UTF-8", cause)
             }
         }
 
@@ -443,6 +466,7 @@ val testPopupMappingAssetGenerator by tasks.registering {
             files: Map<String, String>,
             shared: String = fragment,
             failure: String? = null,
+            prepare: (File) -> Unit = {},
         ): File {
             val root = temporaryDir.resolve("case-${caseNumber++}")
             check(!root.exists() || root.deleteRecursively()) { "Unable to reset popup test fixture" }
@@ -454,6 +478,7 @@ val testPopupMappingAssetGenerator by tasks.registering {
                 writeText("{\"popupMappings\":[$entries]}")
             }
             val output = root.resolve("output")
+            prepare(root)
             val error = runCatching {
                 GeneratePopupMappingAssets.render(sources, sharedFile, extension, output)
             }.exceptionOrNull()
@@ -505,6 +530,22 @@ val testPopupMappingAssetGenerator by tasks.registering {
         exercise(listOf("en"), mapOf("en.json" to marker), failure = "no shared popup marker")
         exercise(listOf("en"), mapOf("en.json.in" to "{\"all\":{\n$marker\n"), failure = "malformed JSON")
         exercise(listOf("en"), mapOf("en.json" to "{broken}"), failure = "malformed JSON")
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "malformed UTF-8") { root ->
+            Files.write(root.resolve("sources/en.json").toPath(), byteArrayOf(0xc3.toByte(), 0x28))
+        }
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "malformed UTF-8") { root ->
+            Files.write(root.resolve("right.inc").toPath(), byteArrayOf(0xc3.toByte(), 0x28))
+        }
+        exercise(listOf("en"), emptyMap(), failure = "missing or linked") { root ->
+            val outside = root.resolve("outside.json").apply { writeText("{}") }
+            Files.createSymbolicLink(root.resolve("sources/en.json").toPath(), outside.toPath())
+        }
+        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "missing or linked") { root ->
+            val linked = root.resolve("right.inc")
+            val outside = root.resolve("outside.inc")
+            Files.move(linked.toPath(), outside.toPath())
+            Files.createSymbolicLink(linked.toPath(), outside.toPath())
+        }
         exercise(listOf("en"), mapOf("en.json.in" to "{\"uri\":{\n$marker\n}}"), failure = "all.~right")
         exercise(
             listOf("en"),
@@ -512,6 +553,24 @@ val testPopupMappingAssetGenerator by tasks.registering {
             shared = "    \"~right\": {\n      broken\n    }",
             failure = "malformed JSON",
         )
+        exercise(
+            listOf("en"),
+            mapOf("en.json.in" to "{\"all\":{\n$marker\n}}"),
+            shared = "    \"~right\": {},\n    \"extra\": {\n    }",
+            failure = "only one ~right entry",
+        )
+        exercise(
+            listOf("en"),
+            mapOf("en.json.in" to "{\"all\":{\n$marker\n}}"),
+            shared = "    \"~right\": {},\n    \"~right\": {\n    }",
+            failure = "only one ~right entry",
+        )
+        exercise(listOf("en"), mapOf("en.json" to "{broken}"), failure = "malformed JSON") { root ->
+            root.resolve("output/$assetPath/stale.json").apply {
+                parentFile.mkdirs()
+                writeText("{}")
+            }
+        }
         exercise(listOf("en", "en"), mapOf("en.json" to "{}"), failure = "Duplicate popup mapping ID")
         exercise(listOf("../other"), emptyMap(), failure = "Invalid popup mapping ID")
     }
@@ -572,8 +631,15 @@ androidComponents {
             popupMappings,
             GeneratePopupMappingAssets::outputDirectory,
         )
-        tasks.matching { it.name == "test${variantName}UnitTest" }.configureEach {
+        tasks.withType<Test>().matching { it.name == "test${variantName}UnitTest" }.configureEach {
             dependsOn(popupMappings, testPopupMappingAssetGenerator)
+            inputs.dir(popupMappings.flatMap { it.outputDirectory })
+            systemProperty(
+                "florisboard.popupMappingAssetRoot",
+                layout.buildDirectory.dir(
+                    "generated/popupMappingAssets/${variant.name}/ime/keyboard/org.florisboard.localization",
+                ).get().asFile.absolutePath,
+            )
         }
     }
 }

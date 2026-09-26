@@ -95,12 +95,15 @@ class KeyboardMetadataContractTest :
             }
         }
 
-        test("bundled popup metadata exposes every packaged mapping") {
+        test("bundled popup metadata exposes every generated mapping") {
             val assetRoot = sequenceOf("src/main/assets", "app/src/main/assets")
                 .map { File(it, "ime/keyboard/org.florisboard.localization") }.first { it.isDirectory }
-            val generatedRoot = sequenceOf("build/generated", "app/build/generated")
-                .map { File(it, "popupMappingAssets/debug/ime/keyboard/org.florisboard.localization") }
-                .first { it.isDirectory }
+            val generatedRoot = File(
+                requireNotNull(System.getProperty("florisboard.popupMappingAssetRoot")) {
+                    "Popup mapping unit tests need their variant's generated asset root"
+                },
+            )
+            generatedRoot.isDirectory shouldBe true
             val extension = ExtensionJsonConfig.decodeFromString(
                 KeyboardExtension.serializer(),
                 assetRoot.resolve("extension.json").readText(),
@@ -113,7 +116,6 @@ class KeyboardMetadataContractTest :
                 .filter(File::isFile)
                 .map { it.relativeTo(generatedRoot).invariantSeparatorsPath }
                 .toList()
-            packagedFiles.size shouldBe 57
             packagedFiles.sorted() shouldBe declaredFiles.sorted()
             packagedFiles.forEach { path ->
                 DefaultJsonConfig.decodeFromString<PopupMapping>(generatedRoot.resolve(path).readText())

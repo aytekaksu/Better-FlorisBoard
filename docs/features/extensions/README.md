@@ -79,7 +79,7 @@ The 57 bundled popup mappings keep their manifest paths. A build task expands
 one shared punctuation popup in 38 templates and copies the other 19 unchanged;
 it rejects missing names or malformed JSON before packaging. Run
 `./gradlew :app:testPopupMappingAssetGenerator :app:testDebugUnitTest` for
-generator and packaged mapping contracts.
+generator and generated mapping contracts.
 
 ## Manifest rules
 
