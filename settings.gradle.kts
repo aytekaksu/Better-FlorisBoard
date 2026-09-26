@@ -43,6 +43,7 @@ dependencyResolutionManagement {
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 include(":app")
+include(":autocorrect-provider-fixture")
 include(":benchmark")
 include(":lib:android")
 include(":lib:autocorrect-api")
