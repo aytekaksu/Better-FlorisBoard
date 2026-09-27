@@ -24,7 +24,6 @@ import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
-import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.nlp.BreakIteratorGroup
 import dev.patrickgold.florisboard.ime.text.composing.Composer
@@ -106,6 +105,7 @@ interface EditorComposingPolicy {
 abstract class AbstractEditorInstance(
     protected val currentSubtype: () -> Subtype,
     composingPolicy: Lazy<EditorComposingPolicy>,
+    protected val currentInputConnection: () -> InputConnection?,
     private val reevaluateInputShiftState: () -> Unit,
 ) {
     companion object {
@@ -158,8 +158,6 @@ abstract class AbstractEditorInstance(
     fun expectedContent(): EditorContent? {
         return expectedContentQueue.peekNewestOrNull()
     }
-
-    private fun currentInputConnection() = FlorisImeService.currentInputConnection()
 
     open fun handleStartInput(editorInfo: FlorisEditorInfo) {
         contentRevision.next()

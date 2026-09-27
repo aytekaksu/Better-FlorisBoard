@@ -19,9 +19,9 @@ package dev.patrickgold.florisboard.ime.editor
 import android.content.ClipDescription
 import android.content.Context
 import android.view.KeyEvent
+import android.view.inputmethod.InputConnection
 import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.core.view.inputmethod.InputContentInfoCompat
-import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.ime.ImeUiMode
@@ -152,8 +152,14 @@ class EditorInstance(
     keyboardState: Lazy<ObservableKeyboardState>,
     currentSubtype: () -> Subtype,
     composingPolicy: Lazy<EditorComposingPolicy>,
+    currentInputConnection: () -> InputConnection?,
     reevaluateInputShiftState: () -> Unit,
-) : AbstractEditorInstance(currentSubtype, composingPolicy, reevaluateInputShiftState) {
+) : AbstractEditorInstance(
+    currentSubtype,
+    composingPolicy,
+    currentInputConnection,
+    reevaluateInputShiftState,
+) {
     companion object {
         private const val SPACE = " "
     }
@@ -171,8 +177,6 @@ class EditorInstance(
     val autoSpace = AutoSpaceState()
     internal val phantomSpace = PhantomSpaceState()
     val massSelection = MassSelectionState()
-
-    private fun currentInputConnection() = FlorisImeService.currentInputConnection()
 
     private fun Boolean.finishCommitAttempt() = also {
         if (it) updateLastCommitPosition() else phantomSpace.setInactive()

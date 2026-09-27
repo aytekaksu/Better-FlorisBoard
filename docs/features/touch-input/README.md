@@ -75,6 +75,9 @@ editor's existing content-publication and invalid-selection paths.
 `FlorisApplication` also supplies the editor a lazy composing policy and a live
 subtype getter. NLP still selects the active language provider, while the editor
 reads punctuation rules from its existing keyboard-extension snapshot.
+The application supplies a live nullable input-connection reader as well. Each
+editor operation resolves the current IME service connection; neither the editor
+nor the application callback retains a service instance or connection.
 
 ## Privacy
 
