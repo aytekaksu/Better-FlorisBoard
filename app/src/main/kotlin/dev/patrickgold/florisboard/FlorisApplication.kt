@@ -200,6 +200,8 @@ class FlorisApplication : Application() {
             this,
             lazy { clipboardManager.value.primaryClipFlow },
             subtypeManager.value.activeSubtypeFlow,
+            subtypeManager.value.subtypesFlow,
+            lazy { extensionManager.value.languagePacks },
             // The getter includes pending edits not yet reflected in activeContentFlow.
             { editorInstance.value.activeContent },
         ) { keyboardManager.value.activeState.isIncognitoMode }

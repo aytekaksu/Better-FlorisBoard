@@ -19,7 +19,6 @@ package dev.patrickgold.florisboard.ime.nlp.han
 import android.content.Context
 import android.database.sqlite.SQLiteException
 import android.icu.text.BreakIterator
-import dev.patrickgold.florisboard.extensionManager
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.editor.EditorRange
@@ -31,7 +30,6 @@ import dev.patrickgold.florisboard.ime.nlp.SuggestionProvider
 import dev.patrickgold.florisboard.ime.nlp.WordSuggestionCandidate
 import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import dev.patrickgold.florisboard.lib.devtools.flogError
-import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +38,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -47,7 +46,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class HanShapeBasedLanguageProvider(context: Context) : SuggestionProvider {
+class HanShapeBasedLanguageProvider(
+    context: Context,
+    private val subtypesFlow: StateFlow<List<Subtype>>,
+    languagePacksFlow: Lazy<StateFlow<List<LanguagePackExtension>>>,
+) : SuggestionProvider {
     companion object {
         const val ProviderId = "org.florisboard.nlp.providers.han.shape"
 
@@ -56,8 +59,7 @@ class HanShapeBasedLanguageProvider(context: Context) : SuggestionProvider {
     }
 
     private val appContext = context.applicationContext
-    private val extensionManager by appContext.extensionManager()
-    private val subtypeManager by appContext.subtypeManager()
+    private val languagePacks by languagePacksFlow
     private val lifecycleGuard = Mutex()
     private val resourceGuard = Mutex()
 
@@ -233,8 +235,8 @@ class HanShapeBasedLanguageProvider(context: Context) : SuggestionProvider {
         launch {
             try {
                 combine(
-                    extensionManager.languagePacks,
-                    subtypeManager.subtypesFlow,
+                    languagePacks,
+                    subtypesFlow,
                 ) { languagePacks, subtypes ->
                     refreshInput(languagePacks, subtypes)
                 }.collect { input ->
@@ -293,8 +295,8 @@ class HanShapeBasedLanguageProvider(context: Context) : SuggestionProvider {
 
     private fun currentRefreshInput(): LanguagePackRefreshInput =
         refreshInput(
-            extensionManager.languagePacks.value,
-            subtypeManager.subtypesFlow.value,
+            languagePacks.value,
+            subtypesFlow.value,
         )
 
     private fun refreshInput(

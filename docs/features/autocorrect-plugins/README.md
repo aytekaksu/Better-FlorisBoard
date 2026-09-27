@@ -74,6 +74,8 @@ reflect the current shift state.
 edits still pending in the editor's expected-content queue.
 The app also supplies NLP the active-subtype flow. NLP collects it for preloading
 and reads its current value for composing, suggestion-strip policy, and retries.
+It also supplies the full subtype-list flow and a lazy language-pack flow to the
+Han provider, which refreshes bindings when either list changes.
 `FlorisApplication` also supplies the autocorrect host with live editor-info
 and content readers; final content is still captured when the session closes.
 
