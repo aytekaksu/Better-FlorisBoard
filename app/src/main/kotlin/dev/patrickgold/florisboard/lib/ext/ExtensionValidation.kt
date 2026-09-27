@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard.lib.ext
 
+import androidx.annotation.StringRes
 import androidx.core.text.trimmedLength
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.lib.ValidationRule
@@ -25,6 +26,10 @@ object ExtensionValidation {
     private val MetaIdRegex = """^[a-z][a-z0-9_]*(\.[a-z0-9][a-z0-9_]*)*${'$'}""".toRegex()
     private val ComponentIdRegex = """^[a-z][a-z0-9_]*${'$'}""".toRegex()
 
+    private fun requiredTextRule(@StringRes errorId: Int) = ValidationRule<String> { str ->
+        if (str.isBlank()) resultInvalid(error = errorId) else resultValid()
+    }
+
     val MetaId = ValidationRule<String> { str ->
         when {
             str.isBlank() -> resultInvalid(error = R.string.ext__validation__enter_package_name)
@@ -33,34 +38,10 @@ object ExtensionValidation {
         }
     }
 
-    val MetaVersion = ValidationRule<String> { str ->
-        when {
-            str.isBlank() -> resultInvalid(error = R.string.ext__validation__enter_version)
-            else -> resultValid()
-        }
-    }
-
-    val MetaTitle = ValidationRule<String> { str ->
-        when {
-            str.isBlank() -> resultInvalid(error = R.string.ext__validation__enter_title)
-            else -> resultValid()
-        }
-    }
-
-    val MetaMaintainers = ValidationRule<String> { str ->
-        val maintainers = str.lines().filter { it.isNotBlank() }
-        when {
-            maintainers.isEmpty() -> resultInvalid(error = R.string.ext__validation__enter_maintainer)
-            else -> resultValid()
-        }
-    }
-
-    val MetaLicense = ValidationRule<String> { str ->
-        when {
-            str.isBlank() -> resultInvalid(error = R.string.ext__validation__enter_license)
-            else -> resultValid()
-        }
-    }
+    val MetaVersion = requiredTextRule(R.string.ext__validation__enter_version)
+    val MetaTitle = requiredTextRule(R.string.ext__validation__enter_title)
+    val MetaMaintainers = requiredTextRule(R.string.ext__validation__enter_maintainer)
+    val MetaLicense = requiredTextRule(R.string.ext__validation__enter_license)
 
     val ComponentId = ValidationRule<String> { str ->
         when {
@@ -83,13 +64,7 @@ object ExtensionValidation {
         }
     }
 
-    val ComponentAuthors = ValidationRule<String> { str ->
-        val authors = str.lines().filter { it.isNotBlank() }
-        when {
-            authors.isEmpty() -> resultInvalid(error = R.string.ext__validation__error_author)
-            else -> resultValid()
-        }
-    }
+    val ComponentAuthors = requiredTextRule(R.string.ext__validation__error_author)
 
     val ThemeComponentStylesheetPath = ValidationRule<String> { str ->
         when {
