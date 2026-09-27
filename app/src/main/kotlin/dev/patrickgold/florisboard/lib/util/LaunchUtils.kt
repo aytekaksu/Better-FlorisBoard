@@ -52,10 +52,6 @@ fun Context.launchUrl(url: String) {
     }
 }
 
-fun Context.launchUrl(@StringRes url: Int) {
-    launchUrl(this.stringRes(url))
-}
-
 fun Context.launchUrl(@StringRes url: Int, vararg args: CurlyArg) {
     launchUrl(this.stringRes(url, *args))
 }
@@ -93,26 +89,13 @@ fun Context.launchPluginHttpsUrl(url: String) {
     }
 }
 
-inline fun <T : Any> Context.launchActivity(kClass: KClass<T>, intentModifier: (Intent) -> Unit = { }) {
-    contract {
-        callsInPlace(intentModifier, InvocationKind.AT_MOST_ONCE)
-    }
-    try {
-        val intent = Intent(this, kClass.java)
-        intentModifier(intent)
-        this.startActivity(intent)
-    } catch (e: ActivityNotFoundException) {
-        flogError { "Activity launch failed: error=${e.javaClass.simpleName}" }
-        Toast.makeText(this, e.localizedMessage, Toast.LENGTH_LONG).show()
-    }
-}
-
-inline fun Context.launchActivity(intentModifier: (Intent) -> Unit) {
+inline fun Context.launchActivity(kClass: KClass<*>? = null, intentModifier: (Intent) -> Unit) {
     contract {
         callsInPlace(intentModifier, InvocationKind.AT_MOST_ONCE)
     }
     try {
         val intent = Intent()
+        if (kClass != null) intent.setClass(this, kClass.java)
         intentModifier(intent)
         this.startActivity(intent)
     } catch (e: ActivityNotFoundException) {
