@@ -204,7 +204,9 @@ class FlorisApplication : Application() {
     val extensionManager = lazy { ExtensionManager(this) }
     val glideTypingManager = lazy { GlideTypingManager(this) }
     val keyboardExtensionRepository = lazy { KeyboardExtensionRepository(this) }
-    val keyboardManager = lazy { KeyboardManager(this, keyboardState.value, inputEventDispatcher.value) }
+    val keyboardManager = lazy {
+        KeyboardManager(this, keyboardState.value, inputEventDispatcher.value, nlpManager)
+    }
     val autocorrectPluginManager = lazy {
         AutocorrectPluginManager(
             context = this,

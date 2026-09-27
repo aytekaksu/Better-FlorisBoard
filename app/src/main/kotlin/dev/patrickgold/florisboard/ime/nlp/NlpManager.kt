@@ -285,6 +285,15 @@ internal fun shouldExpandSmartbarActions(
     return candidates.isNullOrEmpty() && inlineSuggestions.isNullOrEmpty() || isSelection
 }
 
+/** Synchronous suggestion operations needed while dispatching keyboard input. */
+interface KeyboardSuggestionSession {
+    fun isSuggestionOn(): Boolean
+    fun suggest(subtype: Subtype, content: EditorContent)
+    fun clearSuggestions()
+    fun getAutoCommitCandidate(): SuggestionCandidate?
+    fun finishAutocorrectSession()
+}
+
 class NlpManager internal constructor(
     context: Context,
     clipboardPrimaryClipFlow: Lazy<StateFlow<ClipboardItem?>>,
@@ -293,7 +302,7 @@ class NlpManager internal constructor(
     languagePacksFlow: Lazy<StateFlow<List<LanguagePackExtension>>>,
     private val currentEditorContent: () -> EditorContent,
     private val isIncognitoMode: () -> Boolean,
-) : EditorComposingPolicy {
+) : EditorComposingPolicy, KeyboardSuggestionSession {
     private val prefs by FlorisPreferenceStore
     private val primaryClipFlow by clipboardPrimaryClipFlow
     private val autocorrectPluginManager by context.autocorrectPluginManager()
@@ -387,7 +396,7 @@ class NlpManager internal constructor(
         }
     }
 
-    fun finishAutocorrectSession() {
+    override fun finishAutocorrectSession() {
         autocorrectPluginManager.finishSession()
         clearSuggestions()
     }
@@ -436,7 +445,7 @@ class NlpManager internal constructor(
         }
     }
 
-    fun suggest(subtype: Subtype, content: EditorContent) {
+    override fun suggest(subtype: Subtype, content: EditorContent) {
         val requestEditorGeneration = autocorrectPluginManager.captureEditorGeneration()
         if (content.currentWordText.isNotBlank() && !content.selection.isSelectionMode) {
             setSharedActionsExpanded(false)
@@ -517,7 +526,7 @@ class NlpManager internal constructor(
         }
     }
 
-    fun clearSuggestions() {
+    override fun clearSuggestions() {
         synchronized(suggestionJobGuard) {
             suggestionJob?.cancel()
             suggestionJob = null
@@ -536,7 +545,7 @@ class NlpManager internal constructor(
         }
     }
 
-    fun getAutoCommitCandidate(): SuggestionCandidate? {
+    override fun getAutoCommitCandidate(): SuggestionCandidate? {
         return autoCommitCandidate
     }
 

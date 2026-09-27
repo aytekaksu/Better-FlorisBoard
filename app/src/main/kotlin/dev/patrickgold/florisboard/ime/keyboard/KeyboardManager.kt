@@ -47,6 +47,7 @@ import dev.patrickgold.florisboard.ime.input.InputKeyEventReceiver
 import dev.patrickgold.florisboard.ime.input.InputShiftState
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.nlp.ClipboardSuggestionCandidate
+import dev.patrickgold.florisboard.ime.nlp.KeyboardSuggestionSession
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
 import dev.patrickgold.florisboard.ime.nlp.SuggestionSeparatorBehavior
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
@@ -60,7 +61,6 @@ import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.titlecase
 import dev.patrickgold.florisboard.lib.uppercase
 import dev.patrickgold.florisboard.lib.util.InputMethodUtils
-import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.subtypeManager
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicInteger
@@ -109,6 +109,7 @@ class KeyboardManager(
     context: Context,
     val activeState: ObservableKeyboardState,
     dispatcher: InputEventDispatcher,
+    suggestionSession: Lazy<KeyboardSuggestionSession>,
 ) : InputKeyEventReceiver {
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
@@ -116,7 +117,7 @@ class KeyboardManager(
     private val clipboardManager by context.clipboardManager()
     private val editorInstance by context.editorInstance()
     private val keyboardExtensionRepository by context.keyboardExtensionRepository()
-    private val nlpManager by context.nlpManager()
+    private val suggestions by suggestionSession
     private val subtypeManager by context.subtypeManager()
     private val keyguardManager = appContext.systemService(AndroidKeyguardManager::class)
 
@@ -250,11 +251,11 @@ class KeyboardManager(
 
     fun resetSuggestions(content: EditorContent) {
         autocorrectPluginManager.consumePredictionHints()
-        if (!(activeState.isComposingEnabled || nlpManager.isSuggestionOn())) {
-            nlpManager.clearSuggestions()
+        if (!(activeState.isComposingEnabled || suggestions.isSuggestionOn())) {
+            suggestions.clearSuggestions()
             return
         }
-        nlpManager.suggest(subtypeManager.activeSubtype, content)
+        suggestions.suggest(subtypeManager.activeSubtype, content)
     }
 
     /**
@@ -385,7 +386,7 @@ class KeyboardManager(
     }.getOrDefault(true)
 
     private fun commitAutoCorrectionCandidate(): Pair<SuggestionCandidate?, EditorEditResult> {
-        val candidate = nlpManager.getAutoCommitCandidate()
+        val candidate = suggestions.getAutoCommitCandidate()
         val result = candidate?.let {
             commitCandidateResult(it, AutocorrectAcceptanceKind.AUTO_CORRECTION)
         } ?: EditorEditResult.NOT_APPLICABLE
@@ -557,7 +558,7 @@ class KeyboardManager(
                 ImeOptions.Action.PREVIOUS,
                 ImeOptions.Action.SEARCH,
                 ImeOptions.Action.SEND -> {
-                    nlpManager.finishAutocorrectSession()
+                    suggestions.finishAutocorrectSession()
                     editorInstance.performEnterAction(action)
                 }
                 else -> editorInstance.performEnter()
@@ -712,7 +713,7 @@ class KeyboardManager(
         prefs.suggestion.forceIncognitoModeFromDynamic.set(!prefs.suggestion.forceIncognitoModeFromDynamic.get())
         val newState = !activeState.isIncognitoMode
         activeState.isIncognitoMode = newState
-        nlpManager.finishAutocorrectSession()
+        suggestions.finishAutocorrectSession()
         lastToastReference.get()?.cancel()
         lastToastReference = WeakReference(
             if (newState) {

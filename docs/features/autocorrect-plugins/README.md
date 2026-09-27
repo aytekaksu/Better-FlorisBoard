@@ -73,6 +73,8 @@ request caps must reflect the current shift state.
 
 `NlpManager` reads editor content through an app-supplied live reader, including
 edits still pending in the editor's expected-content queue.
+The app passes `KeyboardManager` a lazy suggestion-session port; NLP still owns
+candidate state and provider lifecycle, and keyboard construction does not start it.
 The app also supplies NLP the active-subtype flow. NLP collects it for preloading
 and reads its current value for composing, suggestion-strip policy, and retries.
 It also supplies the full subtype-list flow and a lazy language-pack flow to the
