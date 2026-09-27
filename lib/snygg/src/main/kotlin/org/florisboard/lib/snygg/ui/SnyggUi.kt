@@ -62,40 +62,16 @@ import org.florisboard.lib.snygg.value.SnyggStaticColorValue
 import org.florisboard.lib.snygg.value.SnyggUriValue
 import org.florisboard.lib.snygg.value.SnyggValue
 
-internal val LocalSnyggTheme: ProvidableCompositionLocal<SnyggTheme> =
-    compositionLocalOf {
-        error("ProvideSnyggTheme not called.")
-    }
+private fun <T> requiredSnyggLocal(): ProvidableCompositionLocal<T> =
+    compositionLocalOf { error("ProvideSnyggTheme not called.") }
 
-internal val LocalSnyggDynamicLightColorScheme: ProvidableCompositionLocal<ColorScheme> =
-    compositionLocalOf {
-        error("ProvideSnyggTheme not called.")
-    }
-
-internal val LocalSnyggDynamicDarkColorScheme: ProvidableCompositionLocal<ColorScheme> =
-    compositionLocalOf {
-        error("ProvideSnyggTheme not called.")
-    }
-
-internal val LocalSnyggFontSizeMultiplier: ProvidableCompositionLocal<Float> =
-    compositionLocalOf {
-        error("ProvideSnyggTheme not called.")
-    }
-
-internal val LocalSnyggAssetResolver: ProvidableCompositionLocal<SnyggAssetResolver> =
-    compositionLocalOf {
-        error("ProvideSnyggTheme not called.")
-    }
-
-internal val LocalSnyggPreloadedCustomFontFamilies: ProvidableCompositionLocal<CompiledFontFamilyData> =
-    compositionLocalOf {
-        error("ProvideSnyggTheme not called.")
-    }
-
-internal val LocalSnyggParentStyle: ProvidableCompositionLocal<SnyggSinglePropertySet> =
-    compositionLocalOf {
-        error("ProvideSnyggTheme not called.")
-    }
+internal val LocalSnyggTheme = requiredSnyggLocal<SnyggTheme>()
+internal val LocalSnyggDynamicLightColorScheme = requiredSnyggLocal<ColorScheme>()
+internal val LocalSnyggDynamicDarkColorScheme = requiredSnyggLocal<ColorScheme>()
+internal val LocalSnyggFontSizeMultiplier = requiredSnyggLocal<Float>()
+internal val LocalSnyggAssetResolver = requiredSnyggLocal<SnyggAssetResolver>()
+internal val LocalSnyggPreloadedCustomFontFamilies = requiredSnyggLocal<CompiledFontFamilyData>()
+internal val LocalSnyggParentStyle = requiredSnyggLocal<SnyggSinglePropertySet>()
 
 internal val LocalSnyggParentSelector: ProvidableCompositionLocal<SnyggSelector> =
     compositionLocalOf {
@@ -103,18 +79,8 @@ internal val LocalSnyggParentSelector: ProvidableCompositionLocal<SnyggSelector>
     }
 
 /**
- * Creates a [SnyggTheme] that is remembered across compositions.
- *
- * When the stylesheet changes the [SnyggTheme] is recompiled.
- * This is synchronous; file-font themes should be compiled and preloaded before composition.
- *
- * @param stylesheet [SnyggStylesheet] the [SnyggTheme] is compiled from
- * @param assetResolver The [SnyggAssetResolver] used to resolve [an asset Uri][org.florisboard.lib.snygg.value.SnyggUriValue]
- *
- * @since 0.5.0-alpha01
- *
- * @see SnyggAssetResolver
- * @see SnyggDefaultAssetResolver
+ * Caches the compiled theme until its stylesheet or asset resolver changes.
+ * Compilation is synchronous; file-font themes should be prepared before composition.
  */
 @Composable
 fun rememberSnyggTheme(
@@ -125,21 +91,8 @@ fun rememberSnyggTheme(
 }
 
 /**
- * Provides the snygg theme to use for all snygg ui composable functions.
- * This function **must** be called for snygg ui composables to work.
- *
- * Use [rememberSnyggTheme] to convert a [SnyggStylesheet] to a [SnyggTheme].
- *
- * @param snyggTheme The [SnyggTheme] for the composable functions.
- * @param dynamicAccentColor The [Color] for the dynamic color schemes.
- * [Color.Unspecified] means default/material you color.
- * @param assetResolver The [SnyggAssetResolver] used to resolve [an asset Uri][org.florisboard.lib.snygg.value.SnyggUriValue].
- *
- * @since 0.5.0-alpha01
- *
- * @see rememberSnyggTheme
- * @see SnyggAssetResolver
- * @see SnyggDefaultAssetResolver
+ * Provides the compiled theme to Snygg UI children. Use [rememberSnyggTheme] to compile a stylesheet.
+ * [Color.Unspecified] uses the platform/default accent.
  */
 @Composable
 fun ProvideSnyggTheme(
@@ -227,15 +180,7 @@ val SnyggRule.Companion.NonNullSaver: Saver<SnyggRule, String>
         restore = { fromOrNull(it)!! },
     )
 
-/**
- * Remembers the [PropertySet][SnyggSinglePropertySet] for the params given.
- *
- * @param elementName The name of this element. If `null` the style will be inherited from the parent element.
- * @param attributes The attributes of the element used to refine the query.
- * @param selector A specific SnyggSelector to query the style for.
- *
- * @return the [queried property set][SnyggSinglePropertySet] for usage in custom elements
- */
+/** Returns the current style for [elementName], refined by [attributes] and [selector]. */
 @Composable
 fun rememberSnyggThemeQuery(
     elementName: String,
