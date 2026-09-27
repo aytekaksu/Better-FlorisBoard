@@ -16,10 +16,12 @@
 
 package dev.patrickgold.florisboard
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.Configuration
+import android.content.res.Resources
 import android.inputmethodservice.ExtractEditText
 import android.os.Build
 import android.os.Bundle
@@ -68,13 +70,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.florisboard.lib.android.AndroidInternalR
 import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.android.showShortToast
 import org.florisboard.lib.android.systemServiceOrNull
 import org.florisboard.lib.kotlin.collectIn
 import org.florisboard.lib.kotlin.collectLatestIn
 import java.lang.ref.WeakReference
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Global weak reference for the [FlorisImeService] class. This is needed as certain actions (request hide, switch to
@@ -93,6 +95,7 @@ class FlorisImeService : LifecycleInputMethodService(), KeyboardImeActions {
     companion object {
         private val InlineSuggestionUiSmallestSize = Size(0, 0)
         private val InlineSuggestionUiBiggestSize = Size(Int.MAX_VALUE, Int.MAX_VALUE)
+        private val ImeActionResourceIds = ConcurrentHashMap<String, Int>()
 
         fun currentInputConnection(): InputConnection? {
             return FlorisImeServiceReference.get()?.currentInputConnection
@@ -543,18 +546,14 @@ class FlorisImeService : LifecycleInputMethodService(), KeyboardImeActions {
         windowController.onComputeInsets(outInsets, state.isFullscreenInputRequired())
     }
 
+    @SuppressLint("DiscouragedApi")
     override fun getTextForImeAction(imeOptions: Int): String? {
         return try {
-            when (imeOptions and EditorInfo.IME_MASK_ACTION) {
-                EditorInfo.IME_ACTION_NONE -> null
-                EditorInfo.IME_ACTION_GO -> resourcesContext.getString(AndroidInternalR.string.ime_action_go)
-                EditorInfo.IME_ACTION_SEARCH -> resourcesContext.getString(AndroidInternalR.string.ime_action_search)
-                EditorInfo.IME_ACTION_SEND -> resourcesContext.getString(AndroidInternalR.string.ime_action_send)
-                EditorInfo.IME_ACTION_NEXT -> resourcesContext.getString(AndroidInternalR.string.ime_action_next)
-                EditorInfo.IME_ACTION_DONE -> resourcesContext.getString(AndroidInternalR.string.ime_action_done)
-                EditorInfo.IME_ACTION_PREVIOUS -> resourcesContext.getString(AndroidInternalR.string.ime_action_previous)
-                else -> resourcesContext.getString(AndroidInternalR.string.ime_action_default)
+            val resourceName = imeActionResourceName(imeOptions) ?: return null
+            val resourceId = ImeActionResourceIds.computeIfAbsent(resourceName) {
+                Resources.getSystem().getIdentifier(it, "string", "android")
             }
+            resourcesContext.getString(resourceId)
         } catch (_: Throwable) {
             super.getTextForImeAction(imeOptions)?.toString()
         }
@@ -567,4 +566,15 @@ class FlorisImeService : LifecycleInputMethodService(), KeyboardImeActions {
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
         return keyboardManager.onHardwareKeyUp(keyCode, event) || super.onKeyUp(keyCode, event)
     }
+}
+
+internal fun imeActionResourceName(imeOptions: Int): String? = when (imeOptions and EditorInfo.IME_MASK_ACTION) {
+    EditorInfo.IME_ACTION_NONE -> null
+    EditorInfo.IME_ACTION_GO -> "ime_action_go"
+    EditorInfo.IME_ACTION_SEARCH -> "ime_action_search"
+    EditorInfo.IME_ACTION_SEND -> "ime_action_send"
+    EditorInfo.IME_ACTION_NEXT -> "ime_action_next"
+    EditorInfo.IME_ACTION_DONE -> "ime_action_done"
+    EditorInfo.IME_ACTION_PREVIOUS -> "ime_action_previous"
+    else -> "ime_action_default"
 }
