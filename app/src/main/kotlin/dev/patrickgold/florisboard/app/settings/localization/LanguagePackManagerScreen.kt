@@ -77,12 +77,8 @@ fun LanguagePackManagerScreen(action: LanguagePackManagerScreenAction?) = Floris
     val operationScope = rememberCoroutineScope()
 
     val indexedLanguagePackExtensions by extensionManager.languagePacks.collectAsState()
-    val extGroupedLanguagePacks = remember(indexedLanguagePackExtensions) {
-        buildMap {
-            for (ext in indexedLanguagePackExtensions) {
-                put(ext.meta.id, ext.items)
-            }
-        }.mapValues { (_, configs) -> configs.sortedBy { it.label } }
+    val indexedLanguagePacksById = remember(indexedLanguagePackExtensions) {
+        indexedLanguagePackExtensions.associateBy { it.meta.id }
     }
 
     var languagePackExtToDelete by remember { mutableStateOf<Extension?>(null) }
@@ -99,8 +95,8 @@ fun LanguagePackManagerScreen(action: LanguagePackManagerScreenAction?) = Floris
                 title = stringRes(R.string.action__import),
             )
         }
-        for ((extensionId, configs) in extGroupedLanguagePacks) key(extensionId) {
-            val ext = extensionManager.getExtensionById(extensionId)!!
+        for ((extensionId, ext) in indexedLanguagePacksById) key(extensionId) {
+            val configs = remember(ext) { ext.items.sortedBy { it.label } }
             FlorisOutlinedBox(
                 modifier = Modifier.defaultFlorisOutlinedBox(),
                 title = ext.meta.title,
