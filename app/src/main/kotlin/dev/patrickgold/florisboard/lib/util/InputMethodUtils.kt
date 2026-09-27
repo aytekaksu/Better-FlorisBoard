@@ -72,7 +72,7 @@ object InputMethodUtils {
         foregroundOnly: Boolean = false,
     ): State<Boolean> {
         return if (AndroidVersion.ATLEAST_API34_U) {
-            timedObserveIsFlorisBoardEnabled()
+            timedObserveIsFlorisboard(isSelected = false)
         } else {
             AndroidSettings.Secure.observeAsState(
                 key = Settings.Secure.ENABLED_INPUT_METHODS,
@@ -88,7 +88,7 @@ object InputMethodUtils {
         foregroundOnly: Boolean = false,
     ): State<Boolean> {
         return if (AndroidVersion.ATLEAST_API34_U) {
-            timedObserveIsFlorisBoardSelected()
+            timedObserveIsFlorisboard(isSelected = true)
         } else {
             AndroidSettings.Secure.observeAsState(
                 key = Settings.Secure.DEFAULT_INPUT_METHOD,
@@ -128,26 +128,16 @@ object InputMethodUtils {
 
     @RequiresApi(api = 34)
     @Composable
-    private fun timedObserveIsFlorisBoardEnabled(): State<Boolean> {
+    private fun timedObserveIsFlorisboard(isSelected: Boolean): State<Boolean> {
         val state = remember { mutableStateOf(false) }
         val context = LocalContext.current
         LaunchedEffect(Unit) {
             while (true) {
-                state.value = isFlorisboardEnabled(context)
-                delay(TIMED_QUERY_DELAY)
-            }
-        }
-        return state
-    }
-
-    @RequiresApi(api = 34)
-    @Composable
-    private fun timedObserveIsFlorisBoardSelected(): State<Boolean> {
-        val state = remember { mutableStateOf(false) }
-        val context = LocalContext.current
-        LaunchedEffect(Unit) {
-            while (true) {
-                state.value = isFlorisboardSelected(context)
+                state.value = if (isSelected) {
+                    isFlorisboardSelected(context)
+                } else {
+                    isFlorisboardEnabled(context)
+                }
                 delay(TIMED_QUERY_DELAY)
             }
         }
