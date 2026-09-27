@@ -41,7 +41,6 @@ import androidx.core.content.ContextCompat
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.dictionaryManager
-import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.dictionary.UserDictionaryEntry
 import dev.patrickgold.florisboard.ime.dictionary.storedUserDictionaryLocale
@@ -325,6 +324,8 @@ internal fun EditorContent.buildAutocorrectWireRequest(
 class AutocorrectPluginManager internal constructor(
     context: Context,
     private val keyboardTraits: () -> AutocorrectKeyboardTraits,
+    private val currentEditorInfo: () -> FlorisEditorInfo,
+    private val currentEditorContent: () -> EditorContent,
 ) : SuggestionProvider {
     companion object {
         const val ProviderId = "org.florisboard.nlp.providers.external-autocorrect"
@@ -332,7 +333,6 @@ class AutocorrectPluginManager internal constructor(
 
     private val appContext by context.appContext()
     private val dictionaryManager by context.dictionaryManager()
-    private val editorInstance by context.editorInstance()
     private val subtypeManager by context.subtypeManager()
     private val prefs by FlorisPreferenceStore
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -495,7 +495,7 @@ class AutocorrectPluginManager internal constructor(
             event.configuration != effect.configuration
         ) return
         val content = selectFinalRequestContent(
-            editorInstance.activeContent,
+            currentEditorContent(),
             contentAllowedAtEnd = true,
             sameEditorGeneration = true,
             editorEligibleNow = true,
@@ -860,7 +860,7 @@ class AutocorrectPluginManager internal constructor(
         val accessibility = appContext.getSystemService(AccessibilityManager::class.java)
         val sessionId = activeSessionId
         val selectedProviderId = prefs.suggestion.autocorrectPluginComponent.get()
-        val editorInfo = editorInstance.activeInfo
+        val editorInfo = currentEditorInfo()
         val isEligible =
             accessibility?.isTouchExplorationEnabled != true &&
                 prefs.suggestion.enabled.get() &&
@@ -1097,10 +1097,15 @@ class AutocorrectPluginManager internal constructor(
         val height = inputLayout.height
         if (
             !prefs.suggestion.enabled.get() ||
-            prefs.suggestion.autocorrectPluginComponent.get().isBlank() ||
-            !editorInstance.activeInfo.inputAttributes.allowsAutocorrectPluginSession(
+            prefs.suggestion.autocorrectPluginComponent.get().isBlank()
+        ) {
+            return
+        }
+        val editorInfo = currentEditorInfo()
+        if (
+            !editorInfo.inputAttributes.allowsAutocorrectPluginSession(
                 isPrivateSession = isPrivateSession,
-                isRawInputEditor = editorInstance.activeInfo.isRawInputEditor,
+                isRawInputEditor = editorInfo.isRawInputEditor,
             ) ||
             !data.isAutocorrectTraceInput(inputLayout.mode) ||
             width <= 0f ||
@@ -1299,7 +1304,7 @@ class AutocorrectPluginManager internal constructor(
     }
 
     private fun currentEditorAllowsFinalContent(session: AutocorrectSession): Boolean {
-        val editorInfo = editorInstance.activeInfo
+        val editorInfo = currentEditorInfo()
         return editorInfo.inputAttributes.raw == session.inputType &&
             editorInfo.imeOptions.flagNoPersonalizedLearning == !session.allowPersonalizedLearning &&
             editorInfo.autocorrectEditorFlags() == session.editorFlags &&
@@ -1422,7 +1427,7 @@ class AutocorrectPluginManager internal constructor(
         }
         val session = ensureSession(
             subtype,
-            editorInstance.activeInfo,
+            currentEditorInfo(),
             isPrivateSession,
             requestEditorGeneration,
         ) ?: return unhandled
