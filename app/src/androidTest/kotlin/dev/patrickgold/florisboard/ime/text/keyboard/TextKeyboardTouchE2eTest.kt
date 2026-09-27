@@ -315,6 +315,27 @@ class TextKeyboardTouchE2eTest {
     }
 
     @Test
+    fun distinctPointersLiftInOrderWithoutDuplicatingTheFirstKey() {
+        clearEditor()
+        clearPredictionHints()
+        val downTime = SystemClock.uptimeMillis()
+        val first = InjectedPointer(DUPLICATE_POINTER_ID_1, points.n.center)
+        val second = InjectedPointer(DUPLICATE_POINTER_ID_2, points.b.center)
+
+        injectPointers(MotionEvent.ACTION_DOWN, 0, listOf(first), downTime)
+        injectPointers(MotionEvent.ACTION_POINTER_DOWN, 1, listOf(first, second), downTime)
+        injectPointers(MotionEvent.ACTION_POINTER_UP, 1, listOf(first, second), downTime)
+        injectPointers(MotionEvent.ACTION_UP, 0, listOf(first), downTime)
+
+        waitForText("nb")
+        assertTextRemains(
+            expected = "nb",
+            durationMs = repeatObservationDuration(),
+            context = "after two distinct pointers lift",
+        )
+    }
+
+    @Test
     fun denseMotionCancelAndPointerReuseAreLossless() {
         for ((point, expected) in listOf(points.n to "n", points.v to "v", points.b to "b")) {
             clearEditor()
