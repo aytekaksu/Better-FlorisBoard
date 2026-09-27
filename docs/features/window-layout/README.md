@@ -4,6 +4,7 @@
 owns the move/resize editor state and saves the window config for the current
 form factor. [`ImeWindow`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/window/ImeWindow.kt)
 renders the resulting window and docking indicator.
+System-bar setup follows context wrappers to the hosting activity or IME service.
 
 Releasing a floating move in the dock zone switches to fixed mode and closes
 the move editor immediately. The dock zone ends at `dockToFixedHeight`; the
