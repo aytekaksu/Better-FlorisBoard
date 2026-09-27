@@ -101,8 +101,8 @@ value class FlorisRef private constructor(val uri: Uri) {
         fun from(str: String): FlorisRef {
             // First two entries only kept due to backwards-compatibility reasons.
             return when {
-                str.startsWith("assets:") -> assets(str.substring(7))
-                str.startsWith("internal:") -> internal(str.substring(9))
+                str.startsWith("assets:") -> assets(str.substringAfter(':'))
+                str.startsWith("internal:") -> internal(str.substringAfter(':'))
                 else -> FlorisRef(str.toUri())
             }
         }
