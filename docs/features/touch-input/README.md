@@ -150,6 +150,7 @@ accessibility, and stale prediction hints.
 
 ## Known limits
 
+- The real-touch fixture currently assumes a fixed keyboard window; floating mode adds a caption row below the keys.
 - Rendering, touch control, glide trail, swipe actions, selection drag, popups,
   and autocorrect trace capture still share one large source file.
 - Some cleanup catches broad failures to protect the IME; this makes defects
