@@ -73,6 +73,15 @@ val extensionHardeningKotlinSources = files(
     file("app/src/androidTest/kotlin/dev/patrickgold/florisboard/lib/ext/ExtensionLifecycleAndroidTest.kt"),
 )
 
+val cacheCleanupKotlinSources = files(
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/cache/ImportWorkspaceJanitor.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/cache/ImportWorkspaceRetirement.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/cache/StartupCacheJanitor.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/cache/ImportWorkspaceJanitorTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/cache/ImportWorkspaceRetirementTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/cache/StartupCacheJanitorTest.kt"),
+)
+
 val sharedQualityKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceMigrationTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/FlorisPreferenceSchemaContractTest.kt"),
@@ -148,6 +157,7 @@ val qualityKotlinSources = files(
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickAction.kt"),
     backupArchiveKotlinSources,
     extensionHardeningKotlinSources,
+    cacheCleanupKotlinSources,
     inheritedPlatformUtilityKotlinSources,
     inheritedKotlinCoreSources,
     inheritedAndroidLibrarySources,

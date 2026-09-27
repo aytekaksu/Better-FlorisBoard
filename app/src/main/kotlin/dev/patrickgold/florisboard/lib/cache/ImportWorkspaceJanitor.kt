@@ -38,13 +38,12 @@ internal class ImportWorkspaceJanitor(
         scope.launch {
             while (true) {
                 wakeups.receive()
-                while (true) {
+                while (synchronized(guard) { pending.isNotEmpty() }) {
                     val batch = synchronized(guard) {
                         pending.take(16).also { selected ->
                             pending.removeAll(selected.toSet())
                         }
                     }
-                    if (batch.isEmpty()) break
                     for (directory in batch) {
                         val cleaned = try {
                             cleanup(directory)
@@ -57,11 +56,10 @@ internal class ImportWorkspaceJanitor(
                             synchronized(guard) { pending.add(directory) }
                         }
                     }
-                    if (synchronized(guard) { pending.isEmpty() }) {
-                        break
+                    if (synchronized(guard) { pending.isNotEmpty() }) {
+                        // A newly failed path should not wait behind an old path's retry interval.
+                        withTimeoutOrNull(intervalMs) { wakeups.receive() }
                     }
-                    // A newly failed path should not wait behind an old path's retry interval.
-                    withTimeoutOrNull(intervalMs) { wakeups.receive() }
                 }
             }
         }
