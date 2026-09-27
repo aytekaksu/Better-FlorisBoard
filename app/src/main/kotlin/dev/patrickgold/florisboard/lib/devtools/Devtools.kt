@@ -79,34 +79,23 @@ object Devtools {
         }
     }
 
-    fun generateDebugLogForGithub(
-        context: Context,
-        prefs: FlorisPreferenceModel? = null,
-        includeDiagnostics: Boolean = false,
-    ): String = renderDebugLogForGithub(captureDebugLog(context, prefs, includeDiagnostics))
-
-    internal fun renderDebugLogForGithub(snapshot: DebugLogSnapshot): String {
-        return buildString {
-            appendLine("<details>")
-            appendLine("<summary>Diagnostic report header</summary>")
+    internal fun renderDebugLogForGithub(snapshot: DebugLogSnapshot): String = buildString {
+        appendGithubSection("Diagnostic report header", snapshot.header)
+        snapshot.diagnostics?.let { diagnostics ->
             appendLine()
-            appendLine("```")
-            append(snapshot.header)
-            appendLine()
-            appendLine("```")
-            appendLine("</details>")
-            snapshot.diagnostics?.let { diagnostics ->
-                appendLine()
-                appendLine("<details>")
-                appendLine("<summary>App diagnostics</summary>")
-                appendLine()
-                appendLine("```")
-                append(diagnostics)
-                appendLine()
-                appendLine("```")
-                appendLine("</details>")
-            }
+            appendGithubSection("App diagnostics", diagnostics)
         }
+    }
+
+    private fun StringBuilder.appendGithubSection(title: String, content: String) {
+        appendLine("<details>")
+        append("<summary>").append(title).appendLine("</summary>")
+        appendLine()
+        appendLine("```")
+        append(content)
+        appendLine()
+        appendLine("```")
+        appendLine("</details>")
     }
 
     fun generateSystemInfoLog(context: Context, withTitle: Boolean = true): String {
