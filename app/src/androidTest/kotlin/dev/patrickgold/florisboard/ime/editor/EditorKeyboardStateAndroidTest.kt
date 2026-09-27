@@ -18,6 +18,9 @@ package dev.patrickgold.florisboard.ime.editor
 
 import android.content.Context
 import android.text.InputType
+import android.view.InputDevice
+import android.view.KeyCharacterMap
+import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
@@ -321,11 +324,113 @@ class EditorKeyboardStateAndroidTest {
             assertEquals(8, reads)
         }
     }
+
+    @Test
+    fun syntheticKeyEventsKeepModifierOrderAndRepeatTiming() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val connection = RecordingInputConnection(instrumentation.targetContext)
+            var activeConnection: InputConnection? = connection
+            val editor = EditorInstance(
+                instrumentation.targetContext,
+                lazy { ObservableKeyboardState.new() },
+                { Subtype.DEFAULT },
+                lazy { TestEditorComposingPolicy() },
+                { activeConnection },
+            ) { false }
+            val down = KeyEvent.ACTION_DOWN
+            val up = KeyEvent.ACTION_UP
+            val key = KeyEvent.KEYCODE_Z
+
+            assertTrue(editor.sendDownUpKeyEvent(key))
+            assertEquals(listOf(Triple(down, key, 0), Triple(up, key, 0)), connection.keyEventSignatures())
+            assertEquals(listOf(0, 0), connection.keyEvents.map { it.metaState })
+            assertEquals(1, connection.batchBegins)
+            assertEquals(1, connection.batchEnds)
+
+            connection.keyEvents.clear()
+            val modifiers = editor.meta(ctrl = true, alt = true, shift = true)
+            assertTrue(editor.sendDownUpKeyEvent(key, modifiers, count = 3))
+            assertEquals(
+                listOf(
+                    Triple(down, KeyEvent.KEYCODE_CTRL_LEFT, 0),
+                    Triple(down, KeyEvent.KEYCODE_ALT_LEFT, 0),
+                    Triple(down, KeyEvent.KEYCODE_SHIFT_LEFT, 0),
+                    Triple(down, key, 0),
+                    Triple(down, key, 1),
+                    Triple(down, key, 2),
+                    Triple(up, key, 0),
+                    Triple(up, KeyEvent.KEYCODE_SHIFT_LEFT, 0),
+                    Triple(up, KeyEvent.KEYCODE_ALT_LEFT, 0),
+                    Triple(up, KeyEvent.KEYCODE_CTRL_LEFT, 0),
+                ),
+                connection.keyEventSignatures(),
+            )
+            assertEquals(listOf(0, 0, 0, modifiers, modifiers, modifiers, modifiers, 0, 0, 0),
+                connection.keyEvents.map { it.metaState })
+            val eventTime = connection.keyEvents.first().downTime
+            connection.keyEvents.forEach { event ->
+                assertEquals(eventTime, event.downTime)
+                if (event.action == down) assertEquals(eventTime, event.eventTime)
+                else assertTrue(event.eventTime >= eventTime)
+                assertEquals(KeyCharacterMap.VIRTUAL_KEYBOARD, event.deviceId)
+                assertEquals(0, event.scanCode)
+                assertEquals(KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, event.flags)
+                assertEquals(InputDevice.SOURCE_KEYBOARD, event.source)
+            }
+            assertEquals(2, connection.batchBegins)
+            assertEquals(2, connection.batchEnds)
+
+            for ((singleModifier, modifierKeyCode) in listOf(
+                editor.meta(ctrl = true) to KeyEvent.KEYCODE_CTRL_LEFT,
+                editor.meta(alt = true) to KeyEvent.KEYCODE_ALT_LEFT,
+                editor.meta(shift = true) to KeyEvent.KEYCODE_SHIFT_LEFT,
+            )) {
+                connection.keyEvents.clear()
+                assertTrue(editor.sendDownUpKeyEvent(key, singleModifier))
+                assertEquals(listOf(
+                    Triple(down, modifierKeyCode, 0), Triple(down, key, 0),
+                    Triple(up, key, 0), Triple(up, modifierKeyCode, 0),
+                ), connection.keyEventSignatures())
+                assertEquals(listOf(0, singleModifier, singleModifier, 0),
+                    connection.keyEvents.map { it.metaState })
+            }
+
+            val eventsBeforeInvalidCalls = connection.keyEventSignatures()
+            val batchesBeforeInvalidCalls = connection.batchBegins
+            assertFalse(editor.sendDownUpKeyEvent(key, count = 0))
+            activeConnection = null
+            assertFalse(editor.sendDownUpKeyEvent(key))
+            assertEquals(eventsBeforeInvalidCalls, connection.keyEventSignatures())
+            assertEquals(batchesBeforeInvalidCalls, connection.batchBegins)
+            assertEquals(batchesBeforeInvalidCalls, connection.batchEnds)
+        }
+    }
 }
 
 private class RecordingInputConnection(context: Context) : BaseInputConnection(View(context), true) {
     val cursorUpdateModes = mutableListOf<Int>()
     val editorActions = mutableListOf<Int>()
+    val keyEvents = mutableListOf<KeyEvent>()
+    var batchBegins = 0
+    var batchEnds = 0
+
+    fun keyEventSignatures() = keyEvents.map { Triple(it.action, it.keyCode, it.repeatCount) }
+
+    override fun beginBatchEdit(): Boolean {
+        batchBegins++
+        return true
+    }
+
+    override fun endBatchEdit(): Boolean {
+        batchEnds++
+        return true
+    }
+
+    override fun sendKeyEvent(event: KeyEvent): Boolean {
+        keyEvents += event
+        return true
+    }
 
     override fun requestCursorUpdates(cursorUpdateMode: Int): Boolean {
         cursorUpdateModes += cursorUpdateMode
