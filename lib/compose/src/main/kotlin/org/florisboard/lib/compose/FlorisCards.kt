@@ -189,59 +189,9 @@ private fun FlorisStatusCardIcon(imageVector: ImageVector) {
 @Composable
 fun FlorisOutlinedBox(
     modifier: Modifier = Modifier,
-    title: String,
+    title: String? = null,
     onTitleClick: (() -> Unit)? = null,
     subtitle: String? = null,
-    onSubtitleClick: (() -> Unit)? = null,
-    borderWidth: Dp = 1.dp,
-    borderColor: Color = MaterialTheme.colorScheme.outlineVariant,
-    shape: Shape = BoxDefaults.OutlinedBoxShape,
-    contentPadding: PaddingValues = BoxDefaults.ContentPadding,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    FlorisOutlinedBox(
-        modifier = modifier,
-        title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
-        onTitleClick = onTitleClick,
-        subtitle = if (subtitle != null) {
-            {
-                Text(
-                    modifier = Modifier
-                        .padding(start = 6.dp, end = 6.dp, bottom = 4.dp),
-                    text = subtitle,
-                    color = LocalContentColor.current.copy(alpha = 0.56f),
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
-                )
-            }
-        } else {
-            null
-        },
-        onSubtitleClick = onSubtitleClick,
-        borderWidth = borderWidth,
-        borderColor = borderColor,
-        shape = shape,
-        contentPadding = contentPadding,
-        content = content,
-    )
-}
-
-// TODO: Rework internal implementation (with same API and visual appearance) of FlorisOutlinedBox
-//  to avoid too much nesting and improve performance
-@Composable
-fun FlorisOutlinedBox(
-    modifier: Modifier = Modifier,
-    title: (@Composable () -> Unit)? = null,
-    onTitleClick: (() -> Unit)? = null,
-    subtitle: (@Composable () -> Unit)? = null,
     onSubtitleClick: (() -> Unit)? = null,
     borderWidth: Dp = 1.dp,
     borderColor: Color = MaterialTheme.colorScheme.outlineVariant,
@@ -267,7 +217,14 @@ fun FlorisOutlinedBox(
                             onSubtitleClick!!()
                         },
                 ) {
-                    subtitle()
+                    Text(
+                        modifier = Modifier.padding(start = 6.dp, end = 6.dp, bottom = 4.dp),
+                        text = subtitle,
+                        color = LocalContentColor.current.copy(alpha = 0.56f),
+                        fontWeight = FontWeight.Normal,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 10.sp,
+                    )
                 }
             }
             Column(
@@ -289,7 +246,12 @@ fun FlorisOutlinedBox(
                     .padding(horizontal = 6.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                title()
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
