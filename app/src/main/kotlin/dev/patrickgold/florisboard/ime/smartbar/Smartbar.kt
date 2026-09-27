@@ -295,7 +295,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
                 if (shouldShowInlineSuggestionsUi) {
                     InlineSuggestionsUi(inlineSuggestions)
                 } else {
-                    CandidatesRow()
+                    CandidatesRow(candidates)
                 }
             }
             SharedActionsVisibility(visible = expanded) {
@@ -408,7 +408,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
                 if (shouldShowInlineSuggestionsUi) {
                     InlineSuggestionsUi(inlineSuggestions)
                 } else {
-                    CandidatesRow()
+                    CandidatesRow(candidates)
                 }
             }
 
