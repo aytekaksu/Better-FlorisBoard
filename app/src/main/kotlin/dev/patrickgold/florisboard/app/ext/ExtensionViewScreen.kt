@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -101,10 +100,7 @@ private fun ViewScreen(ext: Extension, routeEntry: NavBackStackEntry? = null) = 
                 label = stringRes(R.string.ext__meta__maintainers),
                 showDividerAbove = false,
             ) {
-                for ((n, maintainer) in ext.meta.maintainers.withIndex()) {
-                    if (n > 0) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
+                for (maintainer in ext.meta.maintainers) {
                     ExtensionMaintainerChip(maintainer)
                 }
             }
@@ -116,10 +112,7 @@ private fun ViewScreen(ext: Extension, routeEntry: NavBackStackEntry? = null) = 
             }
             if (ext.meta.keywords != null && ext.meta.keywords!!.isNotEmpty()) {
                 ExtensionMetaRowScrollableChips(label = stringRes(R.string.ext__meta__keywords)) {
-                    for ((n, keyword) in ext.meta.keywords!!.withIndex()) {
-                        if (n > 0) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
+                    for (keyword in ext.meta.keywords!!) {
                         ExtensionKeywordChip(keyword)
                     }
                 }
@@ -169,33 +162,21 @@ private fun ViewScreen(ext: Extension, routeEntry: NavBackStackEntry? = null) = 
             }
         }
 
-        when (ext) {
-            is ThemeExtension -> {
-                ExtensionComponentListView(
-                    title = stringRes(R.string.ext__meta__components_theme),
-                    components = ext.themes,
-                ) { component ->
-                    ExtensionComponentView(
-                        modifier = Modifier.defaultFlorisOutlinedBox(),
-                        meta = ext.meta,
-                        component = component,
-                    )
-                }
-            }
-            is LanguagePackExtension -> {
-                ExtensionComponentListView(
-                    title = stringRes(R.string.ext__meta__components_language_pack),
-                    components = ext.items,
-                ) { component ->
-                    ExtensionComponentView(
-                        modifier = Modifier.defaultFlorisOutlinedBox(),
-                        meta = ext.meta,
-                        component = component,
-                    )
-                }
-            }
-            else -> {
-                // Render nothing
+        val componentTitle = when (ext) {
+            is ThemeExtension -> R.string.ext__meta__components_theme
+            is LanguagePackExtension -> R.string.ext__meta__components_language_pack
+            else -> null
+        }
+        if (componentTitle != null) {
+            ExtensionComponentListView(
+                title = stringRes(componentTitle),
+                components = ext.components(),
+            ) { component ->
+                ExtensionComponentView(
+                    modifier = Modifier.defaultFlorisOutlinedBox(),
+                    meta = ext.meta,
+                    component = component,
+                )
             }
         }
 
@@ -263,6 +244,7 @@ private fun ExtensionMetaRowScrollableChips(
             modifier = Modifier
                 .weight(1.0f, fill = false)
                 .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             content()
         }
