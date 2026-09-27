@@ -16,8 +16,8 @@
 
 package dev.patrickgold.florisboard.lib.ext
 
+import dev.patrickgold.florisboard.lib.io.parsePortablePathSegments
 import java.io.IOException
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -34,39 +34,16 @@ class SafeRelativePath private constructor(private val segments: List<String>) {
         const val MAX_SEGMENT_LENGTH = 128
         const val MAX_DEPTH = 16
 
-        private val DrivePrefix = Regex("^[A-Za-z]:")
-
         fun parse(rawPath: String): Result<SafeRelativePath> {
-            if (!rawPath.isSafePathText()) {
-                return unsafePath()
-            }
-            val segments = rawPath.split('/')
-            if (
-                segments.size > MAX_DEPTH ||
-                segments.any { !it.isSafePathSegment() }
-            ) {
-                return unsafePath()
-            }
+            val segments = parsePortablePathSegments(
+                rawPath = rawPath,
+                maxPathBytes = MAX_LENGTH,
+                maxSegmentBytes = MAX_SEGMENT_LENGTH,
+                maxDepth = MAX_DEPTH,
+                rejectBlankSegments = true,
+            ) ?: return unsafePath()
             return Result.success(SafeRelativePath(segments))
         }
-
-        private fun String.isSafePathText(): Boolean = listOf(
-            isNotEmpty(),
-            length <= MAX_LENGTH,
-            toByteArray(StandardCharsets.UTF_8).size <= MAX_LENGTH,
-            !startsWith('/'),
-            !DrivePrefix.containsMatchIn(this),
-            '\\' !in this,
-            none(Char::isISOControl),
-        ).all { it }
-
-        private fun String.isSafePathSegment(): Boolean = listOf(
-            isNotBlank(),
-            this != ".",
-            this != "..",
-            length <= MAX_SEGMENT_LENGTH,
-            toByteArray(StandardCharsets.UTF_8).size <= MAX_SEGMENT_LENGTH,
-        ).all { it }
     }
 
     /** Validated path text for filesystem APIs. Do not include it in diagnostics. */

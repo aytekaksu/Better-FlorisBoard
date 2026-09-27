@@ -255,7 +255,6 @@ internal object BoundedExtensionArchive {
         val kind = zipEntry.entryKind()
         rejectUnless(kind != EntryKind.UNSUPPORTED)
         val rawPath = zipEntry.name
-        rejectUnless(rawPath.endsWith('/') == (kind == EntryKind.DIRECTORY))
         val path = validatePath(rawPath, kind, limits)
         val rawName = zipEntry.rawName
         rejectUnless(rawName != null && rawName.contentEquals(rawPath.toByteArray(StandardCharsets.UTF_8)))
@@ -310,29 +309,14 @@ internal object BoundedExtensionArchive {
     }
 
     private fun validatePath(rawPath: String, kind: EntryKind, limits: Limits): String {
-        rejectUnless(
-            rawPath.isNotEmpty() &&
-                rawPath.length <= limits.maxPathBytes &&
-                rawPath.toByteArray(StandardCharsets.UTF_8).size <= limits.maxPathBytes &&
-                !rawPath.startsWith('/') &&
-                !rawPath.contains('\\') &&
-                !rawPath.any(Char::isISOControl) &&
-                !DRIVE_PREFIX.containsMatchIn(rawPath),
-        )
-        val path = if (kind == EntryKind.DIRECTORY) rawPath.removeSuffix("/") else rawPath
-        rejectUnless(path.isNotEmpty())
-        val segments = path.split('/')
-        rejectUnless(segments.size <= limits.maxDepth)
-        for (segment in segments) {
-            rejectUnless(
-                segment.isNotEmpty() &&
-                    segment != "." &&
-                    segment != ".." &&
-                    segment.length <= limits.maxSegmentBytes &&
-                    segment.toByteArray(StandardCharsets.UTF_8).size <= limits.maxSegmentBytes,
-            )
-        }
-        return path
+        parsePortablePathSegments(
+            rawPath = rawPath,
+            maxPathBytes = limits.maxPathBytes,
+            maxSegmentBytes = limits.maxSegmentBytes,
+            directory = kind == EntryKind.DIRECTORY,
+            maxDepth = limits.maxDepth,
+        ) ?: reject()
+        return if (kind == EntryKind.DIRECTORY) rawPath.removeSuffix("/") else rawPath
     }
 
     private fun extractValidated(zipFile: ZipFile, archive: ValidatedArchive, staging: Path, limits: Limits) {
@@ -616,7 +600,6 @@ internal object BoundedExtensionArchive {
     private const val MAX_CRC32 = 0xffff_ffffL
     private const val FAILURE_MESSAGE = "Extension data is invalid or exceeds safety limits."
     private const val STAGING_PREFIX = ".extension-stage-"
-    private val DRIVE_PREFIX = Regex("""^[A-Za-z]:""")
     private val SUPPORTED_METHODS = setOf(ZipMethod.STORED.code, ZipMethod.DEFLATED.code)
     private val DISCARDING_OUTPUT = object : OutputStream() {
         override fun write(byte: Int) = Unit

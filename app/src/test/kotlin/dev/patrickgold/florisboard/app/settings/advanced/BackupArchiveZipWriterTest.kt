@@ -232,6 +232,21 @@ class BackupArchiveZipWriterTest :
             }
         }
 
+        test("a UTF-8 segment limit leaves the existing archive untouched") {
+            val source = Files.createDirectory(testRoot.resolve("unicode-path-source"))
+            Files.write(source.resolve("é"), byteArrayOf(1))
+            val destinationBytes = "existing-archive".encodeToByteArray()
+            val destination = Files.write(testRoot.resolve("unicode-path.zip"), destinationBytes)
+
+            val failure = shouldThrow<IllegalStateException> {
+                ZipUtils.zip(source.toFile(), destination.toFile(), writerLimits(maxPathSegmentBytes = 1))
+            }
+
+            failure.message shouldBe "Archive source exceeds backup limits."
+            Files.readAllBytes(destination).contentEquals(destinationBytes) shouldBe true
+            partialSiblings(destination) shouldBe emptyList()
+        }
+
         test("compressed output limits and cancellation preserve the destination") {
             val source = Files.createDirectory(testRoot.resolve("bounded-output-source"))
             Files.write(source.resolve("data.txt"), ByteArray(128 * 1024) { it.toByte() })
