@@ -19,6 +19,8 @@ non-debuggable `.profile` app variant; the startup benchmarks still measure the
 minified `.bench` variant. Run profile capture only on a dedicated API 33+ device
 with an explicit ADB serial. The gate checks source profile rules against code
 defined in the profile and minified beta APKs; it does not measure startup speed.
+The startup benchmark selects the IME once per test, before its per-iteration
+setup, so cold launches are not disrupted by repeatedly selecting the service.
 Review generated rules and the packaged beta profile before replacing
 `app/src/main/baseline-prof.txt`. Building the test APK alone does not refresh
 that checked-in file.

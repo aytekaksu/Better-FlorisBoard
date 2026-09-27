@@ -22,6 +22,8 @@ import androidx.benchmark.macro.StartupMode
 import androidx.benchmark.macro.StartupTimingMetric
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -79,19 +81,22 @@ abstract class AbstractStartupBenchmark(private val startupMode: StartupMode) {
     @Test
     fun startupFullCompilation() = startup(CompilationMode.Full())
 
-    private fun startup(compilationMode: CompilationMode) = benchmarkRule.measureRepeated(
-        packageName = TargetPackage,
-        metrics = listOf(StartupTimingMetric()),
-        compilationMode = compilationMode,
-        iterations = 10,
-        startupMode = startupMode,
-        setupBlock = {
-            pressHome()
-            device.executeShellCommand("ime enable $TargetImeService")
-            device.executeShellCommand("ime set $TargetImeService")
-        },
-    ) {
-        startActivityAndWait()
-        device.waitForIdle(5000)
+    private fun startup(compilationMode: CompilationMode) {
+        // Reselecting the active IME every iteration can wake it after a cold-start stop.
+        val uiDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+        uiDevice.executeShellCommand("ime enable $TargetImeService")
+        uiDevice.executeShellCommand("ime set $TargetImeService")
+
+        benchmarkRule.measureRepeated(
+            packageName = TargetPackage,
+            metrics = listOf(StartupTimingMetric()),
+            compilationMode = compilationMode,
+            iterations = 10,
+            startupMode = startupMode,
+            setupBlock = { pressHome() },
+        ) {
+            startActivityAndWait()
+            device.waitForIdle(5000)
+        }
     }
 }
