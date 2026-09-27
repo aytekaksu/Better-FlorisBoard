@@ -160,6 +160,10 @@ shape type resets the preview and chips to the new type's value, and a corner ed
 updates that value before the property can be saved.
 Adding a theme property with an existing name leaves the current value and
 workspace unchanged; editing that property can replace its value.
+An open property draft belongs to the theme action, so rotation keeps its target,
+value, and unfinished size input. Apply and Delete only touch the original
+property set while it still belongs to the rule. This does not recover an unsaved
+editor workspace after process death.
 
 ## Verification
 
@@ -170,6 +174,8 @@ Run the full JVM suite and local gate:
   --tests 'dev.patrickgold.florisboard.lib.ext.ExtensionExportWorkspaceTest'
 ./gradlew :app:testDebugUnitTest \
   --tests 'dev.patrickgold.florisboard.app.ext.EditorAssetFilesTest'
+./gradlew :app:testDebugUnitTest \
+  --tests 'dev.patrickgold.florisboard.app.settings.theme.ThemePropertyEditTest'
 ./gradlew :app:testDebugUnitTest
 ./gradlew qualityGate
 ```

@@ -60,6 +60,7 @@ import dev.patrickgold.florisboard.app.settings.advanced.RadioListItem
 import dev.patrickgold.florisboard.app.settings.theme.DialogProperty
 import dev.patrickgold.florisboard.app.settings.theme.PrettyPrintConfig
 import dev.patrickgold.florisboard.app.settings.theme.ThemeEditorScreen
+import dev.patrickgold.florisboard.app.settings.theme.ThemePropertyEditSession
 import dev.patrickgold.florisboard.app.settings.theme.newEmptyThemeStylesheetEditor
 import dev.patrickgold.florisboard.cacheManager
 import dev.patrickgold.florisboard.extensionManager
@@ -189,7 +190,9 @@ sealed interface ThemeEditorAction {
 
     object CreateTheme : ThemeEditorAction
 
-    data class EditTheme(val editor: ThemeExtensionComponentEditor) : ThemeEditorAction
+    data class EditTheme(val editor: ThemeExtensionComponentEditor) : ThemeEditorAction {
+        internal var propertyEditSession by mutableStateOf<ThemePropertyEditSession?>(null)
+    }
 }
 
 @Composable
@@ -437,7 +440,7 @@ private fun ExtensionEditScreenSheetSwitcher(
                     CreateThemeScreen(workspace)
                 }
                 is ThemeEditorAction.EditTheme -> {
-                    ThemeEditorScreen(workspace, action.editor)
+                    ThemeEditorScreen(workspace, action)
                 }
                 null -> Unit
             }
