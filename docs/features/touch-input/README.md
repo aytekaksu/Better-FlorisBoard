@@ -61,6 +61,8 @@ Semantic input order is more important than callback completion order.
 Multi-pointer transitions, gesture completion, and selection dragging must
 resolve or cancel their pending editor event exactly once. A stale prediction
 hint or trace may improve neither hit testing nor suggestions.
+Each key callback sees the event history from before its own key; nested input
+advances that history before the outer callback returns.
 
 `FlorisLocale` gates automatic shift and default suggestion/phantom spacing.
 Japanese `ja`, including regional variants, disables both; explicit suggestion
