@@ -34,12 +34,8 @@ abstract class AndroidSettingsHelper(
     private fun reflectionGetAllStaticFields(kClass: KClass<*>) = sequence<Pair<String, String>> {
         for (field in kClass.java.declaredFields) {
             if (Modifier.isStatic(field.modifiers)) {
-                try {
-                    val value = field.get(null) as? String ?: continue
-                    yield(field.name to value)
-                } catch (e: Exception) {
-                    // Cannot access field, continue on to next one
-                }
+                val value = tryOrNull { field.get(null) } as? String ?: continue
+                yield(field.name to value)
             }
         }
     }
