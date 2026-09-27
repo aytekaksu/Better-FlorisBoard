@@ -67,6 +67,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.autocorrectPluginManager
@@ -105,7 +107,6 @@ import dev.patrickgold.florisboard.lib.PointerMap
 import dev.patrickgold.florisboard.lib.toIntOffset
 import dev.patrickgold.jetpref.datastore.model.collectAsState
 import org.florisboard.lib.android.isOrientationLandscape
-import org.florisboard.lib.compose.DisposableLifecycleEffect
 import org.florisboard.lib.snygg.SnyggSelector
 import org.florisboard.lib.snygg.ui.SnyggBox
 import org.florisboard.lib.snygg.ui.SnyggIcon
@@ -177,10 +178,7 @@ fun TextKeyboardLayout(
         }
     }
 
-    DisposableLifecycleEffect(
-        onResume = { /* Do nothing */ },
-        onPause = { resetAllKeys() },
-    )
+    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { resetAllKeys() }
 
     BoxWithConstraints(
         modifier = modifier
