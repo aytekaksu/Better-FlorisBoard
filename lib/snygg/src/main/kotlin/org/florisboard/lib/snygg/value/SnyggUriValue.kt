@@ -34,18 +34,14 @@ data class SnyggUriValue(val uri: String) : SnyggValue {
 
         override fun defaultValue() = SnyggUriValue("")
 
-        override fun serialize(v: SnyggValue) = runCatching<String> {
-            require(v is SnyggUriValue)
-            val map = snyggIdToValueMapOf(EnclosedUriId to "`${v.uri}`")
-            return@runCatching spec.pack(map)
+        override fun serialize(v: SnyggValue) = encodeValue<SnyggUriValue>(v) {
+            snyggIdToValueMapOf(EnclosedUriId to "`${uri}`")
         }
 
-        override fun deserialize(v: String) = runCatching<SnyggValue> {
-            val map = snyggIdToValueMapOf()
-            spec.parse(v, map)
-            val enclosedUri = map.getString(EnclosedUriId)
+        override fun deserialize(v: String) = decodeValue(v) {
+            val enclosedUri = getString(EnclosedUriId)
             val uri = enclosedUri.substring(1, enclosedUri.length - 1)
-            return@runCatching SnyggUriValue(URI.create(uri).toString())
+            SnyggUriValue(URI.create(uri).toString())
         }
     }
 
