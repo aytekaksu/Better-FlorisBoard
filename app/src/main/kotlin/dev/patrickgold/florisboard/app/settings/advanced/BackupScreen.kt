@@ -49,6 +49,7 @@ import dev.patrickgold.florisboard.app.popOwnedRouteWhenResumed
 import dev.patrickgold.florisboard.cacheManager
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
+import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionArrangementSave
 import dev.patrickgold.florisboard.lib.cache.CacheManager
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.lib.devtools.flogError
@@ -266,7 +267,9 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                         .subDir(AndroidAppDataStorage.JETPREF_DIR_NAME)
                         .subFile("${FlorisPreferenceModel.NAME}.${AndroidAppDataStorage.JETPREF_FILE_EXT}")
                         .let { FileBasedStorage(it.path) }
-                    FlorisPreferenceStore.export(fileBasedStorage).getOrThrow()
+                    QuickActionArrangementSave.withBarrier {
+                        FlorisPreferenceStore.export(fileBasedStorage).getOrThrow()
+                    }
                 }
                 val workspaceFilesDir = workspace.inputDir.subDir("files")
                 ExtensionManager.withStorageMutation {

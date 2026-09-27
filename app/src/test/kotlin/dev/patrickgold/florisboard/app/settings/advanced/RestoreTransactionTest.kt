@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard.app.settings.advanced
 
+import dev.patrickgold.florisboard.ime.smartbar.quickaction.PendingPreferenceSave
 import dev.patrickgold.florisboard.lib.ext.ExtensionManager
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
@@ -123,6 +124,41 @@ class RestoreTransactionTest :
             preferences shouldBe "new preferences"
             live.contents() shouldBe mapOf("new.flex" to "new keyboard")
             fixture.hasScratchData() shouldBe false
+        }
+
+        test("cancellation during the noncancellable restore commit invalidates an older editor draft") {
+            val fixture = root.fixture("cancel-during-commit")
+            val preferenceSource = fixture.file("source/preferences.jetpref", "restored preferences")
+            var preferences = "old preferences"
+            val commitEntered = CompletableDeferred<Unit>()
+            val releaseCommit = CompletableDeferred<Unit>()
+
+            coroutineScope {
+                val save = PendingPreferenceSave(this, { preferences }, { preferences = it }, { throw it })
+                val oldEdit = save.open()
+                val restore = async {
+                    save.withReplacement {
+                        RestoreTransaction.execute(
+                            scratchParent = fixture.scratchParent,
+                            eraseExisting = true,
+                            preferences = preferencePlan(preferenceSource, { preferences }) { preferences = it },
+                            directories = emptyList(),
+                            finalCommit = {
+                                commitEntered.complete(Unit)
+                                releaseCommit.await()
+                            },
+                        )
+                    }
+                }
+                commitEntered.await()
+                restore.cancel()
+                releaseCommit.complete(Unit)
+                restore.join()
+
+                preferences shouldBe "restored preferences"
+                save.saveAndAwait("stale draft", oldEdit.epoch) shouldBe false
+                preferences shouldBe "restored preferences"
+            }
         }
 
         test("restore excludes competing extension storage mutations through final commit") {

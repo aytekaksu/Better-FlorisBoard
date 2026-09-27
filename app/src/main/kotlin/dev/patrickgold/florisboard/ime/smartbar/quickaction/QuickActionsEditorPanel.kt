@@ -39,6 +39,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,15 +52,16 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import dev.patrickgold.florisboard.R
-import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.ime.keyboard.FlorisImeSizing
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.lib.toIntOffset
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import org.florisboard.lib.android.showLongToast
 import org.florisboard.lib.compose.stringRes
-import kotlinx.coroutines.runBlocking
 import org.florisboard.lib.snygg.ui.SnyggBox
 import org.florisboard.lib.snygg.ui.SnyggColumn
 import org.florisboard.lib.snygg.ui.SnyggIcon
@@ -148,25 +151,30 @@ internal data class QuickActionDragState(
 }
 
 @Composable
-fun QuickActionsEditorPanel() {
-    val prefs by FlorisPreferenceStore
+fun QuickActionsEditorPanel(registerCloseRequest: ((() -> Unit)?) -> Unit) {
     val context = LocalContext.current
     val keyboardManager by context.keyboardManager()
+    val scope = rememberCoroutineScope()
 
-    // We get the current arrangement once and do not observe on purpose
-    val actionArrangement = remember { prefs.smartbar.actionArrangement.get().withAvailableActions() }
-    var dragState by remember(actionArrangement) {
-        mutableStateOf(QuickActionDragState(
-            actionArrangement.stickyAction ?: NoopAction,
-            actionArrangement.dynamicActions.ifEmpty { listOf(NoopAction) },
-            actionArrangement.hiddenActions.ifEmpty { listOf(NoopAction) },
-        ))
+    fun dragStateFor(value: QuickActionArrangement): QuickActionDragState {
+        val arrangement = value.withAvailableActions()
+        return QuickActionDragState(
+            arrangement.stickyAction ?: NoopAction,
+            arrangement.dynamicActions.ifEmpty { listOf(NoopAction) },
+            arrangement.hiddenActions.ifEmpty { listOf(NoopAction) },
+        )
     }
+    val initialEdit = remember { QuickActionArrangementSave.open() }
+    var edit by remember { mutableStateOf(initialEdit) }
+    // Keep the state holder stable for the drag callback and disposal across stale-draft reloads.
+    var dragState by remember { mutableStateOf(dragStateFor(initialEdit.value)) }
 
     val evaluator by keyboardManager.activeSmartbarEvaluator.collectAsState()
     val gridState = rememberLazyGridState()
     var activeDragPosition by remember { mutableStateOf(IntOffset.Zero) }
     var activeDragSize by remember { mutableStateOf(IntSize.Zero) }
+    var isSaving by remember { mutableStateOf(false) }
+    var acknowledgedSave by remember { mutableStateOf(false) }
 
     fun findItemForOffsetOrClosestInRow(offset: IntOffset): LazyGridItemInfo? {
         var closestItemInRow: LazyGridItemInfo? = null
@@ -211,12 +219,41 @@ fun QuickActionsEditorPanel() {
         activeDragSize = IntSize.Zero
     }
 
+    fun requestClose() {
+        if (isSaving) return
+        completeDragGestureAndCleanUp()
+        val arrangement = dragState.toArrangement()
+        isSaving = true
+        scope.launch {
+            try {
+                val saved = QuickActionArrangementSave.saveAndAwait(arrangement, edit.epoch)
+                if (!saved) {
+                    val reopened = QuickActionArrangementSave.open()
+                    edit = reopened
+                    dragState = dragStateFor(reopened.value)
+                    isSaving = false
+                    context.showLongToast(R.string.quick_actions_editor__changed_elsewhere)
+                    return@launch
+                }
+                acknowledgedSave = true
+                keyboardManager.activeState.isActionsEditorVisible = false
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                isSaving = false
+                context.showLongToast(R.string.quick_actions_editor__save_failure)
+            }
+        }
+    }
+
+    val currentCloseRequest by rememberUpdatedState(::requestClose)
     DisposableEffect(Unit) {
+        registerCloseRequest { currentCloseRequest() }
         onDispose {
+            registerCloseRequest(null)
             completeDragGestureAndCleanUp()
-            val newActionArrangement = dragState.toArrangement()
-            runBlocking {
-                prefs.smartbar.actionArrangement.set(newActionArrangement)
+            if (!acknowledgedSave) {
+                QuickActionArrangementSave.saveInBackground(dragState.toArrangement(), edit.epoch)
             }
             if (keyboardManager.activeState.isActionsEditorVisible) {
                 keyboardManager.activeState.isActionsEditorVisible = false
@@ -235,9 +272,8 @@ fun QuickActionsEditorPanel() {
                 SnyggIconButton(
                     elementName = FlorisImeUi.SmartbarActionsEditorHeaderButton.elementName,
                     modifier = Modifier.fillMaxHeight().aspectRatio(1f),
-                    onClick = {
-                        keyboardManager.activeState.isActionsEditorVisible = false
-                    },
+                    onClick = ::requestClose,
+                    enabled = !isSaving,
                 ) {
                     SnyggIcon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -256,8 +292,8 @@ fun QuickActionsEditorPanel() {
                 modifier = Modifier
                     .pointerInput(Unit) {
                         detectDragGesturesAfterLongPress(
-                            onDragStart = { beginDragGesture(it.toIntOffset()) },
-                            onDrag = { _, it -> handleDragGestureChange(it.toIntOffset()) },
+                            onDragStart = { if (!isSaving) beginDragGesture(it.toIntOffset()) },
+                            onDrag = { _, it -> if (!isSaving) handleDragGestureChange(it.toIntOffset()) },
                             onDragEnd = { completeDragGestureAndCleanUp() },
                             onDragCancel = { completeDragGestureAndCleanUp() },
                         )

@@ -169,4 +169,13 @@ class QuickActionDragStateTest : FunSpec({
             hiddenActions = emptyList(),
         )
     }
+
+    test("closing without a drag still stores the available action order") {
+        val arrangement = QuickActionArrangement(a, listOf(b), emptyList()).withAvailableActions()
+        QuickActionDragState(
+            arrangement.stickyAction ?: noop,
+            arrangement.dynamicActions,
+            arrangement.hiddenActions,
+        ).toArrangement() shouldBe arrangement
+    }
 })

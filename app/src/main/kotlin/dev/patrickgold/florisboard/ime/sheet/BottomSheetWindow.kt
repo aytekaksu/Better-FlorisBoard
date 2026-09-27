@@ -19,6 +19,9 @@ package dev.patrickgold.florisboard.ime.sheet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import dev.patrickgold.florisboard.ime.core.SelectSubtypePanel
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardState
@@ -31,12 +34,14 @@ fun BottomSheetWindow() {
     val context = LocalContext.current
     val keyboardManager by context.keyboardManager()
     val state by keyboardManager.activeState.collectAsState()
+    var actionsEditorClose by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     BottomSheetHostUi(
         isShowing = state.isAnyBottomSheetVisible(),
         onHide = {
             if (state.isActionsEditorVisible) {
-                keyboardManager.activeState.isActionsEditorVisible = false
+                actionsEditorClose?.invoke()
+                    ?: run { keyboardManager.activeState.isActionsEditorVisible = false }
             }
             if (state.isSubtypeSelectionVisible) {
                 keyboardManager.activeState.isSubtypeSelectionVisible = false
@@ -44,7 +49,7 @@ fun BottomSheetWindow() {
         },
     ) {
         if (state.isActionsEditorVisible) {
-            QuickActionsEditorPanel()
+            QuickActionsEditorPanel { actionsEditorClose = it }
         }
         if (state.isSubtypeSelectionVisible) {
             SelectSubtypePanel()
