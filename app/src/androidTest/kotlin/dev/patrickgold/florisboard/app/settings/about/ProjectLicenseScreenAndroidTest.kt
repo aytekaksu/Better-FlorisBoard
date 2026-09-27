@@ -76,6 +76,7 @@ class ProjectLicenseScreenAndroidTest {
     fun disposedReadCannotReplaceContentAfterReentry() {
         val started = CountDownLatch(1)
         val release = CountDownLatch(1)
+        val finished = CountDownLatch(1)
         val reads = AtomicInteger()
         var show by mutableStateOf(true)
         try {
@@ -94,7 +95,7 @@ class ProjectLicenseScreenAndroidTest {
                                     // Model a read which finishes despite cancellation.
                                 }
                             }
-                            Result.success("Stale license")
+                            Result.success("Stale license").also { finished.countDown() }
                         } else {
                             Result.success("Current license")
                         }
@@ -105,11 +106,15 @@ class ProjectLicenseScreenAndroidTest {
             assertTrue(started.await(10, TimeUnit.SECONDS))
             composeRule.runOnIdle { show = false }
             composeRule.waitForIdle()
-            release.countDown()
             composeRule.runOnIdle { show = true }
 
             waitForText("Current license")
             assertEquals(2, reads.get())
+            assertEquals(1L, finished.count)
+            release.countDown()
+            assertTrue(finished.await(10, TimeUnit.SECONDS))
+            composeRule.waitForIdle()
+            composeRule.onNodeWithText("Current license").assertIsDisplayed()
             composeRule.onNodeWithText("Stale license").assertDoesNotExist()
         } finally {
             release.countDown()
