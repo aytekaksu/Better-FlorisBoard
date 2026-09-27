@@ -563,30 +563,22 @@ private class TextKeyboardLayoutController(
         }
 
         when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
                 val pointerIndex = event.actionIndex
                 val pointerId = event.getPointerId(pointerIndex)
-                val pointer = pointerMap.add(pointerId, pointerIndex)
-                if (pointer != null) {
-                    pointer.leasePredictionHints()
-                    swipeGestureDetector.onTouchDown(event, pointer)
-                    onTouchDownInternal(event, pointer, KeyActivationSource.PHYSICAL_DOWN)
-                }
-            }
-            MotionEvent.ACTION_POINTER_DOWN -> {
-                val pointerIndex = event.actionIndex
-                val pointerId = event.getPointerId(pointerIndex)
-                val oldPointer = pointerMap.findById(pointerId)
-                if (oldPointer != null) {
-                    swipeGestureDetector.onTouchCancel(event, oldPointer)
-                    onTouchCancelInternal(event, oldPointer)
-                    pointerMap.removeById(oldPointer.id)
-                }
-                // Commit active text keys before admitting the additional pointer.
-                for (pointer in pointerMap) {
-                    if (pointer.activeKeyData?.shouldCommitBeforeAdditionalPointer() == true) {
-                        swipeGestureDetector.onTouchCancel(event, pointer)
-                        onTouchUpInternal(event, pointer)
+                if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
+                    val oldPointer = pointerMap.findById(pointerId)
+                    if (oldPointer != null) {
+                        swipeGestureDetector.onTouchCancel(event, oldPointer)
+                        onTouchCancelInternal(event, oldPointer)
+                        pointerMap.removeById(oldPointer.id)
+                    }
+                    // Commit active text keys before admitting the additional pointer.
+                    for (pointer in pointerMap) {
+                        if (pointer.activeKeyData?.shouldCommitBeforeAdditionalPointer() == true) {
+                            swipeGestureDetector.onTouchCancel(event, pointer)
+                            onTouchUpInternal(event, pointer)
+                        }
                     }
                 }
                 val pointer = pointerMap.add(pointerId, pointerIndex)
@@ -626,18 +618,7 @@ private class TextKeyboardLayoutController(
                 val pointer = pointerMap.findById(pointerId)
                 if (pointer != null) {
                     pointer.index = pointerIndex
-                    if (swipeGestureDetector.onTouchUp(event, pointer) || pointer.hasTriggeredGestureMove) {
-                        if (
-                            pointer.hasTriggeredGestureMove &&
-                            pointer.initialKeyData?.code == KeyCode.DELETE &&
-                            shouldCommitDeleteSwipeSelection(prefs.gestures.deleteKeySwipeLeft.get())
-                        ) {
-                            commitDeleteSwipeSelection()
-                        }
-                        onTouchCancelInternal(event, pointer)
-                    } else {
-                        onTouchUpInternal(event, pointer)
-                    }
+                    finishLiftedPointer(event, pointer)
                     pointerMap.removeById(pointer.id)
                 }
             }
@@ -647,16 +628,7 @@ private class TextKeyboardLayoutController(
                 for (pointer in pointerMap) {
                     if (pointer.id == pointerId) {
                         pointer.index = pointerIndex
-                        if (swipeGestureDetector.onTouchUp(event, pointer) || pointer.hasTriggeredGestureMove) {
-                            if (pointer.hasTriggeredGestureMove &&
-                                pointer.initialKeyData?.code == KeyCode.DELETE &&
-                                shouldCommitDeleteSwipeSelection(prefs.gestures.deleteKeySwipeLeft.get())) {
-                                commitDeleteSwipeSelection()
-                            }
-                            onTouchCancelInternal(event, pointer)
-                        } else {
-                            onTouchUpInternal(event, pointer)
-                        }
+                        finishLiftedPointer(event, pointer)
                     } else {
                         swipeGestureDetector.onTouchCancel(event, pointer)
                         onTouchCancelInternal(event, pointer)
@@ -671,6 +643,19 @@ private class TextKeyboardLayoutController(
                 }
                 pointerMap.clear()
             }
+        }
+    }
+
+    private fun finishLiftedPointer(event: MotionEvent, pointer: TouchPointer) {
+        if (swipeGestureDetector.onTouchUp(event, pointer) || pointer.hasTriggeredGestureMove) {
+            if (pointer.hasTriggeredGestureMove &&
+                pointer.initialKeyData?.code == KeyCode.DELETE &&
+                shouldCommitDeleteSwipeSelection(prefs.gestures.deleteKeySwipeLeft.get())) {
+                commitDeleteSwipeSelection()
+            }
+            onTouchCancelInternal(event, pointer)
+        } else {
+            onTouchUpInternal(event, pointer)
         }
     }
 
