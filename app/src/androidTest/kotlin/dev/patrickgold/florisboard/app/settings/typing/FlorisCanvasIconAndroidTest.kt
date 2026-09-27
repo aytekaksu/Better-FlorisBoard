@@ -28,6 +28,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.patrickgold.florisboard.R
@@ -74,8 +76,10 @@ class FlorisCanvasIconAndroidTest {
 
     @Test
     fun adaptiveResourceIconStillRenders() {
-        composeRule.setContent { FlorisCanvasIcon(R.mipmap.floris_app_icon) }
-        composeRule.waitForIdle()
+        composeRule.setContent {
+            FlorisCanvasIcon(R.mipmap.floris_app_icon, contentDescription = "App icon")
+        }
+        composeRule.onNodeWithContentDescription("App icon").assertIsDisplayed()
     }
 
     @Test
@@ -111,6 +115,7 @@ class FlorisCanvasIconAndroidTest {
 
         override fun setAlpha(alpha: Int) = Unit
         override fun setColorFilter(colorFilter: ColorFilter?) = Unit
+        @Suppress("OVERRIDE_DEPRECATION")
         override fun getOpacity() = PixelFormat.TRANSLUCENT
         override fun getIntrinsicWidth() = intrinsicWidth
         override fun getIntrinsicHeight() = intrinsicHeight
