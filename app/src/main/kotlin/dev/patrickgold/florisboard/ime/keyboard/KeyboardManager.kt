@@ -258,13 +258,6 @@ class KeyboardManager(
         suggestions.suggest(subtypeManager.activeSubtype, content)
     }
 
-    /**
-     * @return If the language switch should be shown.
-     */
-    fun shouldShowLanguageSwitch(): Boolean {
-        return subtypeManager.subtypes.size > 1
-    }
-
     fun executeSwipeAction(swipeAction: SwipeAction) {
         val keyData = when (swipeAction) {
             SwipeAction.CYCLE_TO_PREVIOUS_KEYBOARD_MODE -> when (activeState.keyboardMode) {
@@ -994,35 +987,19 @@ class KeyboardManager(
         }
 
         override fun evaluateVisible(data: KeyData): Boolean {
-            return when (data.code) {
-                KeyCode.IME_UI_MODE_TEXT,
-                KeyCode.IME_UI_MODE_MEDIA -> {
-                    val tempUtilityKeyAction = when {
-                        prefs.keyboard.utilityKeyEnabled.get() -> prefs.keyboard.utilityKeyAction.get()
-                        else -> UtilityKeyAction.DISABLED
-                    }
-                    when (tempUtilityKeyAction) {
-                        UtilityKeyAction.DISABLED,
-                        UtilityKeyAction.SWITCH_LANGUAGE,
-                        UtilityKeyAction.SWITCH_KEYBOARD_APP -> false
-                        UtilityKeyAction.SWITCH_TO_EMOJIS -> true
-                        UtilityKeyAction.DYNAMIC_SWITCH_LANGUAGE_EMOJIS -> !shouldShowLanguageSwitch()
-                    }
-                }
-                KeyCode.LANGUAGE_SWITCH -> {
-                    val tempUtilityKeyAction = when {
-                        prefs.keyboard.utilityKeyEnabled.get() -> prefs.keyboard.utilityKeyAction.get()
-                        else -> UtilityKeyAction.DISABLED
-                    }
-                    when (tempUtilityKeyAction) {
-                        UtilityKeyAction.DISABLED,
-                        UtilityKeyAction.SWITCH_TO_EMOJIS -> false
-                        UtilityKeyAction.SWITCH_LANGUAGE,
-                        UtilityKeyAction.SWITCH_KEYBOARD_APP -> true
-                        UtilityKeyAction.DYNAMIC_SWITCH_LANGUAGE_EMOJIS -> shouldShowLanguageSwitch()
-                    }
-                }
-                else -> true
+            val isLanguageSwitch = when (data.code) {
+                KeyCode.IME_UI_MODE_TEXT, KeyCode.IME_UI_MODE_MEDIA -> false
+                KeyCode.LANGUAGE_SWITCH -> true
+                else -> return true
+            }
+            if (!prefs.keyboard.utilityKeyEnabled.get()) return false
+            return when (prefs.keyboard.utilityKeyAction.get()) {
+                UtilityKeyAction.DISABLED -> false
+                UtilityKeyAction.SWITCH_TO_EMOJIS -> !isLanguageSwitch
+                UtilityKeyAction.SWITCH_LANGUAGE,
+                UtilityKeyAction.SWITCH_KEYBOARD_APP -> isLanguageSwitch
+                UtilityKeyAction.DYNAMIC_SWITCH_LANGUAGE_EMOJIS ->
+                    isLanguageSwitch == (subtypeManager.subtypes.size > 1)
             }
         }
 
