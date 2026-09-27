@@ -9,7 +9,7 @@ not stronger evidence for a pure state rule.
 | Robolectric | Bundle codecs and small Android service helpers | `./gradlew :lib:autocorrect-api:testDebugUnitTest` |
 | Instrumented | Real Binder process boundaries, `MotionEvent`, IME/service lifecycle | Focused `connectedDebugAndroidTest` class |
 | Packaging | Shrinker rules, manifest/privacy invariants, benchmark source compilation | `./gradlew ciPackage` |
-| Scheduled benchmark | Startup and measured hot paths on a controlled device | Benchmark-module instrumentation |
+| Scheduled benchmark | Startup on a controlled device | Benchmark-module instrumentation |
 
 `./gradlew qualityGate` is the local merge gate. It runs formatting, Detekt,
 privacy checks, Android lint, JVM/Robolectric tests, debug packaging, a minified

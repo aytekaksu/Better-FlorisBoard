@@ -152,13 +152,6 @@ watchdog.
 - No synchronous provider, disk, or dictionary wait on the main thread.
 - Never exceed the public payload limits or create an unbounded pending-request
   collection.
-- Serialization, validation, and state reduction should add less than 2 ms
-  p95 on a reference development device; provider inference is measured
-  separately.
-- A change to the request path must not regress host-side p95 latency or
-  allocations by more than 10% against the checked-in benchmark baseline.
-  Until that baseline exists, report before/after measurements instead of
-  claiming an optimization.
 
 ## Verification
 

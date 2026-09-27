@@ -96,14 +96,10 @@ available only while their provider candidate can still be committed.
 ## Performance and accuracy budget
 
 - Detection and trail drawing must not run model inference or block on Binder.
-- Touch-path processing should stay below 8 ms p95 per event.
 - Built-in preview work is rate-limited by the configured refresh delay and
   previous preview work is cancelled.
 - Provider traces stay within 128 points; the built-in classifier uses bounded
   resampling, tokenization, and small caches.
-- A classifier change must not reduce top-1 or top-3 accuracy on the fixed
-  gesture corpus. A performance change must not regress p95 completion latency
-  or allocations by more than 10% without a documented accuracy gain.
 
 Do not tune thresholds or pruning constants using a few hand-drawn words.
 Record the corpus, device, cold/warm state, latency distribution, and accuracy

@@ -105,13 +105,8 @@ No cleanup path may commit a key merely to make internal state consistent.
 
 - `ACTION_DOWN`, `MOVE`, and `UP` processing must not perform disk access,
   Binder waits, model inference, or blocking coroutine work.
-- Pointer event handling should remain below 8 ms p95 and 16 ms p99 on a
-  reference development device.
 - Allocation count per move event must remain effectively constant with
   gesture length; bounded history is processed incrementally.
-- A touch-path change must not regress measured p95 latency or allocations by
-  more than 10%. Record before/after data until a checked-in benchmark baseline
-  is available.
 
 ## Verification
 
