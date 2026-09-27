@@ -53,6 +53,7 @@ import dev.patrickgold.florisboard.app.FlorisPreferenceModel
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.LocalNavController
 import dev.patrickgold.florisboard.app.importWithLegacyMigrations
+import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionArrangementSave
 import dev.patrickgold.florisboard.app.runOwnedNavigationAction
 import dev.patrickgold.florisboard.app.runOwnedNavigationActionWhenResumed
 import dev.patrickgold.florisboard.cacheManager
@@ -403,13 +404,20 @@ fun RestoreScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
             if (preferenceTransaction == null && directoryTransactions.isEmpty()) {
                 commitClipboard()
             } else {
-                RestoreTransaction.execute(
-                    scratchParent = requireNotNull(stagedRoot.toPath().parent),
-                    eraseExisting = shouldReset,
-                    preferences = preferenceTransaction,
-                    directories = directoryTransactions,
-                    finalCommit = { commitClipboard() },
-                )
+                suspend fun executeRestore() {
+                    RestoreTransaction.execute(
+                        scratchParent = requireNotNull(stagedRoot.toPath().parent),
+                        eraseExisting = shouldReset,
+                        preferences = preferenceTransaction,
+                        directories = directoryTransactions,
+                        finalCommit = { commitClipboard() },
+                    )
+                }
+                if (preferenceTransaction == null) executeRestore()
+                else QuickActionArrangementSave.withReplacement(
+                    flushPending = strategy != ImportStrategy.Erase,
+                    invalidateOnFailure = { it is RestoreTransactionRollbackException },
+                ) { executeRestore() }
             }
         }
     }

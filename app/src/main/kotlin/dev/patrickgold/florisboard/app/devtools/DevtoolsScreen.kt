@@ -28,12 +28,14 @@ import dev.patrickgold.florisboard.app.Routes
 import dev.patrickgold.florisboard.dictionaryManager
 import dev.patrickgold.florisboard.ime.dictionary.FlorisUserDictionaryDatabase
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionArrangement
+import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionArrangementSave
 import dev.patrickgold.florisboard.lib.compose.FlorisConfirmDeleteDialog
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.jetpref.datastore.model.collectAsState
 import dev.patrickgold.jetpref.datastore.ui.Preference
 import dev.patrickgold.jetpref.datastore.ui.PreferenceGroup
 import dev.patrickgold.jetpref.datastore.ui.SwitchPreference
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -106,8 +108,16 @@ fun DevtoolsScreen() = FlorisScreen {
                 summary = stringRes(R.string.devtools__reset_quick_actions_to_default__summary),
                 onClick = {
                     scope.launch {
-                        prefs.smartbar.actionArrangement.set(QuickActionArrangement.Default)
-                        context.showLongToast(R.string.devtools__reset_quick_actions_to_default__toast_success)
+                        try {
+                            QuickActionArrangementSave.withReplacement(flushPending = false) {
+                                prefs.smartbar.actionArrangement.set(QuickActionArrangement.Default).getOrThrow()
+                            }
+                            context.showLongToast(R.string.devtools__reset_quick_actions_to_default__toast_success)
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (_: Exception) {
+                            context.showLongToast(R.string.quick_actions_editor__save_failure)
+                        }
                     }
                 },
                 enabledIf = { prefs.devtools.enabled isEqualTo true },
