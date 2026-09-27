@@ -18,11 +18,16 @@
 
 package org.florisboard.lib.snygg.ui
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.florisboard.lib.snygg.SnyggSelector
 import org.florisboard.lib.snygg.SnyggStylesheet
 
 private val galleryStylesheet = SnyggStylesheet.v2 {
@@ -111,12 +117,32 @@ private fun SnyggComponentGalleryPreview() {
                     text = "Chip",
                 )
             }
-            SnyggListItem(
-                elementName = "list-item",
-                leadingImageVector = Icons.Default.Search,
-                onClick = {},
-                text = "A list item with a deliberately long label that must ellipsize",
-            )
+            val listItemElementName = "list-item"
+            val selector = SnyggSelector.NONE
+            val interactionSource = remember { MutableInteractionSource() }
+            SnyggRow(
+                elementName = listItemElementName,
+                selector = selector,
+                modifier = Modifier.clickable(
+                    interactionSource = interactionSource,
+                    indication = ripple(),
+                    enabled = true,
+                    onClickLabel = null,
+                    role = null,
+                    onClick = {},
+                ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SnyggBox(elementName = "$listItemElementName-icon-leading", selector = selector) {
+                    SnyggIcon(imageVector = Icons.Default.Search)
+                }
+                SnyggText(
+                    elementName = "$listItemElementName-text",
+                    selector = selector,
+                    modifier = Modifier.fillMaxWidth(),
+                    text = "A list item with a deliberately long label that must ellipsize",
+                )
+            }
         }
     }
 }
