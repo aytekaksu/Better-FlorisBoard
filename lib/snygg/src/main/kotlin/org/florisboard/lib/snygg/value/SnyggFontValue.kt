@@ -54,18 +54,14 @@ data class SnyggCustomFontFamilyValue(val fontName: String) : SnyggFontValue {
 
         override fun defaultValue() = SnyggCustomFontFamilyValue("")
 
-        override fun serialize(v: SnyggValue) = runCatching<String> {
-            require(v is SnyggCustomFontFamilyValue)
-            val map = snyggIdToValueMapOf(EnclosedFontNameId to "`${v.fontName}`")
-            return@runCatching spec.pack(map)
+        override fun serialize(v: SnyggValue) = encodeValue<SnyggCustomFontFamilyValue>(v) {
+            snyggIdToValueMapOf(EnclosedFontNameId to "`${fontName}`")
         }
 
-        override fun deserialize(v: String) = runCatching<SnyggValue> {
-            val map = snyggIdToValueMapOf()
-            spec.parse(v, map)
-            val enclosedFontName = map.getString(EnclosedFontNameId)
+        override fun deserialize(v: String) = decodeValue(v) {
+            val enclosedFontName = getString(EnclosedFontNameId)
             val fontName = enclosedFontName.substring(1, enclosedFontName.length - 1)
-            return@runCatching SnyggCustomFontFamilyValue(fontName)
+            SnyggCustomFontFamilyValue(fontName)
         }
     }
 

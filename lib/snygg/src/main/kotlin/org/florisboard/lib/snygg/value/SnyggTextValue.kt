@@ -67,21 +67,16 @@ data class SnyggTextMaxLinesValue(val maxLines: Int) : SnyggTextValue {
 
         override fun defaultValue() = SnyggTextMaxLinesValue(NoneValue)
 
-        override fun serialize(v: SnyggValue) = runCatching<String> {
-            require(v is SnyggTextMaxLinesValue)
-            require(v.maxLines >= 1)
-            val map = snyggIdToValueMapOf(TextMaxLinesId to (
-                if (v.maxLines == NoneValue) NoneKey else v.maxLines.toString()
-                ))
-            return@runCatching spec.pack(map)
+        override fun serialize(v: SnyggValue) = encodeValue<SnyggTextMaxLinesValue>(v) {
+            require(maxLines >= 1)
+            val encoded = if (maxLines == NoneValue) NoneKey else maxLines.toString()
+            snyggIdToValueMapOf(TextMaxLinesId to encoded)
         }
 
-        override fun deserialize(v: String) = runCatching<SnyggValue> {
-            val map = snyggIdToValueMapOf()
-            spec.parse(v, map)
-            val clampValue = map.getString(TextMaxLinesId)
+        override fun deserialize(v: String) = decodeValue(v) {
+            val clampValue = getString(TextMaxLinesId)
             val maxLines = if (clampValue == NoneKey) NoneValue else clampValue.toInt()
-            return@runCatching SnyggTextMaxLinesValue(maxLines)
+            SnyggTextMaxLinesValue(maxLines)
         }
     }
 
