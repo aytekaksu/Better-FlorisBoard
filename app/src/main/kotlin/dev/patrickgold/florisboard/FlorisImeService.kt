@@ -407,7 +407,6 @@ class FlorisImeService : LifecycleInputMethodService() {
         activeState.batchEdit {
             activeState.isSelectionMode = (newSelEnd - newSelStart) != 0
             editorInstance.handleSelectionUpdate(
-                oldSelection = EditorRange.normalized(oldSelStart, oldSelEnd),
                 newSelection = EditorRange.normalized(newSelStart, newSelEnd),
                 composing = EditorRange.normalized(candidatesStart, candidatesEnd),
             )
