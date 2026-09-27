@@ -20,11 +20,13 @@ provider transport is covered by
 | Pure key-transition policies | [`TextKeyboardInteractionPolicy.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardInteractionPolicy.kt) |
 | Key layout and hit testing | [`TextKeyboard.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboard.kt) |
 | Key model and visible/touch bounds | [`TextKey.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKey.kt) |
+| Popup ordering and drag hit testing | [`PopupUiController.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/popup/PopupUiController.kt) |
 | Swipe detector | [`SwipeGesture.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/SwipeGesture.kt) |
 | Glide detector | [`GlideTypingGesture.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/GlideTypingGesture.kt) |
 | Semantic key dispatch | [`KeyboardManager.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyboardManager.kt) |
 | Localized IME-action labels and Android fallback | [`FlorisImeService.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/FlorisImeService.kt) |
 | Fast state and hit-test tests | [`app/src/test/.../keyboard`](../../../app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/) |
+| Popup position tests | [`PopupUiControllerGeometryTest.kt`](../../../app/src/test/kotlin/dev/patrickgold/florisboard/ime/popup/PopupUiControllerGeometryTest.kt) |
 | Deterministic editor fixture | [`DeterministicInputConnection.kt`](../../../app/src/test/kotlin/dev/patrickgold/florisboard/test/editor/DeterministicInputConnection.kt) |
 | Real MotionEvent scenarios | [`TextKeyboardTouchE2eTest.kt`](../../../app/src/androidTest/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardTouchE2eTest.kt) |
 
@@ -51,6 +53,9 @@ either transfers ownership to another key or cancels it. Adding a pointer
 commits applicable active text keys before admitting the new pointer. A glide
 claims the sequence only after its threshold is met; ordinary key state is then
 cancelled.
+Extended popups keep the highest-priority choices near the held key. Left and
+right anchors use the same hit rule, including the existing selection at cell
+edges and a small margin outside the drawn popup.
 
 ## Concurrency and ordering
 

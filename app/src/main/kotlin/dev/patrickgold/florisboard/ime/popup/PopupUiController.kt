@@ -65,6 +65,66 @@ val ExceptionsForKeyCodes = listOf(
     KeyCode.CHAR_WIDTH_SWITCHER,
 )
 
+private val priorityOffsets = intArrayOf(0, 1, -1, 2, -2)
+
+/** Maps each visible slot to a [PopupKeys] lookup index. */
+internal fun popupDisplayOrder(size: Int, prioritizedCount: Int, initialIndex: Int): IntArray {
+    val indices = IntArray(size)
+    // Resolved popup sets have at most three priorities. Leave unsupported counts unchanged.
+    if (prioritizedCount in 1..3) {
+        for (priority in 1..prioritizedCount) {
+            val offset = priorityOffsets.first { delta ->
+                val index = initialIndex + delta
+                index in indices.indices && indices[index] == 0
+            }
+            indices[initialIndex + offset] = -priority
+        }
+    }
+    var prioritizedBefore = 0
+    for (index in indices.indices) {
+        if (indices[index] < 0) {
+            prioritizedBefore++
+        } else {
+            indices[index] = index - prioritizedBefore
+        }
+    }
+    return indices
+}
+
+internal fun popupHitIndex(
+    x: Float,
+    y: Float,
+    keyWidth: Float,
+    popupWidth: Float,
+    popupHeight: Float,
+    anchorLeft: Boolean,
+    anchorOffset: Int,
+    bottomRowCount: Int,
+    topRowCount: Int,
+): Int? {
+    if (y < -popupHeight || y > 0.9f * popupHeight) return null
+
+    val inset = (keyWidth - popupWidth) / 2f
+    val reference = if (anchorLeft) inset else keyWidth - inset
+    val before = if (anchorLeft) anchorOffset + 1 else bottomRowCount + 1 - anchorOffset
+    val after = if (anchorLeft) bottomRowCount + 1 - anchorOffset else anchorOffset + 1
+    if (x < reference - before * popupWidth || x > reference + after * popupWidth) return null
+
+    val topRow = y < 0 && topRowCount > 0
+    val rowSize = if (topRow) topRowCount else bottomRowCount
+    val rowStart = if (topRow) 0 else topRowCount
+    val shift = if (anchorLeft) anchorOffset else rowSize - 1 - anchorOffset
+    val unitX = x / popupWidth
+    val column = when {
+        unitX < -shift -> 0
+        unitX >= rowSize - shift -> rowSize - 1
+        // Preserve the existing truncation at exact negative cell boundaries.
+        unitX < 0 -> unitX.toInt() - 1 + shift
+        else -> unitX.toInt() + shift
+    }
+    return rowStart + column
+}
+
 class PopupUiController(
     val boundsProvider: (key: Key) -> FlorisRect,
     val isSuitableForBasicPopup: (key: Key) -> Boolean,
@@ -134,103 +194,25 @@ class PopupUiController(
 
         // Anchor left if keyView is in left half of keyboardView, else anchor right
         val anchorLeft = key.visibleBounds.left < size.width / 2
-        val anchorRight = !anchorLeft
-
         // Determine key counts for each row
         val n = popupKeys.size
-        val row1count: Int
-        val row0count: Int
-        when {
-            n <= 0 -> return
-            n <= 5 -> {
-                row1count = 0
-                row0count = n
-            }
-            n > 5 && n % 2 == 1 -> {
-                row1count = (n - 1) / 2
-                row0count = (n + 1) / 2
-            }
-            else -> {
-                row1count = n / 2
-                row0count = n / 2
-            }
+        if (n <= 0) return
+        val row1count = if (n > 5) n / 2 else 0
+        val row0count = n - row1count
+
+        var anchorOffset = (row0count - 1) / 2
+        val availableSpace = if (anchorLeft) {
+            key.visibleBounds.left + keyPopupDiffX
+        } else {
+            size.width - (key.visibleBounds.left + keyPopupDiffX + baseBounds.width)
+        }
+        while (anchorOffset > 0 && !(availableSpace >= anchorOffset * baseBounds.width)) {
+            anchorOffset--
         }
 
-        // Calculate anchor offset (always positive int, direction depends on anchorLeft and
-        // anchorRight state)
-        val anchorOffset = when {
-            row0count <= 1 -> 0
-            else -> {
-                var offset = when {
-                    row0count % 2 == 1 -> (row0count - 1) / 2
-                    row0count % 2 == 0 -> (row0count / 2) - 1
-                    else -> 0
-                }
-                val availableSpace = when {
-                    anchorLeft -> key.visibleBounds.left + keyPopupDiffX
-                    anchorRight -> size.width -
-                        (key.visibleBounds.left + keyPopupDiffX + baseBounds.width)
-                    else -> 0.0f
-                }
-                while (offset > 0) {
-                    if (availableSpace >= offset * baseBounds.width) {
-                        break
-                    } else {
-                        offset -= 1
-                    }
-                }
-                offset
-            }
-        }
-
-        val initUiIndex = when {
-            anchorLeft -> anchorOffset + row1count
-            anchorRight -> row0count - 1 - anchorOffset + row1count
-            else -> 0
-        }
-        val popupIndices = IntArray(n)
-        val uiIndices = IntRange(0, (n - 1).coerceAtLeast(0))
-        when (popupKeys.prioritizedCount) {
-            // only one key: use initial position
-            1 -> {
-                popupIndices[initUiIndex] = PopupKeys.FIRST_PRIORITIZED
-            }
-            // two keys: use initial position and one to the right if available, otherwise one to the left
-            2 -> {
-                popupIndices[initUiIndex] = PopupKeys.FIRST_PRIORITIZED
-                when {
-                    initUiIndex + 1 < n -> popupIndices[initUiIndex + 1] = PopupKeys.SECOND_PRIORITIZED
-                    initUiIndex - 1 >= 0 -> popupIndices[initUiIndex - 1] = PopupKeys.SECOND_PRIORITIZED
-                }
-            }
-            // three keys: use initial position and one to either sides if available
-            // otherwise two to the right or two to the left with decreasing priority
-            3 -> {
-                popupIndices[initUiIndex] = PopupKeys.FIRST_PRIORITIZED
-                when {
-                    initUiIndex + 1 < n && initUiIndex - 1 >= 0 -> {
-                        popupIndices[initUiIndex + 1] = PopupKeys.SECOND_PRIORITIZED
-                        popupIndices[initUiIndex - 1] = PopupKeys.THIRD_PRIORITIZED
-                    }
-                    initUiIndex + 2 < n -> {
-                        popupIndices[initUiIndex + 1] = PopupKeys.SECOND_PRIORITIZED
-                        popupIndices[initUiIndex + 2] = PopupKeys.THIRD_PRIORITIZED
-                    }
-                    initUiIndex - 2 >= 0 -> {
-                        popupIndices[initUiIndex - 1] = PopupKeys.SECOND_PRIORITIZED
-                        popupIndices[initUiIndex - 2] = PopupKeys.THIRD_PRIORITIZED
-                    }
-                }
-            }
-        }
-        var offset = 0
-        for (uiIndex in uiIndices) {
-            if (popupIndices[uiIndex] < 0) {
-                offset++
-            } else {
-                popupIndices[uiIndex] = uiIndex - offset
-            }
-        }
+        val initUiIndex = row1count + if (anchorLeft) anchorOffset else row0count - 1 - anchorOffset
+        val popupIndices = popupDisplayOrder(n, popupKeys.prioritizedCount, initUiIndex)
+        val uiIndices = 0 until n
 
         val elements: List<MutableList<Element>> = if (row1count > 0) {
             listOf(mutableListOf(), mutableListOf())
@@ -251,19 +233,15 @@ class PopupUiController(
 
         // Calculate layout params
         val extWidth = row0count * baseBounds.width
-        val extHeight = when {
-            row1count > 0 -> baseBounds.height * 0.4f * 2.0f
-            else -> baseBounds.height * 0.4f
+        val extHeight = baseBounds.height * 0.4f * (if (row1count > 0) 2f else 1f)
+        val anchorX = if (anchorLeft) {
+            -anchorOffset * baseBounds.width
+        } else {
+            -extWidth + baseBounds.width + anchorOffset * baseBounds.width
         }
-        val x = ((key.visibleBounds.width - baseBounds.width) / 2.0f) + when {
-            anchorLeft -> -anchorOffset * baseBounds.width
-            anchorRight -> -extWidth + baseBounds.width + anchorOffset * baseBounds.width
-            else -> 0.0f
-        } + key.visibleBounds.left
-        val y = -baseBounds.height - when {
-            row1count > 0 -> (baseBounds.height * 0.4f).toInt()
-            else -> 0
-        } + key.visibleBounds.bottom
+        val x = keyPopupDiffX + anchorX + key.visibleBounds.left
+        val extraTop = if (row1count > 0) (baseBounds.height * 0.4f).toInt() else 0
+        val y = -baseBounds.height - extraTop + key.visibleBounds.bottom
         val extBounds = FlorisRect.new(
             left = x, top = y, right = x + extWidth, bottom = y + extHeight,
         )
@@ -273,7 +251,6 @@ class PopupUiController(
             baseBounds = baseBounds,
             bounds = extBounds,
             anchorLeft = anchorLeft,
-            anchorRight = anchorRight,
             anchorOffset = anchorOffset,
             row0count = row0count,
             row1count = row1count,
@@ -292,71 +269,19 @@ class PopupUiController(
      * @return True if the pointer movement is within the elements bounds, false otherwise.
      */
     fun propagateMotionEvent(key: Key, xEvent: Float, yEvent: Float): Boolean {
-        if (!isShowingExtendedPopup) {
-            return false
-        }
-
         val extRenderInfo = extRenderInfo ?: return false
         val baseBounds = extRenderInfo.baseBounds
-        val keyPopupDiffX = (key.visibleBounds.width - baseBounds.width) / 2.0f
-
-        val x = xEvent - key.visibleBounds.left
-        val y = yEvent - key.visibleBounds.top
-        val kX = x / baseBounds.width
-
-        // Check if out of boundary on y-axis
-        if (y < -baseBounds.height || y > 0.9f * baseBounds.height) {
-            return false
-        }
-
-        extRenderInfo.apply {
-            activeElementIndex = when {
-                anchorLeft -> when {
-                    // check if out of boundary on x-axis
-                    x < keyPopupDiffX - (anchorOffset + 1) * baseBounds.width ||
-                        x > (keyPopupDiffX + (row0count + 1 - anchorOffset) * baseBounds.width) -> {
-                        return false
-                    }
-                    // row 1
-                    y < 0 && row1count > 0 -> when {
-                        kX >= row1count - anchorOffset -> row1count - 1
-                        kX < -anchorOffset -> 0
-                        kX < 0 -> kX.toInt() - 1 + anchorOffset
-                        else -> kX.toInt() + anchorOffset
-                    }
-                    // row 0
-                    else -> when {
-                        kX >= row0count - anchorOffset -> row1count + row0count - 1
-                        kX < -anchorOffset -> row1count
-                        kX < 0 -> row1count + kX.toInt() - 1 + anchorOffset
-                        else -> row1count + kX.toInt() + anchorOffset
-                    }
-                }
-                anchorRight -> when {
-                    // check if out of boundary on x-axis
-                    x > key.visibleBounds.width - keyPopupDiffX + (anchorOffset + 1) * baseBounds.width ||
-                        x < (key.visibleBounds.width - keyPopupDiffX - (row0count + 1 - anchorOffset) * baseBounds.width) -> {
-                        return false
-                    }
-                    // row 1
-                    y < 0 && row1count > 0 -> when {
-                        kX >= anchorOffset -> row1count - 1
-                        kX < -(row1count - 1 - anchorOffset) -> 0
-                        kX < 0 -> row1count - 2 + kX.toInt() - anchorOffset
-                        else -> row1count - 1 + kX.toInt() - anchorOffset
-                    }
-                    // row 0
-                    else -> when {
-                        kX >= anchorOffset -> row1count + row0count - 1
-                        kX < -(row0count - 1 - anchorOffset) -> row1count
-                        kX < 0 -> row1count + row0count - 2 + kX.toInt() - anchorOffset
-                        else -> row1count + row0count - 1 + kX.toInt() - anchorOffset
-                    }
-                }
-                else -> -1
-            }
-        }
-
+        activeElementIndex = popupHitIndex(
+            x = xEvent - key.visibleBounds.left,
+            y = yEvent - key.visibleBounds.top,
+            keyWidth = key.visibleBounds.width,
+            popupWidth = baseBounds.width,
+            popupHeight = baseBounds.height,
+            anchorLeft = extRenderInfo.anchorLeft,
+            anchorOffset = extRenderInfo.anchorOffset,
+            bottomRowCount = extRenderInfo.row0count,
+            topRowCount = extRenderInfo.row1count,
+        ) ?: return false
         return true
     }
 
@@ -448,7 +373,6 @@ class PopupUiController(
         val baseBounds: FlorisRect,
         val bounds: FlorisRect,
         val anchorLeft: Boolean,
-        val anchorRight: Boolean,
         val anchorOffset: Int,
         val row0count: Int,
         val row1count: Int,
