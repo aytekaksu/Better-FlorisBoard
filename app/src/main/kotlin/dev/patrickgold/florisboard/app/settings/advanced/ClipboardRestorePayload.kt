@@ -317,18 +317,6 @@ internal class PreparedClipboardMedia internal constructor(
         require(validPreparedMimeTypes(ref.type, this.mimeTypes))
     }
 
-    internal fun withMetadata(
-        additionalMimeTypes: List<String>,
-        displayName: String?,
-    ): PreparedClipboardMedia =
-        PreparedClipboardMedia(
-            ref = ref,
-            stagedFile = stagedFile,
-            byteCount = byteCount,
-            mimeTypes = (mimeTypes + additionalMimeTypes).distinct(),
-            displayName = this.displayName ?: displayName,
-        )
-
     override fun toString(): String =
         "PreparedClipboardMedia(type=${ref.type}, mimeTypeCount=${mimeTypes.size}, " +
             "hasDisplayName=${displayName != null}, stagedFile=<redacted>)"
@@ -442,7 +430,7 @@ internal object ClipboardRestorePayload {
             PreparedClipboardRestore(
                 selectedTypes = inspection.orderedTypes.toCollection(linkedSetOf()),
                 items = state.items,
-                media = state.mediaBySourceId.values.toList(),
+                media = state.media(),
             ),
         )
     }
@@ -576,7 +564,6 @@ internal object ClipboardRestorePayload {
         val isSensitive: Boolean,
         val isRemoteDevice: Boolean,
         val mediaRef: ArchiveClipboardMediaRef?,
-        val displayName: String?,
     )
 
     private class ValidatedClipboardMediaMetadata(
@@ -601,6 +588,8 @@ internal object ClipboardRestorePayload {
 
         fun mediaReferences(): Set<ArchiveClipboardMediaRef> =
             mediaBySourceId.values.mapTo(linkedSetOf()) { it.ref }
+
+        fun mediaMetadata(): Collection<ValidatedClipboardMediaMetadata> = mediaBySourceId.values
 
         fun validate(
             item: SerializedClipboardItem,
@@ -718,7 +707,6 @@ internal object ClipboardRestorePayload {
                     isSensitive = item.isSensitive,
                     isRemoteDevice = item.isRemoteDevice,
                     mediaRef = mediaRef,
-                    displayName = normalizedDisplayName,
                 ),
             )
         }
@@ -727,14 +715,27 @@ internal object ClipboardRestorePayload {
             RecordValidationResult.Invalid(failure)
     }
 
+    private class StagedClipboardMedia(val stagedFile: Path, val byteCount: Long)
+
     private class ValidationState(
         private val limits: ClipboardRestorePayloadLimits,
     ) {
         val items = mutableListOf<PreparedClipboardItem>()
-        val mediaBySourceId = linkedMapOf<Long, PreparedClipboardMedia>()
+        private val stagedMediaBySourceId = linkedMapOf<Long, StagedClipboardMedia>()
 
         private val records = RecordValidationState(limits)
         private var mediaBytes = 0L
+
+        fun media(): List<PreparedClipboardMedia> = records.mediaMetadata().map { metadata ->
+            val staged = checkNotNull(stagedMediaBySourceId[metadata.ref.sourceId])
+            PreparedClipboardMedia(
+                ref = metadata.ref,
+                stagedFile = staged.stagedFile,
+                byteCount = staged.byteCount,
+                mimeTypes = metadata.mimeTypes,
+                displayName = metadata.displayName,
+            )
+        }
 
         fun validateAndAdd(
             item: SerializedClipboardItem,
@@ -750,13 +751,7 @@ internal object ClipboardRestorePayload {
                 is RecordValidationResult.Invalid -> return result.failure
             }
             record.mediaRef?.let { mediaRef ->
-                val existingMedia = mediaBySourceId[mediaRef.sourceId]
-                if (existingMedia != null) {
-                    mediaBySourceId[mediaRef.sourceId] = existingMedia.withMetadata(
-                        additionalMimeTypes = record.mimeTypes,
-                        displayName = record.displayName,
-                    )
-                } else {
+                if (mediaRef.sourceId !in stagedMediaBySourceId) {
                     val mediaRoot = stagedRoot.resolve(BackupArchive.CLIPBOARD_MEDIA_ROOT)
                     if (!directoryExistsNoFollow(mediaRoot)) {
                         return ClipboardRestorePayloadFailure.MEDIA_UNAVAILABLE
@@ -772,13 +767,7 @@ internal object ClipboardRestorePayload {
                     }
                     mediaBytes = checkedAdd(mediaBytes, fileSize, limits.maxTotalMediaBytes)
                         ?: return ClipboardRestorePayloadFailure.LIMIT_EXCEEDED
-                    mediaBySourceId[mediaRef.sourceId] = PreparedClipboardMedia(
-                        ref = mediaRef,
-                        stagedFile = stagedFile,
-                        byteCount = fileSize,
-                        mimeTypes = record.mimeTypes,
-                        displayName = record.displayName,
-                    )
+                    stagedMediaBySourceId[mediaRef.sourceId] = StagedClipboardMedia(stagedFile, fileSize)
                 }
             }
 

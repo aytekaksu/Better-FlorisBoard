@@ -100,6 +100,9 @@ validation finishes before install, and selected history types commit in one
 Room transaction. Install receipts keep newly copied media removable until that
 transaction commits.
 
+For a shared file, record validation settles its MIME types and display name
+once; preparation checks the staged file before building one media entry.
+
 The wider restore snapshots preferences and extensions, commits clipboard last,
 and rolls touched components back after an in-process failure. It is not
 crash- or power-loss safe; see [Backup and restore](../backup-restore/README.md).
