@@ -215,8 +215,9 @@ private fun readBoundedStylesheet(file: Path): String? = Files.newInputStream(fi
 @Composable
 fun ThemeEditorScreen(
     workspace: CacheManager.ThemeEditorWorkspace,
-    editor: ThemeExtensionComponentEditor,
+    action: ThemeEditorAction.EditTheme,
 ) {
+    val editor = action.editor
     var strategy by remember(workspace, editor) {
         mutableStateOf(StylesheetLoadingStrategy.TRY_LOAD_OR_ASK_ON_CONFLICT)
     }
@@ -248,7 +249,7 @@ fun ThemeEditorScreen(
     }
 
     when (val state = loadState) {
-        is StylesheetLoadResult.Ready -> ThemeEditorReadyScreen(workspace, editor, state.editor)
+        is StylesheetLoadResult.Ready -> ThemeEditorReadyScreen(workspace, action, state.editor)
         else -> ThemeEditorPendingScreen(
             workspace = workspace,
             conflict = state == StylesheetLoadResult.Conflict,
@@ -306,7 +307,7 @@ private fun ThemeEditorPendingScreen(
 @Composable
 private fun ThemeEditorReadyScreen(
     workspace: CacheManager.ThemeEditorWorkspace,
-    editor: ThemeExtensionComponentEditor,
+    action: ThemeEditorAction.EditTheme,
     stylesheetEditor: SnyggStylesheetEditor,
 ) = FlorisScreen {
     title = stringRes(R.string.ext__editor__edit_component__title_theme)
@@ -316,6 +317,7 @@ private fun ThemeEditorReadyScreen(
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val themeManager by context.themeManager()
+    val editor = action.editor
 
     val scope = rememberCoroutineScope()
     val previewFieldController = rememberPreviewFieldController().also { it.isVisible = true }
@@ -345,8 +347,7 @@ private fun ThemeEditorReadyScreen(
     val displayKbdAfterDialogs by prefs.theme.editorDisplayKbdAfterDialogs.collectAsState()
     var oldFocusState by remember { mutableStateOf(false) }
     var snyggRuleToEdit by rememberSaveable(stateSaver = SnyggRule.Saver) { mutableStateOf(null) }
-    var snyggPropertyToEdit by remember { mutableStateOf<PropertyInfo?>(null) }
-    var snyggPropertySetForEditing = remember<SnyggSinglePropertySetEditor?> { null }
+    val propertyEditSession = action.propertyEditSession
     var showEditComponentMetaDialog by rememberSaveable { mutableStateOf(false) }
     var showFineTuneDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -391,9 +392,9 @@ private fun ThemeEditorReadyScreen(
         }
 
         val isImeVisible = WindowInsets.isImeVisible
-        LaunchedEffect(showEditComponentMetaDialog, showFineTuneDialog, snyggRuleToEdit, snyggPropertyToEdit) {
+        LaunchedEffect(showEditComponentMetaDialog, showFineTuneDialog, snyggRuleToEdit, propertyEditSession) {
             val visible = showEditComponentMetaDialog || showFineTuneDialog ||
-                snyggRuleToEdit != null || snyggPropertyToEdit != null
+                snyggRuleToEdit != null || propertyEditSession != null
             if (visible) {
                 oldFocusState = isImeVisible
                 focusManager.clearFocus()
@@ -480,9 +481,9 @@ private fun ThemeEditorReadyScreen(
                                         }
                                     }
                                     is SnyggSinglePropertySetEditor -> {
-                                        snyggPropertySetForEditing = propertySet
-                                        snyggPropertyToEdit = SnyggEmptyPropertyInfoForAdding.copy(
-                                            rule = rule,
+                                        action.propertyEditSession = ThemePropertyEditSession(
+                                            SnyggEmptyPropertyInfoForAdding.copy(rule = rule),
+                                            propertySet,
                                         )
                                     }
                                 }
@@ -516,8 +517,10 @@ private fun ThemeEditorReadyScreen(
                                 if (true /*propertySpec != null && propertySpec.level <= snyggLevel*/ || isVariablesRule) {
                                     JetPrefListItem(
                                         modifier = Modifier.rippleClickable {
-                                            snyggPropertySetForEditing = propertySet
-                                            snyggPropertyToEdit = PropertyInfo(rule, propertyName, propertyValue)
+                                            action.propertyEditSession = ThemePropertyEditSession(
+                                                PropertyInfo(rule, propertyName, propertyValue),
+                                                propertySet,
+                                            )
                                         },
                                         text = context.translatePropertyName(propertyName, snyggLevel),
                                         secondaryText = context.translatePropertyValue(propertyValue, snyggLevel, colorRepresentation),
@@ -582,9 +585,9 @@ private fun ThemeEditorReadyScreen(
                                                 )
                                                 FlorisIconButton(
                                                     onClick = {
-                                                        snyggPropertySetForEditing = propertySet
-                                                        snyggPropertyToEdit = SnyggEmptyPropertyInfoForAdding.copy(
-                                                            rule = rule,
+                                                        action.propertyEditSession = ThemePropertyEditSession(
+                                                            SnyggEmptyPropertyInfoForAdding.copy(rule = rule),
+                                                            propertySet,
                                                         )
                                                     },
                                                     icon = Icons.Default.Add,
@@ -678,30 +681,37 @@ private fun ThemeEditorReadyScreen(
             )
         }
 
-        val propertyToEdit = snyggPropertyToEdit
-        if (propertyToEdit != null) {
+        if (propertyEditSession != null && propertyEditSession.isCurrentIn(stylesheetEditor)) {
             EditPropertyDialog(
-                initProperty = propertyToEdit,
+                session = propertyEditSession,
                 level = snyggLevel,
                 colorRepresentation = colorRepresentation,
                 definedVariables = definedVariables,
                 fontNames = fontNames,
                 workspace = workspace,
                 onConfirmNewValue = { name, value ->
-                    val properties = snyggPropertySetForEditing?.properties ?: return@EditPropertyDialog false
-                    confirmThemePropertyEdit(propertyToEdit, properties, name) {
+                    if (!propertyEditSession.isCurrentIn(stylesheetEditor)) {
+                        action.propertyEditSession = null
+                        return@EditPropertyDialog false
+                    }
+                    val properties = propertyEditSession.propertySet.properties
+                    confirmThemePropertyEdit(propertyEditSession.initProperty, properties, name) {
                         workspace.update { properties[name] = value }
-                        snyggPropertyToEdit = null
+                        action.propertyEditSession = null
                     }
                 },
                 onDelete = {
-                    workspace.update {
-                        snyggPropertySetForEditing?.properties?.remove(propertyToEdit.name)
+                    if (propertyEditSession.isCurrentIn(stylesheetEditor)) {
+                        workspace.update {
+                            propertyEditSession.propertySet.properties.remove(propertyEditSession.initProperty.name)
+                        }
                     }
-                    snyggPropertyToEdit = null
+                    action.propertyEditSession = null
                 },
-                onDismiss = { snyggPropertyToEdit = null },
+                onDismiss = { action.propertyEditSession = null },
             )
+        } else if (propertyEditSession != null) {
+            LaunchedEffect(propertyEditSession) { action.propertyEditSession = null }
         }
     }
 }

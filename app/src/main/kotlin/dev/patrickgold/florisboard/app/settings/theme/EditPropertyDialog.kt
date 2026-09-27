@@ -99,8 +99,11 @@ import org.florisboard.lib.compose.stringRes
 import org.florisboard.lib.kotlin.curlyFormat
 import org.florisboard.lib.kotlin.toStringWithoutDotZero
 import org.florisboard.lib.snygg.SnyggAnnotationRule
+import org.florisboard.lib.snygg.SnyggMultiplePropertySetsEditor
 import org.florisboard.lib.snygg.SnyggRule
+import org.florisboard.lib.snygg.SnyggSinglePropertySetEditor
 import org.florisboard.lib.snygg.SnyggSpec
+import org.florisboard.lib.snygg.SnyggStylesheetEditor
 import org.florisboard.lib.snygg.value.SnyggCustomFontFamilyValue
 import org.florisboard.lib.snygg.value.SnyggCutCornerDpShapeValue
 import org.florisboard.lib.snygg.value.SnyggCutCornerPercentShapeValue
@@ -137,6 +140,35 @@ data class PropertyInfo(
     val name: String,
     val value: SnyggValue,
 )
+
+/** An open property draft belongs to the current theme action, not the recreated activity. */
+internal class ThemePropertyEditSession(
+    val initProperty: PropertyInfo,
+    val propertySet: SnyggSinglePropertySetEditor,
+) {
+    var name by mutableStateOf(if (initProperty.name == SnyggEmptyPropertyInfoForAdding.name) "" else initProperty.name)
+    var value by mutableStateOf(initProperty.value)
+
+    fun changeName(nextName: String) {
+        if (SnyggSpec.encodersOf(initProperty.rule, name) != null) value = SnyggUndefinedValue
+        name = nextName
+    }
+
+    fun selectEncoder(encoder: SnyggValueEncoder) {
+        value = encoder.defaultValue()
+    }
+
+    fun isCurrentIn(stylesheet: SnyggStylesheetEditor): Boolean {
+        val ruleSet = stylesheet.rules[initProperty.rule]
+        val attached = when (ruleSet) {
+            is SnyggSinglePropertySetEditor -> ruleSet === propertySet
+            is SnyggMultiplePropertySetsEditor -> ruleSet.sets.any { it === propertySet }
+            else -> false
+        }
+        return attached && (initProperty.name == SnyggEmptyPropertyInfoForAdding.name ||
+            initProperty.name in propertySet.properties)
+    }
+}
 
 private enum class ShapeCorner {
     TOP_START,
@@ -176,7 +208,7 @@ private enum class PaddingValue {
 
 @Composable
 internal fun EditPropertyDialog(
-    initProperty: PropertyInfo,
+    session: ThemePropertyEditSession,
     level: SnyggLevel,
     colorRepresentation: ColorRepresentation,
     definedVariables: Map<String, SnyggValue>,
@@ -186,40 +218,17 @@ internal fun EditPropertyDialog(
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val initProperty = session.initProperty
     val isAddPropertyDialog = initProperty.name == SnyggEmptyPropertyInfoForAdding.name
     var showSelectAsError by rememberSaveable { mutableStateOf(false) }
     var showAlreadyExistsError by rememberSaveable { mutableStateOf(false) }
 
-    var propertyName by rememberSaveable {
-        mutableStateOf(
-            if (isAddPropertyDialog) {
-                ""
-            } else {
-                initProperty.name
-            }
-        )
-    }
+    val propertyName = session.name
     val propertyNameValidation = rememberValidationResult(ExtensionValidation.ThemeComponentVariableName, propertyName)
 
     val encoders = remember(initProperty.rule, propertyName) { SnyggSpec.encodersOf(initProperty.rule, propertyName) }
-    var propertyValueEncoder by remember {
-        mutableStateOf(
-            if (isAddPropertyDialog && encoders == null) {
-                SnyggUndefinedValue
-            } else {
-                initProperty.value.encoder()
-            }
-        )
-    }
-    var propertyValue by remember {
-        mutableStateOf(
-            if (isAddPropertyDialog && encoders == null) {
-                SnyggUndefinedValue
-            } else {
-                initProperty.value
-            }
-        )
-    }
+    val propertyValue = session.value
+    val propertyValueEncoder = propertyValue.encoder()
 
     fun isPropertyNameValid(): Boolean {
         return when (initProperty.rule) {
@@ -285,13 +294,7 @@ internal fun EditPropertyDialog(
                     rule = initProperty.rule,
                     name = propertyName,
                     nameValidation = propertyNameValidation,
-                    onNameChange = { name ->
-                        if (encoders != null) {
-                            propertyValueEncoder = SnyggUndefinedValue
-                            propertyValue = SnyggUndefinedValue
-                        }
-                        propertyName = name
-                    },
+                    onNameChange = session::changeName,
                     level = level,
                     isAddPropertyDialog = isAddPropertyDialog,
                     showSelectAsError = showSelectAsError,
@@ -302,10 +305,7 @@ internal fun EditPropertyDialog(
                 PropertyValueEncoderDropdown(
                     supportedEncoders = encoders.orEmpty(),
                     encoder = propertyValueEncoder,
-                    onEncoderChange = { encoder ->
-                        propertyValueEncoder = encoder
-                        propertyValue = encoder.defaultValue()
-                    },
+                    onEncoderChange = session::selectEncoder,
                     enabled = isPropertyNameValid(),
                     isError = showSelectAsError && propertyValueEncoder == SnyggUndefinedValue,
                 )
@@ -313,7 +313,7 @@ internal fun EditPropertyDialog(
                 PropertyValueEditor(
                     modifier = Modifier.padding(top = 8.dp),
                     value = propertyValue,
-                    onValueChange = { propertyValue = it },
+                    onValueChange = { session.value = it },
                     level = level,
                     colorRepresentation = colorRepresentation,
                     definedVariables = definedVariables,
@@ -500,7 +500,7 @@ private fun PropertyValueEditor(
         }
 
         is SnyggSizeValue -> key(value.encoder()) {
-            var sizeStr by remember {
+            var sizeStr by rememberSaveable {
                 mutableStateOf(when (value) {
                     is SnyggDpSizeValue -> (value.dp.takeUnless { it.isUnspecified }
                         ?: SnyggDpSizeValue.defaultValue().dp).value.toStringWithoutDotZero()

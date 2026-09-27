@@ -17,10 +17,18 @@
 package dev.patrickgold.florisboard.app.settings.theme
 
 import androidx.compose.ui.graphics.Color
+import dev.patrickgold.florisboard.app.ext.ThemeEditorAction
+import dev.patrickgold.florisboard.ime.theme.ThemeExtensionComponentEditor
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import org.florisboard.lib.snygg.SnyggAnnotationRule
 import org.florisboard.lib.snygg.SnyggElementRule
+import org.florisboard.lib.snygg.SnyggMultiplePropertySetsEditor
+import org.florisboard.lib.snygg.SnyggSinglePropertySetEditor
+import org.florisboard.lib.snygg.SnyggStylesheet
+import org.florisboard.lib.snygg.SnyggStylesheetEditor
 import org.florisboard.lib.snygg.value.SnyggStaticColorValue
+import org.florisboard.lib.snygg.value.SnyggUndefinedValue
 import org.florisboard.lib.snygg.value.SnyggValue
 
 class ThemePropertyEditTest : FunSpec({
@@ -68,5 +76,55 @@ class ThemePropertyEditTest : FunSpec({
 
         properties["background"] shouldBe newColor
         updateCount shouldBe 1
+    }
+
+    test("property draft remains on the theme action") {
+        val set = SnyggSinglePropertySetEditor(mapOf("background" to oldColor))
+        val stylesheet = SnyggStylesheetEditor(SnyggStylesheet.SCHEMA_V2).also {
+            it.rules[rule] = set
+        }
+        val action = ThemeEditorAction.EditTheme(ThemeExtensionComponentEditor())
+        action.propertyEditSession = ThemePropertyEditSession(PropertyInfo(rule, "background", oldColor), set)
+        action.propertyEditSession!!.value = newColor
+
+        val reopened = action.propertyEditSession
+        reopened?.value shouldBe newColor
+        reopened?.isCurrentIn(stylesheet) shouldBe true
+    }
+
+    test("adding a property keeps its undefined default and resets a previously chosen encoder") {
+        val set = SnyggSinglePropertySetEditor()
+        val draft = ThemePropertyEditSession(SnyggEmptyPropertyInfoForAdding.copy(rule = rule), set)
+
+        draft.name shouldBe ""
+        draft.value shouldBe SnyggUndefinedValue
+        draft.changeName("background")
+        draft.value shouldBe SnyggUndefinedValue
+        draft.selectEncoder(SnyggStaticColorValue)
+        draft.value.encoder() shouldBe SnyggStaticColorValue
+        draft.changeName("foreground")
+        draft.value shouldBe SnyggUndefinedValue
+    }
+
+    test("a draft cannot edit a replaced or removed property set") {
+        val fontRule = SnyggAnnotationRule.Font("Example")
+        val first = SnyggSinglePropertySetEditor(mapOf("src" to oldColor))
+        val second = SnyggSinglePropertySetEditor(mapOf("src" to newColor))
+        val sets = SnyggMultiplePropertySetsEditor().also { it.sets.addAll(listOf(first, second)) }
+        val stylesheet = SnyggStylesheetEditor(SnyggStylesheet.SCHEMA_V2).also {
+            it.rules[fontRule] = sets
+        }
+        val draft = ThemePropertyEditSession(PropertyInfo(fontRule, "src", newColor), second)
+
+        draft.isCurrentIn(stylesheet) shouldBe true
+        sets.sets.reverse()
+        draft.isCurrentIn(stylesheet) shouldBe true
+        sets.sets.remove(second)
+        draft.isCurrentIn(stylesheet) shouldBe false
+        sets.sets.add(SnyggSinglePropertySetEditor(mapOf("src" to newColor)))
+        draft.isCurrentIn(stylesheet) shouldBe false
+        sets.sets.add(second)
+        second.properties.remove("src")
+        draft.isCurrentIn(stylesheet) shouldBe false
     }
 })
