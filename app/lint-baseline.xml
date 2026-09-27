@@ -46,17 +46,6 @@
     </issue>
 
     <issue
-        id="LocalContextResourcesRead"
-        message="Reading Resources using LocalContext.current.resources"
-        errorLine1="        LocalContext.current.resources,"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/org/florisboard/lib/compose/FlorisCanvasIcon.kt"
-            line="37"
-            column="9"/>
-    </issue>
-
-    <issue
         id="ModifierFactoryExtensionFunction"
         message="Modifier factory functions should be extensions on Modifier"
         errorLine1="internal fun pluginUiItemModifier("
