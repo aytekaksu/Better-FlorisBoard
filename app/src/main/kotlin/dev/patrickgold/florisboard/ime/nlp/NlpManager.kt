@@ -31,7 +31,6 @@ import dev.patrickgold.florisboard.ime.nlp.latin.LatinLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginSuggestionBatch
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
-import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -289,13 +288,13 @@ internal fun shouldExpandSmartbarActions(
 class NlpManager internal constructor(
     context: Context,
     clipboardPrimaryClipFlow: Lazy<StateFlow<ClipboardItem?>>,
+    private val activeSubtypeFlow: StateFlow<Subtype>,
     private val currentEditorContent: () -> EditorContent,
     private val isIncognitoMode: () -> Boolean,
 ) : EditorComposingPolicy {
     private val prefs by FlorisPreferenceStore
     private val primaryClipFlow by clipboardPrimaryClipFlow
     private val autocorrectPluginManager by context.autocorrectPluginManager()
-    private val subtypeManager by context.subtypeManager()
     private val keyguardManager = context.systemService(AndroidKeyguardManager::class)
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -352,7 +351,7 @@ class NlpManager internal constructor(
         prefs.emoji.suggestionEnabled.asFlow().collectLatestIn(scope) {
             assembleCandidates()
         }
-        subtypeManager.activeSubtypeFlow.collectLatestIn(scope) { subtype ->
+        activeSubtypeFlow.collectLatestIn(scope) { subtype ->
             preload(subtype)
         }
     }
@@ -410,7 +409,7 @@ class NlpManager internal constructor(
     override fun determineLocalComposing(
         textBeforeSelection: CharSequence, breakIterators: BreakIteratorGroup, localLastCommitPosition: Int
     ): EditorRange {
-        val subtype = subtypeManager.activeSubtype
+        val subtype = activeSubtypeFlow.value
         return resolveSuggestionProvider(subtype).determineLocalComposing(
             subtype, textBeforeSelection, breakIterators, localLastCommitPosition
         )
@@ -423,7 +422,7 @@ class NlpManager internal constructor(
     override fun isSuggestionOn(): Boolean =
         prefs.suggestion.enabled.get()
             || prefs.emoji.suggestionEnabled.get()
-            || providerForcesSuggestionOn(subtypeManager.activeSubtype)
+            || providerForcesSuggestionOn(activeSubtypeFlow.value)
 
     private fun launchLatestSuggestionRequest(block: suspend (Long) -> Unit) {
         synchronized(suggestionJobGuard) {
@@ -544,7 +543,7 @@ class NlpManager internal constructor(
                 if (candidate is ClipboardSuggestionCandidate) {
                     assembleCandidates()
                 } else {
-                    suggest(subtypeManager.activeSubtype, currentEditorContent())
+                    suggest(activeSubtypeFlow.value, currentEditorContent())
                 }
             }
         }

@@ -24,16 +24,87 @@ import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.clipboard.ClipboardSyncBehavior
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.core.Subtype
+import dev.patrickgold.florisboard.ime.core.SubtypeJsonConfig
 import dev.patrickgold.florisboard.ime.editor.EditorContent
+import dev.patrickgold.florisboard.ime.nlp.han.HanShapeBasedLanguageProvider
 import dev.patrickgold.florisboard.nlpManager
+import dev.patrickgold.florisboard.subtypeManager
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class NlpClipboardFlowAndroidTest {
+class NlpManagerFlowAndroidTest {
+    @Test
+    fun suggestionPolicyReadsTheLiveSubtypeAfterSwitches() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val nlp by context.nlpManager()
+        val subtypeManager by context.subtypeManager()
+        val prefs by FlorisPreferenceStore
+        val originalSubtypeJson = prefs.localization.subtypes.get()
+        val originalSubtypes = if (originalSubtypeJson.isBlank()) emptyList() else
+            SubtypeJsonConfig.decodeFromString<List<Subtype>>(originalSubtypeJson)
+        val originalSubtypeId = prefs.localization.activeSubtypeId.get()
+        val originalSuggestionEnabled = prefs.suggestion.enabled.get()
+        val originalEmojiEnabled = prefs.emoji.suggestionEnabled.get()
+        val originalPluginComponent = prefs.suggestion.autocorrectPluginComponent.get()
+        val occupiedIds = originalSubtypes.mapTo(mutableSetOf()) { it.id }
+        val temporaryIds = generateSequence(Long.MIN_VALUE) { it + 1L }
+            .filterNot { it in occupiedIds }.take(2).toList()
+        val latin = Subtype.DEFAULT.copy(id = temporaryIds[0])
+        val han = latin.copy(
+            id = temporaryIds[1],
+            nlpProviders = latin.nlpProviders.copy(suggestion = HanShapeBasedLanguageProvider.ProviderId),
+        )
+        val testSubtypes = originalSubtypes + latin + han
+
+        try {
+            runBlocking {
+                prefs.suggestion.enabled.set(false).getOrThrow()
+                prefs.emoji.suggestionEnabled.set(false).getOrThrow()
+                prefs.suggestion.autocorrectPluginComponent.set("").getOrThrow()
+                prefs.localization.activeSubtypeId.set(latin.id).getOrThrow()
+                prefs.localization.subtypes.set(SubtypeJsonConfig.encodeToString(testSubtypes)).getOrThrow()
+                withTimeout(10_000L) { subtypeManager.subtypesFlow.first { it == testSubtypes } }
+                subtypeManager.switchToSubtypeById(latin.id).join()
+            }
+            assertEquals(latin.id, subtypeManager.activeSubtype.id)
+            assertFalse(nlp.isSuggestionOn())
+
+            runBlocking { subtypeManager.switchToSubtypeById(han.id).join() }
+            assertEquals(han.id, subtypeManager.activeSubtype.id)
+            assertTrue(nlp.isSuggestionOn())
+
+            runBlocking { subtypeManager.switchToSubtypeById(latin.id).join() }
+            assertEquals(latin.id, subtypeManager.activeSubtype.id)
+            assertFalse(nlp.isSuggestionOn())
+        } finally {
+            runBlocking {
+                val restores = listOf<suspend () -> Unit>(
+                    { prefs.localization.activeSubtypeId.set(originalSubtypeId).getOrThrow() },
+                    { prefs.localization.subtypes.set(originalSubtypeJson).getOrThrow() },
+                    { withTimeout(10_000L) { subtypeManager.subtypesFlow.first { it == originalSubtypes } } },
+                    {
+                        if (originalSubtypes.any { it.id == originalSubtypeId }) {
+                            subtypeManager.switchToSubtypeById(originalSubtypeId).join()
+                            assertEquals(originalSubtypeId, subtypeManager.activeSubtype.id)
+                        }
+                    },
+                    { prefs.suggestion.enabled.set(originalSuggestionEnabled).getOrThrow() },
+                    { prefs.emoji.suggestionEnabled.set(originalEmojiEnabled).getOrThrow() },
+                    { prefs.suggestion.autocorrectPluginComponent.set(originalPluginComponent).getOrThrow() },
+                )
+                restores.mapNotNull { runCatching { it() }.exceptionOrNull() }
+                    .firstOrNull()?.let { throw it }
+            }
+        }
+    }
+
     @Test
     fun clipboardSuggestionsUseTheCurrentClipAfterEachChange() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
