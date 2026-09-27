@@ -16,10 +16,10 @@
 
 package dev.patrickgold.florisboard.app.settings.advanced
 
+import dev.patrickgold.florisboard.lib.io.parsePortablePathSegments
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.nio.charset.StandardCharsets
 import java.util.Collections
 
 private const val MAX_CRC32 = 0xffff_ffffL
@@ -404,32 +404,14 @@ internal class SafeArchivePath private constructor(internal val value: String) {
     companion object {
         fun parse(rawPath: String, kind: ArchiveEntryKind, limits: ArchiveLimits): SafeArchivePath? {
             val isDirectory = kind == ArchiveEntryKind.DIRECTORY
-            if (hasInvalidRawShape(rawPath, isDirectory, limits)) return null
-            val path = if (isDirectory) rawPath.dropLast(1) else rawPath
-            return if (hasInvalidSegments(path, limits)) null else SafeArchivePath(path)
+            parsePortablePathSegments(
+                rawPath = rawPath,
+                maxPathBytes = limits.maxPathBytes,
+                maxSegmentBytes = limits.maxPathSegmentBytes,
+                directory = isDirectory,
+            ) ?: return null
+            return SafeArchivePath(if (isDirectory) rawPath.dropLast(1) else rawPath)
         }
-
-        private fun hasInvalidRawShape(rawPath: String, isDirectory: Boolean, limits: ArchiveLimits): Boolean =
-            rawPath.isEmpty() ||
-                rawPath.length > limits.maxPathBytes ||
-                rawPath.startsWith('/') ||
-                rawPath.contains('\\') ||
-                rawPath.any(Char::isISOControl) ||
-                rawPath.toByteArray(StandardCharsets.UTF_8).size > limits.maxPathBytes ||
-                isDirectory != rawPath.endsWith('/')
-
-        private fun hasInvalidSegments(path: String, limits: ArchiveLimits): Boolean {
-            val segments = path.split('/')
-            return path.isEmpty() ||
-                DRIVE_PREFIX.containsMatchIn(path) ||
-                segments.any { it.isEmpty() || it == "." || it == ".." } ||
-                segments.any {
-                    it.length > limits.maxPathSegmentBytes ||
-                        it.toByteArray(StandardCharsets.UTF_8).size > limits.maxPathSegmentBytes
-                }
-        }
-
-        private val DRIVE_PREFIX = Regex("""^[A-Za-z]:""")
     }
 }
 

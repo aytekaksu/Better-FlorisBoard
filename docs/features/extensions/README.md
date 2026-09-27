@@ -56,6 +56,9 @@ metadata, and UTF-8 entry names.
 | Path / path segment | 512 / 255 UTF-8 bytes |
 | Path depth | 16 segments |
 
+Portable path syntax is shared with backup ZIPs and extension resource paths;
+each caller keeps its own limits and failure handling.
+
 Extraction rejects traversal, ambiguous or duplicate paths, file/directory
 conflicts, links and special files, encryption, unsupported compression,
 incorrect sizes, and CRC mismatches. It writes into a private sibling staging

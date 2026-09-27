@@ -171,6 +171,8 @@ val qualityKotlinSources = files(
 val formattedKotlinSources = files(
     autocorrectHostCoreKotlinSources,
     sharedQualityKotlinSources,
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/io/PortablePathSyntax.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/io/PortablePathSyntaxTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummary.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/dictionary/UserDictionary.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycle.kt"),

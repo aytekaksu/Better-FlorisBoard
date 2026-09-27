@@ -513,7 +513,12 @@ object ZipUtils {
             transferBudget?.inspect(attributes)
             check(entries.size < limits.maxEntries) { ARCHIVE_LIMIT_ERROR }
             val archivePath = root.relativize(path).joinToString("/") { it.toString() }
-            check(isSafeArchivePath(archivePath, kind, limits)) { ARCHIVE_LIMIT_ERROR }
+            check(parsePortablePathSegments(
+                rawPath = if (kind == ZipSourceKind.DIRECTORY) "$archivePath/" else archivePath,
+                maxPathBytes = limits.maxPathBytes,
+                maxSegmentBytes = limits.maxPathSegmentBytes,
+                directory = kind == ZipSourceKind.DIRECTORY,
+            ) != null) { ARCHIVE_LIMIT_ERROR }
             val entryBytes = if (kind == ZipSourceKind.FILE) attributes.size() else 0L
             check(entryBytes in 0L..limits.fileLimit(archivePath)) { ARCHIVE_LIMIT_ERROR }
             check(entryBytes <= limits.maxSourceBytes - sourceBytes) { ARCHIVE_LIMIT_ERROR }
@@ -527,34 +532,6 @@ object ZipUtils {
         }
 
         fun result(): List<ZipSourceEntry> = entries.sortedBy(ZipSourceEntry::archivePath)
-    }
-
-    private fun isSafeArchivePath(
-        path: String,
-        kind: ZipSourceKind,
-        limits: WriteLimits,
-    ): Boolean {
-        val rawPath = if (kind == ZipSourceKind.DIRECTORY) "$path/" else path
-        if (rawPath.isEmpty() ||
-            rawPath.length > limits.maxPathBytes ||
-            rawPath.startsWith('/') ||
-            rawPath.contains('\\')
-        ) {
-            return false
-        }
-        if (rawPath.any(Char::isISOControl) ||
-            rawPath.encodeToByteArray().size > limits.maxPathBytes ||
-            DRIVE_PREFIX.containsMatchIn(rawPath)
-        ) {
-            return false
-        }
-        return path.split('/').all { segment ->
-            segment.isNotEmpty() &&
-                segment != "." &&
-                segment != ".." &&
-                segment.length <= limits.maxPathSegmentBytes &&
-                segment.encodeToByteArray().size <= limits.maxPathSegmentBytes
-        }
     }
 
     private class BoundedOutputStream(
@@ -601,7 +578,6 @@ object ZipUtils {
     )
 
     private const val COPY_BUFFER_BYTES = 64 * 1024
-    private val DRIVE_PREFIX = Regex("""^[A-Za-z]:""")
 
     private fun extensionWriteLimits(): WriteLimits {
         val limits = BoundedExtensionArchive.DefaultLimits
