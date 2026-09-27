@@ -60,6 +60,7 @@ class HanShapeBasedLanguageProviderAndroidTest {
         )
 
         fun composingRange() = composingPolicy.determineLocalComposing("a[", BreakIteratorGroup(), 0)
+        assertEquals(EditorRange.Unspecified, composingRange())
 
         try {
             provider.create()
