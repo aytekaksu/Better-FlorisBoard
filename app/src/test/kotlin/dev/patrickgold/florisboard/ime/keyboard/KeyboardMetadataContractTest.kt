@@ -26,6 +26,7 @@ import dev.patrickgold.florisboard.lib.ext.validateForImport
 import dev.patrickgold.florisboard.lib.io.DefaultJsonConfig
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.decodeFromString
 import java.io.File
 import java.security.MessageDigest
@@ -47,6 +48,28 @@ class KeyboardMetadataContractTest :
                 KeyboardMode.fromInt(retiredId) shouldBe KeyboardMode.CHARACTERS
                 KeyboardState.new(retiredId.toULong()).keyboardMode shouldBe KeyboardMode.CHARACTERS
             }
+        }
+
+        test("selectors keep their JSON tags and have no text of their own") {
+            val key = """{"${'$'}":"text_key","code":65,"label":"A"}"""
+            val selectorJson = listOf(
+                CaseSelector::class to """{"${'$'}":"case_selector","lower":$key,"upper":$key}""",
+                ShiftStateSelector::class to """{"${'$'}":"shift_state_selector"}""",
+                VariationSelector::class to """{"${'$'}":"variation_selector"}""",
+                LayoutDirectionSelector::class to """{"${'$'}":"layout_direction_selector","ltr":$key,"rtl":$key}""",
+                CharWidthSelector::class to """{"${'$'}":"char_width_selector","full":$key,"half":$key}""",
+                KanaSelector::class to """{"${'$'}":"kana_selector","hira":$key,"kata":$key}""",
+            )
+            selectorJson.forEach { (expectedClass, json) ->
+                val selector = DefaultJsonConfig.decodeFromString(
+                    PolymorphicSerializer(AbstractKeyData::class),
+                    json,
+                )
+                selector::class shouldBe expectedClass
+                selector.asString(isForDisplay = true) shouldBe ""
+                selector.asString(isForDisplay = false) shouldBe ""
+            }
+            TextKeyData(code = 65, label = "A").asString(isForDisplay = false) shouldBe "A"
         }
 
         test("loading keyboard keeps its layout and distinct key slots") {

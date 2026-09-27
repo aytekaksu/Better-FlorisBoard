@@ -65,7 +65,8 @@ destination unchanged and removes owned staging data.
 Trusted APK assets still use staged, all-or-nothing directory publication.
 Bundled layout IDs may share an arrangement via `arrangementFile` while keeping
 distinct labels, modifiers, and subtype choices. Currency keys output their
-visible symbol; metadata tests cover built-in slots.
+visible symbol; metadata tests cover built-in slots. Layout selectors have no
+text of their own; concrete keys still provide their display and input text.
 
 Build-time generators expand `@autoKeys("letters")` character rows (with optional
 padding), digit-script numeric rows from Bengali, theme stylesheets from the
