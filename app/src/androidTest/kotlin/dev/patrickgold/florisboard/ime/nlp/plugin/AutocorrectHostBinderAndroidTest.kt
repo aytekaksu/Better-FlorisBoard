@@ -323,7 +323,7 @@ class AutocorrectHostBinderAndroidTest {
         val first = waitForEvent("UI_REQUEST")
         val pickerLease = requireNotNull(manager.acquirePluginUiPickerLease())
         manager.releasePluginUi()
-        val bindingsBeforeDeath = bindingStartCount()
+        val diagnosticsBeforeDeath = manager.diagnosticsSnapshot().records.lastOrNull()?.sequence ?: 0L
         assertEquals(first.pid, control("kill_provider").getInt("pid"))
 
         val deadline = SystemClock.uptimeMillis() + 20_000
@@ -343,7 +343,12 @@ class AutocorrectHostBinderAndroidTest {
         )
         assertTrue(manager.pluginUiError.value)
         awaitHostCommandBarrier()
-        assertEquals(bindingsBeforeDeath, bindingStartCount())
+        val newBindingStarted = manager.diagnosticsSnapshot().records.any { record ->
+            val binding = record.event as? AutocorrectPluginDiagnosticEvent.Binding
+            record.sequence > diagnosticsBeforeDeath &&
+                binding?.state == AutocorrectPluginDiagnosticState.STARTED
+        }
+        assertFalse(newBindingStarted)
         assertEquals(1, snapshot().events.count { it == "UI_REQUEST" })
     }
 
@@ -780,11 +785,6 @@ class AutocorrectHostBinderAndroidTest {
                 ?.bindingEpoch
         }
         .lastOrNull()
-
-    private fun bindingStartCount() = manager.diagnosticsSnapshot().records.count { record ->
-        (record.event as? AutocorrectPluginDiagnosticEvent.Binding)?.state ==
-            AutocorrectPluginDiagnosticState.STARTED
-    }
 
     private fun currentReplyMessenger(): Messenger =
         AutocorrectPluginManager::class.java.getDeclaredField("replyMessenger").let { field ->
