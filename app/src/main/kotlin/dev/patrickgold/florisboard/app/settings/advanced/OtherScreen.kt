@@ -50,6 +50,14 @@ import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.color.ColorMappings
 import org.florisboard.lib.compose.stringRes
 
+private val SettingsLanguageTags = listOf(
+    "auto", "ar", "bg", "bs", "ca", "ckb", "cs",
+    "da", "de", "el", "en", "eo", "es", "fa",
+    "fi", "fr", "hr", "hu", "in", "it", "iw",
+    "ja", "ko-KR", "ku", "lv-LV", "mk", "nds-DE", "nl",
+    "no", "pl", "pt", "pt-BR", "ru", "sk", "sl",
+    "sr", "sv", "tr", "uk", "zgh", "zh-CN",
+)
 
 @Composable
 fun OtherScreen() = FlorisScreen {
@@ -87,56 +95,14 @@ fun OtherScreen() = FlorisScreen {
             icon = Icons.Default.Language,
             title = stringRes(R.string.pref__other__settings_language__label),
             entries = listPrefEntries {
-                listOf(
-                    "auto",
-                    "ar",
-                    "bg",
-                    "bs",
-                    "ca",
-                    "ckb",
-                    "cs",
-                    "da",
-                    "de",
-                    "el",
-                    "en",
-                    "eo",
-                    "es",
-                    "fa",
-                    "fi",
-                    "fr",
-                    "hr",
-                    "hu",
-                    "in",
-                    "it",
-                    "iw",
-                    "ja",
-                    "ko-KR",
-                    "ku",
-                    "lv-LV",
-                    "mk",
-                    "nds-DE",
-                    "nl",
-                    "no",
-                    "pl",
-                    "pt",
-                    "pt-BR",
-                    "ru",
-                    "sk",
-                    "sl",
-                    "sr",
-                    "sv",
-                    "tr",
-                    "uk",
-                    "zgh",
-                    "zh-CN",
-                ).map { languageTag ->
+                val displayLanguageNamesIn by prefs.localization.displayLanguageNamesIn.collectAsState()
+                SettingsLanguageTags.map { languageTag ->
                     if (languageTag == "auto") {
                         entry(
                             key = "auto",
                             label = stringRes(R.string.settings__system_default),
                         )
                     } else {
-                        val displayLanguageNamesIn by prefs.localization.displayLanguageNamesIn.collectAsState()
                         val locale = FlorisLocale.fromTag(languageTag)
                         entry(locale.languageTag(), when (displayLanguageNamesIn) {
                             DisplayLanguageNamesIn.SYSTEM_LOCALE -> locale.displayName()
