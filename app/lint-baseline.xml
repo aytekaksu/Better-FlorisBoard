@@ -95,28 +95,6 @@
         errorLine1="    modifier: Modifier = Modifier,"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggChip.kt"
-            line="57"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggChip.kt"
-            line="94"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
             file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggColumn.kt"
             line="55"
             column="5"/>

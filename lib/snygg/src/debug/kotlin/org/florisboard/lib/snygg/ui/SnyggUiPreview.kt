@@ -110,12 +110,19 @@ private fun SnyggComponentGalleryPreview() {
                 SnyggIconButton("action", onClick = {}) {
                     SnyggIcon(imageVector = Icons.Default.Search)
                 }
-                SnyggChip(
+                SnyggRow(
                     elementName = "chip",
-                    imageVector = Icons.Default.Search,
-                    onClick = {},
-                    text = "Chip",
-                )
+                    clickAndSemanticsModifier = Modifier.clickable(
+                        interactionSource = null,
+                        indication = ripple(),
+                        enabled = true,
+                        onClick = {},
+                    ),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SnyggIcon(elementName = "chip-icon", imageVector = Icons.Default.Search)
+                    SnyggText(elementName = "chip-text", text = "Chip")
+                }
             }
             val listItemElementName = "list-item"
             val selector = SnyggSelector.NONE
