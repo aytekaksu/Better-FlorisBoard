@@ -17,7 +17,10 @@
 package dev.patrickgold.florisboard.ime.editor
 
 import android.content.Context
+import android.text.Editable
 import android.text.InputType
+import android.text.Selection
+import android.text.SpannableStringBuilder
 import android.view.InputDevice
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
@@ -406,18 +409,201 @@ class EditorKeyboardStateAndroidTest {
             assertEquals(batchesBeforeInvalidCalls, connection.batchEnds)
         }
     }
+
+    @Test
+    fun directionalCharacterDeletionUsesUtf16LengthsAndStagesContentBeforeEditing() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        for ((cursor, backwards, expectedDelete, expectedStage) in listOf(
+            DeleteCase(3, true, 2 to 0, EditorRange.cursor(1)),
+            DeleteCase(1, false, 0 to 2, EditorRange.cursor(3)),
+        )) {
+            val (editor, connection) = newDirectionalEditor("a🙂b", EditorRange.cursor(cursor))
+            instrumentation.runOnMainSync {
+                connection.expectedAtBatchStart = { editor.expectedContent() }
+                val result = if (backwards) {
+                    editor.deleteBackwards(OperationUnit.CHARACTERS)
+                } else {
+                    editor.deleteForwards(OperationUnit.CHARACTERS)
+                }
+                assertTrue(result)
+                assertEquals(listOf(expectedDelete), connection.deletions)
+                assertEquals("ab", connection.currentText)
+                assertEquals(EditorRange.cursor(1), connection.currentSelection)
+                val staged = requireNotNull(editor.expectedContent())
+                assertEquals("ab", staged.text)
+                assertEquals(expectedStage, staged.selection)
+                assertEquals(staged, connection.contentAtBatchStart.first())
+                if (backwards) {
+                    editor.handleSelectionUpdate(staged.selection, staged.composing)
+                    assertEquals(null, editor.expectedContent())
+                }
+            }
+        }
+    }
+
+    @Test
+    fun directionalWordDeletionUsesRichTextBoundaries() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val subtype = Subtype.DEFAULT.copy(primaryLocale = FlorisLocale.from("fr"))
+        for ((cursor, backwards, expectedDelete, expectedStage) in listOf(
+            DeleteCase(7, true, 3 to 0, EditorRange.cursor(4)),
+            DeleteCase(4, false, 0 to 3, EditorRange.cursor(7)),
+        )) {
+            val (editor, connection) = newDirectionalEditor("one two", EditorRange.cursor(cursor), subtype = subtype)
+            instrumentation.runOnMainSync {
+                val deleted = if (backwards) editor.deleteBackwards(OperationUnit.WORDS)
+                else editor.deleteForwards(OperationUnit.WORDS)
+                assertTrue(deleted)
+                assertEquals(listOf(expectedDelete), connection.deletions)
+                assertEquals("one ", connection.currentText)
+                assertEquals(EditorRange.cursor(4), connection.currentSelection)
+                val staged = requireNotNull(editor.expectedContent())
+                assertEquals("one ", staged.text)
+                assertEquals(expectedStage, staged.selection)
+            }
+        }
+    }
+
+    @Test
+    fun directionalDeleteRemovesSelectionWithoutMeasuringSurroundings() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        for (backwards in listOf(true, false)) {
+            val (editor, connection) = newDirectionalEditor("a🙂b", EditorRange(1, 3))
+            instrumentation.runOnMainSync {
+                val deleted = if (backwards) editor.deleteBackwards(OperationUnit.CHARACTERS)
+                else editor.deleteForwards(OperationUnit.CHARACTERS)
+                assertTrue(deleted)
+                assertEquals("ab", connection.currentText)
+                assertEquals(EditorRange.cursor(1), connection.currentSelection)
+                assertTrue(connection.deletions.isEmpty())
+                val staged = requireNotNull(editor.expectedContent())
+                assertEquals("ab", staged.text)
+                assertEquals(EditorRange.cursor(1), staged.selection)
+            }
+        }
+    }
+
+    @Test
+    fun rawAndEmptyScopeDeletionUseDirectionalHardwareKeys() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+
+        fun assertFallback(type: Int, text: String, cursor: Int, backwards: Boolean, unit: OperationUnit) {
+            val (editor, connection) = newDirectionalEditor(text, EditorRange.cursor(cursor), type)
+            val keyCode = if (backwards) KeyEvent.KEYCODE_DEL else KeyEvent.KEYCODE_FORWARD_DEL
+            instrumentation.runOnMainSync {
+                assertTrue(if (backwards) editor.deleteBackwards(unit) else editor.deleteForwards(unit))
+                val expectedCodes = if (unit == OperationUnit.WORDS) {
+                    listOf(KeyEvent.KEYCODE_CTRL_LEFT, keyCode, keyCode, KeyEvent.KEYCODE_CTRL_LEFT)
+                } else {
+                    listOf(keyCode, keyCode)
+                }
+                assertEquals(expectedCodes, connection.keyEvents.map { it.keyCode })
+                assertEquals(
+                    if (unit == OperationUnit.WORDS) editor.meta(ctrl = true) else 0,
+                    connection.keyEvents.first { it.keyCode == keyCode }.metaState,
+                )
+                assertTrue(connection.deletions.isEmpty())
+                assertEquals(null, editor.expectedContent())
+            }
+        }
+
+        assertFallback(InputType.TYPE_NULL, "a🙂b", 3, backwards = true, unit = OperationUnit.WORDS)
+        assertFallback(InputType.TYPE_NULL, "a🙂b", 1, backwards = false, unit = OperationUnit.WORDS)
+        assertFallback(InputType.TYPE_CLASS_TEXT, "", 0, backwards = true, unit = OperationUnit.CHARACTERS)
+        assertFallback(InputType.TYPE_CLASS_TEXT, "", 0, backwards = false, unit = OperationUnit.CHARACTERS)
+    }
+
+    @Test
+    fun surroundingSelectionKeepsDirectionalAnchorsAndZeroCount() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val initialSelection = EditorRange(1, 4)
+        for ((scope, count, expected) in listOf(
+            Triple(OperationScope.BEFORE_CURSOR, 1, EditorRange(3, 4)),
+            Triple(OperationScope.AFTER_CURSOR, 1, EditorRange(1, 3)),
+            Triple(OperationScope.BEFORE_CURSOR, 0, EditorRange.cursor(4)),
+            Triple(OperationScope.AFTER_CURSOR, 0, EditorRange.cursor(1)),
+            Triple(OperationScope.BEFORE_CURSOR, 99, EditorRange(0, 4)),
+            Triple(OperationScope.AFTER_CURSOR, 99, EditorRange(1, 5)),
+        )) {
+            val (editor, connection) = newDirectionalEditor("a🙂bc", initialSelection)
+            instrumentation.runOnMainSync {
+                assertTrue(editor.setSelectionSurrounding(count, OperationUnit.CHARACTERS, scope))
+                assertEquals(expected, connection.currentSelection)
+                assertEquals(expected, connection.setSelections.last())
+                assertEquals(expected, editor.expectedContent()?.selection)
+            }
+        }
+    }
+
+    private fun newDirectionalEditor(
+        text: String,
+        selection: EditorRange,
+        inputType: Int = InputType.TYPE_CLASS_TEXT,
+        subtype: Subtype = Subtype.DEFAULT,
+    ): Pair<EditorInstance, RecordingInputConnection> {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        lateinit var editor: EditorInstance
+        lateinit var connection: RecordingInputConnection
+        instrumentation.runOnMainSync {
+            connection = RecordingInputConnection(instrumentation.targetContext, text, selection)
+            editor = EditorInstance(
+                instrumentation.targetContext,
+                lazy { ObservableKeyboardState.new() },
+                { subtype },
+                lazy { TestEditorComposingPolicy() },
+                { connection },
+            ) { false }
+            editor.handleStartInputView(FlorisEditorInfo.wrap(EditorInfo().apply {
+                this.inputType = inputType
+                initialSelStart = selection.start
+                initialSelEnd = selection.end
+            }), isRestart = false)
+        }
+        instrumentation.waitForIdleSync()
+        if (inputType != InputType.TYPE_NULL) {
+            instrumentation.runOnMainSync { assertEquals(selection, editor.activeContent.selection) }
+        }
+        return editor to connection
+    }
+
+    private data class DeleteCase(
+        val cursor: Int,
+        val backwards: Boolean,
+        val deletion: Pair<Int, Int>,
+        val stagedSelection: EditorRange,
+    )
 }
 
-private class RecordingInputConnection(context: Context) : BaseInputConnection(View(context), true) {
+private class RecordingInputConnection(
+    context: Context,
+    text: String = "",
+    selection: EditorRange = EditorRange.cursor(text.length),
+) : BaseInputConnection(View(context), true) {
+    private val editable = SpannableStringBuilder(text).apply {
+        Selection.setSelection(this, selection.start, selection.end)
+    }
     val cursorUpdateModes = mutableListOf<Int>()
     val editorActions = mutableListOf<Int>()
     val keyEvents = mutableListOf<KeyEvent>()
+    val deletions = mutableListOf<Pair<Int, Int>>()
+    val setSelections = mutableListOf<EditorRange>()
+    val contentAtBatchStart = mutableListOf<EditorContent?>()
+    var expectedAtBatchStart: (() -> EditorContent?)? = null
     var batchBegins = 0
     var batchEnds = 0
 
+    val currentText: String get() = editable.toString()
+    val currentSelection: EditorRange get() = EditorRange(
+        Selection.getSelectionStart(editable),
+        Selection.getSelectionEnd(editable),
+    )
+
     fun keyEventSignatures() = keyEvents.map { Triple(it.action, it.keyCode, it.repeatCount) }
 
+    override fun getEditable(): Editable = editable
+
     override fun beginBatchEdit(): Boolean {
+        expectedAtBatchStart?.let { contentAtBatchStart += it() }
         batchBegins++
         return true
     }
@@ -430,6 +616,16 @@ private class RecordingInputConnection(context: Context) : BaseInputConnection(V
     override fun sendKeyEvent(event: KeyEvent): Boolean {
         keyEvents += event
         return true
+    }
+
+    override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
+        deletions += beforeLength to afterLength
+        return super.deleteSurroundingText(beforeLength, afterLength)
+    }
+
+    override fun setSelection(start: Int, end: Int): Boolean {
+        setSelections += EditorRange(start, end)
+        return super.setSelection(start, end)
     }
 
     override fun requestCursorUpdates(cursorUpdateMode: Int): Boolean {
