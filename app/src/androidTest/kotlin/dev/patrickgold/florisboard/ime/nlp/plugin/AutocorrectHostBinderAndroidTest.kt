@@ -55,6 +55,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 /** Exercises the real host against a protocol-v5 Messenger service in a separate fixture app. */
 // One fixture lifecycle serves the Binder scenarios; splitting it would duplicate mutable IME setup.
@@ -104,6 +105,7 @@ class AutocorrectHostBinderAndroidTest {
         control("release_finish")
         control("release_suggest_b")
         control("release_ui_action")
+        control("release_ui_document")
         manager.finishSession()
         prefs.suggestion.enabled.set(true).getOrThrow()
         prefs.suggestion.autocorrectPluginComponent
@@ -120,6 +122,7 @@ class AutocorrectHostBinderAndroidTest {
         control("release_finish")
         control("release_suggest_b")
         control("release_ui_action")
+        control("release_ui_document")
         manager.releasePluginUi()
         manager.finishSession()
         val eventsBeforeRestore = snapshot().events
@@ -352,6 +355,48 @@ class AutocorrectHostBinderAndroidTest {
         }
         assertFalse(newBindingStarted)
         assertEquals(1, snapshot().events.count { it == "UI_REQUEST" })
+    }
+
+    @Test
+    fun documentPreparationKeepsTheProviderBoundUntilItsReply() {
+        openSecondProviderUi()
+        val document = File.createTempFile("ui-ledger", ".bin", targetContext.cacheDir)
+        control("hold_ui_document")
+        try {
+            val lease = requireNotNull(manager.acquirePluginUiPickerLease())
+            manager.releasePluginUi()
+            manager.sendPluginUiDocument("fixture-b-document", Uri.fromFile(document), false, lease)
+
+            waitForEvent("B_UI_DOCUMENT")
+            awaitHostCommandBarrier()
+            assertTrue(synchronized(manager) { uiOperations().hasDocument })
+            assertTrue(manager.hostStateSnapshot().uiBindingDemand)
+            assertFalse("binding released before document reply", snapshot().events.contains("B_UNBOUND"))
+
+            control("release_ui_document")
+            val released = waitForEvent("B_UNBOUND")
+            assertTrue(released.events.indexOf("B_UI_DOCUMENT") < released.events.indexOf("B_UNBOUND"))
+        } finally {
+            control("release_ui_document")
+            document.delete()
+        }
+    }
+
+    @Test
+    fun failedDocumentPreparationReleasesTheLastUiBinding() {
+        openSecondProviderUi()
+        val lease = requireNotNull(manager.acquirePluginUiPickerLease())
+        manager.releasePluginUi()
+        manager.sendPluginUiDocument(
+            "fixture-b-document",
+            Uri.parse("content://$FIXTURE_PACKAGE.control/missing-document"),
+            false,
+            lease,
+        )
+
+        val released = waitForEvent("B_UNBOUND")
+        assertFalse(released.events.contains("B_UI_DOCUMENT"))
+        assertTrue(manager.pluginUiError.value)
     }
 
     @Test
@@ -821,12 +866,13 @@ class AutocorrectHostBinderAndroidTest {
         assertTrue("fixture failed to send synthetic UI reply", result.getBoolean("sent"))
     }
 
-    private fun latestPluginUiRequestId() = synchronized(manager) {
-        AutocorrectPluginManager::class.java.getDeclaredField("latestPluginUiRequestId").let { field ->
+    private fun latestPluginUiRequestId() = synchronized(manager) { uiOperations().latestId }
+
+    private fun uiOperations() = AutocorrectPluginManager::class.java
+        .getDeclaredField("pluginUiOperations").let { field ->
             field.isAccessible = true
-            field.getLong(manager)
+            field.get(manager) as PluginUiOperationLedger
         }
-    }
 
     @Suppress("UNCHECKED_CAST")
     private fun <T> managerSet(name: String): Set<T> = synchronized(manager) {
@@ -836,16 +882,13 @@ class AutocorrectHostBinderAndroidTest {
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun dictionaryActionGrantIds(): Set<Long> = synchronized(manager) {
-        AutocorrectPluginManager::class.java.getDeclaredField("pendingDictionaryMutationActions")
-            .let { field ->
-                field.isAccessible = true
-                (field.get(manager) as Map<Long, String>).keys.toSet()
-            }
+        uiOperations().actionGrantIds()
     }
 
-    private fun pendingUiOperationIds(): Set<Long> = managerSet("pendingPluginUiOperations")
+    private fun pendingUiOperationIds(): Set<Long> = synchronized(manager) {
+        uiOperations().pendingMutationIds()
+    }
 
     private fun activePickerLeaseIds(): Set<Long> = managerSet("activePluginUiPickerLeaseIds")
 

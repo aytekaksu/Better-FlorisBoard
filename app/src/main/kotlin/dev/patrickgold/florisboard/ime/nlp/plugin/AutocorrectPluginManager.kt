@@ -351,11 +351,7 @@ class AutocorrectPluginManager internal constructor(
     private val finalRequestSnapshots = FinalRequestSnapshots()
     private val pendingHostSettingValues =
         ConcurrentHashMap<AutocorrectPluginHostSetting, Boolean>()
-    private val pendingPluginUiOperations = mutableSetOf<Long>()
-    private val pendingPluginUiDocumentOperations = mutableSetOf<Long>()
-    private var pendingPluginUiReadRequestId: Long? = null
-    private val pendingDictionaryMutationActions =
-        mutableMapOf<Long, String>()
+    private val pluginUiOperations = PluginUiOperationLedger()
     private val hostSettingMutationGuard = Mutex()
     private val userDictionaryRequestGuard = Mutex()
     private val hostUserDictionary get() = dictionaryManager.systemUserDictionary
@@ -383,7 +379,6 @@ class AutocorrectPluginManager internal constructor(
         get() = hostState.session?.let { it.configuration.toAutocorrectSession(it.sessionId) }
     private val connectionReady = ConnectionReadySlot<Messenger>()
     @Volatile private var latestSuggestionRequestId = -1L
-    @Volatile private var latestPluginUiRequestId = -1L
     private val activeProviderId get() = hostState.session?.providerId?.value.orEmpty()
     private val bindingLease: BindingLease?
         get() = when (val binding = hostState.binding) {
@@ -407,7 +402,6 @@ class AutocorrectPluginManager internal constructor(
     @Volatile private var uiClientCount = 0
     private val activePluginUiPickerLeaseIds = mutableSetOf<Long>()
     private var pluginUiLifecycleRevision = 0L
-    private var preparingPluginUiDocuments = 0
     private val pendingPluginUiDocumentJobs = mutableSetOf<Job>()
     private var serviceConnection: ServiceConnection? = null
     private data class HostCommand(
@@ -786,62 +780,60 @@ class AutocorrectPluginManager internal constructor(
             return
         }
         activePluginUiPickerLeaseIds.remove(pickerLease.id)
-        preparingPluginUiDocuments++
         val uiLifecycleRevision = pickerLease.lifecycleRevision
         lateinit var job: Job
         job = scope.launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
-            try {
-                val sent = runCatching {
-                    val resolver = appContext.contentResolver
-                    val displayName = runCatching {
-                        resolver.query(
-                            uri,
-                            arrayOf(OpenableColumns.DISPLAY_NAME),
-                            null,
-                            null,
-                            null,
-                        )?.use { cursor ->
-                            val column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                            cursor.takeIf { column >= 0 && it.moveToFirst() }?.getString(column)
-                        }
-                    }.getOrNull()
-                    val mimeType = runCatching { resolver.getType(uri) }.getOrNull()
-                    resolver.openFileDescriptor(
+            val sent = runCatching {
+                val resolver = appContext.contentResolver
+                val displayName = runCatching {
+                    resolver.query(
                         uri,
-                        if (write) "rwt" else "r",
-                    )?.use { fileDescriptor ->
-                        sendPluginUiOperation(
-                            what = AutocorrectPluginContract.MSG_PLUGIN_UI_DOCUMENT,
-                            expectedProviderId = expectedProviderId,
-                            expectedUiLifecycleRevision = uiLifecycleRevision,
-                            isDocumentOperation = true,
-                        ) { requestId ->
-                            pluginUiDocumentBundle(
-                                requestId = requestId,
-                                itemId = itemId,
-                                displayName = displayName,
-                                mimeType = mimeType,
-                                write = write,
-                                fileDescriptor = fileDescriptor,
-                            )
-                        } != null
-                    } ?: false
-                }.getOrDefault(false)
-                if (!sent) {
-                    synchronized(this@AutocorrectPluginManager) {
-                        if (pluginUiLifecycleRevision == uiLifecycleRevision) {
-                            _pluginUiError.value = true
-                        }
+                        arrayOf(OpenableColumns.DISPLAY_NAME),
+                        null,
+                        null,
+                        null,
+                    )?.use { cursor ->
+                        val column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        cursor.takeIf { column >= 0 && it.moveToFirst() }?.getString(column)
+                    }
+                }.getOrNull()
+                val mimeType = runCatching { resolver.getType(uri) }.getOrNull()
+                resolver.openFileDescriptor(
+                    uri,
+                    if (write) "rwt" else "r",
+                )?.use { fileDescriptor ->
+                    sendPluginUiOperation(
+                        what = AutocorrectPluginContract.MSG_PLUGIN_UI_DOCUMENT,
+                        expectedProviderId = expectedProviderId,
+                        expectedUiLifecycleRevision = uiLifecycleRevision,
+                    ) { requestId ->
+                        pluginUiDocumentBundle(
+                            requestId = requestId,
+                            itemId = itemId,
+                            displayName = displayName,
+                            mimeType = mimeType,
+                            write = write,
+                            fileDescriptor = fileDescriptor,
+                        )
+                    } != null
+                } ?: false
+            }.getOrDefault(false)
+            if (!sent) {
+                synchronized(this@AutocorrectPluginManager) {
+                    if (pluginUiLifecycleRevision == uiLifecycleRevision) {
+                        _pluginUiError.value = true
                     }
                 }
-            } finally {
-                finishPluginUiDocumentPreparation(uiLifecycleRevision)
             }
         }
         pendingPluginUiDocumentJobs.add(job)
         job.invokeOnCompletion {
             synchronized(this) {
-                pendingPluginUiDocumentJobs.remove(job)
+                if (pendingPluginUiDocumentJobs.remove(job) &&
+                    pluginUiLifecycleRevision == uiLifecycleRevision
+                ) {
+                    if (!closePluginUiIfIdle()) releaseBindingIfIdle()
+                }
             }
         }
         job.start()
@@ -925,23 +917,28 @@ class AutocorrectPluginManager internal constructor(
         }
     }
 
+    private fun pluginUiOperationKind(what: Int) = when (what) {
+        AutocorrectPluginContract.MSG_GET_PLUGIN_UI -> PluginUiOperationLedger.Kind.READ
+        AutocorrectPluginContract.MSG_PLUGIN_UI_DOCUMENT -> PluginUiOperationLedger.Kind.DOCUMENT
+        AutocorrectPluginContract.MSG_INVOKE_PLUGIN_UI_ACTION -> PluginUiOperationLedger.Kind.ACTION
+        else -> PluginUiOperationLedger.Kind.MUTATION
+    }
+
     @Synchronized
     private fun sendPluginUiOperation(
         what: Int,
         expectedProviderId: String,
         expectedUiLifecycleRevision: Long? = null,
-        isDocumentOperation: Boolean = false,
         data: (Long) -> Bundle,
     ): Long? {
+        val kind = pluginUiOperationKind(what)
         val isCurrentUiLifecycle =
             expectedUiLifecycleRevision == null ||
                 expectedUiLifecycleRevision == pluginUiLifecycleRevision
+        val hasClient = uiClientCount > 0 ||
+            (kind == PluginUiOperationLedger.Kind.DOCUMENT && pendingPluginUiDocumentJobs.isNotEmpty())
         val service = currentPhysicalRemote()?.takeIf {
-            isCurrentUiLifecycle &&
-                (
-                    uiClientCount > 0 ||
-                        (isDocumentOperation && preparingPluginUiDocuments > 0)
-                    ) &&
+            isCurrentUiLifecycle && hasClient &&
                 expectedProviderId.isNotBlank() &&
                 expectedProviderId == boundProviderId &&
                 expectedProviderId == prefs.suggestion.autocorrectPluginComponent.get()
@@ -950,23 +947,16 @@ class AutocorrectPluginManager internal constructor(
             return null
         }
         val requestId = nextId.getAndIncrement()
-        pendingPluginUiReadRequestId = null
-        latestPluginUiRequestId = requestId
+        pluginUiOperations.start(
+            requestId,
+            kind,
+            expectedProviderId.takeIf { kind == PluginUiOperationLedger.Kind.ACTION },
+        )
         _pluginUiError.value = false
         _pluginUiLoading.value = true
-        pendingPluginUiOperations.add(requestId)
-        if (isDocumentOperation) {
-            pendingPluginUiDocumentOperations.add(requestId)
-        }
-        if (what == AutocorrectPluginContract.MSG_INVOKE_PLUGIN_UI_ACTION) {
-            pendingDictionaryMutationActions[requestId] = expectedProviderId
-        }
         if (!send(what, data(requestId), service)) {
-            pendingPluginUiOperations.remove(requestId)
-            pendingPluginUiDocumentOperations.remove(requestId)
-            pendingDictionaryMutationActions.remove(requestId)
-            _pluginUiError.value = true
-            _pluginUiLoading.value = false
+            pluginUiOperations.finish(requestId)
+            reportPluginUiFailure()
             return null
         }
         return requestId
@@ -977,20 +967,11 @@ class AutocorrectPluginManager internal constructor(
         if (service == null || service !== currentPhysicalRemote() ||
             prefs.suggestion.autocorrectPluginComponent.get() != boundProviderId
         ) return
-        val requestId = nextId.getAndIncrement()
-        pendingPluginUiReadRequestId = requestId
-        latestPluginUiRequestId = requestId
-        _pluginUiError.value = false
-        _pluginUiLoading.value = true
-        if (!send(
-                AutocorrectPluginContract.MSG_GET_PLUGIN_UI,
-                pluginUiRequestBundle(requestId, configuredLanguageTags()),
-                service,
-            )
-        ) {
-            pendingPluginUiReadRequestId = null
-            _pluginUiError.value = true
-            _pluginUiLoading.value = false
+        sendPluginUiOperation(
+            AutocorrectPluginContract.MSG_GET_PLUGIN_UI,
+            boundProviderId,
+        ) { requestId ->
+            pluginUiRequestBundle(requestId, configuredLanguageTags())
         }
     }
 
@@ -1008,50 +989,31 @@ class AutocorrectPluginManager internal constructor(
     }
 
     @Synchronized
-    private fun finishPluginUiOperation(requestId: Long): Boolean {
-        if (!pendingPluginUiOperations.remove(requestId)) return false
-        pendingPluginUiDocumentOperations.remove(requestId)
-        val wasLatest = latestPluginUiRequestId == requestId
-        if (wasLatest) {
-            _pluginUiLoading.value = false
+    private fun finishPluginUiOperation(requestId: Long) {
+        val operation = pluginUiOperations.finish(requestId) ?: return
+        if (pluginUiOperations.isLatest(requestId)) _pluginUiLoading.value = false
+        if (operation.kind != PluginUiOperationLedger.Kind.READ && !closePluginUiIfIdle()) {
+            releaseBindingIfIdle()
         }
-        if (!closePluginUiIfIdle()) releaseBindingIfIdle()
-        return wasLatest
-    }
-
-    @Synchronized
-    private fun finishPluginUiDocumentPreparation(uiLifecycleRevision: Long) {
-        if (pluginUiLifecycleRevision != uiLifecycleRevision) return
-        preparingPluginUiDocuments = (preparingPluginUiDocuments - 1).coerceAtLeast(0)
-        if (!closePluginUiIfIdle()) releaseBindingIfIdle()
     }
 
     private fun invalidatePluginUiDocuments() {
         pluginUiLifecycleRevision++
         activePluginUiPickerLeaseIds.clear()
-        preparingPluginUiDocuments = 0
-        pendingPluginUiDocumentOperations.forEach(pendingPluginUiOperations::remove)
-        pendingPluginUiDocumentOperations.clear()
+        pluginUiOperations.invalidateDocuments()
         val jobs = pendingPluginUiDocumentJobs.toList()
         pendingPluginUiDocumentJobs.clear()
         jobs.forEach(Job::cancel)
     }
 
-    private fun clearPendingPluginUiOperations() {
-        pendingPluginUiReadRequestId = null
-        pendingPluginUiOperations.clear()
-        pendingPluginUiDocumentOperations.clear()
-        pendingDictionaryMutationActions.clear()
-    }
-
     private fun hasPluginUiDemand() =
         uiClientCount > 0 || activePluginUiPickerLeaseIds.isNotEmpty() ||
-            preparingPluginUiDocuments > 0 || pendingPluginUiDocumentOperations.isNotEmpty()
+            pendingPluginUiDocumentJobs.isNotEmpty() || pluginUiOperations.hasDocument
 
     private fun closePluginUiIfIdle(): Boolean {
         if (hasPluginUiDemand()) return false
         invalidatePluginUiDocuments()
-        clearPendingPluginUiOperations()
+        pluginUiOperations.clear()
         send(AutocorrectPluginContract.MSG_PLUGIN_UI_CLOSED, Bundle())
         providerPluginUi = null
         _pluginUi.value = null
@@ -1059,9 +1021,6 @@ class AutocorrectPluginManager internal constructor(
         releaseBindingIfIdle()
         return true
     }
-
-    private fun hasInFlightPluginUiOperation() =
-        preparingPluginUiDocuments > 0 || pendingPluginUiOperations.isNotEmpty()
 
     private fun syncSelectedProvider() {
         val selected = prefs.suggestion.autocorrectPluginComponent.get()
@@ -1077,7 +1036,7 @@ class AutocorrectPluginManager internal constructor(
     }
 
     private fun reconcileUiBindingDemand() {
-        dispatchHost(HostEvent.SetUiBindingDemand(hasPluginUiDemand() || hasInFlightPluginUiOperation()))
+        dispatchHost(HostEvent.SetUiBindingDemand(hasPluginUiDemand()))
     }
 
     private fun releaseBindingIfIdle(): Boolean {
@@ -1253,7 +1212,7 @@ class AutocorrectPluginManager internal constructor(
             send(AutocorrectPluginContract.MSG_PLUGIN_UI_CLOSED, Bundle())
         }
         invalidatePluginUiDocuments()
-        clearPendingPluginUiOperations()
+        pluginUiOperations.clear()
         reconcileUiBindingDemand()
         val selected = prefs.suggestion.autocorrectPluginComponent.get()
             .takeIf(String::isNotBlank)?.let(::ProviderId)
@@ -1719,7 +1678,7 @@ class AutocorrectPluginManager internal constructor(
             }
             uiClientCount = 0
             invalidatePluginUiDocuments()
-            clearPendingPluginUiOperations()
+            pluginUiOperations.clear()
             pendingHostSettingValues.clear()
             providerPluginUi = null
             _pluginUi.value = null
@@ -1833,7 +1792,7 @@ class AutocorrectPluginManager internal constructor(
         remote = null
         boostedCodePoints = emptySet()
         invalidatePluginUiDocuments()
-        clearPendingPluginUiOperations()
+        pluginUiOperations.clear()
         reconcileUiBindingDemand()
         if (activeSessionId != null) connectionReady.replace() else connectionReady.close()
         failPending()
@@ -1983,7 +1942,7 @@ class AutocorrectPluginManager internal constructor(
             remote = null
             boostedCodePoints = emptySet()
             invalidatePluginUiDocuments()
-            clearPendingPluginUiOperations()
+            pluginUiOperations.clear()
             reconcileUiBindingDemand()
             providerPluginUi = null
             _pluginUi.value = null
@@ -2214,14 +2173,12 @@ class AutocorrectPluginManager internal constructor(
             }
             AutocorrectUserDictionaryOperation.UPSERT,
             AutocorrectUserDictionaryOperation.DELETE -> {
-                val grantedProviderId =
-                    pendingDictionaryMutationActions[request.originUiRequestId]
                 if (
                     hasDictionaryMutationAccess(
                         uiClientCount = uiClientCount,
                         selectedProviderId = selectedProviderId,
                         providerId = providerId,
-                        grantProviderId = grantedProviderId,
+                        grantProviderId = pluginUiOperations.grantFor(request.originUiRequestId),
                     )
                 ) {
                     emptyList()
@@ -2247,9 +2204,7 @@ class AutocorrectPluginManager internal constructor(
         request: AutocorrectUserDictionaryRequest,
     ) {
         if (request.operation != AutocorrectUserDictionaryOperation.QUERY) {
-            pendingDictionaryMutationActions[request.originUiRequestId]
-                ?.takeIf { it == providerId }
-                ?.let { pendingDictionaryMutationActions.remove(request.originUiRequestId, it) }
+            pluginUiOperations.revokeGrant(request.originUiRequestId, providerId)
         }
     }
 
@@ -2618,7 +2573,7 @@ class AutocorrectPluginManager internal constructor(
                 rejectMalformedPluginUiReply(requestId)
                 return
             }
-            if (requestId != 0L && !ownsPluginUiReply(requestId)) {
+            if (requestId != 0L && !pluginUiOperations.owns(requestId)) {
                 diagnostics.record(
                     AutocorrectPluginDiagnosticEvent.ReplyRejected(
                         bindingEpoch = bindingEpoch,
@@ -2628,12 +2583,10 @@ class AutocorrectPluginManager internal constructor(
                 )
                 return
             }
-            if (pendingPluginUiReadRequestId == requestId) pendingPluginUiReadRequestId = null
-            pendingDictionaryMutationActions.remove(requestId)
+            val wasLatest = pluginUiOperations.isLatest(requestId)
             finishPluginUiOperation(requestId)
-            if (requestId == latestPluginUiRequestId) _pluginUiLoading.value = false
             if (uiClientCount > 0 &&
-                (requestId == 0L || requestId == latestPluginUiRequestId)
+                (requestId == 0L || wasLatest)
             ) {
                 _pluginUiError.value = !result.successful
                 if (result.successful || result.ui != null) {
@@ -2646,34 +2599,23 @@ class AutocorrectPluginManager internal constructor(
         private fun rejectMalformedPluginUiReply(requestId: Long?) {
             recordMalformedReply(AutocorrectPluginDiagnosticOperation.PLUGIN_UI)
             if (requestId == 0L) return // An unsolicited push owns no pending operation.
-            if (requestId == null) {
-                val wasLoading = _pluginUiLoading.value
-                if (!wasLoading && pendingPluginUiReadRequestId == null &&
-                    pendingPluginUiOperations.isEmpty()
-                ) return
-                clearPendingPluginUiOperations()
-                latestPluginUiRequestId = nextId.getAndIncrement()
-                if (uiClientCount > 0) _pluginUiError.value = true
-                _pluginUiLoading.value = false
-                if (!closePluginUiIfIdle()) releaseBindingIfIdle()
-                return
+            val wasLatest = if (requestId == null) {
+                if (!_pluginUiLoading.value && !pluginUiOperations.hasPending) return
+                pluginUiOperations.clear()
+                true
+            } else {
+                if (!pluginUiOperations.owns(requestId)) return
+                val latest = pluginUiOperations.isLatest(requestId)
+                finishPluginUiOperation(requestId)
+                latest
             }
-            if (!ownsPluginUiReply(requestId)) return
-            val wasLatest = requestId == latestPluginUiRequestId
-            if (pendingPluginUiReadRequestId == requestId) pendingPluginUiReadRequestId = null
-            pendingDictionaryMutationActions.remove(requestId)
-            finishPluginUiOperation(requestId)
             if (wasLatest) {
-                latestPluginUiRequestId = nextId.getAndIncrement()
+                pluginUiOperations.tombstone(nextId.getAndIncrement())
                 _pluginUiLoading.value = false
-                if (uiClientCount > 0) {
-                    _pluginUiError.value = true
-                }
+                if (uiClientCount > 0) _pluginUiError.value = true
             }
+            if (requestId == null && !closePluginUiIfIdle()) releaseBindingIfIdle()
         }
-
-        private fun ownsPluginUiReply(requestId: Long) =
-            requestId == pendingPluginUiReadRequestId || requestId in pendingPluginUiOperations
 
         private fun recordMalformedReply(operation: AutocorrectPluginDiagnosticOperation) {
             diagnostics.record(
