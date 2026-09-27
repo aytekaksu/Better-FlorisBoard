@@ -33,16 +33,32 @@ import org.florisboard.lib.android.systemService
 
 @Suppress("MemberVisibilityCanBePrivate")
 object Devtools {
+    internal data class DebugLogSnapshot(
+        val header: String,
+        val diagnostics: String?,
+    )
+
+    internal fun captureDebugLog(
+        context: Context,
+        prefs: FlorisPreferenceModel? = null,
+        includeDiagnostics: Boolean = false,
+    ): DebugLogSnapshot = DebugLogSnapshot(
+        header = generateDebugLogHeader(context, prefs),
+        diagnostics = if (includeDiagnostics) generateDiagnosticDump() else null,
+    )
+
     fun generateDebugLog(
         context: Context,
         prefs: FlorisPreferenceModel? = null,
         includeDiagnostics: Boolean = false,
-    ): String {
+    ): String = renderDebugLog(captureDebugLog(context, prefs, includeDiagnostics))
+
+    internal fun renderDebugLog(snapshot: DebugLogSnapshot): String {
         return buildString {
-            append(generateDebugLogHeader(context, prefs))
-            if (includeDiagnostics) {
+            append(snapshot.header)
+            snapshot.diagnostics?.let { diagnostics ->
                 appendLine()
-                append(generateDiagnosticDump())
+                append(diagnostics)
             }
         }
     }
@@ -67,23 +83,25 @@ object Devtools {
         context: Context,
         prefs: FlorisPreferenceModel? = null,
         includeDiagnostics: Boolean = false,
-    ): String {
+    ): String = renderDebugLogForGithub(captureDebugLog(context, prefs, includeDiagnostics))
+
+    internal fun renderDebugLogForGithub(snapshot: DebugLogSnapshot): String {
         return buildString {
             appendLine("<details>")
             appendLine("<summary>Diagnostic report header</summary>")
             appendLine()
             appendLine("```")
-            append(generateDebugLogHeader(context, prefs))
+            append(snapshot.header)
             appendLine()
             appendLine("```")
             appendLine("</details>")
-            if (includeDiagnostics) {
+            snapshot.diagnostics?.let { diagnostics ->
                 appendLine()
                 appendLine("<details>")
                 appendLine("<summary>App diagnostics</summary>")
                 appendLine()
                 appendLine("```")
-                append(generateDiagnosticDump())
+                append(diagnostics)
                 appendLine()
                 appendLine("```")
                 appendLine("</details>")

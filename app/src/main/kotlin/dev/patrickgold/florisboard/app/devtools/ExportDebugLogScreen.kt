@@ -43,12 +43,19 @@ import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.lib.devtools.Devtools
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.florisboard.lib.android.showShortToast
 import org.florisboard.lib.compose.FlorisButton
 import org.florisboard.lib.compose.florisHorizontalScroll
 import org.florisboard.lib.compose.florisScrollbar
 import org.florisboard.lib.compose.stringRes
+
+private data class DebugLogExport(
+    val plainLines: List<String>,
+    val githubLines: List<String>,
+)
 
 // TODO: This screen is just a quick thrown-together thing and needs further enhancing in the UI
 @Composable
@@ -61,12 +68,16 @@ fun ExportDebugLogScreen() = FlorisScreen {
     val scope = rememberCoroutineScope()
     val clipboardManager by context.clipboardManager()
 
-    var debugLog by remember { mutableStateOf<List<String>?>(null) }
-    var formattedDebugLog by remember { mutableStateOf<List<String>?>(null) }
+    var debugLog by remember { mutableStateOf<DebugLogExport?>(null) }
 
     LaunchedEffect(Unit) {
-        debugLog = Devtools.generateDebugLog(context, prefs, includeDiagnostics = true).lines()
-        formattedDebugLog = Devtools.generateDebugLogForGithub(context, prefs, includeDiagnostics = true).lines()
+        debugLog = withContext(Dispatchers.IO) {
+            val snapshot = Devtools.captureDebugLog(context, prefs, includeDiagnostics = true)
+            DebugLogExport(
+                plainLines = Devtools.renderDebugLog(snapshot).lines(),
+                githubLines = Devtools.renderDebugLogForGithub(snapshot).lines(),
+            )
+        }
     }
 
     bottomBar {
@@ -76,7 +87,7 @@ fun ExportDebugLogScreen() = FlorisScreen {
         ) {
             FlorisButton(
                 onClick = {
-                    clipboardManager.addNewPlaintext(debugLog!!.joinToString("\n"))
+                    clipboardManager.addNewPlaintext(debugLog!!.plainLines.joinToString("\n"))
                     scope.launch { context.showShortToast(R.string.devtools__debuglog__copied_to_clipboard) }
                 },
                 modifier = Modifier,
@@ -85,7 +96,7 @@ fun ExportDebugLogScreen() = FlorisScreen {
             )
             FlorisButton(
                 onClick = {
-                    clipboardManager.addNewPlaintext(formattedDebugLog!!.joinToString("\n"))
+                    clipboardManager.addNewPlaintext(debugLog!!.githubLines.joinToString("\n"))
                     scope.launch { context.showShortToast(R.string.devtools__debuglog__copied_to_clipboard) }
                 },
                 text = stringRes(R.string.devtools__debuglog__copy_for_github),
@@ -111,7 +122,7 @@ fun ExportDebugLogScreen() = FlorisScreen {
                         Text(stringRes(R.string.devtools__debuglog__loading))
                     }
                 } else {
-                    items(log) { logLine ->
+                    items(log.plainLines) { logLine ->
                         Text(
                             text = logLine,
                             fontFamily = FontFamily.Monospace,

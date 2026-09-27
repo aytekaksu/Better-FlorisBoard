@@ -44,6 +44,8 @@ diagnostics in every build. Release builds retain this snapshot without writing
 it to Logcat and capture only warnings and errors to keep input paths cheap. The
 report never reads raw logcat, so Android and third-party messages cannot enter
 it. Review device and configuration details before sharing.
+The export screen captures the report once in the background and makes both copy
+formats from that same snapshot.
 
 Never add temporary logs containing:
 
