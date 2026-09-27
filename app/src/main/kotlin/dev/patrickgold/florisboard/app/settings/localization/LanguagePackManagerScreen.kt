@@ -59,18 +59,17 @@ import org.florisboard.lib.compose.FlorisTextButton
 import org.florisboard.lib.compose.defaultFlorisOutlinedBox
 import org.florisboard.lib.compose.stringRes
 
-enum class LanguagePackManagerScreenAction(val id: String) {
-    MANAGE("manage-installed-language-packs");
+enum class LanguagePackManagerScreenAction {
+    MANAGE;
 }
 
-// TODO: this file is based on ThemeManagerScreen.kt and can arguably be merged.
 @OptIn(ExperimentalJetPrefDatastoreUi::class)
 @Composable
 fun LanguagePackManagerScreen(action: LanguagePackManagerScreenAction?) = FlorisScreen {
-    title = stringRes(when (action) {
-        LanguagePackManagerScreenAction.MANAGE -> R.string.settings__localization__language_pack_title
-        else -> error("LanguagePack manager screen action must not be null")
-    })
+    if (action != LanguagePackManagerScreenAction.MANAGE) {
+        error("LanguagePack manager screen action must not be null")
+    }
+    title = stringRes(R.string.settings__localization__language_pack_title)
 
     val navController = LocalNavController.current
     val context = LocalContext.current
@@ -89,18 +88,16 @@ fun LanguagePackManagerScreen(action: LanguagePackManagerScreenAction?) = Floris
     var languagePackExtToDelete by remember { mutableStateOf<Extension?>(null) }
 
     content {
-        if (action == LanguagePackManagerScreenAction.MANAGE) {
-            FlorisOutlinedBox(
-                modifier = Modifier.defaultFlorisOutlinedBox(),
-            ) {
-                Preference(
-                    onClick = { navController.navigate(
-                        Routes.Ext.Import(ExtensionImportScreenType.EXT_LANGUAGEPACK, null)
-                    ) },
-                    icon = Icons.AutoMirrored.Filled.Input,
-                    title = stringRes(R.string.action__import),
-                )
-            }
+        FlorisOutlinedBox(
+            modifier = Modifier.defaultFlorisOutlinedBox(),
+        ) {
+            Preference(
+                onClick = { navController.navigate(
+                    Routes.Ext.Import(ExtensionImportScreenType.EXT_LANGUAGEPACK, null)
+                ) },
+                icon = Icons.AutoMirrored.Filled.Input,
+                title = stringRes(R.string.action__import),
+            )
         }
         for ((extensionId, configs) in extGroupedLanguagePacks) key(extensionId) {
             val ext = extensionManager.getExtensionById(extensionId)!!
@@ -123,7 +120,7 @@ fun LanguagePackManagerScreen(action: LanguagePackManagerScreenAction?) = Floris
                         )
                     }
                 }
-                if (action == LanguagePackManagerScreenAction.MANAGE && extensionManager.canDelete(ext)) {
+                if (extensionManager.canDelete(ext)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
