@@ -18,6 +18,7 @@ package dev.patrickgold.florisboard.ime.input
 
 import dev.patrickgold.florisboard.ime.keyboard.KeyData
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
@@ -78,6 +79,100 @@ class InputEventDispatcherTest : FunSpec({
         dispatcher.close()
     }
 
+    test("reentrant down keeps the nested key current without changing the outer snapshot") {
+        val dispatcher = testDispatcher()
+        val nested = TextKeyData(code = 'b'.code, label = "b")
+        val observed = mutableListOf<Boolean>()
+        dispatcher.keyEventReceiver = object : EmptyReceiver() {
+            override fun onInputKeyDown(data: KeyData) {
+                when (data.code) {
+                    letter.code -> {
+                        observed.add(dispatcher.isUninterruptedEventSequence(letter))
+                        dispatcher.sendDownUp(nested)
+                        observed.add(dispatcher.isUninterruptedEventSequence(letter))
+                    }
+                    nested.code -> observed.add(dispatcher.isUninterruptedEventSequence(letter))
+                }
+            }
+        }
+
+        dispatcher.sendDown(letter, false, false)
+
+        observed shouldBe listOf(false, true, false)
+        dispatcher.isUninterruptedEventSequence(nested) shouldBe true
+        dispatcher.close()
+    }
+
+    test("reentrant up keeps the nested release current without changing the outer snapshot") {
+        val dispatcher = testDispatcher()
+        val nested = TextKeyData(code = 'b'.code, label = "b")
+        dispatcher.sendDown(letter, false, false)
+        val observed = mutableListOf<Boolean>()
+        dispatcher.keyEventReceiver = object : EmptyReceiver() {
+            override fun onInputKeyUp(data: KeyData) {
+                when (data.code) {
+                    letter.code -> {
+                        observed.add(dispatcher.isConsecutiveUp(letter))
+                        dispatcher.sendDownUp(nested)
+                        observed.add(dispatcher.isConsecutiveUp(letter))
+                    }
+                    nested.code -> observed.add(dispatcher.isConsecutiveUp(letter))
+                }
+            }
+        }
+
+        dispatcher.sendUp(letter) shouldBe true
+
+        observed shouldBe listOf(false, true, false)
+        dispatcher.isConsecutiveUp(nested) shouldBe true
+        dispatcher.close()
+    }
+
+    test("combined key dispatch retains nested down history through its own up") {
+        val dispatcher = testDispatcher()
+        val nested = TextKeyData(code = 'b'.code, label = "b")
+        var nestedSawOuterDown = false
+        var outerUpSawNestedDown = false
+        dispatcher.keyEventReceiver = object : EmptyReceiver() {
+            override fun onInputKeyDown(data: KeyData) {
+                when (data.code) {
+                    letter.code -> dispatcher.sendDownUp(nested)
+                    nested.code -> nestedSawOuterDown = dispatcher.isUninterruptedEventSequence(letter)
+                }
+            }
+
+            override fun onInputKeyUp(data: KeyData) {
+                if (data.code == letter.code) {
+                    outerUpSawNestedDown = dispatcher.isUninterruptedEventSequence(nested)
+                }
+            }
+        }
+
+        dispatcher.sendDownUp(letter)
+
+        nestedSawOuterDown shouldBe true
+        outerUpSawNestedDown shouldBe true
+        dispatcher.isUninterruptedEventSequence(nested) shouldBe true
+        dispatcher.isConsecutiveUp(letter) shouldBe true
+        dispatcher.close()
+    }
+
+    test("history advances without a receiver and when a receiver throws") {
+        val dispatcher = testDispatcher()
+        val nested = TextKeyData(code = 'b'.code, label = "b")
+        dispatcher.sendDownUp(letter)
+        dispatcher.isConsecutiveDown(letter) shouldBe true
+        dispatcher.isConsecutiveUp(letter) shouldBe true
+        dispatcher.keyEventReceiver = object : EmptyReceiver() {
+            override fun onInputKeyDown(data: KeyData): Unit = throw IllegalStateException("receiver failed")
+        }
+
+        shouldThrow<IllegalStateException> { dispatcher.sendDown(nested, false, false) }
+
+        dispatcher.isUninterruptedEventSequence(nested) shouldBe true
+        dispatcher.close()
+    }
+
     test("lifecycle invalidation drops queued double-tap history") {
         val dispatcher = testDispatcher()
         val consecutiveEvents = mutableListOf<Boolean>()
@@ -93,6 +188,7 @@ class InputEventDispatcherTest : FunSpec({
         dispatcher.deferInputEvents(start = {})
         dispatcher.sendDownUp(TextKeyData.SPACE)
         dispatcher.invalidatePendingInputEvents()
+        dispatcher.isUninterruptedEventSequence(TextKeyData.SPACE) shouldBe false
         dispatcher.sendDownUp(TextKeyData.SPACE)
 
         consecutiveEvents shouldBe listOf(false, false)

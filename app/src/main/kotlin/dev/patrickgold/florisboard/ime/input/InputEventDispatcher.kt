@@ -205,10 +205,12 @@ class InputEventDispatcher internal constructor(
     private fun dispatchToReceiver(
         eventTime: Long = uptimeMillis(),
         isStillValid: () -> Boolean = { true },
+        recordDown: EventData? = null,
+        recordUp: EventData? = null,
         action: InputKeyEventReceiver.() -> Unit,
     ) {
-        val receiver = keyEventReceiver ?: return
-        val state = ReceiverState(
+        val receiver = keyEventReceiver
+        val state = if (receiver == null) null else ReceiverState(
             pressedKeyCodes = synchronized(pressedKeysLock) {
                 IntArray(pressedKeys.size()) { index -> pressedKeys.keyAt(index) }
             },
@@ -216,6 +218,10 @@ class InputEventDispatcher internal constructor(
             lastKeyEventUp = lastKeyEventUp,
             eventTime = eventTime,
         )
+        // Keep this event out of its own snapshot, but visible to reentrant input.
+        recordDown?.let { lastKeyEventDown = it }
+        recordUp?.let { lastKeyEventUp = it }
+        if (receiver == null) return
         receiverQueue.dispatch receiverDispatch@ {
             if (!isStillValid()) return@receiverDispatch
             val previousState = activeReceiverState.get()
@@ -318,8 +324,7 @@ class InputEventDispatcher internal constructor(
             pressedKeyInfo
         }
         if (result != null) {
-            dispatchToReceiver(eventTime) { onInputKeyDown(data) }
-            lastKeyEventDown = EventData(eventTime, data)
+            dispatchToReceiver(eventTime, recordDown = EventData(eventTime, data)) { onInputKeyDown(data) }
         }
         return result
     }
@@ -331,8 +336,7 @@ class InputEventDispatcher internal constructor(
         val isBlocked = removePressedKey(data, expected) ?: return false
         if (!isBlocked) {
             val eventTime = uptimeMillis()
-            dispatchToReceiver(eventTime) { onInputKeyUp(data) }
-            lastKeyEventUp = EventData(eventTime, data)
+            dispatchToReceiver(eventTime, recordUp = EventData(eventTime, data)) { onInputKeyUp(data) }
         } else {
             dispatchToReceiver { onInputKeyCancel(data) }
         }
@@ -342,10 +346,8 @@ class InputEventDispatcher internal constructor(
     fun sendDownUp(data: KeyData) {
         removePressedKey(data)
         val eventData = EventData(uptimeMillis(), data)
-        dispatchToReceiver(eventData.time) { onInputKeyDown(data) }
-        lastKeyEventDown = eventData
-        dispatchToReceiver(eventData.time) { onInputKeyUp(data) }
-        lastKeyEventUp = eventData
+        dispatchToReceiver(eventData.time, recordDown = eventData) { onInputKeyDown(data) }
+        dispatchToReceiver(eventData.time, recordUp = eventData) { onInputKeyUp(data) }
     }
 
     fun sendCancel(
