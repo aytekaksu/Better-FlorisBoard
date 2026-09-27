@@ -49,6 +49,11 @@ enum class OperationScope {
 }
 
 private const val NumCharsSafeMarginBeforeCursor: Int = 128
+private val VirtualModifierKeys = arrayOf(
+    KeyEvent.META_CTRL_ON to KeyEvent.KEYCODE_CTRL_LEFT,
+    KeyEvent.META_ALT_ON to KeyEvent.KEYCODE_ALT_LEFT,
+    KeyEvent.META_SHIFT_ON to KeyEvent.KEYCODE_SHIFT_LEFT,
+)
 
 internal enum class EditorEditResult {
     NOT_APPLICABLE,
@@ -721,42 +726,28 @@ abstract class AbstractEditorInstance(
         return metaState
     }
 
-    private fun InputConnection.sendDownKeyEvent(eventTime: Long, keyEventCode: Int, metaState: Int, repeat: Int = 0): Boolean {
-        return this.sendKeyEvent(
-            KeyEvent(
-                eventTime,
-                eventTime,
-                KeyEvent.ACTION_DOWN,
-                keyEventCode,
-                repeat,
-                metaState,
-                KeyCharacterMap.VIRTUAL_KEYBOARD,
-                0,
-                KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE,
-                InputDevice.SOURCE_KEYBOARD,
-            )
-        )
-    }
-
-    private fun InputConnection.sendUpKeyEvent(eventTime: Long, keyEventCode: Int, metaState: Int): Boolean {
-        return this.sendKeyEvent(
-            KeyEvent(
-                eventTime,
-                SystemClock.uptimeMillis(),
-                KeyEvent.ACTION_UP,
-                keyEventCode,
-                0,
-                metaState,
-                KeyCharacterMap.VIRTUAL_KEYBOARD,
-                0,
-                KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE,
-                InputDevice.SOURCE_KEYBOARD,
-            )
-        )
-    }
+    private fun InputConnection.sendVirtualKeyEvent(
+        action: Int,
+        downTime: Long,
+        keyEventCode: Int,
+        metaState: Int,
+        repeat: Int = 0,
+    ): Boolean = sendKeyEvent(KeyEvent(
+        downTime,
+        if (action == KeyEvent.ACTION_DOWN) downTime else SystemClock.uptimeMillis(),
+        action,
+        keyEventCode,
+        repeat,
+        metaState,
+        KeyCharacterMap.VIRTUAL_KEYBOARD,
+        0,
+        KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE,
+        InputDevice.SOURCE_KEYBOARD,
+    ))
 
     /**
      * Same as [InputMethodService.sendDownUpKeyEvents] but also allows to set meta state.
+     * Presses CTRL/ALT/SHIFT in that order and releases them in reverse order.
      *
      * @param keyEventCode The key code to send, use a key code defined in Android's [KeyEvent].
      * @param metaState Flags indicating which meta keys are currently pressed.
@@ -770,27 +761,16 @@ abstract class AbstractEditorInstance(
         val ic = currentInputConnection() ?: return false
         ic.beginBatchEdit()
         val eventTime = SystemClock.uptimeMillis()
-        if (metaState and KeyEvent.META_CTRL_ON != 0) {
-            ic.sendDownKeyEvent(eventTime, KeyEvent.KEYCODE_CTRL_LEFT, 0)
-        }
-        if (metaState and KeyEvent.META_ALT_ON != 0) {
-            ic.sendDownKeyEvent(eventTime, KeyEvent.KEYCODE_ALT_LEFT, 0)
-        }
-        if (metaState and KeyEvent.META_SHIFT_ON != 0) {
-            ic.sendDownKeyEvent(eventTime, KeyEvent.KEYCODE_SHIFT_LEFT, 0)
+        for ((flag, keyCode) in VirtualModifierKeys) {
+            if (metaState and flag != 0) ic.sendVirtualKeyEvent(KeyEvent.ACTION_DOWN, eventTime, keyCode, 0)
         }
         for (n in 0 until count) {
-            ic.sendDownKeyEvent(eventTime, keyEventCode, metaState, n)
+            ic.sendVirtualKeyEvent(KeyEvent.ACTION_DOWN, eventTime, keyEventCode, metaState, n)
         }
-        ic.sendUpKeyEvent(eventTime, keyEventCode, metaState)
-        if (metaState and KeyEvent.META_SHIFT_ON != 0) {
-            ic.sendUpKeyEvent(eventTime, KeyEvent.KEYCODE_SHIFT_LEFT, 0)
-        }
-        if (metaState and KeyEvent.META_ALT_ON != 0) {
-            ic.sendUpKeyEvent(eventTime, KeyEvent.KEYCODE_ALT_LEFT, 0)
-        }
-        if (metaState and KeyEvent.META_CTRL_ON != 0) {
-            ic.sendUpKeyEvent(eventTime, KeyEvent.KEYCODE_CTRL_LEFT, 0)
+        ic.sendVirtualKeyEvent(KeyEvent.ACTION_UP, eventTime, keyEventCode, metaState)
+        for (index in VirtualModifierKeys.indices.reversed()) {
+            val (flag, keyCode) = VirtualModifierKeys[index]
+            if (metaState and flag != 0) ic.sendVirtualKeyEvent(KeyEvent.ACTION_UP, eventTime, keyCode, 0)
         }
         ic.endBatchEdit()
         return true
