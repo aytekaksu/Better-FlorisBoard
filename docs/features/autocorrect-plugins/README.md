@@ -22,7 +22,6 @@ The wire format and provider responsibilities are documented in the
 | Public message IDs, limits, models, and codecs | [`lib/autocorrect-api`](../../../lib/autocorrect-api/src/main/kotlin/org/florisboard/autocorrect/api/) |
 | Provider-side Messenger service | [`AutocorrectPluginService.kt`](../../../lib/autocorrect-api/src/main/kotlin/org/florisboard/autocorrect/api/AutocorrectPluginService.kt) |
 | Platform-neutral host state and transition rules | [`lib/autocorrect-host-core`](../../../lib/autocorrect-host-core/src/main/kotlin/org/florisboard/autocorrect/host/core/) |
-| Request admission and stale-reply adapter | [`AutocorrectSuggestionRequestCoordinator.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectSuggestionRequestCoordinator.kt) |
 | Android discovery, binding, session transport, and dictionary bridge | [`AutocorrectPluginManager.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginManager.kt) |
 | Bounded content-free lifecycle diagnostics | [`AutocorrectPluginDiagnostics.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginDiagnostics.kt) |
 | Host-rendered UI entry point | [`AutocorrectPluginUi.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginUi.kt) |
@@ -36,9 +35,10 @@ The wire format and provider responsibilities are documented in the
 
 The Android manager remains the public facade. The host core decides discovery,
 binding and session lifecycle, request identity, reply admission, and circuit
-health. The coordinator applies those transitions; the manager executes their
-effects through Android binding, `Messenger`, document pickers, and content
-resolvers. Do not duplicate reducer decisions in the adapter.
+health. The manager applies those transitions and executes their effects through
+Android binding, `Messenger`, document pickers, and content resolvers. It handles
+request effects synchronously and queues lifecycle effects; do not duplicate
+reducer decisions in the adapter.
 
 ## Data and lifecycle
 

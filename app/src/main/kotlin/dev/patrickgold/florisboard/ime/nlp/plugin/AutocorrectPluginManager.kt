@@ -116,6 +116,7 @@ import org.florisboard.autocorrect.api.removalResultFromBundle
 import org.florisboard.autocorrect.api.suggestionResultFromBundle
 import org.florisboard.autocorrect.api.userDictionaryRequestFromBundle
 import org.florisboard.autocorrect.api.userDictionaryResultBundle
+import org.florisboard.autocorrect.host.core.AutocorrectHostReducer
 import org.florisboard.autocorrect.host.core.BindingLease
 import org.florisboard.autocorrect.host.core.BindingState
 import org.florisboard.autocorrect.host.core.ConnectionLossKind
@@ -124,11 +125,14 @@ import org.florisboard.autocorrect.host.core.EditorGeneration
 import org.florisboard.autocorrect.host.core.FallbackReason
 import org.florisboard.autocorrect.host.core.HostEffect
 import org.florisboard.autocorrect.host.core.HostEvent
+import org.florisboard.autocorrect.host.core.HostState
 import org.florisboard.autocorrect.host.core.HostTransition
 import org.florisboard.autocorrect.host.core.MonotonicMillis
 import org.florisboard.autocorrect.host.core.ProviderFailureKind
 import org.florisboard.autocorrect.host.core.ProviderId
 import org.florisboard.autocorrect.host.core.ReplyRejectionReason
+import org.florisboard.autocorrect.host.core.RequestId
+import org.florisboard.autocorrect.host.core.RequestLease
 import org.florisboard.autocorrect.host.core.RequestOutcome
 import org.florisboard.autocorrect.host.core.SessionConfiguration
 import org.florisboard.autocorrect.host.core.SessionFinishLease
@@ -338,7 +342,8 @@ class AutocorrectPluginManager internal constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val nextId = AtomicLong(1L)
     private val diagnostics = AutocorrectPluginDiagnostics()
-    private val suggestionRequestCoordinator = AutocorrectSuggestionRequestCoordinator()
+    private val hostReducer = AutocorrectHostReducer()
+    @Volatile private var hostState = HostState()
     private val hostCommands = Channel<HostCommand>(Channel.UNLIMITED)
     private val pendingSuggestions =
         ConcurrentHashMap<Long, CompletableDeferred<AutocorrectSuggestionResult>>()
@@ -369,11 +374,10 @@ class AutocorrectPluginManager internal constructor(
     val keyboardUiVisible = _keyboardUiVisible.asStateFlow()
 
     internal fun diagnosticsSnapshot() = diagnostics.snapshot()
-    internal fun hostStateSnapshot() = suggestionRequestCoordinator.snapshot()
+    internal fun hostStateSnapshot() = hostState
 
     @Volatile private var remote: Messenger? = null
     @Volatile private var bound = false
-    private val hostState get() = suggestionRequestCoordinator.snapshot()
     private val activeSessionId: Long? get() = hostState.session?.sessionId?.value
     private val activeSession: AutocorrectSession?
         get() = hostState.session?.let { it.configuration.toAutocorrectSession(it.sessionId) }
@@ -453,7 +457,7 @@ class AutocorrectPluginManager internal constructor(
     @Synchronized
     private fun dispatchHost(event: HostEvent): HostTransition {
         val previousSessionId = hostState.session?.sessionId
-        val transition = suggestionRequestCoordinator.dispatchLifecycle(event)
+        val transition = reduceHost(event)
         finalRequestSnapshots.onHostEvent(event, keyboardTraits().isPrivateSession)
         if (previousSessionId != transition.state.session?.sessionId) {
             if (transition.state.session == null) connectionReady.close()
@@ -466,6 +470,16 @@ class AutocorrectPluginManager internal constructor(
             }
         }
         return transition
+    }
+
+    @Synchronized
+    private fun reduceHost(event: HostEvent): HostTransition =
+        hostReducer.reduce(hostState, event).also { hostState = it.state }
+
+    private fun cancelSuggestionRequest(requestId: Long): Boolean {
+        if (requestId <= 0L) return false
+        return reduceHost(HostEvent.CancelRequest(RequestId(requestId))).effects
+            .any { it is HostEffect.CancelSuggestions }
     }
 
     private fun hostCommandFor(effect: HostEffect, event: HostEvent): HostCommand = when (effect) {
@@ -894,7 +908,7 @@ class AutocorrectPluginManager internal constructor(
         boostedCodePoints = emptySet()
         val requestId = latestSuggestionRequestId.takeIf { it >= 0L } ?: return
         latestSuggestionRequestId = -1L
-        val cancelled = suggestionRequestCoordinator.cancelRequest(requestId).isNotEmpty()
+        val cancelled = cancelSuggestionRequest(requestId)
         val pending = pendingSuggestions.remove(requestId)
         pending?.cancel()
         if (cancelled || pending != null) {
@@ -1473,12 +1487,12 @@ class AutocorrectPluginManager internal constructor(
             ) {
                 return null
             }
-            val admission = suggestionRequestCoordinator.issueRequest(
-                editorGeneration = editorGeneration,
-                at = monotonicNow(),
+            val admission = reduceHost(
+                HostEvent.IssueRequest(EditorGeneration(editorGeneration), monotonicNow()),
             )
-            val admitted = admission as? SuggestionRequestAdmission.Admitted ?: return null
-            val requestId = admitted.lease.requestId.value
+            val lease = admission.effects.filterIsInstance<HostEffect.RequestSuggestions>()
+                .singleOrNull()?.lease ?: return null
+            val requestId = lease.requestId.value
             val wireRequest = content.buildAutocorrectWireRequest(
                 sessionId = session.sessionId,
                 requestId = requestId,
@@ -1487,12 +1501,13 @@ class AutocorrectPluginManager internal constructor(
                 inputTrace = inputTrace,
                 capsMode = keyboardTraits().capsMode,
             ) ?: run {
-                suggestionRequestCoordinator.cancelRequest(requestId)
+                cancelSuggestionRequest(requestId)
                 return null
             }
             latestSuggestionRequestId = requestId
             boostedCodePoints = emptySet()
-            admitted.cancelledLeases.forEach { cancelledLease ->
+            admission.effects.filterIsInstance<HostEffect.CancelSuggestions>().forEach { cancellation ->
+                val cancelledLease = cancellation.lease
                 val cancelledRequestId = cancelledLease.requestId.value
                 pendingSuggestions.remove(cancelledRequestId)?.let { previous ->
                     previous.cancel()
@@ -1528,7 +1543,7 @@ class AutocorrectPluginManager internal constructor(
             ) {
                 dispatchHost(
                     HostEvent.RequestSendFailed(
-                        lease = admitted.lease,
+                        lease = lease,
                         kind = ProviderFailureKind.SEND_FAILED,
                         at = monotonicNow(),
                     ),
@@ -1556,7 +1571,7 @@ class AutocorrectPluginManager internal constructor(
         } finally {
             synchronized(this) {
                 if (pendingSuggestions.remove(requestId, deferred)) {
-                    suggestionRequestCoordinator.cancelRequest(requestId)
+                    cancelSuggestionRequest(requestId)
                     if (
                         activeSessionId == session.sessionId &&
                         requestId == latestSuggestionRequestId
@@ -2479,16 +2494,17 @@ class AutocorrectPluginManager internal constructor(
                 failMalformedSuggestionReply(requestId = null)
                 return
             }
-            val replyDecision = suggestionRequestCoordinator.acceptReply(
-                requestId = requestId,
-                at = monotonicNow(),
-            )
-            if (replyDecision !is SuggestionReplyDecision.Accept) {
+            val replyEffects = hostState.suggestionLeaseForReply(requestId)?.let { lease ->
+                reduceHost(HostEvent.RequestReply(lease, RequestOutcome.Success, monotonicNow())).effects
+            }
+            val accepted = replyEffects?.filterIsInstance<HostEffect.AcceptReply>()?.singleOrNull()
+            if (accepted == null) {
                 diagnostics.record(
                     AutocorrectPluginDiagnosticEvent.ReplyRejected(
                         bindingEpoch = bindingEpoch,
                         operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                        error = replyDecision.toDiagnosticError(),
+                        error = replyEffects?.filterIsInstance<HostEffect.RejectReply>()
+                            ?.lastOrNull()?.reason.toDiagnosticError(),
                     ),
                 )
                 return
@@ -2508,7 +2524,7 @@ class AutocorrectPluginManager internal constructor(
             diagnostics.operationFinished(
                 operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
                 bindingEpoch = bindingEpoch,
-                sessionId = replyDecision.lease.sessionId.value,
+                sessionId = accepted.lease.sessionId.value,
                 requestId = requestId,
                 state = AutocorrectPluginDiagnosticState.SUCCEEDED,
                 itemCount = result.candidates.size,
@@ -2517,7 +2533,7 @@ class AutocorrectPluginManager internal constructor(
         }
 
         private fun failMalformedSuggestionReply(requestId: Long?) {
-            val lease = suggestionRequestCoordinator.currentLeaseForMalformedReply(requestId, bindingEpoch)
+            val lease = hostState.currentSuggestionLeaseForMalformedReply(requestId, bindingEpoch)
                 ?: return recordMalformedReply(AutocorrectPluginDiagnosticOperation.SUGGESTION)
             val transition = dispatchHost(
                 HostEvent.RequestReply(
@@ -2858,24 +2874,30 @@ private fun diagnosticOperationForMessage(what: Int) = when (what) {
     else -> AutocorrectPluginDiagnosticOperation.UNKNOWN_REPLY
 }
 
-private fun SuggestionReplyDecision.toDiagnosticError() = when (this) {
-    is SuggestionReplyDecision.Accept -> AutocorrectPluginDiagnosticError.NONE
-    SuggestionReplyDecision.Unknown -> AutocorrectPluginDiagnosticError.UNKNOWN_REQUEST
-    is SuggestionReplyDecision.Reject -> when (reason) {
-        ReplyRejectionReason.SUPERSEDED ->
-            AutocorrectPluginDiagnosticError.SUPERSEDED
-        ReplyRejectionReason.STALE_PROVIDER,
-        ReplyRejectionReason.STALE_BINDING,
-        -> AutocorrectPluginDiagnosticError.STALE_BINDING
-        ReplyRejectionReason.STALE_SESSION ->
-            AutocorrectPluginDiagnosticError.STALE_SESSION
-        ReplyRejectionReason.STALE_GENERATION ->
-            AutocorrectPluginDiagnosticError.STALE_GENERATION
-        ReplyRejectionReason.DUPLICATE,
-        ReplyRejectionReason.CANCELLED,
-        ReplyRejectionReason.UNKNOWN_REQUEST,
-        -> AutocorrectPluginDiagnosticError.UNKNOWN_REQUEST
-    }
+private fun ReplyRejectionReason?.toDiagnosticError() = when (this) {
+    ReplyRejectionReason.SUPERSEDED -> AutocorrectPluginDiagnosticError.SUPERSEDED
+    ReplyRejectionReason.STALE_PROVIDER,
+    ReplyRejectionReason.STALE_BINDING -> AutocorrectPluginDiagnosticError.STALE_BINDING
+    ReplyRejectionReason.STALE_SESSION -> AutocorrectPluginDiagnosticError.STALE_SESSION
+    ReplyRejectionReason.STALE_GENERATION -> AutocorrectPluginDiagnosticError.STALE_GENERATION
+    ReplyRejectionReason.DUPLICATE,
+    ReplyRejectionReason.CANCELLED,
+    ReplyRejectionReason.UNKNOWN_REQUEST,
+    null -> AutocorrectPluginDiagnosticError.UNKNOWN_REQUEST
+}
+
+internal fun HostState.suggestionLeaseForReply(requestId: Long): RequestLease? {
+    if (requestId <= 0L) return null
+    val id = RequestId(requestId)
+    return pendingRequest?.lease?.takeIf { it.requestId == id }
+        ?: retiredRequests.lastOrNull { it.lease.requestId == id }?.lease
+}
+
+internal fun HostState.currentSuggestionLeaseForMalformedReply(
+    requestId: Long?,
+    bindingEpoch: Long,
+): RequestLease? = pendingRequest?.lease?.takeIf {
+    it.epoch.value == bindingEpoch && (requestId == null || it.requestId.value == requestId)
 }
 
 internal fun SessionConfiguration.toAutocorrectSession(sessionId: SessionId) = AutocorrectSession(

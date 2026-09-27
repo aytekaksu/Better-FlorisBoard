@@ -171,10 +171,6 @@ val formattedKotlinSources = files(
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginUiFormatting.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginUiKeyboard.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginUiPresentation.kt"),
-    file(
-        "app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/" +
-            "AutocorrectSuggestionRequestCoordinator.kt",
-    ),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectTracePolicy.kt"),
     file(
         "app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/" +
@@ -208,7 +204,7 @@ val formattedKotlinSources = files(
     ),
     file(
         "app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/" +
-            "AutocorrectSuggestionRequestCoordinatorTest.kt",
+            "AutocorrectRequestLeaseLookupTest.kt",
     ),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/devtools/FlogDiagnosticsTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/util/UnitUtilsTest.kt"),

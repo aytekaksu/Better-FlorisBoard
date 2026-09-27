@@ -143,15 +143,23 @@ class AutocorrectHostRequestOrderingTest :
         test("retired request history is bounded without weakening current request validation") {
             val host = HostTestHarness()
             host.startActiveSession()
+            var oldest: RequestLease? = null
 
-            repeat(AutocorrectHostReducer.RETIRED_REQUEST_LIMIT + 12) {
+            repeat(AutocorrectHostReducer.RETIRED_REQUEST_LIMIT + 12) { index ->
                 val request = host.issue()
+                if (index == 0) oldest = request
                 host.dispatch(HostEvent.RequestReply(request, RequestOutcome.Success, T0))
             }
 
             host.state.retiredRequests.size shouldBe AutocorrectHostReducer.RETIRED_REQUEST_LIMIT
+            val evicted = requireNotNull(oldest)
+            host.state.retiredRequests.any { it.lease == evicted } shouldBe false
             val current = host.issue()
+            host.dispatch(HostEvent.RequestReply(evicted, RequestOutcome.Success, T0))
+                .singleEffect<HostEffect.RejectReply>().reason shouldBe ReplyRejectionReason.UNKNOWN_REQUEST
             host.state.pendingRequest?.lease shouldBe current
+            host.dispatch(HostEvent.RequestReply(current, RequestOutcome.Success, T0))
+                .singleEffect<HostEffect.AcceptReply>().lease shouldBe current
             host.state.requireValid()
         }
 
@@ -173,5 +181,32 @@ class AutocorrectHostRequestOrderingTest :
                 HostEvent.RequestReply(request, RequestOutcome.Success, T0),
             ).singleEffect<HostEffect.RejectReply>().reason shouldBe
                 ReplyRejectionReason.CANCELLED
+        }
+
+        test("an old reply cannot complete after the editor opens another session") {
+            val host = HostTestHarness()
+            host.startActiveSession()
+            val old = host.issue()
+            host.dispatch(HostEvent.InvalidateEditor)
+            val start = host.dispatch(
+                HostEvent.OpenSession(DefaultSessionConfiguration, host.state.editorGeneration, T0),
+            ).singleEffect<HostEffect.StartSession>().lease
+            host.dispatch(HostEvent.SessionStartSending(start))
+            host.dispatch(HostEvent.SessionStartResult(start, successful = true, T0))
+            val current = host.issue()
+
+            host.dispatch(HostEvent.RequestReply(old, RequestOutcome.Success, T0))
+                .singleEffect<HostEffect.RejectReply>().reason shouldBe ReplyRejectionReason.CANCELLED
+            host.state.pendingRequest?.lease shouldBe current
+        }
+
+        test("switching providers rejects the old request") {
+            val host = HostTestHarness()
+            host.startActiveSession()
+            val old = host.issue()
+            host.dispatch(HostEvent.SelectProvider(ProviderB))
+
+            host.dispatch(HostEvent.RequestReply(old, RequestOutcome.Success, T0))
+                .singleEffect<HostEffect.RejectReply>().reason shouldBe ReplyRejectionReason.CANCELLED
         }
     })
