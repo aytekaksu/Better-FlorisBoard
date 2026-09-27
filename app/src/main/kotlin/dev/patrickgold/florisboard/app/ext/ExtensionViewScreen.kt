@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Share
@@ -62,6 +63,7 @@ import dev.patrickgold.florisboard.lib.ext.ExtensionMeta
 import dev.patrickgold.florisboard.lib.io.FlorisRef
 import kotlinx.coroutines.launch
 import org.florisboard.lib.android.showLongToast
+import org.florisboard.lib.compose.FlorisChip
 import org.florisboard.lib.compose.FlorisOutlinedButton
 import org.florisboard.lib.compose.defaultFlorisOutlinedBox
 import org.florisboard.lib.compose.stringRes
@@ -110,26 +112,30 @@ private fun ViewScreen(ext: Extension, routeEntry: NavBackStackEntry? = null) = 
             ExtensionMetaRowSimpleText(label = stringRes(R.string.ext__meta__version)) {
                 Text(text = ext.meta.version)
             }
-            if (ext.meta.keywords != null && ext.meta.keywords!!.isNotEmpty()) {
+            ext.meta.keywords?.takeIf { it.isNotEmpty() }?.let { keywords ->
                 ExtensionMetaRowScrollableChips(label = stringRes(R.string.ext__meta__keywords)) {
-                    for (keyword in ext.meta.keywords!!) {
-                        ExtensionKeywordChip(keyword)
+                    for (keyword in keywords) {
+                        FlorisChip(
+                            text = keyword,
+                            enabled = false,
+                            shape = RoundedCornerShape(4.dp),
+                        )
                     }
                 }
             }
-            if (!ext.meta.homepage.isNullOrBlank()) {
+            ext.meta.homepage?.takeIf { it.isNotBlank() }?.let { homepage ->
                 ExtensionMetaRowSimpleText(label = stringRes(R.string.ext__meta__homepage)) {
                     FlorisHyperlinkText(
-                        text = FlorisRef.fromUrl(ext.meta.homepage!!).authority,
-                        url = ext.meta.homepage!!,
+                        text = FlorisRef.fromUrl(homepage).authority,
+                        url = homepage,
                     )
                 }
             }
-            if (!ext.meta.issueTracker.isNullOrBlank()) {
+            ext.meta.issueTracker?.takeIf { it.isNotBlank() }?.let { issueTracker ->
                 ExtensionMetaRowSimpleText(label = stringRes(R.string.ext__meta__issue_tracker)) {
                     FlorisHyperlinkText(
-                        text = FlorisRef.fromUrl(ext.meta.issueTracker!!).authority,
-                        url = ext.meta.issueTracker!!,
+                        text = FlorisRef.fromUrl(issueTracker).authority,
+                        url = issueTracker,
                     )
                 }
             }
