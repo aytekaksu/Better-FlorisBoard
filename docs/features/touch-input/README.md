@@ -80,6 +80,11 @@ reads punctuation rules from its existing keyboard-extension snapshot.
 The application supplies a live nullable input-connection reader as well. Each
 editor operation resolves the current IME service connection; neither the editor
 nor the application callback retains a service instance or connection.
+It also supplies `KeyboardManager` a live nullable IME-action reader. Each key
+event uses one current service snapshot for feedback, window controls, IME
+switching, and Settings; key-up still does nothing when no service is active.
+The evaluator reads the same port for the floating-window icon and treats a
+missing service as fixed mode.
 
 ## Privacy
 

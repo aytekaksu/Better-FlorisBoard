@@ -47,7 +47,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SpaceBar
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
-import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.ime.core.DisplayLanguageNamesIn
 import dev.patrickgold.florisboard.ime.core.Subtype
@@ -73,6 +72,8 @@ interface ComputingEvaluator {
     val subtype: Subtype
 
     fun context(): Context?
+
+    fun windowMode(): ImeWindowMode? = null
 
     fun displayLanguageNamesIn(): DisplayLanguageNamesIn
 
@@ -126,6 +127,11 @@ private var cachedDisplayNameState = LanguageDisplayNameCache(
     labelMode = SpaceBarLanguageLabelMode.LOCALE_NAME,
     displayName = "",
 )
+
+internal fun floatingWindowIconResource(mode: ImeWindowMode?): Int = when (mode) {
+    ImeWindowMode.FLOATING -> R.drawable.ic_floating_keyboard_disable
+    ImeWindowMode.FIXED, null -> R.drawable.ic_floating_keyboard
+}
 
 /**
  * Compute language name with a cache to prevent repetitive calling of `locale.displayName()`, which invokes the
@@ -210,15 +216,7 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
         KeyCode.COMPACT_LAYOUT_TO_LEFT,
         KeyCode.COMPACT_LAYOUT_TO_RIGHT,
         KeyCode.TOGGLE_COMPACT_LAYOUT -> context()?.vectorResource(id = R.drawable.ic_accessibility_one_handed)
-        KeyCode.TOGGLE_FLOATING_WINDOW -> {
-            val enabledIcon = context()?.vectorResource(id = R.drawable.ic_floating_keyboard)
-            val disabledIcon = context()?.vectorResource(id = R.drawable.ic_floating_keyboard_disable)
-            val windowController = FlorisImeService.windowControllerOrNull() ?: return enabledIcon
-            when (windowController.activeWindowConfig.value.mode) {
-                ImeWindowMode.FIXED -> enabledIcon
-                ImeWindowMode.FLOATING -> disabledIcon
-            }
-        }
+        KeyCode.TOGGLE_FLOATING_WINDOW -> context()?.vectorResource(floatingWindowIconResource(windowMode()))
         KeyCode.TOGGLE_RESIZE_MODE -> context()?.vectorResource(id = R.drawable.ic_resize)
         KeyCode.VOICE_INPUT -> Icons.Default.KeyboardVoice
         KeyCode.IME_HIDE_UI -> Icons.Default.KeyboardHide

@@ -22,7 +22,6 @@ import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
-import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
@@ -110,6 +109,7 @@ class KeyboardManager(
     val activeState: ObservableKeyboardState,
     dispatcher: InputEventDispatcher,
     suggestionSession: Lazy<KeyboardSuggestionSession>,
+    private val imeActions: () -> KeyboardImeActions?,
 ) : InputKeyEventReceiver {
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
@@ -140,7 +140,7 @@ class KeyboardManager(
     val inputEventDispatcher = dispatcher.also {
         it.keyEventReceiver = this
         it.keyRepeatFeedbackReceiver = { data ->
-            FlorisImeService.inputFeedbackController()?.keyRepeatedAction(data)
+            imeActions()?.keyRepeatedAction(data)
         }
     }
     private val clipboardInputSink = inputEventDispatcher.asClipboardInputSink()
@@ -570,11 +570,11 @@ class KeyboardManager(
      * Handles a [KeyCode.LANGUAGE_SWITCH] event. Also handles if the language switch should cycle
      * FlorisBoard internal or system-wide.
      */
-    private fun handleLanguageSwitch() {
+    private fun handleLanguageSwitch(actions: KeyboardImeActions) {
         when (prefs.keyboard.utilityKeyAction.get()) {
             UtilityKeyAction.DYNAMIC_SWITCH_LANGUAGE_EMOJIS,
             UtilityKeyAction.SWITCH_LANGUAGE -> subtypeManager.switchToNextSubtype()
-            else -> FlorisImeService.switchToNextInputMethod()
+            else -> actions.switchToNextInputMethod()
         }
     }
 
@@ -731,8 +731,7 @@ class KeyboardManager(
     }
 
     override fun onInputKeyDown(data: KeyData) {
-        val windowController = FlorisImeService.windowControllerOrNull()
-        windowController?.editor?.disableIfNoGestureInProgress()
+        imeActions()?.disableWindowEditorIfIdle()
         when (data.code) {
             in KeyCode.MOVE_END_OF_LINE..KeyCode.ARROW_LEFT -> {
                 editorInstance.massSelection.begin()
@@ -742,7 +741,7 @@ class KeyboardManager(
     }
 
     override fun onInputKeyUp(data: KeyData) = activeState.batchEdit {
-        val windowController = FlorisImeService.windowControllerOrNull() ?: return@batchEdit
+        val actions = imeActions() ?: return@batchEdit
         when (data.code) {
             in KeyCode.MOVE_END_OF_LINE..KeyCode.ARROW_LEFT -> {
                 editorInstance.massSelection.end()
@@ -770,24 +769,24 @@ class KeyboardManager(
                     appContext.showShortToast(R.string.clipboard__cleared_primary_clip)
                 }
             }
-            KeyCode.TOGGLE_FLOATING_WINDOW -> windowController.actions.toggleFloatingWindow()
-            KeyCode.TOGGLE_COMPACT_LAYOUT -> windowController.actions.toggleCompactLayout()
-            KeyCode.COMPACT_LAYOUT_TO_LEFT -> windowController.actions.compactLayoutToLeft()
-            KeyCode.COMPACT_LAYOUT_TO_RIGHT -> windowController.actions.compactLayoutToRight()
-            KeyCode.TOGGLE_RESIZE_MODE -> windowController.editor.toggleEnabled()
+            KeyCode.TOGGLE_FLOATING_WINDOW -> actions.toggleFloatingWindow()
+            KeyCode.TOGGLE_COMPACT_LAYOUT -> actions.toggleCompactLayout()
+            KeyCode.COMPACT_LAYOUT_TO_LEFT -> actions.compactLayoutToLeft()
+            KeyCode.COMPACT_LAYOUT_TO_RIGHT -> actions.compactLayoutToRight()
+            KeyCode.TOGGLE_RESIZE_MODE -> actions.toggleResizeMode()
             KeyCode.DELETE -> handleBackwardDelete(OperationUnit.CHARACTERS)
             KeyCode.DELETE_WORD -> handleBackwardDelete(OperationUnit.WORDS)
             KeyCode.ENTER -> handleEnter()
             KeyCode.FORWARD_DELETE -> handleForwardDelete(OperationUnit.CHARACTERS)
             KeyCode.FORWARD_DELETE_WORD -> handleForwardDelete(OperationUnit.WORDS)
-            KeyCode.IME_SHOW_UI -> FlorisImeService.showUi()
-            KeyCode.IME_HIDE_UI -> FlorisImeService.hideUi()
+            KeyCode.IME_SHOW_UI -> actions.showUi()
+            KeyCode.IME_HIDE_UI -> actions.hideUi()
             KeyCode.IME_PREV_SUBTYPE -> subtypeManager.switchToPrevSubtype()
             KeyCode.IME_NEXT_SUBTYPE -> subtypeManager.switchToNextSubtype()
             KeyCode.IME_UI_MODE_TEXT -> activeState.imeUiMode = ImeUiMode.TEXT
             KeyCode.IME_UI_MODE_MEDIA -> activeState.imeUiMode = ImeUiMode.MEDIA
             KeyCode.IME_UI_MODE_CLIPBOARD -> activeState.imeUiMode = ImeUiMode.CLIPBOARD
-            KeyCode.VOICE_INPUT -> FlorisImeService.switchToVoiceInputMethod()
+            KeyCode.VOICE_INPUT -> actions.switchToVoiceInputMethod()
             KeyCode.KANA_SWITCHER, KeyCode.KANA_HIRA, KeyCode.KANA_KATA, KeyCode.KANA_HALF_KATA -> {
                 activeState.isKanaKata = when (data.code) {
                     KeyCode.KANA_SWITCHER -> !activeState.isKanaKata
@@ -796,17 +795,17 @@ class KeyboardManager(
                 }
                 activeState.isCharHalfWidth = data.code == KeyCode.KANA_HALF_KATA
             }
-            KeyCode.LANGUAGE_SWITCH -> handleLanguageSwitch()
+            KeyCode.LANGUAGE_SWITCH -> handleLanguageSwitch(actions)
             KeyCode.REDO -> editorInstance.performRedo()
-            KeyCode.SETTINGS -> FlorisImeService.launchSettings()
+            KeyCode.SETTINGS -> actions.launchSettings()
             KeyCode.SHIFT -> handleShiftUp(data)
             KeyCode.SPACE -> handleSpace(data)
             KeyCode.SYSTEM_INPUT_METHOD_PICKER -> InputMethodUtils.showImePicker(appContext)
             KeyCode.SHOW_SUBTYPE_PICKER -> {
                 activeState.isSubtypeSelectionVisible = true
             }
-            KeyCode.SYSTEM_PREV_INPUT_METHOD -> FlorisImeService.switchToPrevInputMethod()
-            KeyCode.SYSTEM_NEXT_INPUT_METHOD -> FlorisImeService.switchToNextInputMethod()
+            KeyCode.SYSTEM_PREV_INPUT_METHOD -> actions.switchToPrevInputMethod()
+            KeyCode.SYSTEM_NEXT_INPUT_METHOD -> actions.switchToNextInputMethod()
             KeyCode.TOGGLE_SMARTBAR_VISIBILITY -> scope.launch {
                 prefs.smartbar.enabled.let { it.set(!it.get()) }
             }
@@ -952,6 +951,8 @@ class KeyboardManager(
     ) : ComputingEvaluator {
 
         override fun context(): Context = appContext
+
+        override fun windowMode() = imeActions()?.windowMode
 
         override fun displayLanguageNamesIn(): DisplayLanguageNamesIn {
             return prefs.localization.displayLanguageNamesIn.get()
