@@ -179,12 +179,6 @@ class MutablePopupSet : PopupSet<KeyData>() {
  * indexes select the remaining keys. [hint] is drawn on the base key and also occurs in the popup.
  */
 class PopupKeys<T>(val hint: T?, private val prioritized: List<T>, private val other: List<T>) {
-    companion object {
-        const val FIRST_PRIORITIZED = -1
-        const val SECOND_PRIORITIZED = -2
-        const val THIRD_PRIORITIZED = -3
-    }
-
     val size: Int
         get() = prioritized.size + other.size
 
