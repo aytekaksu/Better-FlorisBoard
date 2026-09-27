@@ -181,36 +181,28 @@ class ExtensionManager(context: Context) {
         }
     }
 
-    suspend fun import(ext: Extension) = importGuard.withLock {
-        withStorageMutation {
-            runInterruptible(Dispatchers.IO) {
-                val stagingDir = requireNotNull(ext.workingDir) { "No working dir specified" }
-                installArchive(ext, stagingDir, replaceExisting = true)
-            }
-        }
+    suspend fun import(ext: Extension) = install(ext, replaceExisting = true) {
+        requireNotNull(ext.workingDir) { "No working dir specified" }
     }
 
-    internal suspend fun installNew(ext: Extension, stagingDir: FsDir) = importGuard.withLock {
-        withStorageMutation {
-            runInterruptible(Dispatchers.IO) {
-                installArchive(ext, stagingDir, replaceExisting = false)
-            }
-        }
-    }
+    internal suspend fun installNew(ext: Extension, stagingDir: FsDir) =
+        install(ext, replaceExisting = false) { stagingDir }
 
     internal suspend fun replace(
         ext: Extension,
         stagingDir: FsDir,
         expected: InstalledExtensionArchiveFingerprint,
+    ) = install(ext, replaceExisting = true, expected = expected) { stagingDir }
+
+    private suspend fun install(
+        ext: Extension,
+        replaceExisting: Boolean,
+        expected: InstalledExtensionArchiveFingerprint? = null,
+        stagingDir: () -> FsDir,
     ) = importGuard.withLock {
         withStorageMutation {
             runInterruptible(Dispatchers.IO) {
-                installArchive(
-                    ext = ext,
-                    stagingDir = stagingDir,
-                    replaceExisting = true,
-                    expected = expected,
-                )
+                installArchive(ext, stagingDir(), replaceExisting, expected)
             }
         }
     }
