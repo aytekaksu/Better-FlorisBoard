@@ -16,15 +16,19 @@
 
 package dev.patrickgold.florisboard.app.settings.about
 
+import android.content.Context
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -35,6 +39,8 @@ import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.lib.io.FlorisRef
 import dev.patrickgold.florisboard.lib.io.loadTextAsset
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runInterruptible
 import org.florisboard.lib.compose.florisScrollbar
 import org.florisboard.lib.compose.stringRes
 
@@ -60,18 +66,34 @@ fun ProjectLicenseScreen() = FlorisScreen {
                     .verticalScroll(verticalScrollState)
                     .horizontalScroll(horizontalScrollState),
             ) {
-                val licenseText = FlorisRef.assets("license/project_license.txt").loadTextAsset(
-                    context
-                ).getOrElse {
-                    stringRes(R.string.about__project_license__error_license_text_failed, "error_message" to (it.message ?: ""))
-                }
-                Text(
-                    text = licenseText,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
-                    softWrap = false,
-                )
+                ProjectLicenseText(context)
             }
         }
+    }
+}
+
+@Composable
+internal fun ProjectLicenseText(
+    context: Context,
+    readAsset: (Context) -> Result<String> = {
+        FlorisRef.assets("license/project_license.txt").loadTextAsset(it)
+    },
+) {
+    val loaded by produceState<Result<String>?>(initialValue = null, key1 = context) {
+        value = runInterruptible(Dispatchers.IO) { readAsset(context.applicationContext) }
+    }
+    val result = loaded
+    if (result == null) {
+        CircularProgressIndicator()
+    } else {
+        val licenseText = result.getOrElse {
+            stringRes(R.string.about__project_license__error_license_text_failed, "error_message" to (it.message ?: ""))
+        }
+        Text(
+            text = licenseText,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 10.sp,
+            softWrap = false,
+        )
     }
 }
