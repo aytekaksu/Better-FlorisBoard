@@ -1008,7 +1008,9 @@ class KeyboardManager(
         }
 
         override fun slotData(data: KeyData): KeyData? {
-            return subtypeManager.getCurrencySet(subtype).getSlot(data.code)
+            val currencySet = keyboardExtensionRepository.snapshot.value.currencySets[subtype.currencySet]
+                ?: CurrencySet.Fallback
+            return currencySet.getSlot(data.code)
         }
 
         fun asSmartbarQuickActionsEvaluator(): ComputingEvaluatorImpl {

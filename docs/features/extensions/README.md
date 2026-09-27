@@ -122,9 +122,10 @@ messages. Normal import lists may show a bounded, sanitized provider label.
 ## Runtime and editor ownership
 
 The app-owned `KeyboardExtensionRepository` publishes one snapshot per keyboard
-index refresh, including replacements whose manifest is unchanged. Subtypes,
-layouts, editor, NLP, and settings read it directly; `KeyboardManager` clears
-computed keyboards, and `LayoutManager` drops decoded layouts and popups from
+index refresh, including replacements whose manifest is unchanged. Layouts,
+the subtype editor, NLP, and settings read it directly; `SubtypeManager` owns
+saved subtypes and active selection. `KeyboardManager` clears computed
+keyboards, and `LayoutManager` drops decoded layouts and popups from
 older generations. Later components with the same ID win, unknown layout types
 are skipped, and preset order and missing-component fallbacks stay unchanged.
 

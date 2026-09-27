@@ -16,11 +16,7 @@
 
 package dev.patrickgold.florisboard.ime.core
 
-import android.content.Context
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
-import dev.patrickgold.florisboard.ime.keyboard.CurrencySet
-import dev.patrickgold.florisboard.keyboardExtensionRepository
-import dev.patrickgold.florisboard.lib.FlorisLocale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,9 +50,8 @@ internal fun adjacentSubtypeInOrder(subtypeList: List<Subtype>, activeSubtype: S
  * Class which acts as a high level helper for the raw implementation of subtypes in the prefs. Additionally provides
  * helper methods for the in-keyboard language switch process.
  */
-class SubtypeManager(context: Context) {
+class SubtypeManager {
     private val prefs by FlorisPreferenceStore
-    private val keyboardExtensionRepository by context.keyboardExtensionRepository()
     private val scope = CoroutineScope(Dispatchers.Default)
 
     val subtypesFlow: StateFlow<List<Subtype>>
@@ -123,17 +118,6 @@ class SubtypeManager(context: Context) {
     }
 
     /**
-     * Gets the currency set from the given subtype and returns it. Falls back to a default one if the subtype does not
-     * exist.
-     *
-     * @return The currency set or a fallback.
-     */
-    fun getCurrencySet(subtypeToSearch: Subtype): CurrencySet {
-        return keyboardExtensionRepository.snapshot.value.currencySets[subtypeToSearch.currencySet]
-            ?: CurrencySet.Fallback
-    }
-
-    /**
      * Gets a subtype by the given [id].
      *
      * @param id The id of the subtype you want to get.
@@ -142,18 +126,6 @@ class SubtypeManager(context: Context) {
     fun getSubtypeById(id: Long): Subtype? {
         val subtypeList = subtypes
         return subtypeList.find { it.id == id }
-    }
-
-    /**
-     * Gets the default system subtype for a given [locale].
-     *
-     * @param locale The locale of the default system subtype to get.
-     * @return The default system locale or null, if no matching default system subtype could be
-     *  found.
-     */
-    fun getSubtypePresetForLocale(locale: FlorisLocale): SubtypePreset? {
-        val presets = keyboardExtensionRepository.snapshot.value.subtypePresets
-        return presets.find { it.locale == locale } ?: presets.find { it.locale.language == locale.language }
     }
 
     /**
