@@ -47,6 +47,8 @@ import dev.patrickgold.florisboard.ime.ImeUiMode
 import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.editor.FlorisEditorInfo
 import dev.patrickgold.florisboard.ime.input.InputFeedbackController
+import dev.patrickgold.florisboard.ime.keyboard.KeyData
+import dev.patrickgold.florisboard.ime.keyboard.KeyboardImeActions
 import dev.patrickgold.florisboard.ime.keyboard.isFullscreenInputRequired
 import dev.patrickgold.florisboard.ime.landscapeinput.ExtractedInputRootView
 import dev.patrickgold.florisboard.ime.landscapeinput.LandscapeInputUiMode
@@ -55,6 +57,7 @@ import dev.patrickgold.florisboard.ime.nlp.NlpInlineAutofill
 import dev.patrickgold.florisboard.ime.theme.WallpaperChangeReceiver
 import dev.patrickgold.florisboard.ime.window.ImeRootView
 import dev.patrickgold.florisboard.ime.window.ImeWindowController
+import dev.patrickgold.florisboard.ime.window.ImeWindowMode
 import dev.patrickgold.florisboard.lib.devtools.LogTopic
 import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.devtools.flogInfo
@@ -86,7 +89,7 @@ private var FlorisImeServiceReference = WeakReference<FlorisImeService?>(null)
  * Core class responsible for linking together all managers and UI composables to provide an IME service. Sets
  * up the window and context to be lifecycle-aware, so LiveData and Jetpack Compose can be used without issues.
  */
-class FlorisImeService : LifecycleInputMethodService() {
+class FlorisImeService : LifecycleInputMethodService(), KeyboardImeActions {
     companion object {
         private val InlineSuggestionUiSmallestSize = Size(0, 0)
         private val InlineSuggestionUiBiggestSize = Size(Int.MAX_VALUE, Int.MAX_VALUE)
@@ -99,18 +102,7 @@ class FlorisImeService : LifecycleInputMethodService() {
             return FlorisImeServiceReference.get()?.inputFeedbackController
         }
 
-        /**
-         * Hides the IME and launches [FlorisAppActivity].
-         */
-        fun launchSettings() {
-            val ims = FlorisImeServiceReference.get() ?: return
-            ims.requestHideSelf(0)
-            ims.launchActivity(FlorisAppActivity::class) {
-                it.flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
-        }
+        fun keyboardActionsOrNull(): KeyboardImeActions? = FlorisImeServiceReference.get()
 
         fun showUi() {
             val ims = FlorisImeServiceReference.get() ?: return
@@ -151,7 +143,16 @@ class FlorisImeService : LifecycleInputMethodService() {
         fun currentImeRootViewOrNull(): View? = FlorisImeServiceReference.get()?.imeRootView
     }
 
-    fun hideUi() {
+    override fun launchSettings() {
+        requestHideSelf(0)
+        launchActivity(FlorisAppActivity::class) {
+            it.flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+    }
+
+    override fun hideUi() {
         requestHideSelf(0)
     }
 
@@ -161,7 +162,7 @@ class FlorisImeService : LifecycleInputMethodService() {
      * Note: This function can be replaced with a `requestShowSelf(0)`
      * call once we've set the minApiLevel to 28 (Android 9)
      */
-    fun showUi() {
+    override fun showUi() {
         if (AndroidVersion.ATLEAST_API28_P) {
             requestShowSelf(0)
         } else {
@@ -180,7 +181,7 @@ class FlorisImeService : LifecycleInputMethodService() {
      *
      * @return true if the switch was successful
      */
-    fun switchToPrevInputMethod(): Boolean {
+    override fun switchToPrevInputMethod(): Boolean {
         val imm = systemServiceOrNull(InputMethodManager::class)
         try {
             if (AndroidVersion.ATLEAST_API28_P) {
@@ -206,7 +207,7 @@ class FlorisImeService : LifecycleInputMethodService() {
      *
      * @return true if the switch was successful
      */
-    fun switchToNextInputMethod(): Boolean {
+    override fun switchToNextInputMethod(): Boolean {
         val imm = systemServiceOrNull(InputMethodManager::class)
         try {
             if (AndroidVersion.ATLEAST_API28_P) {
@@ -233,7 +234,7 @@ class FlorisImeService : LifecycleInputMethodService() {
      *
      * @return true if the switch was successful
      */
-    fun switchToVoiceInputMethod(): Boolean {
+    override fun switchToVoiceInputMethod(): Boolean {
         val imm = systemServiceOrNull(InputMethodManager::class) ?: return false
         val list: List<InputMethodInfo> = imm.enabledInputMethodList
         for (el in list) {
@@ -268,6 +269,17 @@ class FlorisImeService : LifecycleInputMethodService() {
     private val themeManager by themeManager()
 
     val windowController = ImeWindowController(prefs, lifecycleScope)
+
+    override val windowMode: ImeWindowMode
+        get() = windowController.activeWindowConfig.value.mode
+
+    override fun disableWindowEditorIfIdle() = windowController.editor.disableIfNoGestureInProgress()
+    override fun keyRepeatedAction(data: KeyData) = inputFeedbackController.keyRepeatedAction(data)
+    override fun toggleFloatingWindow() = windowController.actions.toggleFloatingWindow()
+    override fun toggleCompactLayout() = windowController.actions.toggleCompactLayout()
+    override fun compactLayoutToLeft() = windowController.actions.compactLayoutToLeft()
+    override fun compactLayoutToRight() = windowController.actions.compactLayoutToRight()
+    override fun toggleResizeMode() = windowController.editor.toggleEnabled()
 
     private var imeRootView: View? = null
 

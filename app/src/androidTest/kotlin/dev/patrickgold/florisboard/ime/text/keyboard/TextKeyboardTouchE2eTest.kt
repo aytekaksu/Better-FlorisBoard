@@ -49,6 +49,7 @@ import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyType
+import dev.patrickgold.florisboard.ime.window.ImeWindowMode
 import dev.patrickgold.florisboard.ime.window.ImeWindowProps
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.subtypeManager
@@ -91,6 +92,37 @@ class TextKeyboardTouchE2eTest {
     private var previousKeyboardMode: KeyboardMode? = null
     private var testedIme: String? = null
     private var testedImeWasEnabled = false
+
+    @Test
+    fun floatingWindowKeyUsesTheCurrentImeService() {
+        val keyboardManager by instrumentation.targetContext.keyboardManager()
+        val controller = requireNotNull(FlorisImeService.windowControllerOrNull())
+        val original = controller.activeWindowConfig.value
+        val prefs by FlorisPreferenceStore
+        val originalStored = prefs.keyboard.windowConfig.get()
+        val formFactor = controller.activeRootInsets.value.formFactor.typeGuess
+        val expectedMode = when (original.mode) {
+            ImeWindowMode.FIXED -> ImeWindowMode.FLOATING
+            ImeWindowMode.FLOATING -> ImeWindowMode.FIXED
+        }
+        try {
+            instrumentation.runOnMainSync {
+                keyboardManager.onInputKeyUp(TextKeyData(code = KeyCode.TOGGLE_FLOATING_WINDOW))
+            }
+            waitUntil("floating-window key did not reach the active IME") {
+                controller.activeWindowConfig.value.mode == expectedMode &&
+                    prefs.keyboard.windowConfig.get()[formFactor]?.mode == expectedMode &&
+                    keyboardManager.activeEvaluator.value.windowMode() == expectedMode
+            }
+        } finally {
+            instrumentation.runOnMainSync { controller.updateWindowConfig { original } }
+            waitUntil("floating-window config was not restored") {
+                controller.activeWindowConfig.value == original &&
+                    prefs.keyboard.windowConfig.get()[formFactor] == original
+            }
+            runBlocking { prefs.keyboard.windowConfig.set(originalStored).getOrThrow() }
+        }
+    }
 
     @Before
     fun setUp() {

@@ -230,7 +230,13 @@ class FlorisApplication : Application() {
     val glideTypingManager = lazy { GlideTypingManager(this) }
     val keyboardExtensionRepository = lazy { KeyboardExtensionRepository(this) }
     val keyboardManager = lazy {
-        KeyboardManager(this, keyboardState.value, inputEventDispatcher.value, nlpManager)
+        KeyboardManager(
+            this,
+            keyboardState.value,
+            inputEventDispatcher.value,
+            nlpManager,
+            { FlorisImeService.keyboardActionsOrNull() },
+        )
     }
     val autocorrectPluginManager = lazy {
         AutocorrectPluginManager(

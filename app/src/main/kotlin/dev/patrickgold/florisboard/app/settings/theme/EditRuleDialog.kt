@@ -68,6 +68,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.enumDisplayEntriesOf
 import dev.patrickgold.florisboard.ime.input.InputKeyEventReceiver
@@ -598,6 +599,8 @@ private fun TextKeyDataPreviewBox(
             }
 
             override fun context() = context
+
+            override fun windowMode() = FlorisImeService.keyboardActionsOrNull()?.windowMode
         }
     }
 
