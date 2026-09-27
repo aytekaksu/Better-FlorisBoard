@@ -95,7 +95,9 @@ Manifest validation is bounded and type-aware. It checks:
 
 Filesystem consumers resolve manifest paths below a trusted root without
 following symbolic links. Invalid installed packages stay out of extension
-indexes; invalid imports appear as corrupted and cannot be installed.
+indexes; one unreadable or changed package does not hide healthy packages or
+stop later index refreshes. Invalid imports appear as corrupted and cannot be
+installed.
 
 An import cannot replace a bundled package or change the type of an installed
 package with the same ID.
@@ -181,6 +183,8 @@ Run the full JVM suite and local gate:
 
 ```shell
 ./gradlew :app:testDebugUnitTest \
+  --tests 'dev.patrickgold.florisboard.lib.ext.ExtensionIndexIsolationTest'
+./gradlew :app:testDebugUnitTest \
   --tests 'dev.patrickgold.florisboard.lib.ext.ExtensionExportWorkspaceTest'
 ./gradlew :app:testDebugUnitTest \
   --tests 'dev.patrickgold.florisboard.app.ext.EditorAssetFilesTest'
@@ -197,6 +201,7 @@ device tests:
 ./gradlew :app:connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=\
 dev.patrickgold.florisboard.lib.cache.CacheManagerAndroidTest,\
+dev.patrickgold.florisboard.lib.ext.ExtensionIndexAndroidTest,\
 dev.patrickgold.florisboard.lib.ext.ExtensionLifecycleAndroidTest,\
 dev.patrickgold.florisboard.ime.keyboard.BundledNumericRowAssetsAndroidTest,\
 dev.patrickgold.florisboard.ime.keyboard.LayoutCacheRefreshAndroidTest,\

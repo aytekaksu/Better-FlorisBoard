@@ -39,6 +39,7 @@ import dev.patrickgold.florisboard.lib.io.loadTextAsset
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -66,6 +67,7 @@ import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.security.MessageDigest
+import java.util.concurrent.CancellationException
 
 @OptIn(ExperimentalSerializationApi::class)
 val ExtensionJsonConfig = Json {
@@ -138,13 +140,45 @@ private fun ByteArray.toHexString(): String = buildString(size * 2) {
     }
 }
 
+private const val EXTENSION_ARCHIVE_SUFFIX = ".${ExtensionDefaults.FILE_EXTENSION}"
+
+/** A failed archive cannot discard healthy siblings or publish a partial index entry. */
+internal fun <T : Extension> indexInstalledExtension(
+    fileName: String,
+    serializer: KSerializer<T>,
+    bundledIds: Set<String>,
+    readManifest: () -> String,
+    fingerprint: (T) -> InstalledExtensionArchiveFingerprint,
+): T? {
+    if (!fileName.endsWith(EXTENSION_ARCHIVE_SUFFIX)) return null
+    return try {
+        val ext = decodeExtensionManifest(readManifest(), serializer).getOrThrow()
+        check(
+            ext.validateForImport().isValid &&
+                fileName == ExtensionDefaults.createFlexName(ext.meta.id) &&
+                ext.meta.id !in bundledIds,
+        ) {
+            "Installed extension package validation failed."
+        }
+        val archiveFingerprint = fingerprint(ext)
+        ext.sourceArchiveFingerprint = archiveFingerprint
+        ext
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: InterruptedException) {
+        throw error
+    } catch (error: Exception) {
+        flogError { "Installed extension package indexing failed: error=${error.javaClass.simpleName}" }
+        null
+    }
+}
+
 class ExtensionManager(context: Context) {
     companion object {
         const val IME_KEYBOARD_PATH = "ime/keyboard"
         const val IME_THEME_PATH = "ime/theme"
         const val IME_LANGUAGEPACK_PATH = "ime/languagepack"
 
-        private const val EXTENSION_ARCHIVE_SUFFIX = ".${ExtensionDefaults.FILE_EXTENSION}"
         private val INTERNAL_EXTENSION_PATHS = listOf(
             IME_KEYBOARD_PATH,
             IME_THEME_PATH,
@@ -160,7 +194,7 @@ class ExtensionManager(context: Context) {
 
     private val appContext by context.appContext()
     private val defaultScope = CoroutineScope(Dispatchers.Default)
-    private val ioScope = CoroutineScope(Dispatchers.IO)
+    private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val importGuard = Mutex()
 
     val keyboardExtensions = ExtensionIndex(KeyboardExtension.serializer(), IME_KEYBOARD_PATH)
@@ -491,87 +525,49 @@ class ExtensionManager(context: Context) {
         }
 
         private fun indexAssetsModule(): List<T> {
-            val list = mutableListOf<T>()
-            assetsModuleRef.listDirs(appContext).fold(
-                onSuccess = { extRefs ->
-                    for (extRef in extRefs) {
-                        val fileRef = extRef.subRef(ExtensionDefaults.MANIFEST_FILE_NAME)
-                        fileRef.loadTextAsset(appContext)
-                            .mapCatching { decodeExtensionManifest(it, serializer).getOrThrow() }
-                            .fold(
-                            onSuccess = { ext ->
-                                if (ext.validateForImport().isValid) {
-                                    ext.sourceRef = extRef
-                                    list.add(ext)
-                                } else {
-                                    flogError { "Bundled extension manifest validation failed" }
-                                }
-                            },
-                            onFailure = { error ->
-                                flogError {
-                                    "Failed to parse bundled extension manifest: error=${error.javaClass.simpleName}"
-                                }
-                            },
-                            )
+            val extRefs = assetsModuleRef.listDirs(appContext).getOrElse { error ->
+                if (error is CancellationException || error is InterruptedException) throw error
+                flogError { "Failed to list bundled extensions: error=${error.javaClass.simpleName}" }
+                return emptyList()
+            }
+            return extRefs.mapNotNull { extRef ->
+                val ext = extRef.subRef(ExtensionDefaults.MANIFEST_FILE_NAME)
+                    .loadTextAsset(appContext)
+                    .mapCatching { decodeExtensionManifest(it, serializer).getOrThrow() }
+                    .getOrElse { error ->
+                        if (error is CancellationException || error is InterruptedException) throw error
+                        flogError { "Failed to parse bundled extension manifest: error=${error.javaClass.simpleName}" }
+                        return@mapNotNull null
                     }
-                },
-                onFailure = { error ->
-                    flogError { "Failed to list bundled extensions: error=${error.javaClass.simpleName}" }
-                },
-            )
-            return list.toList()
+                if (!ext.validateForImport().isValid) {
+                    flogError { "Bundled extension manifest validation failed" }
+                    return@mapNotNull null
+                }
+                ext.sourceRef = extRef
+                ext
+            }
         }
 
         private fun indexInternalModule(): List<T> {
-            val list = mutableListOf<T>()
-            internalModuleRef.listFiles(appContext).fold(
-                onSuccess = { extRefs ->
-                    for (extRef in extRefs) {
-                        val fileRef = extRef.absoluteFile(appContext)
-                        if (!fileRef.name.endsWith(EXTENSION_ARCHIVE_SUFFIX)) {
-                            continue
-                        }
-                        ZipUtils.readFileFromArchive(appContext, extRef, ExtensionDefaults.MANIFEST_FILE_NAME).fold(
-                            onSuccess = { metaStr ->
-                                decodeExtensionManifest(metaStr, serializer).fold(
-                                    onSuccess = { ext ->
-                                        val isCanonicalFile = fileRef.name ==
-                                            ExtensionDefaults.createFlexName(ext.meta.id)
-                                        val conflictsWithBundled = staticExtensions.any {
-                                            it.meta.id == ext.meta.id
-                                        }
-                                        if (
-                                            ext.validateForImport().isValid &&
-                                            isCanonicalFile &&
-                                            !conflictsWithBundled
-                                        ) {
-                                            ext.sourceRef = extRef
-                                            ext.sourceArchiveFingerprint = fingerprint(ext, fileRef.toPath())
-                                            list.add(ext)
-                                        } else {
-                                            flogError { "Installed extension package validation failed" }
-                                        }
-                                    },
-                                    onFailure = { error ->
-                                        flogError {
-                                            "Installed manifest parse failed: error=${error.javaClass.simpleName}"
-                                        }
-                                    },
-                                )
-                            },
-                            onFailure = { error ->
-                                flogError {
-                                    "Failed to read installed extension manifest: error=${error.javaClass.simpleName}"
-                                }
-                            },
-                        )
-                    }
-                },
-                onFailure = { error ->
-                    flogError { "Failed to list installed extensions: error=${error.javaClass.simpleName}" }
-                },
-            )
-            return list.toList()
+            val extRefs = internalModuleRef.listFiles(appContext).getOrElse { error ->
+                if (error is CancellationException || error is InterruptedException) throw error
+                flogError { "Failed to list installed extensions: error=${error.javaClass.simpleName}" }
+                return emptyList()
+            }
+            val bundledIds = staticExtensions.mapTo(HashSet()) { it.meta.id }
+            return extRefs.mapNotNull { extRef ->
+                indexInstalledExtension(
+                    fileName = extRef.relativePath.substringAfterLast('/'),
+                    serializer = serializer,
+                    bundledIds = bundledIds,
+                    readManifest = {
+                        ZipUtils.readFileFromArchive(
+                            appContext, extRef, ExtensionDefaults.MANIFEST_FILE_NAME,
+                        ).getOrThrow()
+                    },
+                    fingerprint = { ext -> fingerprint(ext, extRef.absoluteFile(appContext).toPath()) },
+                )?.also { it.sourceRef = extRef }
+            }
         }
     }
 }
