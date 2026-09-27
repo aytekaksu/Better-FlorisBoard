@@ -319,8 +319,6 @@ class TextKeyboardTouchE2eTest {
 
     @Test
     fun pauseReleasesHeldKeyAfterKeyboardControllerReplacement() {
-        clearEditor()
-        clearPredictionHints()
         val keyboardManager by instrumentation.targetContext.keyboardManager()
         val rootView = requireNotNull(FlorisImeService.currentImeRootViewOrNull())
         lateinit var lifecycle: LifecycleRegistry
@@ -329,17 +327,17 @@ class TextKeyboardTouchE2eTest {
             assertEquals(Lifecycle.State.RESUMED, lifecycle.currentState)
         }
 
-        // Keep the lifecycle owner while replacing the controller captured by the pause callback.
+        // Replacing the keyboard also replaces the controller captured by the pause callback.
         switchKeyboardModeAndWait(KeyboardMode.SYMBOLS, setOf(KeyCode.SPACE))
         switchKeyboardModeAndWait(KeyboardMode.CHARACTERS, setOf('n'.code))
-        val nCenter = awaitStableKeyCenter('n'.code)
-        val nKey = keyboard.keys().asSequence().first { it.computedData.code == 'n'.code }
+        val heldCenter = awaitStableKeyCenter('n'.code)
+        val heldKey = keyboard.keys().asSequence().first { it.computedData.code == 'n'.code }
         var downTime: Long? = null
         var paused = false
         try {
-            downTime = startHold(nCenter, PAUSE_HELD_POINTER_ID)
+            downTime = startHold(heldCenter, DIRECT_HELD_POINTER_ID)
             instrumentation.runOnMainSync {
-                assertTrue("held key did not become pressed", nKey.isPressed)
+                assertTrue("held key did not become pressed", heldKey.isPressed)
                 assertTrue("held key did not reach dispatcher", keyboardManager.inputEventDispatcher.isPressed('n'.code))
             }
             assertEquals("", readEditorText())
@@ -352,7 +350,7 @@ class TextKeyboardTouchE2eTest {
                 var released = false
                 instrumentation.runOnMainSync {
                     assertTrue("IME root detached during lifecycle pause", rootView.isAttachedToWindow)
-                    released = !nKey.isPressed && !keyboardManager.inputEventDispatcher.isPressed('n'.code)
+                    released = !heldKey.isPressed && !keyboardManager.inputEventDispatcher.isPressed('n'.code)
                 }
                 released
             }
@@ -366,10 +364,10 @@ class TextKeyboardTouchE2eTest {
             downTime?.let { startedAt ->
                 inject(
                     MotionEvent.ACTION_UP,
-                    nCenter.x,
-                    nCenter.y,
+                    heldCenter.x,
+                    heldCenter.y,
                     startedAt,
-                    PAUSE_HELD_POINTER_ID,
+                    DIRECT_HELD_POINTER_ID,
                     waitForFinish = true,
                 )
             }
@@ -1371,7 +1369,6 @@ class TextKeyboardTouchE2eTest {
         const val HELD_POINTER_ID = 11
         const val DIRECT_HELD_POINTER_ID = 13
         const val LAYOUT_CHANGE_POINTER_ID = 17
-        const val PAUSE_HELD_POINTER_ID = 19
         const val TEST_SUBTYPE_ID = Long.MIN_VALUE
         const val DUPLICATE_POINTER_ID_1 = 3
         const val DUPLICATE_POINTER_ID_2 = 9
