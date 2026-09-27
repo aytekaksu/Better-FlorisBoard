@@ -48,6 +48,29 @@ inline fun SnyggValue.isUndefined(): Boolean {
     return this is SnyggUndefinedValue
 }
 
+private const val INHERIT_KEYWORD = "inherit"
+private const val UNDEFINED_KEYWORD = "undefined"
+private const val YES_KEYWORD = "yes"
+private const val NO_KEYWORD = "no"
+
+/** Shared codec for stylesheet keywords with singleton values. */
+sealed class SnyggKeywordValue(private val keyword: String) : SnyggValue, SnyggValueEncoder {
+    override val spec = SnyggValueSpec {
+        keywords(id = keyword, keywords = listOf(keyword))
+    }
+
+    override fun defaultValue() = this
+
+    override fun serialize(v: SnyggValue) = runCatching { keyword }
+
+    override fun deserialize(v: String) = runCatching<SnyggValue> {
+        check(v.trim() == keyword)
+        this
+    }
+
+    override fun encoder() = this
+}
+
 /**
  * This value defines that a property value should be copied from the parent stylesheet.
  *
@@ -55,25 +78,8 @@ inline fun SnyggValue.isUndefined(): Boolean {
  * stylesheet rules. This value is kept in both ways during the serialization process and is shown in the UI for a
  * stylesheet editor.
  */
-object SnyggInheritValue : SnyggValue, SnyggValueEncoder {
-    const val Inherit = "inherit"
-
-    override val spec = SnyggValueSpec {
-        keywords(id = Inherit, keywords = listOf(Inherit))
-    }
-
-    override fun defaultValue() = this
-
-    override fun serialize(v: SnyggValue) = runCatching<String> {
-        return@runCatching Inherit
-    }
-
-    override fun deserialize(v: String) = runCatching<SnyggValue> {
-        check(v.trim() == Inherit)
-        return@runCatching SnyggInheritValue
-    }
-
-    override fun encoder() = this
+object SnyggInheritValue : SnyggKeywordValue(INHERIT_KEYWORD) {
+    const val Inherit = INHERIT_KEYWORD
 }
 
 /**
@@ -84,15 +90,7 @@ object SnyggInheritValue : SnyggValue, SnyggValueEncoder {
  * an attempt to serialize this value will result in a serialization failure. Additionally, this value should be shown
  * as "Undefined" in a stylesheet editor UI.
  */
-object SnyggUndefinedValue : SnyggValue, SnyggValueEncoder {
-    private const val Undefined = "undefined"
-
-    override val spec = SnyggValueSpec {
-        keywords(id = Undefined, keywords = listOf(Undefined))
-    }
-
-    override fun defaultValue() = this
-
+object SnyggUndefinedValue : SnyggKeywordValue(UNDEFINED_KEYWORD) {
     override fun serialize(v: SnyggValue) = runCatching<String> {
         error("Undefined is not meant to be serialized")
     }
@@ -100,54 +98,18 @@ object SnyggUndefinedValue : SnyggValue, SnyggValueEncoder {
     override fun deserialize(v: String) = runCatching<SnyggValue> {
         error("Undefined is not meant to be deserialized")
     }
-
-    override fun encoder() = this
 }
 
 /**
  * A simple yes value (useful for boolean style value).
  */
-object SnyggYesValue : SnyggValue, SnyggValueEncoder {
-    const val Yes = "yes"
-
-    override val spec = SnyggValueSpec {
-        keywords(id = Yes, keywords = listOf(Yes))
-    }
-
-    override fun defaultValue() = this
-
-    override fun serialize(v: SnyggValue) = runCatching<String> {
-        return@runCatching Yes
-    }
-
-    override fun deserialize(v: String) = runCatching<SnyggValue> {
-        check(v.trim() == Yes)
-        return@runCatching SnyggYesValue
-    }
-
-    override fun encoder() = this
+object SnyggYesValue : SnyggKeywordValue(YES_KEYWORD) {
+    const val Yes = YES_KEYWORD
 }
 
 /**
  * A simple no value (useful for boolean style value).
  */
-object SnyggNoValue : SnyggValue, SnyggValueEncoder {
-    const val No = "no"
-
-    override val spec = SnyggValueSpec {
-        keywords(id = No, keywords = listOf(No))
-    }
-
-    override fun defaultValue() = this
-
-    override fun serialize(v: SnyggValue) = runCatching<String> {
-        return@runCatching No
-    }
-
-    override fun deserialize(v: String) = runCatching<SnyggValue> {
-        check(v.trim() == No)
-        return@runCatching SnyggNoValue
-    }
-
-    override fun encoder() = this
+object SnyggNoValue : SnyggKeywordValue(NO_KEYWORD) {
+    const val No = NO_KEYWORD
 }
