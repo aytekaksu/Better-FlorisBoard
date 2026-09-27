@@ -180,6 +180,7 @@ class FlorisApplication : Application() {
             lazy { keyboardManager.value.activeState },
             { subtypeManager.value.activeSubtype },
             lazy { nlpManager.value },
+            { FlorisImeService.currentInputConnection() },
         ) { keyboardManager.value.reevaluateInputShiftState() }
     }
     val extensionManager = lazy { ExtensionManager(this) }

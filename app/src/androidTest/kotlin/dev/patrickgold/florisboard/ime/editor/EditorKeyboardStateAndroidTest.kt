@@ -16,8 +16,12 @@
 
 package dev.patrickgold.florisboard.ime.editor
 
+import android.content.Context
 import android.text.InputType
+import android.view.View
+import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputConnection
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
@@ -50,6 +54,7 @@ class EditorKeyboardStateAndroidTest {
                 lazy { ObservableKeyboardState.new() },
                 { active.also(reads::add) },
                 lazy { TestEditorComposingPolicy() },
+                { null },
             ) { }
             val content = EditorContent("abc", 0, EditorRange.cursor(3), EditorRange.Unspecified, EditorRange.Unspecified)
 
@@ -70,6 +75,7 @@ class EditorKeyboardStateAndroidTest {
                 lazy { ObservableKeyboardState.new() },
                 { Subtype.DEFAULT },
                 lazy { TestEditorComposingPolicy() },
+                { null },
             ) { }
             val media = ClipboardItem(
                 type = ItemType.IMAGE,
@@ -110,6 +116,7 @@ class EditorKeyboardStateAndroidTest {
                     policyResolutions++
                     TestEditorComposingPolicy()
                 },
+                { null },
             ) {
                 shiftCalls++
             }
@@ -170,6 +177,7 @@ class EditorKeyboardStateAndroidTest {
                     policyResolutions++
                     policy
                 },
+                { null },
             ) { }
 
             assertFalse(editor.determineComposingEnabled())
@@ -201,6 +209,7 @@ class EditorKeyboardStateAndroidTest {
                 lazy { state },
                 { Subtype.DEFAULT },
                 lazy { policy },
+                { null },
             ) { }
             val info = FlorisEditorInfo.wrap(EditorInfo().apply {
                 inputType = InputType.TYPE_CLASS_TEXT
@@ -224,6 +233,75 @@ class EditorKeyboardStateAndroidTest {
             assertEquals(EditorRange.Unspecified, selectedContent.localComposing)
             assertEquals(listOf("enabled"), policy.calls)
         }
+    }
+
+    @Test
+    fun inputConnectionReaderUsesTheCurrentConnectionForBaseAndConcreteActions() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val context = instrumentation.targetContext
+            val first = RecordingInputConnection(context)
+            val second = RecordingInputConnection(context)
+            var activeConnection: InputConnection? = null
+            var reads = 0
+            val editor = EditorInstance(
+                context,
+                lazy { ObservableKeyboardState.new() },
+                { Subtype.DEFAULT },
+                lazy { TestEditorComposingPolicy() },
+                {
+                    reads++
+                    activeConnection
+                },
+            ) { }
+            val info = FlorisEditorInfo.wrap(EditorInfo().apply {
+                inputType = InputType.TYPE_CLASS_TEXT
+            })
+            val cursorUpdateAll =
+                InputConnection.CURSOR_UPDATE_MONITOR or InputConnection.CURSOR_UPDATE_IMMEDIATE
+
+            assertEquals(0, reads)
+            editor.handleStartInput(info)
+            assertFalse(editor.performEnterAction(ImeOptions.Action.DONE))
+            assertEquals(2, reads)
+
+            activeConnection = first
+            editor.handleStartInput(info)
+            assertTrue(editor.performEnterAction(ImeOptions.Action.DONE))
+            assertEquals(listOf(cursorUpdateAll), first.cursorUpdateModes)
+            assertEquals(listOf(EditorInfo.IME_ACTION_DONE), first.editorActions)
+            assertEquals(4, reads)
+
+            activeConnection = second
+            editor.handleStartInput(info)
+            assertTrue(editor.performEnterAction(ImeOptions.Action.GO))
+            assertEquals(listOf(cursorUpdateAll), first.cursorUpdateModes)
+            assertEquals(listOf(EditorInfo.IME_ACTION_DONE), first.editorActions)
+            assertEquals(listOf(cursorUpdateAll), second.cursorUpdateModes)
+            assertEquals(listOf(EditorInfo.IME_ACTION_GO), second.editorActions)
+            assertEquals(6, reads)
+
+            activeConnection = null
+            editor.handleFinishInput()
+            assertFalse(editor.performEnterAction(ImeOptions.Action.DONE))
+            assertEquals(listOf(cursorUpdateAll), second.cursorUpdateModes)
+            assertEquals(8, reads)
+        }
+    }
+}
+
+private class RecordingInputConnection(context: Context) : BaseInputConnection(View(context), true) {
+    val cursorUpdateModes = mutableListOf<Int>()
+    val editorActions = mutableListOf<Int>()
+
+    override fun requestCursorUpdates(cursorUpdateMode: Int): Boolean {
+        cursorUpdateModes += cursorUpdateMode
+        return true
+    }
+
+    override fun performEditorAction(editorAction: Int): Boolean {
+        editorActions += editorAction
+        return true
     }
 }
 
