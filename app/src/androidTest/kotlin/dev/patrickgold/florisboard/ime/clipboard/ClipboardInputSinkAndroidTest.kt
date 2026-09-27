@@ -140,7 +140,7 @@ class ClipboardInputSinkAndroidTest {
             { Subtype.DEFAULT },
             lazy { error("MIME eligibility must not need the composing policy") },
             { null },
-        ) { }
+        ) { false }
         fun info(vararg types: String) = FlorisEditorInfo.wrap(EditorInfo().apply {
             packageName = "test.editor"
             contentMimeTypes = types

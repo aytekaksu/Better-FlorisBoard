@@ -33,13 +33,16 @@ import dev.patrickgold.florisboard.ime.clipboard.ClipboardManager
 import dev.patrickgold.florisboard.ime.core.SubtypeManager
 import dev.patrickgold.florisboard.ime.dictionary.DictionaryManager
 import dev.patrickgold.florisboard.ime.editor.EditorInstance
+import dev.patrickgold.florisboard.ime.input.InputEventDispatcher
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardExtensionRepository
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardManager
+import dev.patrickgold.florisboard.ime.keyboard.ObservableKeyboardState
 import dev.patrickgold.florisboard.ime.media.emoji.FlorisEmojiCompat
 import dev.patrickgold.florisboard.ime.nlp.NlpManager
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
 import dev.patrickgold.florisboard.ime.nlp.plugin.liveAutocorrectKeyboardTraits
 import dev.patrickgold.florisboard.ime.text.gestures.GlideTypingManager
+import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.theme.ThemeManager
 import dev.patrickgold.florisboard.lib.cache.CacheManager
 import dev.patrickgold.florisboard.lib.cache.StartupCacheCleanup
@@ -174,23 +177,38 @@ class FlorisApplication : Application() {
         clipboardInitializationFailure.register(ClipboardManager(this))
     }
     val dictionaryManager = lazy { DictionaryManager(this) }
+    val keyboardState: Lazy<ObservableKeyboardState> = lazy { ObservableKeyboardState.new() }
+    val inputEventDispatcher: Lazy<InputEventDispatcher> = lazy {
+        InputEventDispatcher.new(
+            repeatableKeyCodes = intArrayOf(
+                KeyCode.ARROW_DOWN,
+                KeyCode.ARROW_LEFT,
+                KeyCode.ARROW_RIGHT,
+                KeyCode.ARROW_UP,
+                KeyCode.DELETE,
+                KeyCode.FORWARD_DELETE,
+                KeyCode.UNDO,
+                KeyCode.REDO,
+            ),
+        )
+    }
     val editorInstance: Lazy<EditorInstance> = lazy {
         EditorInstance(
             this,
-            lazy { keyboardManager.value.activeState },
+            keyboardState,
             { subtypeManager.value.activeSubtype },
             lazy { nlpManager.value },
             { FlorisImeService.currentInputConnection() },
-        ) { keyboardManager.value.reevaluateInputShiftState() }
+        ) { inputEventDispatcher.value.isPressed(KeyCode.SHIFT) }
     }
     val extensionManager = lazy { ExtensionManager(this) }
     val glideTypingManager = lazy { GlideTypingManager(this) }
     val keyboardExtensionRepository = lazy { KeyboardExtensionRepository(this) }
-    val keyboardManager = lazy { KeyboardManager(this) }
+    val keyboardManager = lazy { KeyboardManager(this, keyboardState.value, inputEventDispatcher.value) }
     val autocorrectPluginManager = lazy {
         AutocorrectPluginManager(
             context = this,
-            keyboardTraits = liveAutocorrectKeyboardTraits { keyboardManager.value.activeState },
+            keyboardTraits = liveAutocorrectKeyboardTraits { keyboardState.value },
             currentEditorInfo = { editorInstance.value.activeInfo },
             currentEditorContent = { editorInstance.value.activeContent },
         )
@@ -204,7 +222,7 @@ class FlorisApplication : Application() {
             lazy { extensionManager.value.languagePacks },
             // The getter includes pending edits not yet reflected in activeContentFlow.
             { editorInstance.value.activeContent },
-        ) { keyboardManager.value.activeState.isIncognitoMode }
+        ) { keyboardState.value.isIncognitoMode }
     }
     val subtypeManager = lazy { SubtypeManager(this) }
     val themeManager = lazy { ThemeManager(this) }

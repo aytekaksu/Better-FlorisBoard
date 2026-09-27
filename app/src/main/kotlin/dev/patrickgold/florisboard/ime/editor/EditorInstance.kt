@@ -31,6 +31,7 @@ import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.clipboard.provider.OwnedClipboardMediaUri
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.input.InputShiftState
+import dev.patrickgold.florisboard.ime.input.automaticShiftState
 import dev.patrickgold.florisboard.ime.keyboard.IncognitoMode
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.ObservableKeyboardState
@@ -153,12 +154,11 @@ class EditorInstance(
     currentSubtype: () -> Subtype,
     composingPolicy: Lazy<EditorComposingPolicy>,
     currentInputConnection: () -> InputConnection?,
-    reevaluateInputShiftState: () -> Unit,
+    private val isShiftPressed: () -> Boolean,
 ) : AbstractEditorInstance(
     currentSubtype,
     composingPolicy,
     currentInputConnection,
-    reevaluateInputShiftState,
 ) {
     companion object {
         private const val SPACE = " "
@@ -180,6 +180,16 @@ class EditorInstance(
 
     private fun Boolean.finishCommitAttempt() = also {
         if (it) updateLastCommitPosition() else phantomSpace.setInactive()
+    }
+
+    public override fun reevaluateInputShiftState() {
+        if (activeState.inputShiftState != InputShiftState.CAPS_LOCK && !isShiftPressed()) {
+            activeState.inputShiftState = automaticShiftState(
+                autoCapitalization = prefs.correction.autoCapitalization.get(),
+                supportsCapitalization = { currentSubtype().primaryLocale.supportsCapitalization },
+                hasCursorCapsMode = { activeCursorCapsMode != InputAttributes.CapsMode.NONE },
+            )
+        }
     }
 
     override fun handleStartInputView(editorInfo: FlorisEditorInfo, isRestart: Boolean) {

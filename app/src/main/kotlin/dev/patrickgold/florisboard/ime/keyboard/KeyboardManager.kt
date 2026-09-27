@@ -39,7 +39,6 @@ import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.editor.EditorEditResult
 import dev.patrickgold.florisboard.ime.editor.FlorisEditorInfo
 import dev.patrickgold.florisboard.ime.editor.ImeOptions
-import dev.patrickgold.florisboard.ime.editor.InputAttributes
 import dev.patrickgold.florisboard.ime.editor.OperationUnit
 import dev.patrickgold.florisboard.ime.editor.asEditorEditResult
 import dev.patrickgold.florisboard.ime.input.CapitalizationBehavior
@@ -106,7 +105,11 @@ internal val navigationMovements = mapOf(
     ),
 )
 
-class KeyboardManager(context: Context) : InputKeyEventReceiver {
+class KeyboardManager(
+    context: Context,
+    val activeState: ObservableKeyboardState,
+    dispatcher: InputEventDispatcher,
+) : InputKeyEventReceiver {
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
     private val autocorrectPluginManager by context.autocorrectPluginManager()
@@ -121,7 +124,6 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     val layoutManager = LayoutManager(context)
     private val keyboardCache = TextKeyboardCache()
 
-    val activeState = ObservableKeyboardState.new()
     var smartbarVisibleDynamicActionsCount by mutableIntStateOf(0)
     private var lastToastReference = WeakReference<Toast>(null)
 
@@ -134,18 +136,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     val lastCharactersEvaluator: StateFlow<ComputingEvaluator>
         field = MutableStateFlow<ComputingEvaluator>(DefaultComputingEvaluator)
 
-    val inputEventDispatcher = InputEventDispatcher.new(
-        repeatableKeyCodes = intArrayOf(
-            KeyCode.ARROW_DOWN,
-            KeyCode.ARROW_LEFT,
-            KeyCode.ARROW_RIGHT,
-            KeyCode.ARROW_UP,
-            KeyCode.DELETE,
-            KeyCode.FORWARD_DELETE,
-            KeyCode.UNDO,
-            KeyCode.REDO,
-        )
-    ).also {
+    val inputEventDispatcher = dispatcher.also {
         it.keyEventReceiver = this
         it.keyRepeatFeedbackReceiver = { data ->
             FlorisImeService.inputFeedbackController()?.keyRepeatedAction(data)
@@ -197,7 +188,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             }
             subtypeManager.activeSubtypeFlow.collectLatestIn(scope) {
                 autocorrectPluginManager.clearInputTrace()
-                reevaluateInputShiftState()
+                editorInstance.reevaluateInputShiftState()
                 updateActiveEvaluators()
                 editorInstance.refreshComposing()
                 resetSuggestions(editorInstance.activeContent)
@@ -253,18 +244,6 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             activeSmartbarEvaluator.value = computingEvaluator.asSmartbarQuickActionsEvaluator()
             if (computedKeyboard.mode == KeyboardMode.CHARACTERS) {
                 lastCharactersEvaluator.value = computingEvaluator
-            }
-        }
-    }
-
-    fun reevaluateInputShiftState() {
-        if (activeState.inputShiftState != InputShiftState.CAPS_LOCK && !inputEventDispatcher.isPressed(KeyCode.SHIFT)) {
-            val shift = prefs.correction.autoCapitalization.get()
-                && subtypeManager.activeSubtype.primaryLocale.supportsCapitalization
-                && editorInstance.activeCursorCapsMode != InputAttributes.CapsMode.NONE
-            activeState.inputShiftState = when {
-                shift -> InputShiftState.SHIFTED_AUTOMATIC
-                else -> InputShiftState.UNSHIFTED
             }
         }
     }
@@ -823,7 +802,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             KeyCode.SPACE -> handleSpace(data)
             KeyCode.SYSTEM_INPUT_METHOD_PICKER -> InputMethodUtils.showImePicker(appContext)
             KeyCode.SHOW_SUBTYPE_PICKER -> {
-                appContext.keyboardManager.value.activeState.isSubtypeSelectionVisible = true
+                activeState.isSubtypeSelectionVisible = true
             }
             KeyCode.SYSTEM_PREV_INPUT_METHOD -> FlorisImeService.switchToPrevInputMethod()
             KeyCode.SYSTEM_NEXT_INPUT_METHOD -> FlorisImeService.switchToNextInputMethod()

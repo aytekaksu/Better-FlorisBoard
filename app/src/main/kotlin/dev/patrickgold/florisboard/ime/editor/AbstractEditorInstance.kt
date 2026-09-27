@@ -106,7 +106,6 @@ abstract class AbstractEditorInstance(
     protected val currentSubtype: () -> Subtype,
     composingPolicy: Lazy<EditorComposingPolicy>,
     protected val currentInputConnection: () -> InputConnection?,
-    private val reevaluateInputShiftState: () -> Unit,
 ) {
     companion object {
         private const val NumCharsBeforeCursor: Int = 256
@@ -117,6 +116,8 @@ abstract class AbstractEditorInstance(
             InputConnection.CURSOR_UPDATE_MONITOR or InputConnection.CURSOR_UPDATE_IMMEDIATE
         private const val CursorUpdateNone: Int = 0
     }
+
+    abstract fun reevaluateInputShiftState()
 
     protected val editorComposingPolicy by composingPolicy
     private val scope = MainScope()

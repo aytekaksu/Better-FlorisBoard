@@ -68,10 +68,12 @@ advances that history before the outer callback returns.
 Japanese `ja`, including regional variants, disables both; explicit suggestion
 separator choices still apply.
 
-`KeyboardManager` owns keyboard state. `FlorisApplication` gives the editor a
-lazy view of that state and a synchronous shift-recheck callback. The editor
-does not construct or look up the manager. Shift rechecks remain at the
-editor's existing content-publication and invalid-selection paths.
+`FlorisApplication` owns one lazy keyboard state and input dispatcher.
+`KeyboardManager` receives both and registers as the dispatcher's receiver
+before handling input. The editor reads the same state and uses a live
+pressed-Shift reader; it never constructs or looks up `KeyboardManager`.
+Shift rechecks remain at the editor's existing content-publication and
+invalid-selection paths.
 `FlorisApplication` also supplies the editor a lazy composing policy and a live
 subtype getter. NLP still selects the active language provider, while the editor
 reads punctuation rules from its existing keyboard-extension snapshot.
