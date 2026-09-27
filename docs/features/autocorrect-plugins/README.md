@@ -72,6 +72,8 @@ reflect the current shift state.
 
 `NlpManager` reads editor content through an app-supplied live reader, including
 edits still pending in the editor's expected-content queue.
+`FlorisApplication` also supplies the autocorrect host with live editor-info
+and content readers; final content is still captured when the session closes.
 
 The host binds but never starts a provider service. Session starts, admitted
 callbacks, and finish work stay in wire order. Binding demand ends only after

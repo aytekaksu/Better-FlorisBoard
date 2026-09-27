@@ -188,8 +188,10 @@ class FlorisApplication : Application() {
     val keyboardManager = lazy { KeyboardManager(this) }
     val autocorrectPluginManager = lazy {
         AutocorrectPluginManager(
-            this,
-            liveAutocorrectKeyboardTraits { keyboardManager.value.activeState },
+            context = this,
+            keyboardTraits = liveAutocorrectKeyboardTraits { keyboardManager.value.activeState },
+            currentEditorInfo = { editorInstance.value.activeInfo },
+            currentEditorContent = { editorInstance.value.activeContent },
         )
     }
     val nlpManager: Lazy<NlpManager> = lazy {
