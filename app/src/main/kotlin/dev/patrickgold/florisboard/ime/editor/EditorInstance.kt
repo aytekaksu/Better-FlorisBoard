@@ -611,41 +611,28 @@ class EditorInstance(
         }
     }
 
-    /**
-     * Executes a backward delete on this editor's text. If a text selection is active, all
-     * characters inside this selection will be removed, else only the left-most character from
-     * the cursor's position.
-     *
-     * @return True on success, false if an error occurred or the input connection is invalid.
-     */
+    /** Deletes selected text, or one character/word before the cursor. */
     fun deleteBackwards(unit: OperationUnit): Boolean {
         val content = activeContent
-        if (unit == OperationUnit.CHARACTERS) {
-            if (phantomSpace.isActive && content.currentWord.isValid && prefs.glide.immediateBackspaceDeletesWord.get()) {
-                return deleteBackwards(OperationUnit.WORDS)
-            }
+        if (unit == OperationUnit.CHARACTERS && phantomSpace.isActive && content.currentWord.isValid &&
+            prefs.glide.immediateBackspaceDeletesWord.get()) {
+            return deleteBackwards(OperationUnit.WORDS)
         }
-        autoSpace.setInactive()
-        phantomSpace.setInactive()
-        return if (content.selection.isSelectionMode) {
-            commitText("")
-        } else deleteAroundCursor(unit, OperationScope.BEFORE_CURSOR, n = 1)
+        return deleteSelectedOrAroundCursor(unit, OperationScope.BEFORE_CURSOR, content)
     }
 
-    /**
-     * Executes a backward delete on this editor's text. If a text selection is active, all
-     * characters inside this selection will be removed, else only the left-most character from
-     * the cursor's position.
-     *
-     * @return True on success, false if an error occurred or the input connection is invalid.
-     */
-    fun deleteForwards(unit: OperationUnit): Boolean {
-        val content = activeContent
+    /** Deletes selected text, or one character/word after the cursor. */
+    fun deleteForwards(unit: OperationUnit): Boolean =
+        deleteSelectedOrAroundCursor(unit, OperationScope.AFTER_CURSOR, activeContent)
+
+    private fun deleteSelectedOrAroundCursor(
+        unit: OperationUnit,
+        scope: OperationScope,
+        content: EditorContent,
+    ): Boolean {
         autoSpace.setInactive()
         phantomSpace.setInactive()
-        return if (content.selection.isSelectionMode) {
-            commitText("")
-        } else deleteAroundCursor(unit, OperationScope.AFTER_CURSOR, n = 1)
+        return if (content.selection.isSelectionMode) commitText("") else deleteAroundCursor(unit, scope, n = 1)
     }
 
     fun setSelectionSurrounding(n: Int, unit: OperationUnit, scope: OperationScope): Boolean {
@@ -655,29 +642,26 @@ class EditorInstance(
         val selection = content.selection
         val safeEditorBounds = content.safeEditorBounds
         if (selection.isNotValid) return false
-        when (scope) {
-            OperationScope.BEFORE_CURSOR -> {
-                if (n <= 0) {
-                    return setSelection(selection.end, selection.end)
-                }
-                val textToAnalyze = content.text.substring(0, content.localSelection.end)
-                val length = when (unit) {
-                    OperationUnit.CHARACTERS -> breakIterators.measureLastUChars(textToAnalyze, n)
-                    OperationUnit.WORDS -> breakIterators.measureLastUWords(textToAnalyze, n)
-                }
-                return setSelection((selection.end - length).coerceAtLeast(safeEditorBounds.start), selection.end)
-            }
-            OperationScope.AFTER_CURSOR -> {
-                if (n <= 0) {
-                    return setSelection(selection.start, selection.start)
-                }
-                val textToAnalyze = content.text.substring(content.localSelection.start)
-                val length = when (unit) {
-                    OperationUnit.CHARACTERS -> breakIterators.measureUChars(textToAnalyze, n)
-                    OperationUnit.WORDS -> breakIterators.measureUWords(textToAnalyze, n)
-                }
-                return setSelection(selection.start, (selection.start + length).coerceAtMost(safeEditorBounds.end))
-            }
+        val beforeCursor = scope == OperationScope.BEFORE_CURSOR
+        val anchor = if (beforeCursor) selection.end else selection.start
+        if (n <= 0) return setSelection(anchor, anchor)
+        val textToAnalyze = if (beforeCursor) {
+            content.text.substring(0, content.localSelection.end)
+        } else {
+            content.text.substring(content.localSelection.start)
+        }
+        val length = when (unit) {
+            OperationUnit.CHARACTERS ->
+                if (beforeCursor) breakIterators.measureLastUChars(textToAnalyze, n)
+                else breakIterators.measureUChars(textToAnalyze, n)
+            OperationUnit.WORDS ->
+                if (beforeCursor) breakIterators.measureLastUWords(textToAnalyze, n)
+                else breakIterators.measureUWords(textToAnalyze, n)
+        }
+        return if (beforeCursor) {
+            setSelection((anchor - length).coerceAtLeast(safeEditorBounds.start), anchor)
+        } else {
+            setSelection(anchor, (anchor + length).coerceAtMost(safeEditorBounds.end))
         }
     }
 
