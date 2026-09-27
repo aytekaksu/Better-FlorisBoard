@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +42,6 @@ import androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationExceptio
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.ime.clipboard.rememberClipboardAccessLocked
@@ -96,8 +96,13 @@ internal fun <T> candidatesForDisplay(
     displayMode: CandidatesDisplayMode,
 ) = if (displayMode == CandidatesDisplayMode.CLASSIC) candidates.take(3) else candidates
 
+private class CandidatePointerKey(private val candidate: SuggestionCandidate) {
+    override fun equals(other: Any?) = other is CandidatePointerKey && candidate === other.candidate
+    override fun hashCode() = System.identityHashCode(candidate)
+}
+
 @Composable
-fun CandidatesRow(modifier: Modifier = Modifier) {
+fun CandidatesRow(candidates: List<SuggestionCandidate>, modifier: Modifier = Modifier) {
     val prefs by FlorisPreferenceStore
     val context = LocalContext.current
     val keyboardManager by context.keyboardManager()
@@ -111,12 +116,11 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
     val displayMode by prefs.suggestion.displayMode.collectAsState()
     val matchKeyAppearance by prefs.suggestion.matchKeyAppearance.collectAsState()
     val keyboardState by keyboardManager.activeState.collectAsState()
-    val candidateSource by nlpManager.activeCandidatesFlow.collectAsState()
     val clipboardAccessLocked = rememberClipboardAccessLocked(context, keyguardManager)
-    val candidates = if (clipboardAccessLocked || keyboardState.isIncognitoMode) {
-        candidateSource.filterNot { it is ClipboardSuggestionCandidate }
+    val visibleCandidates = if (clipboardAccessLocked || keyboardState.isIncognitoMode) {
+        candidates.filterNot { it is ClipboardSuggestionCandidate }
     } else {
-        candidateSource
+        candidates
     }
     val appearance = resolveCandidateAppearance(matchKeyAppearance, displayMode)
 
@@ -124,17 +128,17 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
         elementName = FlorisImeUi.SmartbarCandidatesRow.elementName,
         modifier = modifier
             .fillMaxSize()
-            .conditional(displayMode == CandidatesDisplayMode.DYNAMIC_SCROLLABLE && candidates.size > 1) {
+            .conditional(displayMode == CandidatesDisplayMode.DYNAMIC_SCROLLABLE && visibleCandidates.size > 1) {
                 florisHorizontalScroll(scrollbarHeight = CandidatesRowScrollbarHeight)
             },
-        horizontalArrangement = if (candidates.size > 1) {
+        horizontalArrangement = if (visibleCandidates.size > 1) {
             Arrangement.Start
         } else {
             Arrangement.Center
         },
     ) {
-        if (candidates.isNotEmpty()) {
-            val candidateModifier = if (candidates.size == 1) {
+        if (visibleCandidates.isNotEmpty()) {
+            val candidateModifier = if (visibleCandidates.size == 1) {
                 Modifier
                     .fillMaxHeight()
                     .weight(1f, fill = false)
@@ -148,7 +152,7 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
                         wrapContentWidth().widthIn(max = 160.dp)
                     }
             }
-            val list = candidatesForDisplay(candidates, displayMode)
+            val list = candidatesForDisplay(visibleCandidates, displayMode)
             for ((n, candidate) in list.withIndex()) {
                 if (n > 0) {
                     val separatorModifier = Modifier
@@ -198,7 +202,7 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun CandidateItem(
+internal fun CandidateItem(
     candidate: SuggestionCandidate,
     displayMode: CandidatesDisplayMode,
     appearance: CandidateAppearance,
@@ -206,8 +210,11 @@ private fun CandidateItem(
     onClick: () -> Unit = { },
     onLongPress: () -> Boolean = { false },
     longPressDelay: Long,
-) = with(LocalDensity.current) {
+) {
     var isPressed by remember { mutableStateOf(false) }
+    val currentCandidate by rememberUpdatedState(candidate)
+    val currentOnClick by rememberUpdatedState(onClick)
+    val currentOnLongPress by rememberUpdatedState(onLongPress)
 
     val elementName = if (candidate is ClipboardSuggestionCandidate) {
         FlorisImeUi.SmartbarCandidateClip
@@ -225,28 +232,29 @@ private fun CandidateItem(
         attributes = attributes,
         selector = selector,
         modifier = modifier
-            .pointerInput(Unit) {
+            .pointerInput(CandidatePointerKey(candidate), longPressDelay) {
                 awaitEachGesture {
                     val down = awaitFirstDown()
                     isPressed = true
-                    if (down.pressed != down.previousPressed) down.consume()
-                    var upOrCancel: PointerInputChange? = null
                     try {
-                        upOrCancel = withTimeout(longPressDelay) {
-                            waitForUpOrCancellation()
+                        if (down.pressed != down.previousPressed) down.consume()
+                        var upOrCancel: PointerInputChange? = null
+                        try {
+                            upOrCancel = withTimeout(longPressDelay) {
+                                waitForUpOrCancellation()
+                            }
+                            upOrCancel?.let { if (it.pressed != it.previousPressed) it.consume() }
+                        } catch (_: PointerEventTimeoutCancellationException) {
+                            if (candidate === currentCandidate && currentOnLongPress()) {
+                                upOrCancel = null
+                                isPressed = false
+                            }
+                            waitForUpOrCancellation()?.let { if (it.pressed != it.previousPressed) it.consume() }
                         }
-                        upOrCancel?.let { if (it.pressed != it.previousPressed) it.consume() }
-                    } catch (_: PointerEventTimeoutCancellationException) {
-                        if (onLongPress()) {
-                            upOrCancel = null
-                            isPressed = false
-                        }
-                        waitForUpOrCancellation()?.let { if (it.pressed != it.previousPressed) it.consume() }
+                        if (upOrCancel != null && candidate === currentCandidate) currentOnClick()
+                    } finally {
+                        isPressed = false
                     }
-                    if (upOrCancel != null) {
-                        onClick()
-                    }
-                    isPressed = false
                 }
             },
         verticalAlignment = Alignment.CenterVertically,
