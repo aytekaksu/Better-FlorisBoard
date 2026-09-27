@@ -23,6 +23,7 @@ provider transport is covered by
 | Swipe detector | [`SwipeGesture.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/SwipeGesture.kt) |
 | Glide detector | [`GlideTypingGesture.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/GlideTypingGesture.kt) |
 | Semantic key dispatch | [`KeyboardManager.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyboardManager.kt) |
+| Localized IME-action labels and Android fallback | [`FlorisImeService.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/FlorisImeService.kt) |
 | Fast state and hit-test tests | [`app/src/test/.../keyboard`](../../../app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/) |
 | Deterministic editor fixture | [`DeterministicInputConnection.kt`](../../../app/src/test/kotlin/dev/patrickgold/florisboard/test/editor/DeterministicInputConnection.kt) |
 | Real MotionEvent scenarios | [`TextKeyboardTouchE2eTest.kt`](../../../app/src/androidTest/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardTouchE2eTest.kt) |
@@ -110,6 +111,8 @@ must not persist or export input.
   continue.
 - External prediction hints are optional and leased to a pointer. Ordinary hit
   testing remains the fallback.
+- Missing Android IME-action labels fall back to the platform label; `NONE`
+  has no label.
 
 No cleanup path may commit a key merely to make internal state consistent.
 
