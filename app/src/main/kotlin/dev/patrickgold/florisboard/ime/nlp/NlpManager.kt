@@ -289,6 +289,8 @@ class NlpManager internal constructor(
     context: Context,
     clipboardPrimaryClipFlow: Lazy<StateFlow<ClipboardItem?>>,
     private val activeSubtypeFlow: StateFlow<Subtype>,
+    subtypesFlow: StateFlow<List<Subtype>>,
+    languagePacksFlow: Lazy<StateFlow<List<LanguagePackExtension>>>,
     private val currentEditorContent: () -> EditorContent,
     private val isIncognitoMode: () -> Boolean,
 ) : EditorComposingPolicy {
@@ -302,7 +304,9 @@ class NlpManager internal constructor(
     private val emojiSuggestionProvider = EmojiSuggestionProvider(context)
     private val providers = mapOf(
         LatinLanguageProvider.ProviderId to ProviderInstanceWrapper(LatinLanguageProvider(context)),
-        HanShapeBasedLanguageProvider.ProviderId to ProviderInstanceWrapper(HanShapeBasedLanguageProvider(context)),
+        HanShapeBasedLanguageProvider.ProviderId to ProviderInstanceWrapper(
+            HanShapeBasedLanguageProvider(context, subtypesFlow, languagePacksFlow),
+        ),
     )
     private val providerLifecycleGate = Mutex()
 
