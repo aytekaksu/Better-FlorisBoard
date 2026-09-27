@@ -608,44 +608,32 @@ abstract class AbstractEditorInstance(
             sendDownUpKeyEvent(keyEventCode, metaState, count = n)
         } else {
             val locale = currentSubtype().primaryLocale
-            when (scope) {
-                OperationScope.BEFORE_CURSOR -> {
-                    val length = when (unit) {
-                        OperationUnit.CHARACTERS -> breakIterators.measureLastUChars(scopeText, n, locale)
-                        OperationUnit.WORDS -> breakIterators.measureLastUWords(scopeText, n, locale)
-                    }
-                    val selection = content.selection
-                    val newSelection = selection.translatedBy(-length)
-                    val newContent = content.generateCopy(
-                        selection = newSelection,
-                        textBeforeSelection = scopeText.dropLast(length),
-                    )
-                    expectedContentQueue.push(newContent)
-                    ic.beginBatchEdit()
-                    ic.finishComposingText()
-                    ic.deleteSurroundingText(length, 0)
-                    ic.setComposingRegion(newContent.composing)
-                    ic.endBatchEdit()
-                }
-                OperationScope.AFTER_CURSOR -> {
-                    val length = when (unit) {
-                        OperationUnit.CHARACTERS -> breakIterators.measureUChars(scopeText, n, locale)
-                        OperationUnit.WORDS -> breakIterators.measureUWords(scopeText, n, locale)
-                    }
-                    val selection = content.selection
-                    val newSelection = selection.translatedBy(length)
-                    val newContent = content.generateCopy(
-                        selection = newSelection,
-                        textAfterSelection = scopeText.drop(length),
-                    )
-                    expectedContentQueue.push(newContent)
-                    ic.beginBatchEdit()
-                    ic.finishComposingText()
-                    ic.deleteSurroundingText(0, length)
-                    ic.setComposingRegion(newContent.composing)
-                    ic.endBatchEdit()
-                }
+            val beforeCursor = scope == OperationScope.BEFORE_CURSOR
+            val length = when (unit) {
+                OperationUnit.CHARACTERS ->
+                    if (beforeCursor) breakIterators.measureLastUChars(scopeText, n, locale)
+                    else breakIterators.measureUChars(scopeText, n, locale)
+                OperationUnit.WORDS ->
+                    if (beforeCursor) breakIterators.measureLastUWords(scopeText, n, locale)
+                    else breakIterators.measureUWords(scopeText, n, locale)
             }
+            val newContent = if (beforeCursor) {
+                content.generateCopy(
+                    selection = content.selection.translatedBy(-length),
+                    textBeforeSelection = scopeText.dropLast(length),
+                )
+            } else {
+                content.generateCopy(
+                    selection = content.selection.translatedBy(length),
+                    textAfterSelection = scopeText.drop(length),
+                )
+            }
+            expectedContentQueue.push(newContent)
+            ic.beginBatchEdit()
+            ic.finishComposingText()
+            ic.deleteSurroundingText(if (beforeCursor) length else 0, if (beforeCursor) 0 else length)
+            ic.setComposingRegion(newContent.composing)
+            ic.endBatchEdit()
             true
         }).also {
             deleteMoveLastCommitPosition()
