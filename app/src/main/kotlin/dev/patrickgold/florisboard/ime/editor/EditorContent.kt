@@ -19,14 +19,14 @@ package dev.patrickgold.florisboard.ime.editor
 import org.florisboard.lib.kotlin.safeSubstring
 
 /**
- * A snapshot window of an input editor content around the selection/cursor.
+ * Editor text around the cursor or selection. The snapshot may cover only part of the document.
  *
- * @property text The raw text of the editor content. May be the full text or only a partial view.
- * @property offset The offset of the whole editor content snapshot. `-1` indicates the value is unknown.
- * @property localSelection The selection reported by the editor, without [offset] included.
- * @property localComposing The composing region for the editor, without [offset] included.
- * @property localCurrentWord The current word for the editor (typically the same as [localComposing]), without [offset]
- *     included.
+ * @property text Full editor text or the available snapshot window.
+ * @property offset Start of [text] in the editor, or `-1` when unknown.
+ * @property localSelection Selection relative to [text], except in a selection-only snapshot where it uses editor
+ *     coordinates.
+ * @property localComposing Composing range relative to [text].
+ * @property localCurrentWord Current word relative to [text], often matching [localComposing].
  */
 data class EditorContent(
     val text: String,
@@ -35,59 +35,35 @@ data class EditorContent(
     val localComposing: EditorRange,
     val localCurrentWord: EditorRange,
 ) {
-    /**
-     * The text before the selection as a new string. This may be the whole text before the selection or only a subset,
-     * depending on the cache and app configuration. Can also be empty for raw editors or if there is no text before
-     * the selection.
-     */
+    /** Available text before the selection; it may be partial or empty, including in raw editors. */
     val textBeforeSelection: String
         get() = if (localSelection.isValid) text.safeSubstring(0, localSelection.start) else ""
 
-    /**
-     * The selected text as a new string. This is always either the entire selected text or an empty string.
-     */
+    /** The selected text, or empty when the selection is invalid or outside this snapshot. */
     val selectedText: String
         get() = if (localSelection.isValid) text.safeSubstring(localSelection.start, localSelection.end) else ""
 
-    /**
-     * The text after the selection as a new string. This may be the whole text after the selection or only a subset,
-     * depending on the cache and app configuration. Can also be empty for raw editors or if there is no text after the
-     * selection.
-     */
+    /** Available text after the selection; it may be partial or empty, including in raw editors. */
     val textAfterSelection: String
         get() = if (localSelection.isValid) text.safeSubstring(localSelection.end) else ""
 
-    /**
-     * The selection reported by the editor, with [offset] included.
-     */
+    /** Selection in editor coordinates; adds [offset] when it is positive. */
     val selection: EditorRange
         get() = if (offset > 0) localSelection.translatedBy(offset) else localSelection
 
-    /**
-     * The composing region for the editor, with [offset] included. May be intentionally invalid even if there is a
-     * current word if the user has requested to disable the composing region.
-     */
+    /** Composing range in editor coordinates; it may be invalid when composing is disabled. */
     val composing: EditorRange
         get() = if (offset > 0) localComposing.translatedBy(offset) else localComposing
 
-    /**
-     * The composing region text as a new string. May be intentionally empty even if there is a current word if the
-     * user has requested to disable the composing region. This is always either the entire composing text or an empty
-     * string.
-     */
+    /** Composing text, or empty when its range is invalid or outside this snapshot. */
     val composingText: String
         get() = if (localComposing.isValid) text.safeSubstring(localComposing.start, localComposing.end) else ""
 
-    /**
-     * The current word for the editor (typically the same as [localComposing]), with [offset] included.
-     */
+    /** Current-word range in editor coordinates; adds [offset] when it is positive. */
     val currentWord: EditorRange
         get() = if (offset > 0) localCurrentWord.translatedBy(offset) else localCurrentWord
 
-    /**
-     * The current word for the editor (typically the same as [localComposing]) as a new string. This is always either
-     * the current word or an empty string.
-     */
+    /** Current-word text, or empty when its range is invalid or outside this snapshot. */
     val currentWordText: String
         get() = if (localCurrentWord.isValid) text.safeSubstring(localCurrentWord.start, localCurrentWord.end) else ""
 
@@ -95,16 +71,11 @@ data class EditorContent(
         get() = if (offset >= 0) EditorRange(0, offset + text.length) else EditorRange(0, 0)
 
     companion object {
-        /**
-         * Default editor content which indicates an unspecified content. This is used for raw editors or if there is
-         * an error in the communication between the keyboard and the app.
-         */
+        /** No usable editor snapshot, as with raw input or a failed editor read. */
         val Unspecified =
             EditorContent("", -1, EditorRange.Unspecified, EditorRange.Unspecified, EditorRange.Unspecified)
 
-        /**
-         * Allows to instantiate a selection-only content, primarily used for mass-selection event handling.
-         */
+        /** Selection-only snapshot for mass-selection handling; [selection] uses editor coordinates. */
         fun selectionOnly(selection: EditorRange) =
             EditorContent("", -1, selection, EditorRange.Unspecified, EditorRange.Unspecified)
     }

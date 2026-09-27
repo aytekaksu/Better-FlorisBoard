@@ -20,40 +20,17 @@ import dev.patrickgold.florisboard.lib.ext.ExtensionComponent
 import kotlinx.serialization.Serializable
 
 /**
- * Data class which describes a punctuation rule for auto-spacing and phantom-space determination. Punctuation rules
- * are defined in keyboard extension's manifest file, there can be multiple ones defined, if necessary.
+ * Symbols from a keyboard extension used to decide when automatic and phantom spaces are allowed.
+ * The spacing symbol fields list individual characters; other editor checks can still prevent a space.
  *
- * Here's an example of a properly configured punctuation rule in a keyboard extension:
- *
- * ```json
- *   "punctuationRules": [
- *     {
- *       "id": "default",
- *       "label": "Default",
- *       "symbolsPrecedingAutoSpace": ".,?‽!\"&%)]}»",
- *       "symbolsFollowingAutoSpace": "",
- *       "symbolsPrecedingPhantomSpace": ".,;:?‽!&%)]}»©®™",
- *       "symbolsFollowingPhantomSpace": "¿⸘¡([{",
- *       "symbolsTerminatingSentence": ".?‽!"
- *     }
- *   ]
- * ```
- *
- * For auto-spacing and phantom-space to consider inserting a space by itself, it must find the symbol in the
- * corresponding rule and may have additional conditions to meet before triggering an automatic space.
- *
- * @property id The ID of this punctuation rule. Can be any ID as long as it follows the ID syntax rule, conventionally
- *  though this is either "default" or the language tag of the locale this punctuation rule is meant for.
- * @property label The label of this punctuation rule, for showing this rule in the UI. Defaults to [id] if not set.
- * @property authors List of authors, not relevant for punctuation rules though. Can and should be omitted.
- * @property symbolsPrecedingAutoSpace List of characters considered to be valid symbols before an auto-space insertion.
- *  Each character is considered a separate symbol.
- * @property symbolsPrecedingAutoSpace List of characters considered to be valid symbols after an auto-space insertion.
- *  Each character is considered a separate symbol.
- * @property symbolsPrecedingPhantomSpace List of characters considered to be valid symbols before a phantom space.
- *  Each character is considered a separate symbol.
- * @property symbolsFollowingPhantomSpace List of characters considered to be valid symbols after a phantom space.
- *  Each character is considered a separate symbol.
+ * @property id Rule ID, usually "default" or a locale tag.
+ * @property label Display name; defaults to [id].
+ * @property authors Component authors; defaults to "unspecified".
+ * @property symbolsPrecedingAutoSpace Characters allowed immediately before an automatic space.
+ * @property symbolsFollowingAutoSpace Characters allowed immediately after an automatic space.
+ * @property symbolsPrecedingPhantomSpace Characters allowed immediately before a phantom space.
+ * @property symbolsFollowingPhantomSpace Characters allowed immediately after a phantom space.
+ * @property symbolsTerminatingSentence Reserved sentence-ending characters; the editor does not currently use them.
  */
 @Serializable
 data class PunctuationRule(
@@ -68,7 +45,7 @@ data class PunctuationRule(
 ) : ExtensionComponent {
 
     companion object {
-        /** Fallback rule which does bare bone matching for spaces in case a proper punctuation rule is not found. */
+        /** Basic spacing rule used when the selected rule is missing. */
         val Fallback = PunctuationRule(
             id = "fallback",
             label = "Fallback",
