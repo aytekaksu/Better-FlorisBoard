@@ -62,48 +62,22 @@ abstract class Keyboard {
     )
 }
 
+private fun placeholderKeys(count: Int) = Array(count) { TextKey(data = TextKeyData(code = 0)) }
+
 val PlaceholderLoadingKeyboard = TextKeyboard(
     arrangement = arrayOf(
-        arrayOf(
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-        ),
-        arrayOf(
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-        ),
+        placeholderKeys(10),
+        placeholderKeys(9),
         arrayOf(
             TextKey(data = TextKeyData(code = KeyCode.SHIFT, type = KeyType.MODIFIER, label = "shift")),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
+            *placeholderKeys(7),
             TextKey(data = TextKeyData(code = KeyCode.DELETE, type = KeyType.ENTER_EDITING, label = "delete")),
         ),
         arrayOf(
             TextKey(data = TextKeyData(code = KeyCode.VIEW_SYMBOLS, type = KeyType.SYSTEM_GUI, label = "view_symbols")),
-            TextKey(data = TextKeyData(code = 0)),
-            TextKey(data = TextKeyData(code = 0)),
+            *placeholderKeys(2),
             TextKey(data = TextKeyData(code = KeyCode.SPACE, label = "space")),
-            TextKey(data = TextKeyData(code = 0)),
+            *placeholderKeys(1),
             TextKey(data = TextKeyData(code = KeyCode.ENTER, type = KeyType.ENTER_EDITING, label = "enter")),
         ),
     ),

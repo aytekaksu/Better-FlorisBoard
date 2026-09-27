@@ -17,6 +17,10 @@
 package dev.patrickgold.florisboard.ime.keyboard
 
 import dev.patrickgold.florisboard.ime.popup.PopupMapping
+import dev.patrickgold.florisboard.ime.text.key.KeyCode
+import dev.patrickgold.florisboard.ime.text.key.KeyType
+import dev.patrickgold.florisboard.ime.text.keyboard.TextKey
+import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import dev.patrickgold.florisboard.lib.ext.ExtensionJsonConfig
 import dev.patrickgold.florisboard.lib.ext.validateForImport
 import dev.patrickgold.florisboard.lib.io.DefaultJsonConfig
@@ -25,6 +29,7 @@ import io.kotest.matchers.shouldBe
 import kotlinx.serialization.decodeFromString
 import java.io.File
 import java.security.MessageDigest
+import java.util.IdentityHashMap
 
 class KeyboardMetadataContractTest :
     FunSpec({
@@ -42,6 +47,29 @@ class KeyboardMetadataContractTest :
                 KeyboardMode.fromInt(retiredId) shouldBe KeyboardMode.CHARACTERS
                 KeyboardState.new(retiredId.toULong()).keyboardMode shouldBe KeyboardMode.CHARACTERS
             }
+        }
+
+        test("loading keyboard keeps its layout and distinct key slots") {
+            val keyboard = PlaceholderLoadingKeyboard
+            keyboard.mode shouldBe KeyboardMode.CHARACTERS
+            keyboard.arrangement.map { it.size } shouldBe listOf(10, 9, 9, 6)
+            val specialKeys = mapOf(
+                (2 to 0) to Triple(KeyCode.SHIFT, KeyType.MODIFIER, "shift"),
+                (2 to 8) to Triple(KeyCode.DELETE, KeyType.ENTER_EDITING, "delete"),
+                (3 to 0) to Triple(KeyCode.VIEW_SYMBOLS, KeyType.SYSTEM_GUI, "view_symbols"),
+                (3 to 3) to Triple(KeyCode.SPACE, KeyType.CHARACTER, "space"),
+                (3 to 5) to Triple(KeyCode.ENTER, KeyType.ENTER_EDITING, "enter"),
+            )
+            val identities = IdentityHashMap<TextKey, Boolean>()
+            keyboard.arrangement.forEachIndexed { rowIndex, row ->
+                row.forEachIndexed { keyIndex, key ->
+                    identities.put(key, true) shouldBe null
+                    val data = key.data as TextKeyData
+                    val expected = specialKeys[rowIndex to keyIndex] ?: Triple(0, KeyType.CHARACTER, "")
+                    Triple(data.code, data.type, data.label) shouldBe expected
+                }
+            }
+            identities.size shouldBe 34
         }
 
         test("bundled currency keys commit the symbols they display") {
