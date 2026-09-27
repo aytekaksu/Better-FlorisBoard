@@ -537,22 +537,9 @@ internal fun CheckboxListItem(
     isSecondaryListItem: Boolean = false,
     enabled: Boolean = true,
 ) {
-    JetPrefListItem(
-        modifier = Modifier.rippleClickable(enabled = enabled, onClick = onClick),
-        icon = {
-            Row {
-                if (isSecondaryListItem) {
-                    Spacer(modifier = Modifier.width(40.dp))
-                }
-                Checkbox(
-                    checked = checked,
-                    onCheckedChange = null,
-                    enabled = enabled,
-                )
-            }
-        },
-        text = text,
-    )
+    BackupToggleListItem(onClick, text, isSecondaryListItem = isSecondaryListItem, enabled = enabled) {
+        Checkbox(checked = checked, onCheckedChange = null, enabled = enabled)
+    }
 }
 
 @Composable
@@ -563,6 +550,19 @@ internal fun TriStateCheckboxListItem(
     isSecondaryListItem: Boolean = false,
     enabled: Boolean = true,
 ) {
+    BackupToggleListItem(onClick, text, isSecondaryListItem = isSecondaryListItem, enabled = enabled) {
+        TriStateCheckbox(state = state, onClick = null, enabled = enabled)
+    }
+}
+
+@Composable
+private fun BackupToggleListItem(
+    onClick: () -> Unit,
+    text: String,
+    isSecondaryListItem: Boolean,
+    enabled: Boolean,
+    indicator: @Composable () -> Unit,
+) {
     JetPrefListItem(
         modifier = Modifier.rippleClickable(enabled = enabled, onClick = onClick),
         icon = {
@@ -570,11 +570,7 @@ internal fun TriStateCheckboxListItem(
                 if (isSecondaryListItem) {
                     Spacer(modifier = Modifier.width(40.dp))
                 }
-                TriStateCheckbox(
-                    state = state,
-                    onClick = null,
-                    enabled = enabled,
-                )
+                indicator()
             }
         },
         text = text,
