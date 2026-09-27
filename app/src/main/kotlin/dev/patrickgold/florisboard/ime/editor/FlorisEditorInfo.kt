@@ -17,7 +17,6 @@
 package dev.patrickgold.florisboard.ime.editor
 
 import android.view.inputmethod.EditorInfo
-import androidx.core.view.inputmethod.EditorInfoCompat
 import androidx.emoji2.text.EmojiCompat
 
 class FlorisEditorInfo private constructor(val base: EditorInfo) {
@@ -43,20 +42,6 @@ class FlorisEditorInfo private constructor(val base: EditorInfo) {
 
     val initialCapsMode: InputAttributes.CapsMode
         get() = InputAttributes.CapsMode.fromFlags(base.initialCapsMode)
-
-    fun getInitialTextBeforeCursor(n: Int): CharSequence? {
-        if (n < 1) return null
-        return EditorInfoCompat.getInitialTextBeforeCursor(base, n, 0)
-    }
-
-    fun getInitialTextAfterCursor(n: Int): CharSequence? {
-        if (n < 1) return null
-        return EditorInfoCompat.getInitialTextAfterCursor(base, n, 0)
-    }
-
-    fun getInitialSelectedText(): CharSequence? {
-        return EditorInfoCompat.getInitialSelectedText(base, 0)
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
