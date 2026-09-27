@@ -149,6 +149,8 @@ The language-pack settings list renders its observed index snapshot directly,
 without resolving IDs against a separately refreshed index.
 The locale chooser appends language-pack locales absent from Android's list,
 deduplicating by exact locale tag while keeping system entries first.
+The subtype editor saves unfinished drafts and validates required choices only
+on final Save; both paths build the subtype from the same field snapshot.
 
 Editor open/save/close I/O, stylesheet reads/parsing, and asset-list reloads run
 off Main. Saving builds a bounded archive; preview close waits for the keyboard
