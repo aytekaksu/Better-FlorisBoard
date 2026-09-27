@@ -46,6 +46,8 @@ report never reads raw logcat, so Android and third-party messages cannot enter
 it. Review device and configuration details before sharing.
 The export screen captures the report once in the background and makes both copy
 formats from that same snapshot.
+Run `./gradlew :app:testDebugUnitTest` for report rendering and
+`./gradlew :app:connectedDebugAndroidTest` for the device-built header.
 
 Never add temporary logs containing:
 
