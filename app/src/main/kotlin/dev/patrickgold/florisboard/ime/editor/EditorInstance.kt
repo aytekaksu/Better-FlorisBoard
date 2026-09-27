@@ -240,7 +240,6 @@ class EditorInstance(
     }
 
     override fun handleSelectionUpdate(
-        oldSelection: EditorRange,
         newSelection: EditorRange,
         composing: EditorRange,
     ) {
@@ -834,11 +833,8 @@ class EditorInstance(
         val isActive: Boolean
             get() = state.get() and F_IS_ACTIVE != 0
 
-        val isInactive: Boolean
-            get() = !isActive
-
-        fun setActive(stayActiveNextUpdate: Boolean = true) {
-            state.set(F_IS_ACTIVE or (if (stayActiveNextUpdate) F_STAY_ACTIVE_NEXT_UPDATE else 0))
+        fun setActive() {
+            state.set(F_IS_ACTIVE or F_STAY_ACTIVE_NEXT_UPDATE)
         }
 
         fun setInactive() {
@@ -874,13 +870,12 @@ class EditorInstance(
 
         fun setActive(
             showComposingRegion: Boolean,
-            stayActiveNextUpdate: Boolean = true,
             candidate: SuggestionCandidate? = null,
         ) {
             state.set(
                 F_IS_ACTIVE
                     or (if (showComposingRegion) F_SHOW_COMPOSING_REGION else 0)
-                    or (if (stayActiveNextUpdate) F_STAY_ACTIVE_NEXT_UPDATE else 0)
+                    or F_STAY_ACTIVE_NEXT_UPDATE
             )
             candidateForRevert = candidate
         }
@@ -908,9 +903,6 @@ class EditorInstance(
         val isActive: Boolean
             get() = state.get() > 0
 
-        val isInactive: Boolean
-            get() = !isActive
-
         fun begin() {
             state.incrementAndGet()
         }
@@ -918,7 +910,7 @@ class EditorInstance(
         fun end() {
             if (state.decrementAndGet() == 0) {
                 // We need to emulate a selection update to update the content if mass selection has ended
-                handleSelectionUpdate(EditorRange.Unspecified, activeContent.selection, EditorRange.Unspecified)
+                handleSelectionUpdate(activeContent.selection, EditorRange.Unspecified)
             }
         }
 

@@ -148,7 +148,6 @@ class EditorKeyboardStateAndroidTest {
             editor.handleSelectionUpdate(
                 EditorRange.Unspecified,
                 EditorRange.Unspecified,
-                EditorRange.Unspecified,
             )
             assertEquals(4, shiftCalls)
             assertEquals(1, stateResolutions)

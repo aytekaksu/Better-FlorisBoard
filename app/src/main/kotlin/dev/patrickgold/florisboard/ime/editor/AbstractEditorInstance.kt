@@ -226,13 +226,10 @@ abstract class AbstractEditorInstance(
         _lastCommitPosition.handleUpdateSelection(newSelection)
     }
 
-    open fun handleSelectionUpdate(
-        oldSelection: EditorRange,
+    abstract fun handleSelectionUpdate(
         newSelection: EditorRange,
         composing: EditorRange,
-    ) {
-        handleSelectionUpdateInternal(newSelection, composing)
-    }
+    )
 
     protected fun handleSelectionUpdateInternal(
         newSelection: EditorRange,
