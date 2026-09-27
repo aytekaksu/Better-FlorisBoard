@@ -11,6 +11,7 @@ changes.
 | Onboarding | Guide first-time setup without losing progress or changing step order across Android versions | [Onboarding](setup/README.md) |
 | External autocorrect | Discover, bind, validate, and coordinate separately installed suggestion engines | [Autocorrect plugins](autocorrect-plugins/README.md) |
 | Text-keyboard touch | Turn Android pointer streams into keys, popups, swipes, editor actions, and bounded input traces | [Touch input](touch-input/README.md) |
+| Keyboard window | Place, move, resize, and dock the keyboard window | [Window layout](window-layout/README.md) |
 | Glide typing | Detect a word gesture, classify it externally or locally, and commit only a current result | [Glide typing](glide-typing/README.md) |
 | Preferences | Define stored settings and preserve supported upgrade and restore behavior | [Preferences](preferences/README.md) |
 | Backup and restore | Validate archive contents and plan exactly which selected data may change | [Backup and restore](backup-restore/README.md) |

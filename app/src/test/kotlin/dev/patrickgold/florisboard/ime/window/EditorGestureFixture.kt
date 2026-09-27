@@ -16,13 +16,20 @@
 
 package dev.patrickgold.florisboard.ime.window
 
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntRect
 import dev.patrickgold.florisboard.app.FlorisPreferenceModel
 import dev.patrickgold.jetpref.datastore.jetprefDataStoreOf
 import io.kotest.assertions.assertSoftly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.runCurrent
 
 internal data class EditorGestureResult(
     val before: ImeWindowSpec,
@@ -57,4 +64,29 @@ internal suspend fun runEditorGesture(
     val after = controller.activeWindowSpec.value
     controller.editor.endMoveGesture(after)
     return EditorGestureResult(before, calculated, after)
+}
+
+@OptIn(ExperimentalCoroutinesApi::class)
+internal data class FloatingEditorFixture(
+    val prefs: FlorisPreferenceModel,
+    val rootInsets: ImeInsets.Root,
+    val controller: ImeWindowController,
+    val spec: ImeWindowSpec.Floating,
+    val scheduler: TestCoroutineScheduler,
+    val scope: CoroutineScope,
+)
+
+@OptIn(ExperimentalCoroutinesApi::class)
+internal suspend fun floatingEditorFixture(): FloatingEditorFixture {
+    val rootInsets = with(Density(3f)) { ImeInsets.Root.of(IntRect(0, 0, 1080, 2400)) }
+    val prefs by jetprefDataStoreOf(FlorisPreferenceModel::class)
+    prefs.keyboard.windowConfig
+        .set(mapOf(rootInsets.formFactor.typeGuess to ImeWindowConfig(ImeWindowMode.FLOATING))).getOrThrow()
+    val scheduler = TestCoroutineScheduler()
+    val scope = CoroutineScope(SupervisorJob() + StandardTestDispatcher(scheduler))
+    val controller = ImeWindowController(prefs, scope)
+    controller.updateRootInsets(rootInsets)
+    scheduler.runCurrent()
+    val spec = controller.activeWindowSpec.value.shouldBeInstanceOf<ImeWindowSpec.Floating>()
+    return FloatingEditorFixture(prefs, rootInsets, controller, spec, scheduler, scope)
 }

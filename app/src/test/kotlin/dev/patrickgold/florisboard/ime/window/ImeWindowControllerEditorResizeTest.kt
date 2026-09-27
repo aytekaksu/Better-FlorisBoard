@@ -26,16 +26,43 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.engine.coroutines.backgroundScope
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.enum
 import io.kotest.property.checkAll
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.runCurrent
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ImeWindowControllerEditorResizeTest : FunSpec({
     val tolerance = 1e-3f.dp
     val imeRowCount = 4
     val smartBarRowCount = 0
 
     coroutineTestScope = true
+
+    test("resizing near the dock edge keeps floating editing active and saves props") {
+        val fixture = floatingEditorFixture()
+        try {
+            val resized = fixture.spec.resizedBy(
+                DpOffset(0.dp, 20.dp), ImeWindowResizeHandle.BOTTOM, imeRowCount, smartBarRowCount,
+            ).shouldBeInstanceOf<ImeWindowSpec.Floating>()
+            (resized.props.offsetBottom <= resized.constraints.dockToFixedHeight) shouldBe true
+
+            fixture.controller.editor.beginResizeGesture()
+            fixture.controller.editor.onSpecUpdated(resized)
+            fixture.controller.editor.endResizeGesture(resized)
+
+            fixture.controller.editor.state.value shouldBe ImeWindowController.EditorState.ACTIVE
+            fixture.scheduler.runCurrent()
+            fixture.controller.activeWindowConfig.value.mode shouldBe ImeWindowMode.FLOATING
+            fixture.prefs.keyboard.windowConfig.get()[fixture.rootInsets.formFactor.typeGuess]
+                ?.floatingProps?.get(resized.floatingMode) shouldBe resized.props
+        } finally {
+            fixture.scope.cancel()
+        }
+    }
 
     test("resize handles retain fixed and floating placement") {
         ImeWindowResizeHandle.entries.map { it.alignment } shouldBe listOf(

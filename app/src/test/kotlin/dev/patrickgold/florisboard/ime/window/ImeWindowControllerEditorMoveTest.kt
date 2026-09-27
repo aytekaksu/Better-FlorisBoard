@@ -27,11 +27,59 @@ import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.enum
 import io.kotest.property.checkAll
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.runCurrent
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ImeWindowControllerEditorMoveTest : FunSpec({
     val tolerance = 1e-3f.dp
 
     coroutineTestScope = true
+
+    test("floating move docks at and below the threshold before config saving runs") {
+        for (atThreshold in listOf(false, true)) {
+            val fixture = floatingEditorFixture()
+            try {
+                val offsetBottom = if (atThreshold) fixture.spec.constraints.dockToFixedHeight else 0.dp
+                val docked = fixture.spec.copy(props = fixture.spec.props.copy(offsetBottom = offsetBottom))
+
+                fixture.controller.editor.beginMoveGesture()
+                fixture.controller.editor.onSpecUpdated(docked)
+                fixture.controller.editor.endMoveGesture(docked)
+
+                fixture.controller.editor.state.value shouldBe ImeWindowController.EditorState.INACTIVE
+                fixture.controller.activeWindowConfig.value.mode shouldBe ImeWindowMode.FLOATING
+                fixture.scheduler.runCurrent()
+                fixture.controller.activeWindowConfig.value.mode shouldBe ImeWindowMode.FIXED
+                fixture.prefs.keyboard.windowConfig.get()[fixture.rootInsets.formFactor.typeGuess]?.mode shouldBe
+                    ImeWindowMode.FIXED
+            } finally {
+                fixture.scope.cancel()
+            }
+        }
+    }
+
+    test("moving above the dock threshold keeps editing active and saves floating props") {
+        val fixture = floatingEditorFixture()
+        try {
+            val moved = fixture.spec.copy(props = fixture.spec.props.copy(
+                offsetBottom = fixture.spec.constraints.dockToFixedHeight + 20.dp,
+            ))
+
+            fixture.controller.editor.beginMoveGesture()
+            fixture.controller.editor.onSpecUpdated(moved)
+            fixture.controller.editor.endMoveGesture(moved)
+
+            fixture.controller.editor.state.value shouldBe ImeWindowController.EditorState.ACTIVE
+            fixture.scheduler.runCurrent()
+            fixture.controller.activeWindowConfig.value.mode shouldBe ImeWindowMode.FLOATING
+            fixture.prefs.keyboard.windowConfig.get()[fixture.rootInsets.formFactor.typeGuess]
+                ?.floatingProps?.get(moved.floatingMode) shouldBe moved.props
+        } finally {
+            fixture.scope.cancel()
+        }
+    }
 
     context("for all root insets and fixed modes") {
         test("for all upward moves") {
