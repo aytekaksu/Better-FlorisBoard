@@ -17,53 +17,26 @@
 package org.florisboard.lib.snygg
 
 /**
- * Base interface for all Snygg stylesheet rules. A rule in a stylesheet is a core component, acting as the key for a
- * property set map. There are two main rule categories, annotation and element rules.
- *
- * - **Annotation rules**: Represent meta-rules, describing globally valid properties. This includes global style
- *   variables, global font faces, etc.
- * - **Element rules**: These rules target a specific element with a specific attribute/selector set. Used to describe
- *   the style of a specific element.
+ * A stylesheet rule used as the key for a property set. Annotation rules define global values
+ * ([SnyggAnnotationRule.Defines] and [SnyggAnnotationRule.Font]); [SnyggElementRule] styles a named element.
  *
  * @since 0.5.0-alpha01
- * @see [SnyggAnnotationRule.Defines]
- * @see [SnyggAnnotationRule.Font]
- * @see [SnyggElementRule]
  */
 sealed interface SnyggRule : Comparable<SnyggRule> {
-    /**
-     * Returns the associated declaration of this rule.
-     *
-     * @since 0.5.0-alpha01
-     */
+    /** Returns the declaration that describes this rule. */
     fun decl(): SnyggSpecDecl.RuleDecl
 
     /**
-     * Compares this Snygg rule with [other]. The ordering is defined as follows:
-     * - @defines
-     * - @font (multiple fonts => sort by fontName)
-     * - elements (first by element name, then by attributes/selectors)
-     *
-     * @since 0.5.0-alpha01
+     * Orders `@defines`, fonts by name, then elements by name, selector, and attributes.
+     * Rules without a selector come before selected states.
      */
     override fun compareTo(other: SnyggRule): Int
 
-    /**
-     * Serializes the Snygg rule to a string. This method never fails.
-     *
-     * @return The serialized representation of the Snygg rule instance.
-     * @since 0.5.0-alpha01
-     */
+    /** Returns this rule's stylesheet syntax. */
     override fun toString(): String
 
     companion object {
-        /**
-         * Attempts to parse the given string into a `SnyggRule` instance or `null` if no match is found.
-         *
-         * @param str The string to parse into a `SnyggRule`.
-         * @return A `SnyggRule` instance if the string matches any supported rule type, or `null` if no match is found.
-         * @since 0.5.0-alpha01
-         */
+        /** Parses a supported rule, or returns null when [str] does not match one. */
         fun fromOrNull(str: String): SnyggRule? = SnyggAnnotationRule.Defines.fromOrNull(str)
             ?: SnyggAnnotationRule.Font.fromOrNull(str)
             ?: SnyggElementRule.fromOrNull(str)
@@ -71,12 +44,9 @@ sealed interface SnyggRule : Comparable<SnyggRule> {
 }
 
 /**
- * Annotation rule base interface. See the specific implementations for details.
+ * A global `@defines` or `@font` rule.
  *
  * @since 0.5.0-alpha01
- *
- * @see [SnyggAnnotationRule.Defines]
- * @see [SnyggAnnotationRule.Font]
  */
 sealed interface SnyggAnnotationRule : SnyggRule {
     data object Defines : SnyggAnnotationRule, SnyggSpecDecl.RuleDecl {
@@ -94,15 +64,7 @@ sealed interface SnyggAnnotationRule : SnyggRule {
 
         override fun toString(): String = "@defines"
 
-        /**
-         * Attempts to parse the given string into a `defines` annotation rule instance, or `null` if the given string
-         * does not represent a `defines` annotation rule.
-         *
-         * @param str The string to parse into a `defines` annotation rule instance.
-         * @return A `defines` annotation rule instance or `null`.
-         *
-         * @since 0.5.0-alpha01
-         */
+        /** Returns [Defines] for `@defines`, or null for other text. */
         fun fromOrNull(str: String): Defines? {
             pattern.matchEntire(str) ?: return null
             return Defines
@@ -124,15 +86,7 @@ sealed interface SnyggAnnotationRule : SnyggRule {
             override val name = "font"
             override val pattern = """^@$name `(?<fontName>[a-zA-Z0-9\s-]+)`$""".toRegex()
 
-            /**
-             * Attempts to parse the given string into a `font` annotation rule instance, or `null` if the given string
-             * does not represent a `font` annotation rule.
-             *
-             * @param str The string to parse into a `font` annotation rule instance.
-             * @return A `font` annotation rule instance or `null`.
-             *
-             * @since 0.5.0-alpha01
-             */
+            /** Parses a `@font` rule with a backtick-quoted name, or returns null. */
             fun fromOrNull(str: String): Font? {
                 val match = pattern.matchEntire(str) ?: return null
                 return Font(match.groups["fontName"]!!.value)
@@ -142,12 +96,8 @@ sealed interface SnyggAnnotationRule : SnyggRule {
 }
 
 /**
- * A core element in the Snygg styling system, this rule allows targeting specific elements with specific attributes
- * and selectors.
- *
- * @property elementName The element name this rule targets, it can be seen similarly to a CSS class.
- * @property attributes The attributes this rule targets.
- * @property selector The selector this rule targets, or [SnyggSelector.NONE] for not specified.
+ * Styles [elementName], optionally narrowed by [attributes] and [selector]. [SnyggSelector.NONE]
+ * means the rule has no selector suffix.
  *
  * @since 0.5.0-alpha01
  */
@@ -191,15 +141,7 @@ data class SnyggElementRule(
         private val SELECTOR_REGEX = """(?<selectorRaw>:pressed|:focus|:hover|:disabled)?""".toRegex()
         override val pattern = """^$ELEMENT_NAME_REGEX$ATTRIBUTES_REGEX$SELECTOR_REGEX$""".toRegex()
 
-        /**
-         * Attempts to parse the given string into an element rule instance, or `null` if the given string
-         * does not represent an element rule instance.
-         *
-         * @param str the string to parse into an element rule instance
-         * @return an element rule instance or `null`
-         *
-         * @since 0.5.0-alpha01
-         */
+        /** Parses an element rule, or returns null when [str] has invalid syntax. */
         fun fromOrNull(str: String): SnyggElementRule? {
             val result = pattern.matchEntire(str) ?: return null
             val elementName = result.groups["elementName"]!!.value // cannot be null logically
@@ -389,71 +331,28 @@ data class SnyggAttributes private constructor(private val attributes: Map<Strin
 }
 
 /**
- * A Snygg selector describes the interaction state of a component. Within stylesheets, this can be used in element
- * rules to target specific interaction states of elements for styling. Within the UI implementation this is used to
- * pass the current interaction state to Snygg to allow for correct style resolving.
- *
- * @property id The id of the selector.
+ * An element's interaction state, used by stylesheet rules and style resolution.
+ * [NONE] means no state selector.
  *
  * @since 0.5.0-alpha01
  */
 enum class SnyggSelector(val id: String) {
-    /**
-     * No interaction is active. Only used within UI implementation, is not serialized.
-     *
-     * @since 0.5.0-alpha01
-     */
+    /** No selector suffix; serializes as an empty string. */
     NONE("none"),
 
-    /**
-     * Pressed interaction.
-     *
-     * @since 0.5.0-alpha01
-     */
     PRESSED("pressed"),
 
-    /**
-     * Focus interaction.
-     *
-     * @since 0.5.0-alpha01
-     */
     FOCUS("focus"),
 
-    /**
-     * Hover interaction.
-     *
-     * @since 0.5.0-alpha01
-     */
     HOVER("hover"),
 
-    /**
-     * Disabled state. Used for inputs and buttons.
-     *
-     * @since 0.5.0-alpha01
-     */
     DISABLED("disabled"),
     ;
 
-    /**
-     * Serializes the selector to a string. If [NONE], an empty string is returned.
-     *
-     * @return The serialized representation of this selector.
-     *
-     * @since 0.5.0-alpha01
-     */
-    override fun toString(): String {
-        if (this == NONE) {
-            return ""
-        }
-        return buildString {
-            append(SELECTOR_COLON)
-            append(id)
-        }
-    }
+    /** Returns a `:state` suffix, or an empty string for [NONE]. */
+    override fun toString(): String = if (this == NONE) "" else ":$id"
 
     companion object {
-        private const val SELECTOR_COLON = ":"
-
         internal fun from(str: String): SnyggSelector {
             if (str.isNotEmpty()) {
                 val selector = str.substring(1)
