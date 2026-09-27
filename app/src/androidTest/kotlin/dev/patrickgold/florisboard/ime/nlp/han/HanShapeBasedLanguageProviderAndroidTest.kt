@@ -19,7 +19,10 @@ package dev.patrickgold.florisboard.ime.nlp.han
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.patrickgold.florisboard.ime.core.Subtype
+import dev.patrickgold.florisboard.ime.editor.EditorRange
+import dev.patrickgold.florisboard.ime.nlp.BreakIteratorGroup
 import dev.patrickgold.florisboard.ime.nlp.LanguagePackExtension
+import dev.patrickgold.florisboard.ime.nlp.NlpComposingPolicy
 import dev.patrickgold.florisboard.lib.ext.ExtensionJsonConfig
 import dev.patrickgold.florisboard.lib.io.FlorisRef
 import kotlinx.coroutines.delay
@@ -41,10 +44,22 @@ class HanShapeBasedLanguageProviderAndroidTest {
             LanguagePackExtension.serializer(),
             context.assets.open("$packPath/extension.json").bufferedReader().use { it.readText() },
         ).apply { sourceRef = FlorisRef.assets(packPath) }
-        val subtype = Subtype.DEFAULT.copy(primaryLocale = pack.items.first().locale)
+        val subtype = Subtype.DEFAULT.copy(
+            primaryLocale = pack.items.first { it.id == "zh_TW_boshiamy" }.locale,
+            nlpProviders = Subtype.DEFAULT.nlpProviders.copy(suggestion = HanShapeBasedLanguageProvider.ProviderId),
+        )
         val subtypesFlow = MutableStateFlow(emptyList<Subtype>())
         val languagePacksFlow = MutableStateFlow(listOf(pack))
         val provider = HanShapeBasedLanguageProvider(context, subtypesFlow, lazy { languagePacksFlow })
+        val composingPolicy = NlpComposingPolicy(
+            builtInProviders = mapOf(HanShapeBasedLanguageProvider.ProviderId to provider),
+            activeSubtype = { subtype },
+            selectedExternalProviderId = { "" },
+            suggestionsEnabled = { false },
+            emojiSuggestionsEnabled = { false },
+        )
+
+        fun composingRange() = composingPolicy.determineLocalComposing("a[", BreakIteratorGroup(), 0)
 
         try {
             provider.create()
@@ -55,11 +70,13 @@ class HanShapeBasedLanguageProviderAndroidTest {
                 while (provider.getLanguagePack(subtype) == null) delay(20L)
             }
             assertEquals(pack.meta.id, provider.getLanguagePack(subtype)?.second?.meta?.id)
+            assertEquals(EditorRange(0, 2), composingRange())
 
             languagePacksFlow.value = emptyList()
             withTimeout(30_000L) {
                 while (provider.getLanguagePack(subtype) != null) delay(20L)
             }
+            assertEquals(EditorRange.Unspecified, composingRange())
             languagePacksFlow.value = listOf(pack)
             withTimeout(30_000L) {
                 while (provider.getLanguagePack(subtype) == null) delay(20L)

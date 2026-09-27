@@ -75,10 +75,15 @@ request caps must reflect the current shift state.
 edits still pending in the editor's expected-content queue.
 The app passes `KeyboardManager` a lazy suggestion-session port; NLP still owns
 candidate state and provider lifecycle, and keyboard construction does not start it.
-The app also supplies NLP the active-subtype flow. NLP collects it for preloading
-and reads its current value for composing, suggestion-strip policy, and retries.
-It also supplies the full subtype-list flow and a lazy language-pack flow to the
-Han provider, which refreshes bindings when either list changes.
+The app owns one lazy set of built-in Latin and Han provider instances. NLP
+retains their create/preload lifecycle, while an independent composing policy
+reads the same instances for the editor and NLP suggestion-strip decisions.
+The editor no longer resolves NLP to determine composing. The policy reads the
+active subtype and suggestion preferences on each call. A selected external
+provider uses the default word boundary and does not force suggestions on,
+even if that provider is unavailable; NLP still handles actual external
+requests and built-in fallback. The Han provider receives the full subtype-list
+flow and a lazy language-pack flow, and refreshes bindings when either changes.
 `FlorisApplication` also supplies the autocorrect host with live editor-info
 and content readers; final content is still captured when the session closes.
 

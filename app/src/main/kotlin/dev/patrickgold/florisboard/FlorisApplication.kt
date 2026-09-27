@@ -32,13 +32,18 @@ import dev.patrickgold.florisboard.app.initAndroidWithLegacyMigrations
 import dev.patrickgold.florisboard.ime.clipboard.ClipboardManager
 import dev.patrickgold.florisboard.ime.core.SubtypeManager
 import dev.patrickgold.florisboard.ime.dictionary.DictionaryManager
+import dev.patrickgold.florisboard.ime.editor.EditorComposingPolicy
 import dev.patrickgold.florisboard.ime.editor.EditorInstance
 import dev.patrickgold.florisboard.ime.input.InputEventDispatcher
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardExtensionRepository
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardManager
 import dev.patrickgold.florisboard.ime.keyboard.ObservableKeyboardState
 import dev.patrickgold.florisboard.ime.media.emoji.FlorisEmojiCompat
+import dev.patrickgold.florisboard.ime.nlp.NlpComposingPolicy
 import dev.patrickgold.florisboard.ime.nlp.NlpManager
+import dev.patrickgold.florisboard.ime.nlp.SuggestionProvider
+import dev.patrickgold.florisboard.ime.nlp.han.HanShapeBasedLanguageProvider
+import dev.patrickgold.florisboard.ime.nlp.latin.LatinLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
 import dev.patrickgold.florisboard.ime.nlp.plugin.liveAutocorrectKeyboardTraits
 import dev.patrickgold.florisboard.ime.text.gestures.GlideTypingManager
@@ -156,6 +161,7 @@ internal fun readBoundedProcessName(input: InputStream): String? {
 }
 
 class FlorisApplication : Application() {
+    private val prefs by FlorisPreferenceStore
     private val mainHandler by lazy { Handler(mainLooper) }
     private val scope = CoroutineScope(Dispatchers.Default)
     private val startupCacheCleanup = StartupCacheCleanup(scope) {
@@ -192,12 +198,31 @@ class FlorisApplication : Application() {
             ),
         )
     }
+    private val builtInSuggestionProviders: Lazy<Map<String, SuggestionProvider>> = lazy {
+        mapOf(
+            LatinLanguageProvider.ProviderId to LatinLanguageProvider(this),
+            HanShapeBasedLanguageProvider.ProviderId to HanShapeBasedLanguageProvider(
+                this,
+                subtypeManager.value.subtypesFlow,
+                lazy { extensionManager.value.languagePacks },
+            ),
+        )
+    }
+    private val editorComposingPolicy: Lazy<EditorComposingPolicy> = lazy {
+        NlpComposingPolicy(
+            builtInProviders = builtInSuggestionProviders.value,
+            activeSubtype = { subtypeManager.value.activeSubtype },
+            selectedExternalProviderId = { prefs.suggestion.autocorrectPluginComponent.get() },
+            suggestionsEnabled = { prefs.suggestion.enabled.get() },
+            emojiSuggestionsEnabled = { prefs.emoji.suggestionEnabled.get() },
+        )
+    }
     val editorInstance: Lazy<EditorInstance> = lazy {
         EditorInstance(
             this,
             keyboardState,
             { subtypeManager.value.activeSubtype },
-            lazy { nlpManager.value },
+            editorComposingPolicy,
             { FlorisImeService.currentInputConnection() },
         ) { inputEventDispatcher.value.isPressed(KeyCode.SHIFT) }
     }
@@ -217,14 +242,15 @@ class FlorisApplication : Application() {
     }
     val nlpManager: Lazy<NlpManager> = lazy {
         NlpManager(
-            this,
-            lazy { clipboardManager.value.primaryClipFlow },
-            subtypeManager.value.activeSubtypeFlow,
-            subtypeManager.value.subtypesFlow,
-            lazy { extensionManager.value.languagePacks },
+            context = this,
+            clipboardPrimaryClipFlow = lazy { clipboardManager.value.primaryClipFlow },
+            activeSubtypeFlow = subtypeManager.value.activeSubtypeFlow,
+            builtInProviders = builtInSuggestionProviders.value,
+            composingPolicy = editorComposingPolicy.value,
             // The getter includes pending edits not yet reflected in activeContentFlow.
-            { editorInstance.value.activeContent },
-        ) { keyboardState.value.isIncognitoMode }
+            currentEditorContent = { editorInstance.value.activeContent },
+            isIncognitoMode = { keyboardState.value.isIncognitoMode },
+        )
     }
     val subtypeManager = lazy { SubtypeManager(this) }
     val themeManager = lazy { ThemeManager(this) }
