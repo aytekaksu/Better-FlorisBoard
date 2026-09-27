@@ -573,6 +573,7 @@ class TextKeyboardTouchE2eTest {
         val prefs by FlorisPreferenceStore
         val originalClip = clipboard.primaryClip
         val originalInternalClipboard = prefs.clipboard.useInternalClipboard.get()
+        val originalSyncToFloris = prefs.clipboard.syncToFloris.get()
         val originalSyncToSystem = prefs.clipboard.syncToSystem.get()
 
         fun selectMiddle() {
@@ -599,6 +600,8 @@ class TextKeyboardTouchE2eTest {
 
         try {
             runBlocking {
+                // Keep this internal-only fixture isolated from queued system clipboard events.
+                prefs.clipboard.syncToFloris.set(ClipboardSyncBehavior.NO_EVENTS).getOrThrow()
                 prefs.clipboard.useInternalClipboard.set(true).getOrThrow()
                 prefs.clipboard.syncToSystem.set(ClipboardSyncBehavior.NO_EVENTS).getOrThrow()
             }
@@ -635,9 +638,13 @@ class TextKeyboardTouchE2eTest {
             } finally {
                 runBlocking {
                     try {
-                        prefs.clipboard.syncToSystem.set(originalSyncToSystem).getOrThrow()
+                        prefs.clipboard.syncToFloris.set(originalSyncToFloris).getOrThrow()
                     } finally {
-                        prefs.clipboard.useInternalClipboard.set(originalInternalClipboard).getOrThrow()
+                        try {
+                            prefs.clipboard.syncToSystem.set(originalSyncToSystem).getOrThrow()
+                        } finally {
+                            prefs.clipboard.useInternalClipboard.set(originalInternalClipboard).getOrThrow()
+                        }
                     }
                 }
             }
@@ -1289,9 +1296,16 @@ class TextKeyboardTouchE2eTest {
     }
 
     private fun waitForText(expected: String) {
-        waitUntil("editor text did not become <$expected>; actual=<${readEditorText()}>") {
-            readEditorText() == expected
-        }
+        val deadline = SystemClock.uptimeMillis() + WAIT_TIMEOUT_MS
+        do {
+            val actual = readEditorText()
+            if (actual == expected) return
+            SystemClock.sleep(WAIT_POLL_MS)
+        } while (SystemClock.uptimeMillis() < deadline)
+        throw AssertionError(
+            "editor text did not match expected text; expected length=${expected.length}, " +
+                "actual length=${readEditorText().length}",
+        )
     }
 
     private fun assertTextRemains(expected: String, durationMs: Long, context: String) {
