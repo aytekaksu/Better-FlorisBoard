@@ -99,6 +99,8 @@ class AutocorrectHostBinderAndroidTest {
         oldProviderId = prefs.suggestion.autocorrectPluginComponent.get()
         oldSuggestionsEnabled = prefs.suggestion.enabled.get()
         manager = targetContext.autocorrectPluginManager().value
+        // The host no longer constructs the keyboard while reading live traits.
+        targetContext.keyboardManager().value
         control("release_finish")
         control("release_suggest_b")
         control("release_ui_action")

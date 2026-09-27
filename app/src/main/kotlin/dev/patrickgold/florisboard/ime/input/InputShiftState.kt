@@ -47,3 +47,13 @@ enum class InputShiftState(val value: Int) {
 
     fun toInt() = value
 }
+
+internal inline fun automaticShiftState(
+    autoCapitalization: Boolean,
+    supportsCapitalization: () -> Boolean,
+    hasCursorCapsMode: () -> Boolean,
+): InputShiftState = if (autoCapitalization && supportsCapitalization() && hasCursorCapsMode()) {
+    InputShiftState.SHIFTED_AUTOMATIC
+} else {
+    InputShiftState.UNSHIFTED
+}

@@ -24,10 +24,12 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.patrickgold.florisboard.FlorisApplication
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.clipboard.provider.OwnedClipboardMediaUri
 import dev.patrickgold.florisboard.ime.core.Subtype
+import dev.patrickgold.florisboard.ime.input.InputShiftState
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.ObservableKeyboardState
 import dev.patrickgold.florisboard.ime.nlp.BreakIteratorGroup
@@ -35,6 +37,7 @@ import dev.patrickgold.florisboard.ime.text.key.KeyVariation
 import dev.patrickgold.florisboard.lib.FlorisLocale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -55,7 +58,7 @@ class EditorKeyboardStateAndroidTest {
                 { active.also(reads::add) },
                 lazy { TestEditorComposingPolicy() },
                 { null },
-            ) { }
+            ) { false }
             val content = EditorContent("abc", 0, EditorRange.cursor(3), EditorRange.Unspecified, EditorRange.Unspecified)
 
             assertTrue(reads.isEmpty())
@@ -76,7 +79,7 @@ class EditorKeyboardStateAndroidTest {
                 { Subtype.DEFAULT },
                 lazy { TestEditorComposingPolicy() },
                 { null },
-            ) { }
+            ) { false }
             val media = ClipboardItem(
                 type = ItemType.IMAGE,
                 text = null,
@@ -94,7 +97,7 @@ class EditorKeyboardStateAndroidTest {
     }
 
     @Test
-    fun startInputUsesInjectedStateAndReevaluatesShiftSynchronously() {
+    fun startInputUsesInjectedStateAndReadsShiftSynchronously() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {
             val state = ObservableKeyboardState.new().apply {
@@ -104,7 +107,8 @@ class EditorKeyboardStateAndroidTest {
             }
             var stateResolutions = 0
             var policyResolutions = 0
-            var shiftCalls = 0
+            var shiftPressedReads = 0
+            var shiftPressed = false
             val editor = EditorInstance(
                 instrumentation.targetContext,
                 lazy {
@@ -118,7 +122,8 @@ class EditorKeyboardStateAndroidTest {
                 },
                 { null },
             ) {
-                shiftCalls++
+                shiftPressedReads++
+                shiftPressed
             }
             assertEquals(0, stateResolutions)
             assertEquals(0, policyResolutions)
@@ -133,7 +138,8 @@ class EditorKeyboardStateAndroidTest {
 
             startInput(InputType.TYPE_CLASS_NUMBER)
             assertEquals(1, stateResolutions)
-            assertEquals(1, shiftCalls)
+            assertEquals(1, shiftPressedReads)
+            assertEquals(InputShiftState.UNSHIFTED, state.inputShiftState)
             assertEquals(KeyboardMode.NUMERIC, state.keyboardMode)
             assertEquals(KeyVariation.NORMAL, state.keyVariation)
             assertFalse(state.isComposingEnabled)
@@ -141,13 +147,15 @@ class EditorKeyboardStateAndroidTest {
             assertFalse(state.isActionsEditorVisible)
 
             startInput(InputType.TYPE_CLASS_PHONE)
-            assertEquals(2, shiftCalls)
+            assertEquals(2, shiftPressedReads)
+            assertEquals(InputShiftState.UNSHIFTED, state.inputShiftState)
             assertEquals(KeyboardMode.PHONE, state.keyboardMode)
             assertEquals(KeyVariation.NORMAL, state.keyVariation)
             assertFalse(state.isComposingEnabled)
 
             startInput(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)
-            assertEquals(3, shiftCalls)
+            assertEquals(3, shiftPressedReads)
+            assertEquals(InputShiftState.UNSHIFTED, state.inputShiftState)
             assertEquals(KeyboardMode.CHARACTERS, state.keyboardMode)
             assertEquals(KeyVariation.PASSWORD, state.keyVariation)
             assertFalse(state.isComposingEnabled)
@@ -156,9 +164,34 @@ class EditorKeyboardStateAndroidTest {
                 EditorRange.Unspecified,
                 EditorRange.Unspecified,
             )
-            assertEquals(4, shiftCalls)
+            assertEquals(4, shiftPressedReads)
+            assertEquals(InputShiftState.UNSHIFTED, state.inputShiftState)
             assertEquals(1, stateResolutions)
             assertEquals(0, policyResolutions)
+
+            state.inputShiftState = InputShiftState.SHIFTED_MANUAL
+            shiftPressed = true
+            editor.handleSelectionUpdate(EditorRange.Unspecified, EditorRange.Unspecified)
+            assertEquals(5, shiftPressedReads)
+            assertEquals(InputShiftState.SHIFTED_MANUAL, state.inputShiftState)
+
+            state.inputShiftState = InputShiftState.CAPS_LOCK
+            shiftPressed = false
+            editor.handleSelectionUpdate(EditorRange.Unspecified, EditorRange.Unspecified)
+            assertEquals(5, shiftPressedReads)
+            assertEquals(InputShiftState.CAPS_LOCK, state.inputShiftState)
+        }
+    }
+
+    @Test
+    fun applicationAndKeyboardManagerExposeTheSameInputRuntime() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val app = instrumentation.targetContext.applicationContext as FlorisApplication
+            val manager = app.keyboardManager.value
+            assertSame(app.keyboardState.value, manager.activeState)
+            assertSame(app.inputEventDispatcher.value, manager.inputEventDispatcher)
+            assertSame(manager, app.inputEventDispatcher.value.keyEventReceiver)
         }
     }
 
@@ -178,7 +211,7 @@ class EditorKeyboardStateAndroidTest {
                     policy
                 },
                 { null },
-            ) { }
+            ) { false }
 
             assertFalse(editor.determineComposingEnabled())
             assertEquals(0, policyResolutions)
@@ -210,7 +243,7 @@ class EditorKeyboardStateAndroidTest {
                 { Subtype.DEFAULT },
                 lazy { policy },
                 { null },
-            ) { }
+            ) { false }
             val info = FlorisEditorInfo.wrap(EditorInfo().apply {
                 inputType = InputType.TYPE_CLASS_TEXT
             })
@@ -253,7 +286,7 @@ class EditorKeyboardStateAndroidTest {
                     reads++
                     activeConnection
                 },
-            ) { }
+            ) { false }
             val info = FlorisEditorInfo.wrap(EditorInfo().apply {
                 inputType = InputType.TYPE_CLASS_TEXT
             })
