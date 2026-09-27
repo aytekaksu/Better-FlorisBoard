@@ -112,17 +112,12 @@ internal object ClipboardRestoreCommit {
                         replaceSelected = replaceSelected,
                     )
                     ClipboardRestoreCommitResult.Committed
-                } catch (error: CancellationException) {
+                } catch (error: Exception) {
                     val mediaCleaned = cleanInstalledMedia(installedMedia)
                     if (!mediaCleaned) {
                         clipboardManager.retryMediaCleanup(installedMedia)
                     }
-                    throw error
-                } catch (_: Exception) {
-                    val mediaCleaned = cleanInstalledMedia(installedMedia)
-                    if (!mediaCleaned) {
-                        clipboardManager.retryMediaCleanup(installedMedia)
-                    }
+                    if (error is CancellationException) throw error
                     when {
                         !mediaCleaned -> {
                             ClipboardRestoreCommitResult.Failed(
