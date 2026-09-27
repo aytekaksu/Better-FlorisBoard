@@ -37,8 +37,7 @@ import org.florisboard.lib.kotlin.collectIn
  * The window controller is responsible for managing everything related to window config, spec, insets,
  * actions, editor move, and editor resize.
  *
- * This class is designed so it does not contain any references to Android framework classes, allowing it
- * and its inner classes to be unit tested on JVM desktop.
+ * Window config and editor state can be tested on the JVM; [onComputeInsets] is the Android bridge.
  *
  * @property prefs The preference data store from which the window config is read from / where the window
  *  config is written to.
@@ -457,25 +456,14 @@ class ImeWindowController(
         }
 
         fun endMoveGesture(spec: ImeWindowSpec) {
-            var keepEnabled = true
-            updateWindowConfig { config ->
-                when (spec) {
-                     is ImeWindowSpec.Fixed -> {
-                         keepEnabled = true
-                         config.copy(fixedProps = config.fixedProps.plus(spec.fixedMode to spec.props))
-                     }
-                    is ImeWindowSpec.Floating -> {
-                        if (spec.props.offsetBottom <= spec.constraints.dockToFixedHeight) {
-                            keepEnabled = false
-                            config.copy(mode = ImeWindowMode.FIXED)
-                        } else {
-                            keepEnabled = true
-                            config.copy(floatingProps = config.floatingProps.plus(spec.floatingMode to spec.props))
-                        }
-                    }
-                }
+            val dockToFixed = spec is ImeWindowSpec.Floating &&
+                spec.props.offsetBottom <= spec.constraints.dockToFixedHeight
+            if (dockToFixed) {
+                updateWindowConfig { it.copy(mode = ImeWindowMode.FIXED) }
+            } else {
+                saveGestureSpec(spec)
             }
-            state.value = editorStateOf(keepEnabled)
+            state.value = editorStateOf(!dockToFixed)
         }
 
         fun beginResizeGesture(): ImeWindowSpec {
@@ -484,20 +472,21 @@ class ImeWindowController(
         }
 
         fun endResizeGesture(spec: ImeWindowSpec) {
-            var keepEnabled = true
+            saveGestureSpec(spec)
+            state.value = EditorState.ACTIVE
+        }
+
+        private fun saveGestureSpec(spec: ImeWindowSpec) {
             updateWindowConfig { config ->
                 when (spec) {
-                    is ImeWindowSpec.Fixed -> {
-                        keepEnabled = true
-                        config.copy(fixedProps = config.fixedProps.plus(spec.fixedMode to spec.props))
-                    }
-                    is ImeWindowSpec.Floating -> {
-                        keepEnabled = true
-                        config.copy(floatingProps = config.floatingProps.plus(spec.floatingMode to spec.props))
-                    }
+                    is ImeWindowSpec.Fixed -> config.copy(
+                        fixedProps = config.fixedProps.plus(spec.fixedMode to spec.props),
+                    )
+                    is ImeWindowSpec.Floating -> config.copy(
+                        floatingProps = config.floatingProps.plus(spec.floatingMode to spec.props),
+                    )
                 }
             }
-            state.value = editorStateOf(keepEnabled)
         }
 
         fun onSpecUpdated(spec: ImeWindowSpec) {
