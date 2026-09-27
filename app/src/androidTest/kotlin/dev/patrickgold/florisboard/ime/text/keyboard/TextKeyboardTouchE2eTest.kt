@@ -16,15 +16,18 @@
 
 package dev.patrickgold.florisboard.ime.text.keyboard
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
+import android.content.res.Resources
 import android.graphics.PointF
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.ViewConfiguration
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import androidx.compose.ui.unit.IntRect
@@ -41,6 +44,7 @@ import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.editorInstance
+import dev.patrickgold.florisboard.imeActionResourceName
 import dev.patrickgold.florisboard.ime.clipboard.ClipboardSyncBehavior
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.core.SubtypeJsonConfig
@@ -58,6 +62,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -92,6 +97,29 @@ class TextKeyboardTouchE2eTest {
     private var previousKeyboardMode: KeyboardMode? = null
     private var testedIme: String? = null
     private var testedImeWasEnabled = false
+
+    @Test
+    @SuppressLint("DiscouragedApi")
+    fun imeActionLabelsUseTheCurrentServiceResources() {
+        val service = FlorisImeService.keyboardActionsOrNull() as FlorisImeService
+        listOf(
+            EditorInfo.IME_ACTION_GO,
+            EditorInfo.IME_ACTION_SEARCH,
+            EditorInfo.IME_ACTION_SEND,
+            EditorInfo.IME_ACTION_NEXT,
+            EditorInfo.IME_ACTION_DONE,
+            EditorInfo.IME_ACTION_PREVIOUS,
+            EditorInfo.IME_ACTION_UNSPECIFIED,
+        ).forEach { action ->
+            val resourceName = requireNotNull(imeActionResourceName(action))
+            val resourceId = Resources.getSystem().getIdentifier(resourceName, "string", "android")
+            val actual = service.getTextForImeAction(action)
+            if (resourceId != 0) {
+                assertEquals(resourceName, service.resourcesContext.getString(resourceId), actual)
+            }
+        }
+        assertNull(service.getTextForImeAction(EditorInfo.IME_ACTION_NONE))
+    }
 
     @Test
     fun floatingWindowKeyUsesTheCurrentImeService() {
