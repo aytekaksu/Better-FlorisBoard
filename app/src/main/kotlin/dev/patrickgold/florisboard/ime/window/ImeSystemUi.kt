@@ -86,11 +86,7 @@ fun ImeSystemUi() {
     val backgroundImage = backgroundQuery.backgroundImage.uriOrNull()
 
     val hasBackgroundImage = backgroundImage != null
-    val useDarkIcons = if (backgroundImage == null) {
-        backgroundColor.luminance() >= 0.5
-    } else {
-        false
-    }
+    val useDarkIcons = !hasBackgroundImage && backgroundColor.luminance() >= 0.5
 
     val view = LocalView.current
     val window = view.context.findWindow()!!
@@ -134,15 +130,11 @@ fun ImeSystemUiFloating() {
     }
     val isNonDefaultSize by remember {
         derivedStateOf {
-            when (val spec = windowSpec) {
-                is ImeWindowSpec.Fixed -> false // wtf
-                is ImeWindowSpec.Floating -> {
-                    val defaultProps = spec.constraints.defaultProps
-                    val props = spec.props
-                    defaultProps.keyboardHeight != props.keyboardHeight ||
-                        defaultProps.keyboardWidth != props.keyboardWidth
-                }
-            }
+            (windowSpec as? ImeWindowSpec.Floating)?.run {
+                val defaultProps = constraints.defaultProps
+                props.keyboardHeight != defaultProps.keyboardHeight ||
+                    props.keyboardWidth != defaultProps.keyboardWidth
+            } == true
         }
     }
 
@@ -162,11 +154,11 @@ fun ImeSystemUiFloating() {
         ) {
             val weightModifier = Modifier.weight(1f)
 
-            if (!showHideAndSwitch) {
-                Box(
-                    modifier = weightModifier,
-                    contentAlignment = Alignment.Center,
-                ) {
+            Box(
+                modifier = weightModifier,
+                contentAlignment = Alignment.Center,
+            ) {
+                if (!showHideAndSwitch) {
                     FlorisIconButton(
                         onClick = {
                             FlorisImeService.hideUi()
@@ -174,23 +166,18 @@ fun ImeSystemUiFloating() {
                     ) {
                         Icon(imageVector = Icons.Default.KeyboardArrowDown, null)
                     }
-                }
-            } else {
-                Box(
-                    modifier = weightModifier,
-                    contentAlignment = Alignment.Center,
-                ) {
+                } else {
                     Spacer(modifier = Modifier.size(DpSize(52.dp, 30.dp)))
                 }
             }
 
-            NavigationPill()
+            NavigationPill(attributes)
 
-            if (!showHideAndSwitch) {
-                Box(
-                    modifier = weightModifier,
-                    contentAlignment = Alignment.Center,
-                ) {
+            Box(
+                modifier = weightModifier,
+                contentAlignment = Alignment.Center,
+            ) {
+                if (!showHideAndSwitch) {
                     FlorisIconButton(
                         onClick = {
                             FlorisImeService.switchToNextInputMethod()
@@ -201,24 +188,17 @@ fun ImeSystemUiFloating() {
                     ) {
                         Icon(imageVector = Icons.Default.Language, null)
                     }
-                }
-            } else {
-                Box(
-                    modifier = weightModifier,
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (isNonDefaultSize) {
-                        SnyggButton(
-                            elementName = FlorisImeUi.WindowResizeAction.elementName,
-                            attributes = attributes,
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                            onClick = {
-                                windowController.actions.resetFloatingSize()
-                            }
-                        ) {
-                            SnyggIcon(imageVector = drawableRes(R.drawable.ic_restart_alt))
-                            SnyggText(text = stringRes(R.string.action__reset))
+                } else if (isNonDefaultSize) {
+                    SnyggButton(
+                        elementName = FlorisImeUi.WindowResizeAction.elementName,
+                        attributes = attributes,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                        onClick = {
+                            windowController.actions.resetFloatingSize()
                         }
+                    ) {
+                        SnyggIcon(imageVector = drawableRes(R.drawable.ic_restart_alt))
+                        SnyggText(text = stringRes(R.string.action__reset))
                     }
                 }
             }
@@ -227,26 +207,14 @@ fun ImeSystemUiFloating() {
 }
 
 @Composable
-private fun RowScope.NavigationPill() {
+private fun RowScope.NavigationPill(attributes: Map<String, String>) {
     val windowController = LocalWindowController.current
-
-    val windowConfig by windowController.activeWindowConfig.collectAsState()
 
     val backgroundQuery = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
     val backgroundColor = backgroundQuery.background()
     val backgroundImage = backgroundQuery.backgroundImage.uriOrNull()
 
-    val attributes = remember(windowConfig.mode) {
-        mapOf(
-            FlorisImeUi.Attr.WindowMode to windowConfig.mode.toString()
-        )
-    }
-
-    val useDarkIcons = if (backgroundImage == null) {
-        backgroundColor.luminance() >= 0.5
-    } else {
-        false
-    }
+    val useDarkIcons = backgroundImage == null && backgroundColor.luminance() >= 0.5
 
     val defaultScrimColor = if (useDarkIcons) {
         Color.Black
@@ -278,9 +246,9 @@ private fun RowScope.NavigationPill() {
     }
 }
 
-private tailrec fun Context.findWindow(): Window? {
-    val context = this
-    if (context is Activity) return context.window
-    if (context is InputMethodService) return context.window?.window
-    return if (context is ContextWrapper) context.findWindow() else null
+internal tailrec fun Context.findWindow(): Window? = when (this) {
+    is Activity -> window
+    is InputMethodService -> window?.window
+    is ContextWrapper -> baseContext.findWindow()
+    else -> null
 }
