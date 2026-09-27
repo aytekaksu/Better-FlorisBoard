@@ -8,6 +8,7 @@ changes.
 
 | Feature | Main responsibility | Start here |
 | --- | --- | --- |
+| Onboarding | Guide first-time setup without losing progress or changing step order across Android versions | [Onboarding](setup/README.md) |
 | External autocorrect | Discover, bind, validate, and coordinate separately installed suggestion engines | [Autocorrect plugins](autocorrect-plugins/README.md) |
 | Text-keyboard touch | Turn Android pointer streams into keys, popups, swipes, editor actions, and bounded input traces | [Touch input](touch-input/README.md) |
 | Glide typing | Detect a word gesture, classify it externally or locally, and commit only a current result | [Glide typing](glide-typing/README.md) |

@@ -58,9 +58,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.compose.FlorisBulletSpacer
-import org.florisboard.lib.compose.FlorisStep
-import org.florisboard.lib.compose.FlorisStepLayout
-import org.florisboard.lib.compose.FlorisStepState
 import org.florisboard.lib.compose.stringRes
 
 @Composable
@@ -112,26 +109,19 @@ private fun FlorisScreenScope.content(
     scope: CoroutineScope,
 ) {
 
-    val stepState = rememberSaveable(saver = FlorisStepState.Saver) {
-        val initStep = when {
-            !isFlorisBoardEnabled -> Steps.EnableIme.id
-            !isFlorisBoardSelected -> Steps.SelectIme.id
-            hasNotificationPermission == NotificationPermissionState.NOT_SET && AndroidVersion.ATLEAST_API33_T -> Steps.SelectNotification.id
-            else -> Steps.FinishUp.id
-        }
-        FlorisStepState.new(init = initStep)
+    val automaticStep = when {
+        !isFlorisBoardEnabled -> Steps.EnableIme.id
+        !isFlorisBoardSelected -> Steps.SelectIme.id
+        hasNotificationPermission == NotificationPermissionState.NOT_SET && AndroidVersion.ATLEAST_API33_T -> Steps.SelectNotification.id
+        else -> Steps.FinishUp.id
+    }
+    val stepState = rememberSaveable(saver = SetupStepState.Saver) {
+        SetupStepState.new(initial = automaticStep)
     }
 
     content {
-        LaunchedEffect(isFlorisBoardEnabled, isFlorisBoardSelected, hasNotificationPermission) {
-            stepState.setCurrentAuto(
-                when {
-                    !isFlorisBoardEnabled -> Steps.EnableIme.id
-                    !isFlorisBoardSelected -> Steps.SelectIme.id
-                    hasNotificationPermission == NotificationPermissionState.NOT_SET && AndroidVersion.ATLEAST_API33_T -> Steps.SelectNotification.id
-                    else -> Steps.FinishUp.id
-                }
-            )
+        LaunchedEffect(automaticStep) {
+            stepState.updateAutomatic(automaticStep)
         }
 
         // Below block allows to return from the system IME enabler activity
@@ -140,8 +130,8 @@ private fun FlorisScreenScope.content(
             while (true) {
                 delay(200L)
                 val isEnabled = InputMethodUtils.isFlorisboardEnabled(context)
-                if (stepState.getCurrentAuto().value == Steps.EnableIme.id &&
-                    stepState.getCurrentManual().value == -1 &&
+                if (stepState.automatic == Steps.EnableIme.id &&
+                    stepState.manual == -1 &&
                     !isFlorisBoardEnabled &&
                     !isFlorisBoardSelected &&
                     hasNotificationPermission == NotificationPermissionState.NOT_SET &&
@@ -155,7 +145,7 @@ private fun FlorisScreenScope.content(
                 }
             }
         }
-        FlorisStepLayout(
+        SetupStepLayout(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
@@ -201,10 +191,10 @@ private fun PreferenceUiScope<FlorisPreferenceModel>.steps(
     navController: NavController,
     requestNotification: ManagedActivityResultLauncher<String, Boolean>,
     scope: CoroutineScope,
-): List<FlorisStep> {
+): List<SetupStep> {
 
     return listOfNotNull(
-        FlorisStep(
+        SetupStep(
             id = Steps.EnableIme.id,
             title = stringRes(R.string.setup__enable_ime__title),
         ) {
@@ -213,7 +203,7 @@ private fun PreferenceUiScope<FlorisPreferenceModel>.steps(
                 InputMethodUtils.showImeEnablerActivity(context)
             }
         },
-        FlorisStep(
+        SetupStep(
             id = Steps.SelectIme.id,
             title = stringRes(R.string.setup__select_ime__title),
         ) {
@@ -223,7 +213,7 @@ private fun PreferenceUiScope<FlorisPreferenceModel>.steps(
             }
         },
         if (AndroidVersion.ATLEAST_API33_T) {
-            FlorisStep(
+            SetupStep(
                 id = Steps.SelectNotification.id,
                 title = stringRes(R.string.setup__grant_notification_permission__title),
             ) {
@@ -233,7 +223,7 @@ private fun PreferenceUiScope<FlorisPreferenceModel>.steps(
                 }
             }
         } else null,
-        FlorisStep(
+        SetupStep(
             id = Steps.FinishUp.id,
             title = stringRes(R.string.setup__finish_up__title),
         ) {
