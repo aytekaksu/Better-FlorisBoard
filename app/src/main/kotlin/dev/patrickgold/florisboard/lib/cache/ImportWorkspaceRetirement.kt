@@ -72,6 +72,8 @@ internal class ImportWorkspaceRetirement(
         }
     }
 
+    // Cleanup is injected; any failure must release waiters and permit a later retry.
+    @Suppress("TooGenericExceptionCaught")
     private fun startIfReady() {
         if (!requested || activeImports != 0 || started) return
         started = true
