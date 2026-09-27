@@ -30,6 +30,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -141,7 +142,6 @@ import org.florisboard.lib.kotlin.tryOrNull
 import org.florisboard.lib.snygg.SnyggQueryAttributes
 import org.florisboard.lib.snygg.ui.SnyggBox
 import org.florisboard.lib.snygg.ui.SnyggButton
-import org.florisboard.lib.snygg.ui.SnyggChip
 import org.florisboard.lib.snygg.ui.SnyggColumn
 import org.florisboard.lib.snygg.ui.SnyggIcon
 import org.florisboard.lib.snygg.ui.SnyggIconButton
@@ -627,17 +627,33 @@ fun ClipboardInputLayout(
                                     "type" to itemType.toString().lowercase(),
                                 )
                             }
-                            SnyggChip(
-                                elementName = FlorisImeUi.ClipboardFilterChip.elementName,
+                            val chipElementName = FlorisImeUi.ClipboardFilterChip.elementName
+                            SnyggRow(
+                                elementName = chipElementName,
                                 attributes = attributes,
-                                onClick = {
-                                    if (!activeFilterTypes.add(itemType)) {
-                                        activeFilterTypes.remove(itemType)
-                                    }
-                                },
-                                imageVector = imageVector,
-                                text = text,
-                            )
+                                clickAndSemanticsModifier = Modifier.clickable(
+                                    interactionSource = null,
+                                    indication = ripple(),
+                                    enabled = true,
+                                    onClick = {
+                                        if (!activeFilterTypes.add(itemType)) {
+                                            activeFilterTypes.remove(itemType)
+                                        }
+                                    },
+                                ),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                SnyggIcon(
+                                    elementName = "$chipElementName-icon",
+                                    attributes = attributes,
+                                    imageVector = imageVector,
+                                )
+                                SnyggText(
+                                    elementName = "$chipElementName-text",
+                                    attributes = attributes,
+                                    text = text,
+                                )
+                            }
                         }
 
                         FilterChip(
