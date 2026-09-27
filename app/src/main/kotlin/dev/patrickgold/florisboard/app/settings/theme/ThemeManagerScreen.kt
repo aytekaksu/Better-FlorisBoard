@@ -48,9 +48,9 @@ import org.florisboard.lib.compose.defaultFlorisOutlinedBox
 import org.florisboard.lib.compose.rippleClickable
 import org.florisboard.lib.compose.stringRes
 
-enum class ThemeManagerScreenAction(val id: String) {
-    SELECT_DAY("select-day"),
-    SELECT_NIGHT("select-night");
+enum class ThemeManagerScreenAction {
+    SELECT_DAY,
+    SELECT_NIGHT;
 }
 
 @Composable
@@ -77,26 +77,12 @@ fun ThemeManagerScreen(action: ThemeManagerScreenAction?) = FlorisScreen {
         }.mapValues { (_, configs) -> configs.sortedBy { it.label } }
     }
 
-    fun getThemeIdPref() = when (action) {
+    val themeIdPref = when (action) {
         ThemeManagerScreenAction.SELECT_DAY -> prefs.theme.dayThemeId
         ThemeManagerScreenAction.SELECT_NIGHT -> prefs.theme.nightThemeId
     }
 
-    fun setTheme(extId: String, componentId: String) {
-        val extComponentName = ExtensionComponentName(extId, componentId)
-        when (action) {
-            ThemeManagerScreenAction.SELECT_DAY,
-            ThemeManagerScreenAction.SELECT_NIGHT -> scope.launch {
-                getThemeIdPref().set(extComponentName)
-            }
-        }
-    }
-
-    val activeThemeId by when (action) {
-        ThemeManagerScreenAction.SELECT_DAY,
-        ThemeManagerScreenAction.SELECT_NIGHT
-            -> getThemeIdPref().collectAsState()
-    }
+    val activeThemeId by themeIdPref.collectAsState()
 
     content {
         DisposableEffect(activeThemeId) {
@@ -116,7 +102,9 @@ fun ThemeManagerScreen(action: ThemeManagerScreenAction?) = FlorisScreen {
                 for (config in configs) key(extensionId, config.id) {
                     JetPrefListItem(
                         modifier = Modifier.rippleClickable {
-                            setTheme(extensionId, config.id)
+                            scope.launch {
+                                themeIdPref.set(ExtensionComponentName(extensionId, config.id))
+                            }
                         },
                         icon = {
                             RadioButton(
