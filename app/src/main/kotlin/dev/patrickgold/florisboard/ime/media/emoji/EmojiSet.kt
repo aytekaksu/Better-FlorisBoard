@@ -18,32 +18,22 @@ package dev.patrickgold.florisboard.ime.media.emoji
 
 @JvmInline
 value class EmojiSet(val emojis: List<Emoji>) {
-    companion object {
-        val Unspecified = EmojiSet(listOf(Emoji("", "", emptyList())))
-    }
-
     init {
         require(emojis.isNotEmpty()) { "Cannot create an EmojiSet with no emojis specified." }
     }
 
-    fun base(
-        withSkinTone: EmojiSkinTone = EmojiSkinTone.DEFAULT,
-        withHairStyle: EmojiHairStyle = EmojiHairStyle.DEFAULT,
-    ): Emoji {
+    fun base(withSkinTone: EmojiSkinTone = EmojiSkinTone.DEFAULT): Emoji {
         if (emojis.size == 1) return emojis[0] // Fast compute
         for (emoji in emojis) {
-            if (emoji.skinTone == withSkinTone /*&& emoji.hairStyle == withHairStyle*/) {
+            if (emoji.skinTone == withSkinTone) {
                 return emoji
             }
         }
         return emojis[0] // Fallback
     }
 
-    fun variations(
-        withoutSkinTone: EmojiSkinTone = EmojiSkinTone.DEFAULT,
-        withoutHairStyle: EmojiHairStyle = EmojiHairStyle.DEFAULT,
-    ): List<Emoji> {
+    fun variations(withoutSkinTone: EmojiSkinTone = EmojiSkinTone.DEFAULT): List<Emoji> {
         if (emojis.size == 1) return emptyList() // Fast compute
-        return emojis.filterNot { it.skinTone == withoutSkinTone /*&& it.hairStyle == withoutHairStyle*/ }
+        return emojis.filterNot { it.skinTone == withoutSkinTone }
     }
 }

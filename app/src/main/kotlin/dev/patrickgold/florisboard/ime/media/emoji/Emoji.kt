@@ -28,7 +28,6 @@ import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import java.util.stream.IntStream
 import kotlin.streams.toList
 
 enum class EmojiSkinTone(val id: Int) {
@@ -40,14 +39,6 @@ enum class EmojiSkinTone(val id: Int) {
     DARK_SKIN_TONE(0x1F3FF);
 }
 
-enum class EmojiHairStyle(val id: Int) {
-    DEFAULT(0x0),
-    RED_HAIR(0x1F9B0),
-    CURLY_HAIR(0x1F9B1),
-    WHITE_HAIR(0x1F9B2),
-    BALD(0x1F9B3);
-}
-
 class Emoji(val value: String, val name: String, val keywords: List<String>) : KeyData {
     override val type = KeyType.CHARACTER
     override val code = KeyCode.UNSPECIFIED
@@ -57,15 +48,9 @@ class Emoji(val value: String, val name: String, val keywords: List<String>) : K
 
     val skinTone: EmojiSkinTone
 
-    val hairStyle: EmojiHairStyle
-
-    val codePoints: IntStream
-        get() = value.codePoints()
-
     init {
         val codePoints = value.codePoints().toList()
         skinTone = EmojiSkinTone.entries.firstOrNull { codePoints.contains(it.id) } ?: EmojiSkinTone.DEFAULT
-        hairStyle = EmojiHairStyle.entries.firstOrNull { codePoints.contains(it.id) } ?: EmojiHairStyle.DEFAULT
     }
 
     override fun compute(evaluator: ComputingEvaluator): KeyData {

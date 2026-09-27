@@ -1905,8 +1905,6 @@ HSPLdev/patrickgold/florisboard/ime/dictionary/DictionaryManager;-><clinit>()V
 HSPLdev/patrickgold/florisboard/ime/dictionary/DictionaryManager;-><init>(Landroid/content/Context;)V
 HSPLdev/patrickgold/florisboard/ime/landscapeinput/LandscapeInputUiMode;-><clinit>()V
 HSPLdev/patrickgold/florisboard/ime/landscapeinput/LandscapeInputUiMode;-><init>(Ljava/lang/String;I)V
-HSPLdev/patrickgold/florisboard/ime/media/emoji/EmojiHairStyle;-><clinit>()V
-HSPLdev/patrickgold/florisboard/ime/media/emoji/EmojiHairStyle;-><init>(Ljava/lang/String;II)V
 HSPLdev/patrickgold/florisboard/ime/media/emoji/EmojiSkinTone;-><clinit>()V
 HSPLdev/patrickgold/florisboard/ime/media/emoji/EmojiSkinTone;-><init>(Ljava/lang/String;II)V
 HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$InstanceHandler$initCallback$1;-><init>(Ldev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$InstanceHandler;Z)V
@@ -3356,7 +3354,6 @@ Ldev/patrickgold/florisboard/ime/core/SubtypeLayoutMap$Companion;
 Ldev/patrickgold/florisboard/ime/core/SubtypeLayoutMap;
 Ldev/patrickgold/florisboard/ime/dictionary/DictionaryManager;
 Ldev/patrickgold/florisboard/ime/landscapeinput/LandscapeInputUiMode;
-Ldev/patrickgold/florisboard/ime/media/emoji/EmojiHairStyle;
 Ldev/patrickgold/florisboard/ime/media/emoji/EmojiSkinTone;
 Ldev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$InstanceHandler$initCallback$1;
 Ldev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$InstanceHandler;
