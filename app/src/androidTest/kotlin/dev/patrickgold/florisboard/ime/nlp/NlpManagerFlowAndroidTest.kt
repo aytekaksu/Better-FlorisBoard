@@ -80,6 +80,13 @@ class NlpManagerFlowAndroidTest {
             assertEquals(han.id, subtypeManager.activeSubtype.id)
             assertTrue(nlp.isSuggestionOn())
 
+            runBlocking {
+                prefs.suggestion.autocorrectPluginComponent.set("test.external.provider").getOrThrow()
+            }
+            assertFalse(nlp.isSuggestionOn())
+            runBlocking { prefs.suggestion.autocorrectPluginComponent.set("").getOrThrow() }
+            assertTrue(nlp.isSuggestionOn())
+
             runBlocking { subtypeManager.switchToSubtypeById(latin.id).join() }
             assertEquals(latin.id, subtypeManager.activeSubtype.id)
             assertFalse(nlp.isSuggestionOn())

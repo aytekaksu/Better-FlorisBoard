@@ -24,10 +24,7 @@ import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.editor.EditorComposingPolicy
 import dev.patrickgold.florisboard.ime.editor.EditorContent
-import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSuggestionProvider
-import dev.patrickgold.florisboard.ime.nlp.han.HanShapeBasedLanguageProvider
-import dev.patrickgold.florisboard.ime.nlp.latin.LatinLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginSuggestionBatch
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
@@ -298,11 +295,11 @@ class NlpManager internal constructor(
     context: Context,
     clipboardPrimaryClipFlow: Lazy<StateFlow<ClipboardItem?>>,
     private val activeSubtypeFlow: StateFlow<Subtype>,
-    subtypesFlow: StateFlow<List<Subtype>>,
-    languagePacksFlow: Lazy<StateFlow<List<LanguagePackExtension>>>,
+    builtInProviders: Map<String, SuggestionProvider>,
+    private val composingPolicy: EditorComposingPolicy,
     private val currentEditorContent: () -> EditorContent,
     private val isIncognitoMode: () -> Boolean,
-) : EditorComposingPolicy, KeyboardSuggestionSession {
+) : KeyboardSuggestionSession {
     private val prefs by FlorisPreferenceStore
     private val primaryClipFlow by clipboardPrimaryClipFlow
     private val autocorrectPluginManager by context.autocorrectPluginManager()
@@ -311,12 +308,7 @@ class NlpManager internal constructor(
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val clipboardSuggestionProvider = ClipboardSuggestionProvider(context)
     private val emojiSuggestionProvider = EmojiSuggestionProvider(context)
-    private val providers = mapOf(
-        LatinLanguageProvider.ProviderId to ProviderInstanceWrapper(LatinLanguageProvider(context)),
-        HanShapeBasedLanguageProvider.ProviderId to ProviderInstanceWrapper(
-            HanShapeBasedLanguageProvider(context, subtypesFlow, languagePacksFlow),
-        ),
-    )
+    private val providers = builtInProviders.mapValues { (_, provider) -> ProviderInstanceWrapper(provider) }
     private val providerLifecycleGate = Mutex()
 
     private val candidateAssemblyRevision = CandidateRevision()
@@ -373,15 +365,6 @@ class NlpManager internal constructor(
         return providers[subtype.nlpProviders.suggestion]?.provider.asSuggestionProviderOrFallback()
     }
 
-    private fun resolveSuggestionProvider(subtype: Subtype): SuggestionProvider {
-        // Editor metadata is synchronous; actual provider requests use the gated getter below.
-        return selectActiveSuggestionProvider(
-            builtInProvider = resolveBuiltInSuggestionProvider(subtype),
-            externalProvider = autocorrectPluginManager,
-            externalProviderId = prefs.suggestion.autocorrectPluginComponent.get(),
-        )
-    }
-
     private suspend fun getBuiltInSuggestionProvider(subtype: Subtype): SuggestionProvider {
         return providerLifecycleGate.withLock {
             resolveBuiltInSuggestionProvider(subtype)
@@ -419,23 +402,7 @@ class NlpManager internal constructor(
         }
     }
 
-    override fun determineLocalComposing(
-        textBeforeSelection: CharSequence, breakIterators: BreakIteratorGroup, localLastCommitPosition: Int
-    ): EditorRange {
-        val subtype = activeSubtypeFlow.value
-        return resolveSuggestionProvider(subtype).determineLocalComposing(
-            subtype, textBeforeSelection, breakIterators, localLastCommitPosition
-        )
-    }
-
-    fun providerForcesSuggestionOn(subtype: Subtype): Boolean {
-        return resolveSuggestionProvider(subtype).forcesSuggestionOn
-    }
-
-    override fun isSuggestionOn(): Boolean =
-        prefs.suggestion.enabled.get()
-            || prefs.emoji.suggestionEnabled.get()
-            || providerForcesSuggestionOn(activeSubtypeFlow.value)
+    override fun isSuggestionOn(): Boolean = composingPolicy.isSuggestionOn()
 
     private fun launchLatestSuggestionRequest(block: suspend (Long) -> Unit) {
         synchronized(suggestionJobGuard) {
