@@ -1617,31 +1617,34 @@ object ClipboardFileStorage {
         private var dao: ClipboardFilesDao? = null
         private var database: ClipboardFilesDatabase? = null
 
+        // These storage APIs return synchronously, but Room work must stay off Main.
+        private fun <T> blockingDatabaseIo(block: () -> T): T = runBlocking(Dispatchers.IO) {
+            synchronized(lock, block)
+        }
+
         fun initialize(
             context: Context,
             directory: Path,
             currentBootCount: Int,
         ) {
             if (dao != null) return
-            runBlocking(Dispatchers.IO) {
-                synchronized(lock) {
-                    if (dao != null) return@synchronized
-                    val initializedDatabase = ClipboardFilesDatabase.new(context)
-                    try {
-                        val initializedDao = initializedDatabase.clipboardFilesDao()
-                        reconcileLegacyHistory(
-                            context = context,
-                            directory = directory,
-                            currentBootCount = currentBootCount,
-                            initializedDatabase = initializedDatabase,
-                            initializedDao = initializedDao,
-                        )
-                        database = initializedDatabase
-                        dao = initializedDao
-                    } catch (error: Exception) {
-                        initializedDatabase.close()
-                        throw error
-                    }
+            blockingDatabaseIo {
+                if (dao != null) return@blockingDatabaseIo
+                val initializedDatabase = ClipboardFilesDatabase.new(context)
+                try {
+                    val initializedDao = initializedDatabase.clipboardFilesDao()
+                    reconcileLegacyHistory(
+                        context = context,
+                        directory = directory,
+                        currentBootCount = currentBootCount,
+                        initializedDatabase = initializedDatabase,
+                        initializedDao = initializedDao,
+                    )
+                    database = initializedDatabase
+                    dao = initializedDao
+                } catch (error: Exception) {
+                    initializedDatabase.close()
+                    throw error
                 }
             }
         }
@@ -1651,20 +1654,18 @@ object ClipboardFileStorage {
             directory: Path,
             currentBootCount: Int,
         ) {
-            runBlocking(Dispatchers.IO) {
-                synchronized(lock) {
-                    reconcileLegacyHistory(
-                        context = context,
-                        directory = directory,
-                        currentBootCount = currentBootCount,
-                        initializedDatabase = requireNotNull(database) {
-                            "Clipboard metadata is unavailable."
-                        },
-                        initializedDao = requireNotNull(dao) {
-                            "Clipboard metadata is unavailable."
-                        },
-                    )
-                }
+            blockingDatabaseIo {
+                reconcileLegacyHistory(
+                    context = context,
+                    directory = directory,
+                    currentBootCount = currentBootCount,
+                    initializedDatabase = requireNotNull(database) {
+                        "Clipboard metadata is unavailable."
+                    },
+                    initializedDao = requireNotNull(dao) {
+                        "Clipboard metadata is unavailable."
+                    },
+                )
             }
         }
 
@@ -1799,8 +1800,8 @@ object ClipboardFileStorage {
                 info.shareOperationToken
                     ?.takeIf { shareOperationBindingHasValidShape(info) }
                     ?.let { token ->
-                    shareOperations[token] = info.id
-                }
+                        shareOperations[token] = info.id
+                    }
             }
             quarantinedLegacyFiles.clear()
             quarantinedLegacyFiles.putAll(nextQuarantinedFiles)
@@ -1887,37 +1888,33 @@ object ClipboardFileStorage {
             shareOperations[token.value]?.let(entries::get)
 
         fun insert(info: ClipboardFileInfo) {
-            runBlocking(Dispatchers.IO) {
-                synchronized(lock) {
-                    requireNotNull(dao) { "Clipboard metadata is unavailable." }.insert(info)
-                    entries[info.id] = info
-                    info.shareOperationToken
-                        ?.takeIf { shareOperationBindingHasValidShape(info) }
-                        ?.let { token ->
-                        shareOperations[token] = info.id
-                    }
+            blockingDatabaseIo {
+                requireNotNull(dao) { "Clipboard metadata is unavailable." }.insert(info)
+                entries[info.id] = info
+                info.shareOperationToken
+                    ?.takeIf { shareOperationBindingHasValidShape(info) }
+                    ?.let { token ->
+                    shareOperations[token] = info.id
                 }
             }
         }
 
         fun update(info: ClipboardFileInfo) {
-            runBlocking(Dispatchers.IO) {
-                synchronized(lock) {
-                    requireNotNull(dao) { "Clipboard metadata is unavailable." }.update(info)
-                    val previous = entries.put(info.id, info)
-                    if (previous?.shareOperationToken != info.shareOperationToken ||
-                        previous?.shareRequestFingerprint != info.shareRequestFingerprint ||
-                        previous?.sharePendingBootCount != info.sharePendingBootCount ||
-                        previous?.sharePendingDeadlineElapsedRealtimeMs !=
-                        info.sharePendingDeadlineElapsedRealtimeMs
-                    ) {
-                        previous?.shareOperationToken?.let(shareOperations::remove)
-                        info.shareOperationToken
-                            ?.takeIf { shareOperationBindingHasValidShape(info) }
-                            ?.let { token ->
+            blockingDatabaseIo {
+                requireNotNull(dao) { "Clipboard metadata is unavailable." }.update(info)
+                val previous = entries.put(info.id, info)
+                if (previous?.shareOperationToken != info.shareOperationToken ||
+                    previous?.shareRequestFingerprint != info.shareRequestFingerprint ||
+                    previous?.sharePendingBootCount != info.sharePendingBootCount ||
+                    previous?.sharePendingDeadlineElapsedRealtimeMs !=
+                    info.sharePendingDeadlineElapsedRealtimeMs
+                ) {
+                    previous?.shareOperationToken?.let(shareOperations::remove)
+                    info.shareOperationToken
+                        ?.takeIf { shareOperationBindingHasValidShape(info) }
+                        ?.let { token ->
                             shareOperations[token] = info.id
                         }
-                    }
                 }
             }
         }
@@ -1959,55 +1956,53 @@ object ClipboardFileStorage {
             maxBytes: Long,
             protectedRoots: Set<OwnedClipboardMediaUri>,
         ): PasteRootUpdate {
-            return runBlocking(Dispatchers.IO) {
-                synchronized(lock) {
-                    val initializedDao = requireNotNull(dao) {
-                        "Clipboard metadata is unavailable."
-                    }
-                    val initializedDatabase = requireNotNull(database) {
-                        "Clipboard metadata is unavailable."
-                    }
-                    val protectedIds = protectedRoots.mapTo(mutableSetOf()) { it.id }
-                    val sourceEntries = entries.values.associateByTo(linkedMapOf()) { it.id }
-                    val expiredRoots = linkedSetOf<OwnedClipboardMediaUri>()
-                    for ((id, info) in sourceEntries.toMap()) {
-                        if (info.pasteRetainedUntilMs in 1..now &&
-                            id !in protectedIds
-                        ) {
-                            ownedUriFromInfo(info)?.let(expiredRoots::add)
-                            sourceEntries[id] = info.copy(
-                                ownershipState = ClipboardMediaOwnershipState.RETIRING,
-                                pasteRetainedUntilMs = 0L,
-                                sharePendingBootCount = null,
-                                sharePendingDeadlineElapsedRealtimeMs = 0L,
-                            )
-                        }
-                    }
-                    val activeRootSizes = sourceEntries.values
-                        .filter { it.pasteRetainedUntilMs > now }
-                        .associate { it.id to it.size }
-                    val admitted = root == null || pasteAdmissionFits(
-                        activeRootSizes = activeRootSizes,
-                        candidateId = root.id,
-                        candidateBytes = root.size,
-                        maxRoots = maxRoots,
-                        maxBytes = maxBytes,
-                    )
-                    if (root != null && admitted) {
-                        sourceEntries[root.id] = root
-                    }
-                    val updates = entries.values.mapNotNull { current ->
-                        sourceEntries.getValue(current.id).takeIf { it != current }
-                    }
-                    initializedDatabase.runInTransaction {
-                        updates.forEach(initializedDao::update)
-                    }
-                    updates.forEach { entries[it.id] = it }
-                    PasteRootUpdate(
-                        admitted = admitted,
-                        expiredRoots = expiredRoots,
-                    )
+            return blockingDatabaseIo {
+                val initializedDao = requireNotNull(dao) {
+                    "Clipboard metadata is unavailable."
                 }
+                val initializedDatabase = requireNotNull(database) {
+                    "Clipboard metadata is unavailable."
+                }
+                val protectedIds = protectedRoots.mapTo(mutableSetOf()) { it.id }
+                val sourceEntries = entries.values.associateByTo(linkedMapOf()) { it.id }
+                val expiredRoots = linkedSetOf<OwnedClipboardMediaUri>()
+                for ((id, info) in sourceEntries.toMap()) {
+                    if (info.pasteRetainedUntilMs in 1..now &&
+                        id !in protectedIds
+                    ) {
+                        ownedUriFromInfo(info)?.let(expiredRoots::add)
+                        sourceEntries[id] = info.copy(
+                            ownershipState = ClipboardMediaOwnershipState.RETIRING,
+                            pasteRetainedUntilMs = 0L,
+                            sharePendingBootCount = null,
+                            sharePendingDeadlineElapsedRealtimeMs = 0L,
+                        )
+                    }
+                }
+                val activeRootSizes = sourceEntries.values
+                    .filter { it.pasteRetainedUntilMs > now }
+                    .associate { it.id to it.size }
+                val admitted = root == null || pasteAdmissionFits(
+                    activeRootSizes = activeRootSizes,
+                    candidateId = root.id,
+                    candidateBytes = root.size,
+                    maxRoots = maxRoots,
+                    maxBytes = maxBytes,
+                )
+                if (root != null && admitted) {
+                    sourceEntries[root.id] = root
+                }
+                val updates = entries.values.mapNotNull { current ->
+                    sourceEntries.getValue(current.id).takeIf { it != current }
+                }
+                initializedDatabase.runInTransaction {
+                    updates.forEach(initializedDao::update)
+                }
+                updates.forEach { entries[it.id] = it }
+                PasteRootUpdate(
+                    admitted = admitted,
+                    expiredRoots = expiredRoots,
+                )
             }
         }
 
@@ -2016,46 +2011,44 @@ object ClipboardFileStorage {
             retainExisting: Boolean,
             externalCapabilityBootCount: Int,
         ) {
-            runBlocking(Dispatchers.IO) {
-                synchronized(lock) {
-                    val initializedDao = requireNotNull(dao) {
-                        "Clipboard metadata is unavailable."
-                    }
-                    val initializedDatabase = requireNotNull(database) {
-                        "Clipboard metadata is unavailable."
-                    }
-                    val updates = entries.values.mapNotNull { info ->
-                        val shouldBeRoot = ownedUriFromInfo(info) in ownedUris
-                        val targetState = if (shouldBeRoot) {
-                            ClipboardMediaOwnershipState.ACTIVE
-                        } else {
-                            info.ownershipState
-                        }
-                        info.copy(
-                            ownershipState = targetState,
-                            isSystemRoot = shouldBeRoot || retainExisting && info.isSystemRoot,
-                            externalCapabilityBootCount = if (shouldBeRoot) {
-                                externalCapabilityBootCount
-                            } else {
-                                info.externalCapabilityBootCount
-                            },
-                            sharePendingBootCount = if (shouldBeRoot) {
-                                null
-                            } else {
-                                info.sharePendingBootCount
-                            },
-                            sharePendingDeadlineElapsedRealtimeMs = if (shouldBeRoot) {
-                                0L
-                            } else {
-                                info.sharePendingDeadlineElapsedRealtimeMs
-                            },
-                        ).takeIf { it != info }
-                    }
-                    initializedDatabase.runInTransaction {
-                        updates.forEach(initializedDao::update)
-                    }
-                    updates.forEach { entries[it.id] = it }
+            blockingDatabaseIo {
+                val initializedDao = requireNotNull(dao) {
+                    "Clipboard metadata is unavailable."
                 }
+                val initializedDatabase = requireNotNull(database) {
+                    "Clipboard metadata is unavailable."
+                }
+                val updates = entries.values.mapNotNull { info ->
+                    val shouldBeRoot = ownedUriFromInfo(info) in ownedUris
+                    val targetState = if (shouldBeRoot) {
+                        ClipboardMediaOwnershipState.ACTIVE
+                    } else {
+                        info.ownershipState
+                    }
+                    info.copy(
+                        ownershipState = targetState,
+                        isSystemRoot = shouldBeRoot || retainExisting && info.isSystemRoot,
+                        externalCapabilityBootCount = if (shouldBeRoot) {
+                            externalCapabilityBootCount
+                        } else {
+                            info.externalCapabilityBootCount
+                        },
+                        sharePendingBootCount = if (shouldBeRoot) {
+                            null
+                        } else {
+                            info.sharePendingBootCount
+                        },
+                        sharePendingDeadlineElapsedRealtimeMs = if (shouldBeRoot) {
+                            0L
+                        } else {
+                            info.sharePendingDeadlineElapsedRealtimeMs
+                        },
+                    ).takeIf { it != info }
+                }
+                initializedDatabase.runInTransaction {
+                    updates.forEach(initializedDao::update)
+                }
+                updates.forEach { entries[it.id] = it }
             }
         }
 
@@ -2079,11 +2072,9 @@ object ClipboardFileStorage {
             .toSet()
 
         fun delete(id: Long) {
-            runBlocking(Dispatchers.IO) {
-                synchronized(lock) {
-                    requireNotNull(dao) { "Clipboard metadata is unavailable." }.delete(id)
-                    entries.remove(id)?.shareOperationToken?.let(shareOperations::remove)
-                }
+            blockingDatabaseIo {
+                requireNotNull(dao) { "Clipboard metadata is unavailable." }.delete(id)
+                entries.remove(id)?.shareOperationToken?.let(shareOperations::remove)
             }
         }
 
