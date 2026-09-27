@@ -19,6 +19,8 @@ package dev.patrickgold.florisboard.ime.nlp
 import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.patrickgold.florisboard.FlorisApplication
+import dev.patrickgold.florisboard.PreferenceStoreInitializationState
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.clipboard.ClipboardSyncBehavior
@@ -35,11 +37,26 @@ import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class NlpManagerFlowAndroidTest {
+    @Before
+    fun awaitPreferenceStore(): Unit = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val application = context.applicationContext as FlorisApplication
+        assertEquals(
+            PreferenceStoreInitializationState.READY,
+            withTimeout(20_000L) {
+                application.preferenceStoreInitializationState.first {
+                    it != PreferenceStoreInitializationState.LOADING
+                }
+            },
+        )
+    }
+
     @Test
     fun suggestionPolicyReadsTheLiveSubtypeAfterSwitches() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
