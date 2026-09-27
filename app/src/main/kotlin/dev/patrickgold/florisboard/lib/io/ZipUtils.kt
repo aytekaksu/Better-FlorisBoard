@@ -298,9 +298,6 @@ object ZipUtils {
         return collector.result()
     }
 
-    private fun archivePath(root: Path, path: Path): String =
-        root.relativize(path).joinToString("/") { it.toString() }
-
     private fun writeZipEntries(
         entries: List<ZipSourceEntry>,
         zipOut: ZipOutputStream,
@@ -423,19 +420,7 @@ object ZipUtils {
                     StandardOpenOption.WRITE,
                     LinkOption.NOFOLLOW_LINKS,
                 ).use { output ->
-                    val buffer = ByteArray(COPY_BUFFER_BYTES)
-                    var fileBytes = 0L
-                    while (true) {
-                        val readBytes = input.read(buffer)
-                        if (readBytes < 0) break
-                        fileBytes = if (budget == null) {
-                            check(readBytes > 0) { SOURCE_INSPECTION_ERROR }
-                            fileBytes + readBytes
-                        } else {
-                            budget.add(readBytes, fileBytes)
-                        }
-                        output.write(buffer, 0, readBytes)
-                    }
+                    copySourceBytes(input, output, budget)
                 }
             }
         } catch (error: IllegalStateException) {
@@ -444,6 +429,22 @@ object ZipUtils {
             error(DESTINATION_ERROR)
         } catch (_: SecurityException) {
             error(DESTINATION_ERROR)
+        }
+    }
+
+    private fun copySourceBytes(input: InputStream, output: OutputStream, budget: TransferBudget?) {
+        val buffer = ByteArray(COPY_BUFFER_BYTES)
+        var fileBytes = 0L
+        while (true) {
+            val readBytes = input.read(buffer)
+            if (readBytes < 0) break
+            fileBytes = if (budget == null) {
+                check(readBytes > 0) { SOURCE_INSPECTION_ERROR }
+                fileBytes + readBytes
+            } else {
+                budget.add(readBytes, fileBytes)
+            }
+            output.write(buffer, 0, readBytes)
         }
     }
 
@@ -511,7 +512,7 @@ object ZipUtils {
             limits.ensureActive()
             transferBudget?.inspect(attributes)
             check(entries.size < limits.maxEntries) { ARCHIVE_LIMIT_ERROR }
-            val archivePath = archivePath(root, path)
+            val archivePath = root.relativize(path).joinToString("/") { it.toString() }
             check(isSafeArchivePath(archivePath, kind, limits)) { ARCHIVE_LIMIT_ERROR }
             val entryBytes = if (kind == ZipSourceKind.FILE) attributes.size() else 0L
             check(entryBytes in 0L..limits.fileLimit(archivePath)) { ARCHIVE_LIMIT_ERROR }
@@ -537,8 +538,11 @@ object ZipUtils {
         if (rawPath.isEmpty() ||
             rawPath.length > limits.maxPathBytes ||
             rawPath.startsWith('/') ||
-            rawPath.contains('\\') ||
-            rawPath.any(Char::isISOControl) ||
+            rawPath.contains('\\')
+        ) {
+            return false
+        }
+        if (rawPath.any(Char::isISOControl) ||
             rawPath.encodeToByteArray().size > limits.maxPathBytes ||
             DRIVE_PREFIX.containsMatchIn(rawPath)
         ) {
