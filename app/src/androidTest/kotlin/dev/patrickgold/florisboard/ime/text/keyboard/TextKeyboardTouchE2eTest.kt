@@ -28,6 +28,8 @@ import android.view.ViewConfiguration
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import androidx.compose.ui.unit.IntRect
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.patrickgold.florisboard.FlorisImeService
@@ -44,6 +46,7 @@ import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyType
+import dev.patrickgold.florisboard.ime.window.ImeWindowProps
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.runBlocking
@@ -63,7 +66,7 @@ import kotlin.math.sin
  *
  * This deliberately injects more MOVE events than the old buffered dispatcher could retain. Key
  * coordinates come from the active production keyboard, so the test follows layout sizing, spacing,
- * orientation, and window-position preferences instead of assuming a particular screen geometry. A
+ * orientation, and fixed-window padding instead of assuming a particular screen geometry. A
  * temporary core QWERTY subtype makes the exact n/v/b regression fixture independent of the user's
  * active language; the original subtype and keyboard mode are restored afterwards.
  */
@@ -800,10 +803,44 @@ class TextKeyboardTouchE2eTest {
         return null
     }
 
-    private fun keyboardOrigin(keyboardHeight: Float = keyboard.layoutHeight()) = PointF(
-        windowBounds.left.toFloat(),
-        windowBounds.bottom - keyboardHeight,
-    )
+    private fun keyboardOrigin(keyboardHeight: Float = keyboard.layoutHeight()): PointF {
+        var origin = PointF()
+        instrumentation.runOnMainSync {
+            // The outer IME bounds include safe-area and user padding outside the keyboard touch surface.
+            val fixedProps = FlorisImeService.windowControllerOrNull()
+                ?.activeWindowSpec?.value?.props as? ImeWindowProps.Fixed
+            val rootView = FlorisImeService.currentImeRootViewOrNull()
+            assertNotNull("IME root view is not available for screen coordinates", rootView)
+            assertTrue("IME root view is detached", rootView!!.isAttachedToWindow)
+            val rootLocation = IntArray(2)
+            rootView.getLocationOnScreen(rootLocation)
+            val decorView = rootView.rootView
+            val decorLocation = IntArray(2)
+            decorView.getLocationOnScreen(decorLocation)
+            val safeInsets = if (fixedProps != null) {
+                val insets = ViewCompat.getRootWindowInsets(rootView)
+                assertNotNull("IME root window insets are unavailable", insets)
+                insets!!.getInsets(
+                    WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout(),
+                )
+            } else {
+                null
+            }
+            // Older IME windows can exclude a system bar before Compose receives its safe-drawing insets.
+            val excludedLeft = rootLocation[0] - decorLocation[0]
+            val excludedBottom = decorLocation[1] + decorView.height - rootLocation[1] - rootView.height
+            val safeLeft = ((safeInsets?.left ?: 0) - excludedLeft).coerceAtLeast(0)
+            val safeBottom = ((safeInsets?.bottom ?: 0) - excludedBottom).coerceAtLeast(0)
+            val density = activity.resources.displayMetrics.density
+            origin = PointF(
+                rootLocation[0] + windowBounds.left + safeLeft +
+                    (fixedProps?.paddingLeft?.value ?: 0f) * density,
+                rootLocation[1] + windowBounds.bottom - keyboardHeight - safeBottom -
+                    (fixedProps?.paddingBottom?.value ?: 0f) * density,
+            )
+        }
+        return origin
+    }
 
     /**
      * The last row's touch bounds intentionally extend below the actual Compose layout. Derive the
@@ -944,9 +981,10 @@ class TextKeyboardTouchE2eTest {
             if (stablePolls >= REQUIRED_STABLE_LAYOUT_POLLS) {
                 keyboard = candidate!!
                 windowBounds = bounds!!
+                val origin = keyboardOrigin()
                 center = PointF(
-                    bounds.left + key!!.visibleBounds.center.x,
-                    bounds.bottom - candidate.layoutHeight() + key.visibleBounds.center.y,
+                    origin.x + key!!.visibleBounds.center.x,
+                    origin.y + key.visibleBounds.center.y,
                 )
                 true
             } else {

@@ -146,6 +146,9 @@ class FlorisImeService : LifecycleInputMethodService() {
             val ims = FlorisImeServiceReference.get() ?: return null
             return ims.windowController
         }
+
+        /** Returns the Compose root for screen-coordinate integration tests. */
+        fun currentImeRootViewOrNull(): View? = FlorisImeServiceReference.get()?.imeRootView
     }
 
     fun hideUi() {
@@ -266,6 +269,8 @@ class FlorisImeService : LifecycleInputMethodService() {
 
     val windowController = ImeWindowController(prefs, lifecycleScope)
 
+    private var imeRootView: View? = null
+
     private val activeState get() = keyboardManager.activeState
     val inputFeedbackController by lazy { InputFeedbackController.new(this) }
     private val systemLocalesFlow = MutableStateFlow(LocaleList())
@@ -318,7 +323,7 @@ class FlorisImeService : LifecycleInputMethodService() {
     override fun onCreateInputView(): View? {
         super.installViewTreeOwners()
         val content = window.window!!.findViewById<ViewGroup>(android.R.id.content)
-        content.addView(ImeRootView(this))
+        content.addView(ImeRootView(this).also { imeRootView = it })
         // Disable the default input view placement
         return null
     }
@@ -359,6 +364,7 @@ class FlorisImeService : LifecycleInputMethodService() {
         nlpManager.finishAutocorrectSession()
         super.onDestroy()
         unregisterReceiver(wallpaperChangeReceiver)
+        imeRootView = null
         FlorisImeServiceReference = WeakReference(null)
     }
 
