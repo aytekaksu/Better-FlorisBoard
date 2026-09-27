@@ -89,6 +89,16 @@ private fun <V : Any> describedResourceEntries(
     }
 }
 
+private fun emojiSkinToneEntries(
+    vararg entries: Triple<EmojiSkinTone, Int, String>,
+): @Composable () -> List<ListPreferenceEntry<EmojiSkinTone>> = {
+    listPrefEntries {
+        for ((tone, labelRes, emoji) in entries) {
+            entry(key = tone, label = stringRes(labelRes, "emoji" to emoji))
+        }
+    }
+}
+
 private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable () -> List<ListPreferenceEntry<*>>>(
     AppTheme::class to DEFAULT to resourceEntries(
         AppTheme.AUTO to R.string.settings__system_default,
@@ -168,52 +178,19 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
             R.string.enum__emoji_history_update_strategy__manual_sort_append,
             R.string.enum__emoji_history_update_strategy__manual_sort_append__description),
     ),
-    EmojiSkinTone::class to DEFAULT to {
-        listPrefEntries {
-            entry(
-                key = EmojiSkinTone.DEFAULT,
-                label = stringRes(
-                    R.string.enum__emoji_skin_tone__default,
-                    "emoji" to "\uD83D\uDC4B" // 👋
-                ),
-            )
-            entry(
-                key = EmojiSkinTone.LIGHT_SKIN_TONE,
-                label = stringRes(
-                    R.string.enum__emoji_skin_tone__light_skin_tone,
-                    "emoji" to "\uD83D\uDC4B\uD83C\uDFFB" // 👋🏻
-                ),
-            )
-            entry(
-                key = EmojiSkinTone.MEDIUM_LIGHT_SKIN_TONE,
-                label = stringRes(
-                    R.string.enum__emoji_skin_tone__medium_light_skin_tone,
-                    "emoji" to "\uD83D\uDC4B\uD83C\uDFFC" // 👋🏼
-                ),
-            )
-            entry(
-                key = EmojiSkinTone.MEDIUM_SKIN_TONE,
-                label = stringRes(
-                    R.string.enum__emoji_skin_tone__medium_skin_tone,
-                    "emoji" to "\uD83D\uDC4B\uD83C\uDFFD" // 👋🏽
-                ),
-            )
-            entry(
-                key = EmojiSkinTone.MEDIUM_DARK_SKIN_TONE,
-                label = stringRes(
-                    R.string.enum__emoji_skin_tone__medium_dark_skin_tone,
-                    "emoji" to "\uD83D\uDC4B\uD83C\uDFFE" // 👋🏾
-                ),
-            )
-            entry(
-                key = EmojiSkinTone.DARK_SKIN_TONE,
-                label = stringRes(
-                    R.string.enum__emoji_skin_tone__dark_skin_tone,
-                    "emoji" to "\uD83D\uDC4B\uD83C\uDFFF" // 👋🏿
-                ),
-            )
-        }
-    },
+    EmojiSkinTone::class to DEFAULT to emojiSkinToneEntries(
+        Triple(EmojiSkinTone.DEFAULT, R.string.enum__emoji_skin_tone__default, "\uD83D\uDC4B"), // 👋
+        Triple(EmojiSkinTone.LIGHT_SKIN_TONE, R.string.enum__emoji_skin_tone__light_skin_tone,
+            "\uD83D\uDC4B\uD83C\uDFFB"), // 👋🏻
+        Triple(EmojiSkinTone.MEDIUM_LIGHT_SKIN_TONE, R.string.enum__emoji_skin_tone__medium_light_skin_tone,
+            "\uD83D\uDC4B\uD83C\uDFFC"), // 👋🏼
+        Triple(EmojiSkinTone.MEDIUM_SKIN_TONE, R.string.enum__emoji_skin_tone__medium_skin_tone,
+            "\uD83D\uDC4B\uD83C\uDFFD"), // 👋🏽
+        Triple(EmojiSkinTone.MEDIUM_DARK_SKIN_TONE, R.string.enum__emoji_skin_tone__medium_dark_skin_tone,
+            "\uD83D\uDC4B\uD83C\uDFFE"), // 👋🏾
+        Triple(EmojiSkinTone.DARK_SKIN_TONE, R.string.enum__emoji_skin_tone__dark_skin_tone,
+            "\uD83D\uDC4B\uD83C\uDFFF"), // 👋🏿
+    ),
     EmojiSuggestionType::class to DEFAULT to describedResourceEntries(
         Triple(EmojiSuggestionType.LEADING_COLON, R.string.enum__emoji_suggestion_type__leading_colon,
             R.string.enum__emoji_suggestion_type__leading_colon__description),
