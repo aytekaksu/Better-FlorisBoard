@@ -74,7 +74,8 @@ shared punctuation popups. Exceptional character and numeric layouts and the
 Han/Bengali presets stay literal. Generation preserves layout IDs and popups,
 theme manifest paths, preset order, and Unicode code points in JSON; missing or
 malformed input fails before packaging. Theme selectors replace whole rules, while
-`@defines` merge by name. Run
+`@defines` merge by name. Replacing asset trees rejects links in task-owned
+output paths and does not follow nested links during deletion. Run
 `./gradlew :app:testLocalizationAssetGenerator :app:testDebugUnitTest` to check
 generated assets and their metadata.
 

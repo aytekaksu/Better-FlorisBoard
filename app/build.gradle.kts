@@ -80,8 +80,7 @@ abstract class GenerateBuiltInThemeAssets : DefaultTask() {
 
     @TaskAction
     fun generate() {
-        val targetRoot = outputDirectory.get().asFile.resolve("ime/theme")
-        check(!targetRoot.exists() || targetRoot.deleteRecursively()) { "Unable to replace generated themes" }
+        val targetRoot = GeneratedAssetSafety.clearTarget(outputDirectory.get().asFile, "ime/theme", "theme")
         generateFamily(
             baseStylesheet.get().asFile,
             overlaysDirectory.get().asFile,
@@ -155,10 +154,11 @@ abstract class GenerateNumericRowAssets : DefaultTask() {
     fun generate() {
         val digits = JsonSlurper().parse(zeroDigitsFile.get().asFile) as? Map<*, *>
             ?: error("Numeric row digits must be a JSON object")
-        val target = outputDirectory.get().asFile.resolve(
+        val target = GeneratedAssetSafety.clearTarget(
+            outputDirectory.get().asFile,
             "ime/keyboard/org.florisboard.layouts/layouts/numericRow",
+            "numeric row",
         )
-        check(!target.exists() || target.deleteRecursively()) { "Unable to replace generated numeric rows" }
         check(target.mkdirs()) { "Unable to create generated numeric row directory" }
 
         for ((nameValue, zeroValue) in digits) {
@@ -208,10 +208,9 @@ private class GeneratedAssetSafety {
         }
 
         fun clearTarget(output: File, assetPath: String, label: String): File {
-            val root = output.toPath()
+            val root = checkedOutputRoot(output, label)
             val target = root.resolve(assetPath)
             var component = root
-            check(!Files.isSymbolicLink(component)) { "Generated $label output path is linked" }
             for (segment in root.relativize(target)) {
                 component = component.resolve(segment)
                 check(!Files.isSymbolicLink(component)) { "Generated $label output path is linked" }
@@ -221,13 +220,18 @@ private class GeneratedAssetSafety {
         }
 
         fun clearOutputRoot(output: File, label: String): File {
+            val root = checkedOutputRoot(output, label)
+            removeTreeNoFollow(root)
+            return output
+        }
+
+        private fun checkedOutputRoot(output: File, label: String): Path {
             val root = output.toPath().toAbsolutePath().normalize()
-            // Check the variant root and its task-owned localizationAssets/generated/build parents.
+            // Check the variant root and its task-owned generator/generated/build parents.
             generateSequence(root) { it.parent }.take(4).forEach { component ->
                 check(!Files.isSymbolicLink(component)) { "Generated $label output path is linked" }
             }
-            removeTreeNoFollow(root)
-            return output
+            return root
         }
 
         fun readSource(file: File, label: String): String {
@@ -1198,6 +1202,39 @@ val testCharacterLayoutAssetGenerator by tasks.registering {
         ) { root ->
             val parent = root.resolve("elsewhere").apply { mkdirs() }
             Files.createSymbolicLink(root.resolve("output").toPath(), parent.toPath())
+        }
+
+        for ((path, taskName) in listOf(
+            "ime/theme" to "builtInThemeAssets",
+            "ime/keyboard/org.florisboard.layouts/layouts/numericRow" to "numericRowAssets",
+        )) {
+            for (linkedPath in listOf(path, "ime")) {
+                val root = temporaryDir.resolve("output-link-${caseNumber++}")
+                GenerateLocalizationAssets.removeTreeNoFollow(root.toPath())
+                val output = root.resolve("output")
+                val outside = root.resolve("outside").apply { mkdirs() }
+                outside.resolve("keep.json").writeText("safe")
+                val link = output.resolve(linkedPath)
+                link.parentFile.mkdirs()
+                Files.createSymbolicLink(link.toPath(), outside.toPath())
+                val error = runCatching { GeneratedAssetSafety.clearTarget(output, path, "test") }.exceptionOrNull()
+                check(error?.message?.contains("output path is linked") == true)
+                check(outside.resolve("keep.json").readText() == "safe")
+            }
+
+            val root = temporaryDir.resolve("output-parent-link-${caseNumber++}")
+            GenerateLocalizationAssets.removeTreeNoFollow(root.toPath())
+            val outside = root.resolve("outside").apply { mkdirs() }
+            val linkedBuild = root.resolve("build")
+            Files.createSymbolicLink(linkedBuild.toPath(), outside.toPath())
+            val output = linkedBuild.resolve("generated/$taskName/debug")
+            val sentinel = output.resolve("$path/stale.json").apply {
+                parentFile.mkdirs()
+                writeText("safe")
+            }
+            val error = runCatching { GeneratedAssetSafety.clearTarget(output, path, "test") }.exceptionOrNull()
+            check(error?.message?.contains("output path is linked") == true)
+            check(sentinel.readText() == "safe")
         }
     }
 }
