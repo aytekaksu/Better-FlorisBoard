@@ -325,7 +325,7 @@ private fun ThemeEditorReadyScreen(
     val definedVariables = remember(stylesheetEditor.rules, workspace.version) {
         stylesheetEditor.rules.firstNotNullOfOrNull { (rule, propertySet) ->
             if (rule is SnyggAnnotationRule.Defines && propertySet is SnyggSinglePropertySetEditor) {
-                propertySet.properties
+                propertySet.properties.toMap()
             } else {
                 null
             }
@@ -502,8 +502,11 @@ private fun ThemeEditorReadyScreen(
                         fun SinglePropertySetEditor(
                             propertySet: SnyggSinglePropertySetEditor,
                         ) {
+                            val properties = remember(propertySet, workspace.version) {
+                                propertySet.properties.toMap()
+                            }
                             for ((propertyName, propertySpec) in propertySetSpec?.properties.orEmpty()) {
-                                if (propertySpec.required && !propertySet.properties.containsKey(propertyName)) {
+                                if (propertySpec.required && !properties.containsKey(propertyName)) {
                                     FlorisOutlinedBox(title = "Errors", modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp)) {
                                         Text(
                                             modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
@@ -513,7 +516,7 @@ private fun ThemeEditorReadyScreen(
                                     }
                                 }
                             }
-                            for ((propertyName, propertyValue) in propertySet.properties) {
+                            for ((propertyName, propertyValue) in properties) {
                                 if (true /*propertySpec != null && propertySpec.level <= snyggLevel*/ || isVariablesRule) {
                                     JetPrefListItem(
                                         modifier = Modifier.rippleClickable {
