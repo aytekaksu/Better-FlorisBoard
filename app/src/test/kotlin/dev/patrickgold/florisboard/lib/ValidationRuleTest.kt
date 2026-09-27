@@ -51,6 +51,23 @@ class ValidationRuleTest :
             (hintedPercent as ValidationResult.Valid).hasHintMessage() shouldBe true
         }
 
+        listOf(
+            "version" to ExtensionValidation.MetaVersion,
+            "title" to ExtensionValidation.MetaTitle,
+            "maintainers" to ExtensionValidation.MetaMaintainers,
+            "license" to ExtensionValidation.MetaLicense,
+            "authors" to ExtensionValidation.ComponentAuthors,
+        ).forEach { (name, rule) ->
+            test("$name requires nonblank text") {
+                listOf("", " \t\r\n", "\u2003\u2028").forEach { input ->
+                    rule.validate(input).isInvalid() shouldBe true
+                }
+                listOf("text", "\ntext\n", "one\n\ntwo").forEach { input ->
+                    rule.validate(input).isValid() shouldBe true
+                }
+            }
+        }
+
         test("dictionary rule boundaries remain unchanged") {
             UserDictionaryValidation.Word.validate("hello").isValid() shouldBe true
             UserDictionaryValidation.Word.validate("two words").isInvalid() shouldBe true
