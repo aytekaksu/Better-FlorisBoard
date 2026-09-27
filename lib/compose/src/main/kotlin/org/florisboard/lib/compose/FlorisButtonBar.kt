@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,7 +32,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -66,13 +64,11 @@ class FlorisButtonBarScope(rowScope: RowScope) : RowScope by rowScope {
     @Composable
     fun ButtonBarButton(
         text: String,
-        modifier: Modifier = Modifier,
         enabled: Boolean = true,
-        icon: ImageVector? = null,
         onClick: () -> Unit,
     ) {
         Button(
-            modifier = modifier.padding(start = 16.dp),
+            modifier = Modifier.padding(start = 16.dp),
             enabled = enabled,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -80,13 +76,6 @@ class FlorisButtonBarScope(rowScope: RowScope) : RowScope by rowScope {
             ),
             onClick = onClick,
         ) {
-            if (icon != null) {
-                Icon(
-                    modifier = Modifier.padding(end = 8.dp),
-                    imageVector = icon,
-                    contentDescription = null,
-                )
-            }
             Text(text = text)
         }
     }
@@ -94,26 +83,17 @@ class FlorisButtonBarScope(rowScope: RowScope) : RowScope by rowScope {
     @Composable
     fun ButtonBarTextButton(
         text: String,
-        modifier: Modifier = Modifier,
         enabled: Boolean = true,
-        icon: ImageVector? = null,
         onClick: () -> Unit,
     ) {
         TextButton(
-            modifier = modifier.padding(start = 16.dp),
+            modifier = Modifier.padding(start = 16.dp),
             enabled = enabled,
             colors = ButtonDefaults.textButtonColors(
                 contentColor = MaterialTheme.colorScheme.primary,
             ),
             onClick = onClick,
         ) {
-            if (icon != null) {
-                Icon(
-                    modifier = Modifier.padding(end = 8.dp),
-                    imageVector = icon,
-                    contentDescription = null,
-                )
-            }
             Text(text = text)
         }
     }

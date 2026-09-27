@@ -25,6 +25,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -37,13 +39,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import dev.patrickgold.florisboard.app.FlorisPreferenceModel
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.LocalNavController
 import dev.patrickgold.jetpref.datastore.ui.PreferenceLayout
 import dev.patrickgold.jetpref.datastore.ui.PreferenceUiContent
 import org.florisboard.lib.android.AndroidVersion
-import org.florisboard.lib.compose.FlorisAppBar
 import org.florisboard.lib.compose.FlorisIconButton
 import org.florisboard.lib.compose.autoMirrorForRtl
 import org.florisboard.lib.compose.florisVerticalScroll
@@ -146,7 +148,21 @@ private class FlorisScreenScopeImpl : FlorisScreenScope {
 
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            topBar = { FlorisAppBar(title, navigationIcon.takeIf { navigationIconVisible }, actions, scrollBehavior) },
+            topBar = {
+                TopAppBar(
+                    navigationIcon = navigationIcon.takeIf { navigationIconVisible } ?: {},
+                    title = {
+                        Text(
+                            text = title,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 1,
+                        )
+                    },
+                    actions = actions,
+                    colors = TopAppBarDefaults.topAppBarColors(),
+                    scrollBehavior = scrollBehavior,
+                )
+            },
             bottomBar = bottomBar,
             floatingActionButton = fab,
         ) { innerPadding ->
