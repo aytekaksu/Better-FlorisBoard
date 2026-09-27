@@ -95,6 +95,8 @@ typing, UI/document leases, and pending finish acknowledgements have ended.
   request state. The manager derives session wire data from reducer state and
   effects, and keeps physical Android handles and bounded runtime payloads;
   provider UI, dictionary work, and host setting mutations use their own guards.
+- Provider UI reads, mutations, and documents share one pending-request ledger;
+  dictionary-action grants end with their matching operation.
 - The reducer-issued request lease follows the reply into each visible
   candidate. Both publication and commit require the latest request ID, active
   session, admitted session, provider, and editor generation.

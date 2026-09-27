@@ -86,6 +86,7 @@ abstract class RecordingAutocorrectProviderService(
 
     override suspend fun onPluginUiDocument(document: AutocorrectPluginDocument): Boolean {
         record("UI_DOCUMENT")
+        SyntheticAutocorrectFixture.awaitUiDocumentRelease()
         return true
     }
 
@@ -171,6 +172,14 @@ class SyntheticAutocorrectControlProvider : ContentProvider() {
             }
             "release_ui_action" -> {
                 SyntheticAutocorrectFixture.releaseUiAction()
+                Bundle.EMPTY
+            }
+            "hold_ui_document" -> {
+                SyntheticAutocorrectFixture.holdUiDocument()
+                Bundle.EMPTY
+            }
+            "release_ui_document" -> {
+                SyntheticAutocorrectFixture.releaseUiDocument()
                 Bundle.EMPTY
             }
             "send_ui_reply" -> {
@@ -285,6 +294,7 @@ private object SyntheticAutocorrectFixture {
     private var finishRelease: CompletableDeferred<Unit>? = null
     private var suggestBRelease: CompletableDeferred<Unit>? = null
     private var uiActionRelease: CompletableDeferred<Unit>? = null
+    private var uiDocumentRelease: CompletableDeferred<Unit>? = null
     private var lastBRequestId = 0L
 
     @Synchronized
@@ -292,6 +302,7 @@ private object SyntheticAutocorrectFixture {
         releaseFinish()
         releaseSuggestB()
         releaseUiAction()
+        releaseUiDocument()
         lastBRequestId = 0L
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(EVENTS, "").commit()
@@ -352,6 +363,22 @@ private object SyntheticAutocorrectFixture {
 
     suspend fun awaitUiActionRelease() {
         val current = synchronized(this) { uiActionRelease }
+        current?.await()
+    }
+
+    @Synchronized
+    fun holdUiDocument() {
+        uiDocumentRelease = CompletableDeferred()
+    }
+
+    @Synchronized
+    fun releaseUiDocument() {
+        uiDocumentRelease?.complete(Unit)
+        uiDocumentRelease = null
+    }
+
+    suspend fun awaitUiDocumentRelease() {
+        val current = synchronized(this) { uiDocumentRelease }
         current?.await()
     }
 
