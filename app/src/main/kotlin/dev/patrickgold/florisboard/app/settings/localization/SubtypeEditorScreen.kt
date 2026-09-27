@@ -108,23 +108,10 @@ private val SuggestionProviders = mapOf(
     HanShapeBasedLanguageProvider.ProviderId to "Chinese shape-based",
 )
 
-private class SubtypeEditorState(init: Subtype?) {
+internal class SubtypeEditorState(init: Subtype?) {
     companion object {
         val Saver = Saver<SubtypeEditorState, String>(
-            save = { editor ->
-                val subtype = Subtype(
-                    id = editor.id.value,
-                    primaryLocale = editor.primaryLocale.value,
-                    secondaryLocales = editor.secondaryLocales.value,
-                    nlpProviders = editor.nlpProviders.value,
-                    composer = editor.composer.value,
-                    currencySet = editor.currencySet.value,
-                    punctuationRule = editor.punctuationRule.value,
-                    popupMapping = editor.popupMapping.value,
-                    layoutMap = editor.layoutMap.value,
-                )
-                SubtypeJsonConfig.encodeToString(subtype)
-            },
+            save = { SubtypeJsonConfig.encodeToString(it.snapshot()) },
             restore = { str ->
                 val subtype = SubtypeJsonConfig.decodeFromString<Subtype>(str)
                 SubtypeEditorState(subtype)
@@ -141,6 +128,11 @@ private class SubtypeEditorState(init: Subtype?) {
     val punctuationRule: MutableState<ExtensionComponentName> = mutableStateOf(init?.punctuationRule ?: Subtype.DEFAULT.punctuationRule)
     val popupMapping: MutableState<ExtensionComponentName> = mutableStateOf(init?.popupMapping ?: SelectComponentName)
     val layoutMap: MutableState<SubtypeLayoutMap> = mutableStateOf(init?.layoutMap ?: SelectLayoutMap)
+
+    private fun snapshot() = Subtype(
+        id.value, primaryLocale.value, secondaryLocales.value, nlpProviders.value, composer.value,
+        currencySet.value, punctuationRule.value, popupMapping.value, layoutMap.value,
+    )
 
     fun applySubtype(subtype: Subtype) {
         id.value = subtype.id
@@ -161,18 +153,8 @@ private class SubtypeEditorState(init: Subtype?) {
         check(currencySet.value != SelectComponentName)
         check(punctuationRule.value != SelectComponentName)
         check(popupMapping.value != SelectComponentName)
-        check(layoutMap.value.characters != SelectComponentName)
-        check(layoutMap.value.symbols != SelectComponentName)
-        check(layoutMap.value.symbols2 != SelectComponentName)
-        check(layoutMap.value.numeric != SelectComponentName)
-        check(layoutMap.value.numericAdvanced != SelectComponentName)
-        check(layoutMap.value.numericRow != SelectComponentName)
-        check(layoutMap.value.phone != SelectComponentName)
-        check(layoutMap.value.phone2 != SelectComponentName)
-        Subtype(
-            id.value, primaryLocale.value, secondaryLocales.value, nlpProviders.value, composer.value,
-            currencySet.value, punctuationRule.value, popupMapping.value, layoutMap.value,
-        )
+        check(LayoutType.entries.none { layoutMap.value[it] == SelectComponentName })
+        snapshot()
     }
 }
 
