@@ -319,12 +319,7 @@ class LayoutManager(context: Context) {
         }
     }
 
-    /**
-     * Computes a layout for [keyboardMode] based on the given [subtype] and returns it.
-     *
-     * @param keyboardMode The keyboard mode for which the layout should be computed.
-     * @param subtype The subtype which localizes the computed layout.
-     */
+    /** Computes a keyboard for [keyboardMode] and [subtype]. */
     fun computeKeyboardAsync(
         keyboardMode: KeyboardMode,
         subtype: Subtype,
@@ -335,44 +330,27 @@ class LayoutManager(context: Context) {
         subtype: Subtype,
         snapshot: KeyboardExtensionSnapshot,
     ): Deferred<TextKeyboard> = ioScope.async {
-        var main: LTN? = null
-        var modifier: LTN? = null
-        var extension: LTN? = null
-
-        when (keyboardMode) {
-            KeyboardMode.CHARACTERS -> {
-                if (prefs.keyboard.numberRow.get()) {
-                    extension = LTN(LayoutType.NUMERIC_ROW, subtype.layoutMap.numericRow)
-                }
-                main = LTN(LayoutType.CHARACTERS, subtype.layoutMap.characters)
-                modifier = LTN(LayoutType.CHARACTERS_MOD, extCoreLayout("default"))
-            }
-            KeyboardMode.NUMERIC -> {
-                main = LTN(LayoutType.NUMERIC, subtype.layoutMap.numeric)
-            }
-            KeyboardMode.NUMERIC_ADVANCED -> {
-                main = LTN(LayoutType.NUMERIC_ADVANCED, subtype.layoutMap.numericAdvanced)
-            }
-            KeyboardMode.PHONE -> {
-                main = LTN(LayoutType.PHONE, subtype.layoutMap.phone)
-            }
-            KeyboardMode.PHONE2 -> {
-                main = LTN(LayoutType.PHONE2, subtype.layoutMap.phone2)
-            }
-            KeyboardMode.SYMBOLS -> {
-                extension = LTN(LayoutType.NUMERIC_ROW, subtype.layoutMap.numericRow)
-                main = LTN(LayoutType.SYMBOLS, subtype.layoutMap.symbols)
-                modifier = LTN(LayoutType.SYMBOLS_MOD, extCoreLayout("default"))
-            }
-            KeyboardMode.SYMBOLS2 -> {
-                main = LTN(LayoutType.SYMBOLS2, subtype.layoutMap.symbols2)
-                modifier = LTN(LayoutType.SYMBOLS2_MOD, extCoreLayout("default"))
-            }
-            else -> {
-                // Default values are already provided
-            }
+        val mainType = when (keyboardMode) {
+            KeyboardMode.CHARACTERS -> LayoutType.CHARACTERS
+            KeyboardMode.SYMBOLS -> LayoutType.SYMBOLS
+            KeyboardMode.SYMBOLS2 -> LayoutType.SYMBOLS2
+            KeyboardMode.NUMERIC -> LayoutType.NUMERIC
+            KeyboardMode.NUMERIC_ADVANCED -> LayoutType.NUMERIC_ADVANCED
+            KeyboardMode.PHONE -> LayoutType.PHONE
+            KeyboardMode.PHONE2 -> LayoutType.PHONE2
+            else -> null
         }
-
+        val main = mainType?.let { type -> LTN(type, checkNotNull(subtype.layoutMap[type])) }
+        val modifierType = when (keyboardMode) {
+            KeyboardMode.CHARACTERS -> LayoutType.CHARACTERS_MOD
+            KeyboardMode.SYMBOLS -> LayoutType.SYMBOLS_MOD
+            KeyboardMode.SYMBOLS2 -> LayoutType.SYMBOLS2_MOD
+            else -> null
+        }
+        val modifier = modifierType?.let { LTN(it, extCoreLayout("default")) }
+        val includeNumberRow = keyboardMode == KeyboardMode.SYMBOLS ||
+            (keyboardMode == KeyboardMode.CHARACTERS && prefs.keyboard.numberRow.get())
+        val extension = if (includeNumberRow) LTN(LayoutType.NUMERIC_ROW, subtype.layoutMap.numericRow) else null
         return@async mergeLayouts(keyboardMode, subtype, main, modifier, extension, snapshot)
     }
 
