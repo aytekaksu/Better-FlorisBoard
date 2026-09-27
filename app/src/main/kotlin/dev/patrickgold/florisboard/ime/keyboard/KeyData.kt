@@ -26,79 +26,41 @@ import java.text.Normalizer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * Basic interface for a key data object. Base for all key data objects across the IME, such as text, emojis and
- * selectors. The implementation is as abstract as possible, as different features require different implementations.
- */
+/** A layout entry: either a concrete [KeyData] or a selector that chooses one. */
 interface AbstractKeyData {
-    /**
-     * Computes a [KeyData] object for this key data. Returns null if no computation is possible or if the key is
-     * not relevant based on the result of [evaluator].
-     *
-     * @param evaluator The evaluator used to retrieve different states from the parent controller.
-     *
-     * @return A [KeyData] object or null if no computation is possible.
-     */
+    /** Resolves this entry for the current keyboard state, or returns null when it is hidden. */
     fun compute(evaluator: ComputingEvaluator): KeyData?
 
-    /**
-     * Returns the data described by this key as a string.
-     *
-     * @param isForDisplay Specifies if the returned string is intended to be displayed in a UI label (=true) or if
-     *  it should be computed to be sent to an input connection (=false).
-     *
-     * @return The computed string for the key data object. Note: some objects may return an empty string here, meaning
-     *  it is always required to check for the string's length before attempting to directly retrieve the first char.
-     */
-    fun asString(isForDisplay: Boolean): String
+    /** `true` requests UI text, `false` input text; either may be empty. Selectors use the empty default. */
+    fun asString(isForDisplay: Boolean): String = ""
 }
 
-/**
- * Interface describing a basic key which can carry a character, an emoji, a special function etc. while being as
- * abstract as possible.
- *
- * @property type The type of the key.
- * @property code The Unicode code point of this key, or a special code from [KeyCode].
- * @property label The label of the key. This should always be a representative string for [code].
- * @property groupId The group which this key belongs to.
- * @property popup The popups for ths key. Can also dynamically be provided via popup extensions.
- */
+/** A concrete key with a label, code, type, popup, and modifier group. */
 interface KeyData : AbstractKeyData {
     val type: KeyType
+    /** A Unicode code point or a special [KeyCode]. */
     val code: Int
     val label: String
     val groupId: Int
     val popup: PopupSet<AbstractKeyData>?
 
+    /** Concrete keys must choose their display and committed text. */
+    override fun asString(isForDisplay: Boolean): String
+
     companion object {
-        /**
-         * Constant for the default group. If not otherwise specified, any key is automatically
-         * assigned to this group.
-         */
+        /** Group used when no popup modifier is specified. */
         const val GROUP_DEFAULT: Int = 0
 
-        /**
-         * Constant for the Left modifier key group. Any key belonging to this group will get the
-         * popups specified for "~left" in the popup mapping.
-         */
+        /** Uses the `~left` popup mapping. */
         const val GROUP_LEFT: Int = 1
 
-        /**
-         * Constant for the right modifier key group. Any key belonging to this group will get the
-         * popups specified for "~right" in the popup mapping.
-         */
+        /** Uses the `~right` popup mapping. */
         const val GROUP_RIGHT: Int = 2
 
-        /**
-         * Constant for the enter modifier key group. Any key belonging to this group will get the
-         * popups specified for "~enter" in the popup mapping.
-         */
+        /** Uses the `~enter` popup mapping. */
         const val GROUP_ENTER: Int = 3
 
-        /**
-         * Constant for the enter modifier key group. Any key belonging to this group will get the
-         * popups specified for "~kana" in the popup mapping.
-         */
+        /** Uses the `~kana` popup mapping. */
         const val GROUP_KANA: Int = 97
     }
 
@@ -201,10 +163,6 @@ class CaseSelector(
     override fun compute(evaluator: ComputingEvaluator): KeyData? {
         return (if (evaluator.state.isUppercase) { upper } else { lower }).compute(evaluator)
     }
-
-    override fun asString(isForDisplay: Boolean): String {
-        return ""
-    }
 }
 
 /**
@@ -231,10 +189,6 @@ class ShiftStateSelector(
             InputShiftState.SHIFTED_AUTOMATIC -> shiftedAutomatic ?: shifted ?: default
             InputShiftState.CAPS_LOCK -> capsLock ?: default
         }?.compute(evaluator)
-    }
-
-    override fun asString(isForDisplay: Boolean): String {
-        return ""
     }
 }
 
@@ -264,10 +218,6 @@ data class VariationSelector(
             KeyVariation.URI -> uri ?: default
         }?.compute(evaluator)
     }
-
-    override fun asString(isForDisplay: Boolean): String {
-        return ""
-    }
 }
 
 /**
@@ -283,10 +233,6 @@ class LayoutDirectionSelector(
     override fun compute(evaluator: ComputingEvaluator): KeyData? {
         val isRtl = evaluator.state.layoutDirection == LayoutDirection.Rtl
         return (if (isRtl) { rtl } else { ltr }).compute(evaluator)
-    }
-
-    override fun asString(isForDisplay: Boolean): String {
-        return ""
     }
 }
 
@@ -305,10 +251,6 @@ class CharWidthSelector(
         val data = if (evaluator.state.isCharHalfWidth) { half } else { full }
         return data?.compute(evaluator)
     }
-
-    override fun asString(isForDisplay: Boolean): String {
-        return ""
-    }
 }
 
 /**
@@ -324,9 +266,5 @@ class KanaSelector(
     override fun compute(evaluator: ComputingEvaluator): KeyData? {
         val data = if (evaluator.state.isKanaKata) { kata } else { hira }
         return data.compute(evaluator)
-    }
-
-    override fun asString(isForDisplay: Boolean): String {
-        return ""
     }
 }
