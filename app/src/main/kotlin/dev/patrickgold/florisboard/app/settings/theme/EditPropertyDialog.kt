@@ -752,19 +752,26 @@ private fun PaddingValueEditor(
         )
     }
 
+    fun sizeFor(side: PaddingValue): Dp = when (side) {
+        PaddingValue.START -> start
+        PaddingValue.END -> end
+        PaddingValue.TOP -> top
+        PaddingValue.BOTTOM -> bottom
+    }
+
     @Composable
-    fun DpChip(
-        onClick: () -> Unit,
-        text: String,
-        alignment: Alignment,
-    ) {
+    fun DpChip(side: PaddingValue, alignment: Alignment) {
+        val size = sizeFor(side)
         Box(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = alignment,
         ) {
             FlorisChip(
-                onClick = onClick,
-                text = text,
+                onClick = {
+                    showDialogInitDp = size
+                    showDialogForPaddingValue = side
+                },
+                text = stringRes(R.string.unit__display_pixel__symbol).curlyFormat("v" to size.value.toStringWithoutDotZero()),
                 shape = MaterialTheme.shapes.medium,
             )
         }
@@ -775,25 +782,11 @@ private fun PaddingValueEditor(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            DpChip(
-                onClick = {
-                    showDialogInitDp = start
-                    showDialogForPaddingValue = PaddingValue.START
-                },
-                text = stringRes(R.string.unit__display_pixel__symbol).curlyFormat("v" to start.value.toStringWithoutDotZero()),
-                alignment = Alignment.CenterEnd,
-            )
+            DpChip(PaddingValue.START, Alignment.CenterEnd)
         }
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
-            DpChip(
-                onClick = {
-                    showDialogInitDp = top
-                    showDialogForPaddingValue = PaddingValue.TOP
-                },
-                text = stringRes(R.string.unit__display_pixel__symbol).curlyFormat("v" to top.value.toStringWithoutDotZero()),
-                alignment = Alignment.Center,
-            )
+            DpChip(PaddingValue.TOP, Alignment.Center)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -803,81 +796,39 @@ private fun PaddingValueEditor(
                     .padding(paddingValues)
                     .background(MaterialTheme.colorScheme.inversePrimary),
             )
-            DpChip(
-                onClick = {
-                    showDialogInitDp = bottom
-                    showDialogForPaddingValue = PaddingValue.BOTTOM
-                },
-                text = stringRes(R.string.unit__display_pixel__symbol).curlyFormat("v" to bottom.value.toStringWithoutDotZero()),
-                alignment = Alignment.Center,
-            )
+            DpChip(PaddingValue.BOTTOM, Alignment.Center)
         }
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
-            DpChip(
-                onClick = {
-                    showDialogInitDp = end
-                    showDialogForPaddingValue = PaddingValue.END
-                },
-                text = stringRes(R.string.unit__display_pixel__symbol).curlyFormat("v" to end.value.toStringWithoutDotZero()),
-                alignment = Alignment.CenterStart,
-            )
+            DpChip(PaddingValue.END, Alignment.CenterStart)
         }
     }
 
     val dialogForPaddingValue = showDialogForPaddingValue
     if (dialogForPaddingValue != null) {
-        var showValidationErrors by rememberSaveable { mutableStateOf(false) }
-        var size by rememberSaveable {
-            mutableStateOf(showDialogInitDp.value.toStringWithoutDotZero())
-        }
-        val sizeValidation = rememberValidationResult(ExtensionValidation.SnyggDpShapeValue, size)
-        JetPrefAlertDialog(
+        ValidatedSizeDialog(
             title = dialogForPaddingValue.label(),
-            confirmLabel = stringRes(R.string.action__apply),
-            onConfirm = {
-                if (sizeValidation.isInvalid()) {
-                    showValidationErrors = true
-                } else {
-                    val sizeDp = size.toFloat().dp
-                    when (dialogForPaddingValue) {
-                        PaddingValue.TOP -> top = sizeDp
-                        PaddingValue.BOTTOM -> bottom = sizeDp
-                        PaddingValue.START -> start = sizeDp
-                        PaddingValue.END -> end = sizeDp
-                    }
-                    showDialogForPaddingValue = null
+            initialSize = showDialogInitDp.value.toStringWithoutDotZero(),
+            validationRule = ExtensionValidation.SnyggDpShapeValue,
+            applyAllLabel = "Apply for all",
+            onApply = { size ->
+                val sizeDp = size.toFloat().dp
+                when (dialogForPaddingValue) {
+                    PaddingValue.TOP -> top = sizeDp
+                    PaddingValue.BOTTOM -> bottom = sizeDp
+                    PaddingValue.START -> start = sizeDp
+                    PaddingValue.END -> end = sizeDp
                 }
             },
-            dismissLabel = stringRes(R.string.action__cancel),
-            onDismiss = {
-                showDialogForPaddingValue = null
+            onApplyToAll = { size ->
+                val sizeDp = size.toFloat().dp
+                top = sizeDp
+                bottom = sizeDp
+                start = sizeDp
+                end = sizeDp
             },
-        ) {
-            Column {
-                JetPrefTextField(
-                    value = size,
-                    onValueChange = { size = it },
-                )
-                Validation(showValidationErrors, sizeValidation)
-                FlorisTextButton(
-                    onClick = {
-                        if (sizeValidation.isInvalid()) {
-                            showValidationErrors = true
-                        } else {
-                            val sizeDp = size.toFloat().dp
-                            top = sizeDp
-                            bottom = sizeDp
-                            start = sizeDp
-                            end = sizeDp
-                            showDialogForPaddingValue = null
-                        }
-                    },
-                    modifier = Modifier.align(Alignment.End),
-                    text = "Apply for all",
-                )
-            }
-        }
+            onDismiss = { showDialogForPaddingValue = null },
+        )
     }
 }
 
@@ -935,10 +886,11 @@ private fun ShapeValueEditor(
     )
     selectedCorner?.let { corner ->
         key(value.encoder(), corner) {
-            ShapeCornerDialog(
-                corner = corner,
+            ValidatedSizeDialog(
+                title = corner.label(),
                 initialSize = cornerSize(corner),
                 validationRule = validationRule,
+                applyAllLabel = stringRes(R.string.settings__theme_editor__property_value_shape_apply_for_all_corners),
                 onApply = { applySize(it, corner) },
                 onApplyToAll = { applySize(it, null) },
                 onDismiss = { selectedCorner = null },
@@ -1022,10 +974,11 @@ private fun ShapeCornerPreview(
 }
 
 @Composable
-private fun ShapeCornerDialog(
-    corner: ShapeCorner,
+private fun ValidatedSizeDialog(
+    title: String,
     initialSize: String,
     validationRule: ValidationRule<String>,
+    applyAllLabel: String,
     onApply: (String) -> Unit,
     onApplyToAll: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -1044,7 +997,7 @@ private fun ShapeCornerDialog(
     }
 
     JetPrefAlertDialog(
-        title = corner.label(),
+        title = title,
         confirmLabel = stringRes(R.string.action__apply),
         onConfirm = { applySize(onApply) },
         dismissLabel = stringRes(R.string.action__cancel),
@@ -1059,7 +1012,7 @@ private fun ShapeCornerDialog(
             FlorisTextButton(
                 onClick = { applySize(onApplyToAll) },
                 modifier = Modifier.align(Alignment.End),
-                text = stringRes(R.string.settings__theme_editor__property_value_shape_apply_for_all_corners),
+                text = applyAllLabel,
             )
         }
     }
