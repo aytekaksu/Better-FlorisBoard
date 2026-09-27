@@ -164,6 +164,8 @@ An open property draft belongs to the theme action, so rotation keeps its target
 value, and unfinished size input. Apply and Delete only touch the original
 property set while it still belongs to the rule. This does not recover an unsaved
 editor workspace after process death.
+Committed property changes refresh the visible rows and variable previews without
+reopening the component.
 
 ## Verification
 
