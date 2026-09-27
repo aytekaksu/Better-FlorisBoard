@@ -25,7 +25,6 @@ import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.computeImageVector
 import dev.patrickgold.florisboard.ime.keyboard.computeLabel
 import dev.patrickgold.florisboard.ime.popup.MutablePopupSet
-import dev.patrickgold.florisboard.ime.popup.PopupMapping
 import dev.patrickgold.florisboard.ime.popup.PopupSet
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyType
@@ -61,57 +60,32 @@ class TextKey(override val data: AbstractKeyData) : Key(data) {
                 keyboardMode == KeyboardMode.SYMBOLS || keyboardMode == KeyboardMode.SYMBOLS2) {
                 val computedLabel = computed.label.lowercase(evaluator.subtype.primaryLocale)
                 val extLabel = when (computed.groupId) {
-                    KeyData.GROUP_ENTER -> {
-                        "~enter"
-                    }
-                    KeyData.GROUP_LEFT -> {
-                        "~left"
-                    }
-                    KeyData.GROUP_RIGHT -> {
-                        "~right"
-                    }
-                    KeyData.GROUP_KANA -> {
-                        "~kana"
-                    }
-                    else -> {
-                        computedLabel
-                    }
+                    KeyData.GROUP_ENTER -> "~enter"
+                    KeyData.GROUP_LEFT -> "~left"
+                    KeyData.GROUP_RIGHT -> "~right"
+                    KeyData.GROUP_KANA -> "~kana"
+                    else -> computedLabel
                 }
-                val extendedPopupsDefault = keyboard.extendedPopupMappingDefault
-                val extendedPopups = keyboard.extendedPopupMapping
-                var popupSet: PopupSet<AbstractKeyData>? = null
-                val kv = evaluator.state.keyVariation
-                if (popupSet == null && kv == KeyVariation.PASSWORD) {
-                    popupSet = extendedPopups?.get(KeyVariation.PASSWORD)?.get(extLabel) ?:
-                        extendedPopupsDefault?.get(KeyVariation.PASSWORD)?.get(extLabel)
-                }
-                if (popupSet == null && (kv == KeyVariation.NORMAL || kv == KeyVariation.PASSWORD)) {
-                    popupSet = extendedPopups?.get(KeyVariation.NORMAL)?.get(extLabel) ?:
-                        extendedPopupsDefault?.get(KeyVariation.NORMAL)?.get(extLabel)
-                }
-                if (popupSet == null && kv == KeyVariation.EMAIL_ADDRESS) {
-                    popupSet = extendedPopups?.get(KeyVariation.EMAIL_ADDRESS)?.get(extLabel) ?:
-                        extendedPopupsDefault?.get(KeyVariation.EMAIL_ADDRESS)?.get(extLabel)
-                }
-                if (popupSet == null && (kv == KeyVariation.EMAIL_ADDRESS || kv == KeyVariation.URI)) {
-                    popupSet = extendedPopups?.get(KeyVariation.URI)?.get(extLabel) ?:
-                        extendedPopupsDefault?.get(KeyVariation.URI)?.get(extLabel)
-                }
-                if (popupSet == null) {
-                    popupSet = extendedPopups?.get(KeyVariation.ALL)?.get(extLabel) ?:
-                        extendedPopupsDefault?.get(KeyVariation.ALL)?.get(extLabel)
-                }
-                var keySpecificPopupSet: PopupSet<AbstractKeyData>? = null
-                if (extLabel != computedLabel) {
-                    keySpecificPopupSet = extendedPopups?.get(KeyVariation.ALL)?.get(computedLabel) ?:
-                        extendedPopupsDefault?.get(KeyVariation.ALL)?.get(computedLabel)
+                val popupSet = when (evaluator.state.keyVariation) {
+                    KeyVariation.PASSWORD -> popupSetFor(keyboard, KeyVariation.PASSWORD, extLabel)
+                        ?: popupSetFor(keyboard, KeyVariation.NORMAL, extLabel)
+                    KeyVariation.NORMAL -> popupSetFor(keyboard, KeyVariation.NORMAL, extLabel)
+                    KeyVariation.EMAIL_ADDRESS -> popupSetFor(keyboard, KeyVariation.EMAIL_ADDRESS, extLabel)
+                        ?: popupSetFor(keyboard, KeyVariation.URI, extLabel)
+                    KeyVariation.URI -> popupSetFor(keyboard, KeyVariation.URI, extLabel)
+                    KeyVariation.ALL -> null
+                } ?: popupSetFor(keyboard, KeyVariation.ALL, extLabel)
+                val keySpecificPopupSet = if (extLabel != computedLabel) {
+                    popupSetFor(keyboard, KeyVariation.ALL, computedLabel)
+                } else {
+                    null
                 }
                 computedPopups.apply {
                     keySpecificPopupSet?.let { merge(it, evaluator) }
                     popupSet?.let { merge(it, evaluator) }
                 }
                 if (computed.type == KeyType.CHARACTER) {
-                    addComputedHints(computed.code, evaluator, extendedPopups, extendedPopupsDefault)
+                    addComputedHints(computed.code, evaluator, keyboard)
                 }
             }
             isEnabled = evaluator.evaluateEnabled(computed)
@@ -156,7 +130,7 @@ class TextKey(override val data: AbstractKeyData) : Key(data) {
                 }
                 else -> when (computed.code) {
                     KeyCode.SHIFT,
-                    KeyCode.DELETE -> 1.56f
+                    KeyCode.DELETE,
                     KeyCode.VIEW_CHARACTERS,
                     KeyCode.VIEW_SYMBOLS,
                     KeyCode.VIEW_SYMBOLS2,
@@ -170,8 +144,7 @@ class TextKey(override val data: AbstractKeyData) : Key(data) {
     private fun addComputedHints(
         keyCode: Int,
         evaluator: ComputingEvaluator,
-        extendedPopups: PopupMapping?,
-        extendedPopupsDefault: PopupMapping?
+        keyboard: TextKeyboard,
     ) {
         val symbolHint = computedSymbolHint
         if (symbolHint != null) {
@@ -179,10 +152,7 @@ class TextKey(override val data: AbstractKeyData) : Key(data) {
             if (symbolHint.code != keyCode) {
                 computedPopups.symbolHint = evaluatedSymbolHint
                 mergePopups(evaluatedSymbolHint, evaluator, computedPopups::mergeSymbolHint)
-                val hintSpecificPopupSet =
-                    extendedPopups?.get(KeyVariation.ALL)?.get(symbolHint.label) ?: extendedPopupsDefault?.get(
-                        KeyVariation.ALL
-                    )?.get(symbolHint.label)
+                val hintSpecificPopupSet = popupSetFor(keyboard, KeyVariation.ALL, symbolHint.label)
                 hintSpecificPopupSet?.let { computedPopups.mergeSymbolHint(it, evaluator) }
             }
         }
@@ -192,10 +162,7 @@ class TextKey(override val data: AbstractKeyData) : Key(data) {
             if (numericHint.code != keyCode) {
                 computedPopups.numberHint = evaluatedNumberHint
                 mergePopups(evaluatedNumberHint, evaluator, computedPopups::mergeNumberHint)
-                val hintSpecificPopupSet =
-                    extendedPopups?.get(KeyVariation.ALL)?.get(numericHint.label) ?: extendedPopupsDefault?.get(
-                        KeyVariation.ALL
-                    )?.get(numericHint.label)
+                val hintSpecificPopupSet = popupSetFor(keyboard, KeyVariation.ALL, numericHint.label)
                 hintSpecificPopupSet?.let { computedPopups.mergeNumberHint(it, evaluator) }
             }
         }
@@ -206,10 +173,15 @@ class TextKey(override val data: AbstractKeyData) : Key(data) {
         evaluator: ComputingEvaluator,
         merge: (popups: PopupSet<AbstractKeyData>, evaluator: ComputingEvaluator) -> Unit,
     ) {
-        if (keyData?.popup != null) {
-            merge(keyData.popup!!, evaluator)
-        }
+        keyData?.popup?.let { merge(it, evaluator) }
     }
+
+    private fun popupSetFor(
+        keyboard: TextKeyboard,
+        variation: KeyVariation,
+        label: String,
+    ): PopupSet<AbstractKeyData>? = keyboard.extendedPopupMapping?.get(variation)?.get(label)
+        ?: keyboard.extendedPopupMappingDefault?.get(variation)?.get(label)
 
     /**
      * Computes the label, hintedLabel and iconResId for [computedData] based on given [evaluator].
