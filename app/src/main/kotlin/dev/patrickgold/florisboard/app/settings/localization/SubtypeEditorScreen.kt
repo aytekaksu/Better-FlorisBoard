@@ -207,7 +207,9 @@ fun SubtypeEditorScreen(id: Long?) = FlorisScreen {
         val observer = Observer<String> { languageTag ->
             val locale = FlorisLocale.fromTag(languageTag)
             primaryLocale = locale
-            val preset = subtypeManager.getSubtypePresetForLocale(locale)
+            val presets = keyboardExtensionRepository.snapshot.value.subtypePresets
+            val preset = presets.find { it.locale == locale }
+                ?: presets.find { it.locale.language == locale.language }
             popupMapping = preset?.popupMapping ?: extCorePopupMapping("default")
         }
         selectLocaleScreenResult?.observe(lifecycleOwner, observer)

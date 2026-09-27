@@ -258,7 +258,7 @@ class FlorisApplication : Application() {
             isIncognitoMode = { keyboardState.value.isIncognitoMode },
         )
     }
-    val subtypeManager = lazy { SubtypeManager(this) }
+    val subtypeManager = lazy { SubtypeManager() }
     val themeManager = lazy { ThemeManager(this) }
 
     override fun onCreate() {
