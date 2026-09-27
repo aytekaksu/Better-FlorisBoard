@@ -31,7 +31,6 @@ import dev.patrickgold.florisboard.subtypeManager
 import java.util.Locale
 import org.florisboard.lib.android.systemService
 
-@Suppress("MemberVisibilityCanBePrivate")
 object Devtools {
     internal data class DebugLogSnapshot(
         val header: String,
@@ -63,19 +62,55 @@ object Devtools {
         }
     }
 
-    fun generateDebugLogHeader(context: Context, prefs: FlorisPreferenceModel? = null): String {
-        return buildString {
-            append(generateSystemInfoLog(context))
+    private fun generateDebugLogHeader(context: Context, prefs: FlorisPreferenceModel? = null): String = buildString {
+        appendLine("======= SYSTEM INFO =======")
+        append("Time                : ").appendLine(TimeUtils.currentUtcTimestamp())
+        append("Manufacturer        : ").appendLine(Build.MANUFACTURER)
+        append("Model               : ").appendLine(Build.MODEL)
+        append("Product             : ").appendLine(Build.PRODUCT)
+        append("Android             : ").appendLine(getAndroidVersion(includeOemBuildId = true))
+        append("ABIs                : ").appendLine(Build.SUPPORTED_ABIS.contentToString())
+        append("Memory              : ").appendLine(getSystemMemoryUsage(context))
+        append("Font scale          : ").appendLine(context.resources.configuration.fontScale)
+        append("Locales             : ").appendLine(context.resources.configuration.locales.toLanguageTags())
+
+        appendLine()
+        appendLine("======= APP INFO =======")
+        append("Package             : ").appendLine(BuildConfig.APPLICATION_ID)
+        append("Name                : ").appendLine(context.resources.getString(R.string.floris_app_name))
+        append("Version             : ").appendLine("${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+        append("Build type          : ").appendLine(BuildConfig.BUILD_TYPE)
+        append("Build commit hash   : ").appendLine(BuildConfig.BUILD_COMMIT_HASH)
+        append("Java heap memory    : ").appendLine(getAppJavaHeapMemoryUsage())
+        append("Native heap memory  : ").appendLine(getAppNativeHeapMemoryUsage())
+
+        if (prefs != null) {
             appendLine()
-            append(generateAppInfoLog(context))
-            if (prefs != null) {
-                appendLine()
-                append(generateFeatureConfigLog(prefs))
+            appendLine("======= FEATURE CONFIG =======")
+            append("Smartbar enabled            : ").appendLine(prefs.smartbar.enabled.get())
+            append("Suggestions enabled         : ").appendLine(prefs.suggestion.enabled.get())
+            append("Inline autofill enabled     : ").appendLine(prefs.suggestion.api30InlineSuggestionsEnabled.get())
+            append("Glide enabled               : ").appendLine(prefs.glide.enabled.get())
+            append("Internal clipboard enabled  : ").appendLine(prefs.clipboard.useInternalClipboard.get())
+        }
+
+        appendLine()
+        appendLine("======= EXTENSION CONFIG =======")
+        appendLine("Theme extensions    : ")
+        context.extensionManager().value.themes.value.forEach { append("    ").appendLine(it.meta.id) }
+        appendLine("Language Packs      : ")
+        context.extensionManager().value.languagePacks.value.forEach { append("    ").appendLine(it.meta.id) }
+
+        appendLine()
+        appendLine("======= ACTIVE SUBTYPE CONFIG =======")
+        context.subtypeManager().value.let { subtypeManager ->
+            appendLine("Active Subtype      : ")
+            append("    ")
+            appendLine(subtypeManager.activeSubtype.toShortString())
+            appendLine("Installed Subtypes    : ")
+            subtypeManager.subtypes.forEach { subtype ->
+                append("    ").appendLine(subtype.toShortString())
             }
-            appendLine()
-            append(generateExtensionConfigLog(context))
-            appendLine()
-            append(generateActiveSubtypeConfigLog(context))
         }
     }
 
@@ -98,74 +133,9 @@ object Devtools {
         appendLine("</details>")
     }
 
-    fun generateSystemInfoLog(context: Context, withTitle: Boolean = true): String {
+    private fun generateDiagnosticDump(): String {
         return buildString {
-            if (withTitle) appendLine("======= SYSTEM INFO =======")
-            append("Time                : ").appendLine(TimeUtils.currentUtcTimestamp())
-            append("Manufacturer        : ").appendLine(Build.MANUFACTURER)
-            append("Model               : ").appendLine(Build.MODEL)
-            append("Product             : ").appendLine(Build.PRODUCT)
-            append("Android             : ").appendLine(getAndroidVersion(includeOemBuildId = true))
-            append("ABIs                : ").appendLine(Build.SUPPORTED_ABIS.contentToString())
-            append("Memory              : ").appendLine(getSystemMemoryUsage(context))
-            append("Font scale          : ").appendLine(context.resources.configuration.fontScale)
-            append("Locales             : ").appendLine(context.resources.configuration.locales.toLanguageTags())
-        }
-    }
-
-    fun generateAppInfoLog(context: Context, withTitle: Boolean = true): String {
-        return buildString {
-            if (withTitle) appendLine("======= APP INFO =======")
-            append("Package             : ").appendLine(BuildConfig.APPLICATION_ID)
-            append("Name                : ").appendLine(context.resources.getString(R.string.floris_app_name))
-            append("Version             : ").appendLine("${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-            append("Build type          : ").appendLine(BuildConfig.BUILD_TYPE)
-            append("Build commit hash   : ").appendLine(BuildConfig.BUILD_COMMIT_HASH)
-            append("Java heap memory    : ").appendLine(getAppJavaHeapMemoryUsage())
-            append("Native heap memory  : ").appendLine(getAppNativeHeapMemoryUsage())
-        }
-    }
-
-    fun generateFeatureConfigLog(prefs: FlorisPreferenceModel, withTitle: Boolean = true): String {
-        return buildString {
-            if (withTitle) appendLine("======= FEATURE CONFIG =======")
-            append("Smartbar enabled            : ").appendLine(prefs.smartbar.enabled.get())
-            append("Suggestions enabled         : ").appendLine(prefs.suggestion.enabled.get())
-            append("Inline autofill enabled     : ").appendLine(prefs.suggestion.api30InlineSuggestionsEnabled.get())
-            append("Glide enabled               : ").appendLine(prefs.glide.enabled.get())
-            append("Internal clipboard enabled  : ").appendLine(prefs.clipboard.useInternalClipboard.get())
-        }
-    }
-
-    fun generateExtensionConfigLog(context: Context, withTitle: Boolean = true): String {
-        return buildString {
-            if (withTitle) appendLine("======= EXTENSION CONFIG =======")
-            appendLine("Theme extensions    : ")
-            context.extensionManager().value.themes.value.forEach { append("    ").appendLine(it.meta.id) }
-            appendLine("Language Packs      : ")
-            context.extensionManager().value.languagePacks.value.forEach { append("    ").appendLine(it.meta.id) }
-        }
-    }
-
-    fun generateActiveSubtypeConfigLog(context: Context, withTitle: Boolean = true): String {
-        return buildString {
-            if (withTitle) appendLine("======= ACTIVE SUBTYPE CONFIG =======")
-            context.subtypeManager().value.let { subtypeManager ->
-                appendLine("Active Subtype      : ")
-                append("    ")
-                appendLine(subtypeManager.activeSubtype.toShortString())
-                appendLine("Installed Subtypes    : ")
-                subtypeManager.subtypes.forEach { subtype ->
-                    append("    ").appendLine(subtype.toShortString())
-                }
-            }
-
-        }
-    }
-
-    fun generateDiagnosticDump(withTitle: Boolean = true): String {
-        return buildString {
-            if (withTitle) appendLine("======= APP DIAGNOSTICS =======")
+            appendLine("======= APP DIAGNOSTICS =======")
             Flog.diagnosticSnapshot().forEach { diagnosticLine -> appendLine(diagnosticLine) }
         }
     }
@@ -209,19 +179,19 @@ object Devtools {
         }
     }
 
-    fun getSystemMemoryUsage(context: Context) = formatMemoryUsage {
+    private fun getSystemMemoryUsage(context: Context) = formatMemoryUsage {
         val memoryInfo = ActivityManager.MemoryInfo()
         context.systemService(ActivityManager::class).getMemoryInfo(memoryInfo)
         (memoryInfo.totalMem - memoryInfo.availMem) to memoryInfo.totalMem
     }
 
-    fun getAppJavaHeapMemoryUsage() = formatMemoryUsage {
+    private fun getAppJavaHeapMemoryUsage() = formatMemoryUsage {
         val runtime = Runtime.getRuntime()
         val max = runtime.maxMemory()
         (runtime.totalMemory() - runtime.freeMemory()) to max
     }
 
-    fun getAppNativeHeapMemoryUsage() = formatMemoryUsage {
+    private fun getAppNativeHeapMemoryUsage() = formatMemoryUsage {
         val max = Debug.getNativeHeapSize()
         (max - Debug.getNativeHeapFreeSize()) to max
     }
