@@ -29,9 +29,12 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.florisboard.lib.android.writeFromFile
+import java.util.concurrent.atomic.AtomicReference
 
 internal enum class BackupExportPhase {
     IDLE,
@@ -58,6 +61,8 @@ internal class BackupExportViewModel : ViewModel() {
         private set
 
     private var workspace: CacheManager.BackupAndRestoreWorkspace? = null
+    private var pendingShare: BackupShareLeaseStore.Lease? = null
+    private var shareStore: BackupShareLeaseStore? = null
     val isBusy: Boolean
         get() = when (phase) {
             BackupExportPhase.PREPARING,
@@ -75,15 +80,37 @@ internal class BackupExportViewModel : ViewModel() {
         val selectedDestination = destination
         val appContext = context.applicationContext
         retireWorkspace()
+        retirePendingShare()
         failureClass = null
         phase = BackupExportPhase.PREPARING
         viewModelScope.launch {
             try {
                 val prepared = prepareBackupWorkspace(appContext, cacheManager, selection)
-                workspace = prepared
-                phase = when (selectedDestination) {
-                    Backup.Destination.FILE_SYS -> BackupExportPhase.DOCUMENT_PICKER_PENDING
-                    Backup.Destination.SHARE_INTENT -> BackupExportPhase.SHARE_PENDING
+                when (selectedDestination) {
+                    Backup.Destination.FILE_SYS -> {
+                        workspace = prepared
+                        phase = BackupExportPhase.DOCUMENT_PICKER_PENDING
+                    }
+                    Backup.Destination.SHARE_INTENT -> {
+                        val store = BackupShareLeaseStore(appContext)
+                        val unclaimed = AtomicReference<BackupShareLeaseStore.Lease?>()
+                        try {
+                            val lease = withContext(Dispatchers.IO) {
+                                store.publish(prepared.zipFile).also(unclaimed::set)
+                            }
+                            withContext(NonCancellable + Dispatchers.IO) { closeWorkspace(prepared) }
+                            currentCoroutineContext().ensureActive()
+                            shareStore = store
+                            pendingShare = lease
+                            unclaimed.set(null)
+                            phase = BackupExportPhase.SHARE_PENDING
+                        } finally {
+                            withContext(NonCancellable + Dispatchers.IO) {
+                                if (!prepared.isClosed()) closeWorkspace(prepared)
+                                unclaimed.getAndSet(null)?.let(store::release)
+                            }
+                        }
+                    }
                 }
             } catch (error: CancellationException) {
                 throw error
@@ -141,15 +168,7 @@ internal class BackupExportViewModel : ViewModel() {
                 flogError { "Failed to save backup: failureClass=${error.javaClass.simpleName}" }
             } finally {
                 workspace = null
-                withContext(NonCancellable + Dispatchers.IO) {
-                    try {
-                        source.close()
-                    } catch (error: Exception) {
-                        flogError { "Backup workspace cleanup failed: failureClass=${error.javaClass.simpleName}" }
-                    } finally {
-                        if (!source.isClosed()) source.requestClose()
-                    }
-                }
+                withContext(NonCancellable + Dispatchers.IO) { closeWorkspace(source) }
             }
             if (writeFailure == null) {
                 phase = BackupExportPhase.SUCCEEDED
@@ -160,28 +179,37 @@ internal class BackupExportViewModel : ViewModel() {
         }
     }
 
-    fun claimShareWorkspace(): CacheManager.BackupAndRestoreWorkspace? {
+    suspend fun claimShareUri(): Uri? {
         if (phase != BackupExportPhase.SHARE_PENDING) return null
-        val source = workspace ?: run {
+        val lease = pendingShare ?: run {
             failSourceUnavailable()
             return null
         }
+        val store = shareStore ?: run {
+            failSourceUnavailable()
+            return null
+        }
+        // A recreated route can retry this if cancellation happens during the IO handoff.
+        val uri = withContext(Dispatchers.IO) { store.renewPending(lease) }
+        currentCoroutineContext().ensureActive()
+        if (phase != BackupExportPhase.SHARE_PENDING || pendingShare !== lease) return null
         phase = BackupExportPhase.SHARING
-        return source
+        return uri
     }
 
     fun onShareLaunched() {
         if (phase != BackupExportPhase.SHARING) return
-        // Keep the FileProvider source until this route is closed or another backup begins.
-        // The chooser does not acknowledge when its recipient has finished opening the URI.
+        // The launched lease is independent of this route until its fixed expiry.
+        pendingShare = null
+        shareStore = null
         phase = BackupExportPhase.IDLE
     }
 
     fun onShareLaunchFailed(error: Exception) {
-        if (phase != BackupExportPhase.SHARING) return
+        if (phase != BackupExportPhase.SHARING && phase != BackupExportPhase.SHARE_PENDING) return
         val name = error.javaClass.simpleName
         flogError { "Backup failed: destination=${Backup.Destination.SHARE_INTENT}, failureClass=$name" }
-        retireWorkspace()
+        retirePendingShare()
         failureClass = name
         phase = BackupExportPhase.FAILED
     }
@@ -195,11 +223,28 @@ internal class BackupExportViewModel : ViewModel() {
     fun discard() {
         if (isBusy) return
         retireWorkspace()
+        retirePendingShare()
     }
 
     private fun retireWorkspace() {
         workspace?.requestClose()
         workspace = null
+    }
+
+    private fun retirePendingShare() {
+        pendingShare?.let { shareStore?.requestRelease(it) }
+        pendingShare = null
+        shareStore = null
+    }
+
+    private fun closeWorkspace(source: CacheManager.BackupAndRestoreWorkspace) {
+        try {
+            source.close()
+        } catch (error: Exception) {
+            flogError { "Backup workspace cleanup failed: failureClass=${error.javaClass.simpleName}" }
+        } finally {
+            if (!source.isClosed()) source.requestClose()
+        }
     }
 
     private fun failSourceUnavailable() {
@@ -210,6 +255,7 @@ internal class BackupExportViewModel : ViewModel() {
     override fun onCleared() {
         // WRITING's non-cancellable finally owns its source; do not delete it mid-copy.
         if (phase != BackupExportPhase.WRITING) retireWorkspace()
+        retirePendingShare()
         super.onCleared()
     }
 }

@@ -1378,6 +1378,7 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.window.core)
+    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.cache4k)
     implementation(libs.commons.compress)
     implementation(libs.kotlinx.coroutines)

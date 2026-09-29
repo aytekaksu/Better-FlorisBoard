@@ -27,8 +27,10 @@ import android.os.Build
 import android.os.Handler
 import android.os.StrictMode
 import android.os.UserManager
+import androidx.work.Configuration
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.initAndroidWithLegacyMigrations
+import dev.patrickgold.florisboard.app.settings.advanced.BackupShareLeaseStore
 import dev.patrickgold.florisboard.ime.clipboard.ClipboardManager
 import dev.patrickgold.florisboard.ime.core.SubtypeManager
 import dev.patrickgold.florisboard.ime.dictionary.DictionaryManager
@@ -160,7 +162,10 @@ internal fun readBoundedProcessName(input: InputStream): String? {
         .takeIf(String::isNotEmpty)
 }
 
-class FlorisApplication : Application() {
+class FlorisApplication : Application(), Configuration.Provider {
+    // WorkManager is first needed by backup sharing, after credential unlock.
+    override val workManagerConfiguration: Configuration by lazy { Configuration.Builder().build() }
+
     private val prefs by FlorisPreferenceStore
     private val mainHandler by lazy { Handler(mainLooper) }
     private val scope = CoroutineScope(Dispatchers.Default)
@@ -326,6 +331,23 @@ class FlorisApplication : Application() {
         try {
             // Credential-protected cache cleanup starts only after unlock.
             startupCacheCleanup.start()
+            // Share leases are outside cache and outlive the settings route.
+            // Sweep independently of keyboard readiness without disk I/O on Main.
+            scope.launch(Dispatchers.IO) {
+                try {
+                    BackupShareLeaseStore(this@FlorisApplication).pruneExpired()
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    try {
+                        flogError {
+                            "Startup backup share cleanup failed: failureClass=${error.javaClass.simpleName}"
+                        }
+                    } catch (_: Exception) {
+                        // Diagnostics must not decide bootstrap success.
+                    }
+                }
+            }
             // Android 8 requires ClipboardManager to be created on a Looper thread.
             val initializedClipboardManager = clipboardManager.value
             scope.launch {

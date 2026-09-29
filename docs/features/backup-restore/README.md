@@ -55,10 +55,13 @@ are stable, so the same staged input produces the same ZIP bytes.
 
 Sharing sends the validated ZIP as `application/zip` through a chooser. The
 backup may contain preferences, extensions, and clipboard history, so its
-non-exported FileProvider exposes the chosen content URI with a temporary
-read grant. The screen retains its private workspace after chooser launch,
-but this does not guarantee that a recipient finishes reading before the
-route closes.
+non-exported, read-only provider exposes only the chosen URI with a temporary
+read grant. Once launched, the ZIP stays in private no-backup storage for one
+hour, even if the route closes or another backup starts. New opens stop at
+expiry; an already open reader may finish. Expired files are pruned on startup
+and by a scheduled worker. At most four active shares or 8 GiB are retained;
+a new share explains the limit instead of removing an active one, and Save to
+file remains available.
 
 The live flow is deliberately narrow:
 
@@ -160,11 +163,9 @@ retry handles any remaining workspace without leaving the backup button busy.
 Backup export keeps its prepared archive in a route-scoped operation owner while
 the document picker is open, so configuration changes do not discard the source.
 The first picker result owns the document write and its non-cancellable I/O
-cleanup; duplicate results do nothing. A shared FileProvider archive also stays
-owned across rotation. Leaving the route or starting another backup can still
-retire a shared archive before a delayed recipient opens it: the Android chooser
-does not acknowledge completion of the recipient's read. A separate share lease
-is needed to guarantee that later read window.
+cleanup; duplicate results do nothing. A pending share also stays owned across
+rotation. Only a launched share becomes independent of the route, because the
+Android chooser does not report when its recipient opens the ZIP.
 
 ## Verification
 

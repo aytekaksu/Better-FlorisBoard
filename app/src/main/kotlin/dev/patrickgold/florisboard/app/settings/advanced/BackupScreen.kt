@@ -18,6 +18,7 @@ package dev.patrickgold.florisboard.app.settings.advanced
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Row
@@ -37,7 +38,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ShareCompat
-import androidx.core.content.FileProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavBackStackEntry
@@ -81,10 +81,7 @@ import org.florisboard.lib.kotlin.io.subFile
 import org.florisboard.lib.kotlin.io.writeJson
 
 object Backup {
-    const val FILE_PROVIDER_AUTHORITY = "${BuildConfig.APPLICATION_ID}.provider.file"
-
-    internal fun createShareIntent(context: Context, zipFile: File): Intent {
-        val uri = FileProvider.getUriForFile(context, FILE_PROVIDER_AUTHORITY, zipFile)
+    internal fun createShareIntent(context: Context, uri: Uri): Intent {
         return ShareCompat.IntentBuilder(context)
             .setStream(uri)
             .setType("application/zip")
@@ -209,10 +206,12 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                 }
             }
             BackupExportPhase.SHARE_PENDING -> {
-                val workspace = model.claimShareWorkspace() ?: return@LaunchedEffect
                 try {
-                    context.startActivity(Backup.createShareIntent(context, workspace.zipFile))
+                    val uri = model.claimShareUri() ?: return@LaunchedEffect
+                    context.startActivity(Backup.createShareIntent(context, uri))
                     model.onShareLaunched()
+                } catch (error: kotlinx.coroutines.CancellationException) {
+                    throw error
                 } catch (error: Exception) {
                     model.onShareLaunchFailed(error)
                 }
@@ -223,10 +222,14 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                 }
             }
             BackupExportPhase.FAILED -> {
-                context.showLongToast(
-                    R.string.backup_and_restore__back_up__failure,
-                    "error_message" to (model.failureClass ?: "INTERNAL_FAILURE"),
-                )
+                if (model.failureClass == BackupShareCapacityException::class.java.simpleName) {
+                    context.showLongToast(R.string.backup_and_restore__back_up__share_capacity_full)
+                } else {
+                    context.showLongToast(
+                        R.string.backup_and_restore__back_up__failure,
+                        "error_message" to (model.failureClass ?: "INTERNAL_FAILURE"),
+                    )
+                }
                 model.acknowledgeFailure()
             }
             else -> Unit
