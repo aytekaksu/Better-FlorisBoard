@@ -24,6 +24,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -64,26 +65,31 @@ fun FlorisCanvasIcon(
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val bitmap = remember(drawable, configuration, density) {
-        val fallbackSize = with(density) { 48.dp.roundToPx() }.coerceIn(1, MAX_ICON_SIDE)
-        val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: fallbackSize
-        val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: fallbackSize
-        val scale = minOf(1f, MAX_ICON_SIDE.toFloat() / maxOf(width, height))
-        val bitmap = createBitmap(
-            width = (width * scale).roundToInt().coerceIn(1, MAX_ICON_SIDE),
-            height = (height * scale).roundToInt().coerceIn(1, MAX_ICON_SIDE),
-        )
-        val previousBounds = Rect(drawable.bounds)
-        try {
-            drawable.setBounds(0, 0, bitmap.width, bitmap.height)
-            drawable.draw(Canvas(bitmap))
-        } finally {
-            drawable.setBounds(previousBounds)
-        }
-        bitmap.asImageBitmap()
+        rasterizeDrawable(drawable, with(density) { 48.dp.roundToPx() })
     }
     Image(
         modifier = modifier,
         bitmap = bitmap,
         contentDescription = contentDescription,
     )
+}
+
+/** Bounded bitmap conversion for UI icons, including drawables supplied by other apps. */
+fun rasterizeDrawable(drawable: Drawable, fallbackSizePx: Int): ImageBitmap {
+    val fallbackSize = fallbackSizePx.coerceIn(1, MAX_ICON_SIDE)
+    val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: fallbackSize
+    val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: fallbackSize
+    val scale = minOf(1f, MAX_ICON_SIDE.toFloat() / maxOf(width, height))
+    val bitmap = createBitmap(
+        width = (width * scale).roundToInt().coerceIn(1, MAX_ICON_SIDE),
+        height = (height * scale).roundToInt().coerceIn(1, MAX_ICON_SIDE),
+    )
+    val previousBounds = Rect(drawable.bounds)
+    try {
+        drawable.setBounds(0, 0, bitmap.width, bitmap.height)
+        drawable.draw(Canvas(bitmap))
+    } finally {
+        drawable.setBounds(previousBounds)
+    }
+    return bitmap.asImageBitmap()
 }

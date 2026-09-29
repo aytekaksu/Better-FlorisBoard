@@ -22,9 +22,9 @@ language mode and spelling overlay settings are retired. Android's selected
 spell checker is still visible in Typing settings. Saved keyboard subtypes keep
 their `spelling` provider ID for compatibility; runtime suggestions and glide
 typing use only the `suggestion` provider ID.
-The Typing card loads the selected service's icon and name without blocking the
-screen; an unreadable name still shows as "Unknown", and an older lookup cannot
-replace a newer selection.
+The Typing card loads the selected service's name and draws its icon off Main
+before showing either; an unreadable name still shows as "Unknown", and an older
+lookup cannot replace a newer selection.
 
 Older window sizing and one-handed settings are reconstructed for the five
 phone/tablet form factors they described. Desktop and unrelated current window

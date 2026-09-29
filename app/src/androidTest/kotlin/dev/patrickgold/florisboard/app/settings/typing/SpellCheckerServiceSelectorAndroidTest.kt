@@ -17,6 +17,9 @@
 package dev.patrickgold.florisboard.app.settings.typing
 
 import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Looper
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -47,9 +50,11 @@ class SpellCheckerServiceSelectorAndroidTest {
     @get:Rule val composeRule = createComposeRule()
 
     @Test
-    fun lookupRunsOffMainOncePerSelection() {
+    fun lookupAndIconRenderingRunOffMainOncePerSelection() {
         val loads = AtomicInteger()
         val lookupThread = AtomicReference<Thread>()
+        val firstIcon = AtomicReference<ThreadRecordingDrawable>()
+        val secondIcon = AtomicReference<ThreadRecordingDrawable>()
         val clicks = AtomicInteger()
         var selectedId by mutableStateOf("example.pkg/.SpellChecker")
         var unrelated by mutableIntStateOf(0)
@@ -61,7 +66,10 @@ class SpellCheckerServiceSelectorAndroidTest {
                     enabled = "1",
                     loader = { _, _ ->
                         lookupThread.set(Thread.currentThread())
-                        SpellCheckerPresentation("example.pkg", null, "Provider ${loads.incrementAndGet()}")
+                        val load = loads.incrementAndGet()
+                        val icon = ThreadRecordingDrawable()
+                        if (load == 1) firstIcon.set(icon) else secondIcon.set(icon)
+                        SpellCheckerPresentation("example.pkg", icon, "Provider $load")
                     },
                     onClick = { clicks.addAndGet(unrelated + 1) },
                 )
@@ -69,15 +77,22 @@ class SpellCheckerServiceSelectorAndroidTest {
         }
 
         waitForText("Provider 1")
+        composeRule.waitUntil(timeoutMillis = 10_000) { firstIcon.get()?.drawThread?.get() != null }
         assertNotSame(Looper.getMainLooper().thread, lookupThread.get())
+        assertNotSame(Looper.getMainLooper().thread, firstIcon.get().drawThread.get())
+        assertEquals(1, firstIcon.get().draws.get())
         composeRule.runOnIdle { unrelated++ }
         composeRule.waitForIdle()
         assertEquals(1, loads.get())
+        assertEquals(1, firstIcon.get().draws.get())
         composeRule.onNodeWithText("Provider 1").performClick()
         assertEquals(2, clicks.get())
         composeRule.runOnIdle { selectedId = "example.pkg/.OtherSpellChecker" }
         waitForText("Provider 2")
+        composeRule.waitUntil(timeoutMillis = 10_000) { secondIcon.get()?.drawThread?.get() != null }
         assertEquals(2, loads.get())
+        assertNotSame(Looper.getMainLooper().thread, secondIcon.get().drawThread.get())
+        assertEquals(1, secondIcon.get().draws.get())
     }
 
     @Test
@@ -182,6 +197,17 @@ class SpellCheckerServiceSelectorAndroidTest {
     private fun waitForText(text: String) {
         composeRule.waitUntil(timeoutMillis = 10_000) {
             composeRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    private class ThreadRecordingDrawable : ColorDrawable(Color.RED) {
+        val draws = AtomicInteger()
+        val drawThread = AtomicReference<Thread>()
+
+        override fun draw(canvas: Canvas) {
+            drawThread.set(Thread.currentThread())
+            draws.incrementAndGet()
+            super.draw(canvas)
         }
     }
 }
