@@ -502,12 +502,9 @@ class AutocorrectPluginManager internal constructor(
         if (event is HostEvent.OpenSession &&
             event.configuration != effect.configuration
         ) return
-        val content = selectFinalRequestContent(
-            currentEditorContent(),
-            contentAllowedAtEnd = true,
-            sameEditorGeneration = true,
-            editorEligibleNow = true,
-        )
+        val content = currentEditorContent().takeIf {
+            it.localSelection.isCursorMode && it.localSelection.start in 0..it.text.length
+        } ?: EditorContent.selectionOnly(EditorRange.cursor(0))
         finalRequestSnapshots.put(
             effect.lease,
             effect.configuration,
@@ -2768,16 +2765,6 @@ internal class ConnectionReadySlot<T> {
     fun completeIfCurrent(ticket: Deferred<T?>, value: T?): Boolean =
         pending === ticket && pending.complete(value)
 }
-
-internal fun selectFinalRequestContent(
-    content: EditorContent,
-    contentAllowedAtEnd: Boolean,
-    sameEditorGeneration: Boolean,
-    editorEligibleNow: Boolean,
-): EditorContent = content.takeIf {
-    contentAllowedAtEnd && sameEditorGeneration && editorEligibleNow &&
-        it.localSelection.isCursorMode && it.localSelection.start in 0..it.text.length
-} ?: EditorContent.selectionOnly(EditorRange.cursor(0))
 
 /** Provider work ends with its request/session, not an arbitrary wall-clock timeout. */
 internal suspend fun <T> awaitProviderResult(result: Deferred<T>): T? {

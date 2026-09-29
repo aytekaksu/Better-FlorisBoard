@@ -145,32 +145,6 @@ class AutocorrectWireRequestTest : FunSpec({
         wire.request.capsMode shouldBe AutocorrectCapsMode.CAPS_LOCK
     }
 
-    test("normal finish keeps eligible content from the same editor") {
-        val content = editorContent(text = "abc", offset = 0, cursor = 3)
-        selectFinalRequestContent(content, true, true, true) shouldBe content
-    }
-
-    test("finish sends no content after a configuration or privacy change") {
-        val content = editorContent(text = "abc", offset = 0, cursor = 3)
-        selectFinalRequestContent(content, false, true, true).text shouldBe ""
-        selectFinalRequestContent(content, true, true, false).text shouldBe ""
-    }
-
-    test("a later editor cannot contribute content to an earlier session finish") {
-        val laterEditor = editorContent(text = "later editor", offset = 0, cursor = 12)
-        selectFinalRequestContent(laterEditor, true, false, true).text shouldBe ""
-    }
-
-    test("a queued finish keeps the closure snapshot when the same editor changes") {
-        val atClose = editorContent(text = "abc", offset = 0, cursor = 3)
-        val finalRequest = selectFinalRequestContent(atClose, true, true, true)
-            .wireRequest().request
-        val afterClose = editorContent(text = "abcd", offset = 0, cursor = 4)
-
-        finalRequest.text shouldBe "abc"
-        afterClose.text shouldBe "abcd"
-    }
-
     test("a second editor invalidation preserves the queued closure snapshot") {
         val lease = SessionFinishLease(ProviderId("provider"), BindingEpoch(1), SessionId(1), RequestId(2))
         val snapshot = editorContent(text = "abc", offset = 0, cursor = 3).wireRequest().request
