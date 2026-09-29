@@ -179,8 +179,8 @@ An open property draft belongs to the theme action, so rotation keeps its target
 value, and unfinished size input. Apply and Delete only touch the original
 property set while it still belongs to the rule. This does not recover an unsaved
 editor workspace after process death.
-Committed property changes refresh the visible rows and variable previews without
-reopening the component.
+Committed rule and property changes refresh visible rows and variable previews
+without reopening the component.
 
 ## Verification
 
@@ -199,12 +199,13 @@ Run the full JVM suite and local gate:
 ./gradlew qualityGate
 ```
 
-The URI, streamed-size, cancellation, and workspace contracts have focused
-device tests:
+Theme refresh, URI, streamed-size, cancellation, and workspace contracts have
+focused device tests:
 
 ```shell
 ./gradlew :app:connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=\
+dev.patrickgold.florisboard.app.settings.theme.ThemeEditorScreenAndroidTest,\
 dev.patrickgold.florisboard.lib.cache.CacheManagerAndroidTest,\
 dev.patrickgold.florisboard.lib.ext.ExtensionIndexAndroidTest,\
 dev.patrickgold.florisboard.lib.ext.ExtensionLifecycleAndroidTest,\

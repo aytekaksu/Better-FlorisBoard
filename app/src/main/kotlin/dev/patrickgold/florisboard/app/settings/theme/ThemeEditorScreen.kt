@@ -432,6 +432,9 @@ private fun ThemeEditorReadyScreen(
             }
         }
 
+        val ruleEntries = remember(stylesheetEditor, workspace.version) {
+            stylesheetEditor.rules.toList()
+        }
         val lazyListState = rememberLazyListState()
         LazyColumn(
             modifier = Modifier.florisScrollbar(lazyListState),
@@ -445,8 +448,8 @@ private fun ThemeEditorReadyScreen(
                         component = editor,
                         onEditBtnClick = { showEditComponentMetaDialog = true },
                     )
-                    if (stylesheetEditor.rules.isEmpty() ||
-                        (stylesheetEditor.rules.size == 1 && stylesheetEditor.rules.all { (rule, _) -> rule == SnyggAnnotationRule.Defines })
+                    if (ruleEntries.isEmpty() ||
+                        (ruleEntries.size == 1 && ruleEntries.all { (rule, _) -> rule == SnyggAnnotationRule.Defines })
                     ) {
                         Text(
                             modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
@@ -457,7 +460,7 @@ private fun ThemeEditorReadyScreen(
                 }
             }
 
-            items(stylesheetEditor.rules.toList()) { (rule, propertySet) -> key(rule) {
+            items(ruleEntries) { (rule, propertySet) -> key(rule) {
                 val propertySetSpec = SnyggSpec.propertySetSpecOf(rule)
                 val isVariablesRule = rule == SnyggAnnotationRule.Defines
                 FlorisOutlinedBox(
