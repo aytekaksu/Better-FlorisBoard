@@ -1906,14 +1906,6 @@ HSPLdev/patrickgold/florisboard/ime/landscapeinput/LandscapeInputUiMode;-><clini
 HSPLdev/patrickgold/florisboard/ime/landscapeinput/LandscapeInputUiMode;-><init>(Ljava/lang/String;I)V
 HSPLdev/patrickgold/florisboard/ime/media/emoji/EmojiSkinTone;-><clinit>()V
 HSPLdev/patrickgold/florisboard/ime/media/emoji/EmojiSkinTone;-><init>(Ljava/lang/String;II)V
-HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$InstanceHandler$initCallback$1;-><init>(Ldev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$InstanceHandler;Z)V
-HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$InstanceHandler;-><init>(Landroid/content/Context;Z)V
-HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$init$1;-><init>(Lkotlin/coroutines/Continuation;)V
-HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$init$1;->create(Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Lkotlin/coroutines/Continuation;
-HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$init$1;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
-HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$init$2;-><init>(Lkotlin/coroutines/Continuation;)V
-HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$init$2;->create(Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Lkotlin/coroutines/Continuation;
-HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$init$2;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
 HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat;-><clinit>()V
 HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat;-><init>()V
 HSPLdev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat;->init(Landroid/content/Context;)V
@@ -3354,10 +3346,7 @@ Ldev/patrickgold/florisboard/ime/core/SubtypeLayoutMap;
 Ldev/patrickgold/florisboard/ime/dictionary/DictionaryManager;
 Ldev/patrickgold/florisboard/ime/landscapeinput/LandscapeInputUiMode;
 Ldev/patrickgold/florisboard/ime/media/emoji/EmojiSkinTone;
-Ldev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$InstanceHandler$initCallback$1;
-Ldev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$InstanceHandler;
 Ldev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$init$1;
-Ldev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat$init$2;
 Ldev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat;
 Ldev/patrickgold/florisboard/ime/text/gestures/SwipeAction;
 Ldev/patrickgold/florisboard/ime/text/key/KeyHintMode;

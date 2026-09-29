@@ -17,6 +17,9 @@
 package dev.patrickgold.florisboard.ime.media.emoji
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.content.ContextWrapper
+import android.text.Spanned
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
@@ -25,12 +28,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.emoji2.bundled.BundledEmojiCompatConfig
 import androidx.emoji2.text.EmojiCompat
-import androidx.emoji2.widget.EmojiTextView
+import androidx.emoji2.text.EmojiSpan
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import java.util.concurrent.Executor
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotSame
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,36 +48,74 @@ class EmojiTextAndroidTest {
 
     @Test
     @SuppressLint("RestrictedApi")
-    fun compatibilityChangeRecreatesTheCorrectTextView() {
+    fun loadedFontUsesTheCurrentReplacementStrategy() {
         val previousEmojiCompat = if (EmojiCompat.isConfigured()) EmojiCompat.get() else null
-        val testConfig = object : EmojiCompat.Config(EmojiCompat.MetadataRepoLoader { _ -> }) {}
-            .setMetadataLoadStrategy(EmojiCompat.LOAD_STRATEGY_MANUAL)
-        EmojiCompat.reset(testConfig)
+        var showText by mutableStateOf(true)
         try {
-            assertViewRecreation()
+            // Keep test APK assets when the bundled loader asks for the application context.
+            val fontContext = object : ContextWrapper(InstrumentationRegistry.getInstrumentation().context) {
+                override fun getApplicationContext(): Context = this
+            }
+            val testConfig = BundledEmojiCompatConfig(
+                fontContext,
+                Executor { it.run() },
+            ).setMetadataLoadStrategy(EmojiCompat.LOAD_STRATEGY_MANUAL)
+                .setReplaceAll(false)
+                // Model a system-supported glyph; the real processor still creates the spans.
+                .setGlyphChecker { _, _, _, _ -> true }
+            val instance = EmojiCompat.reset(testConfig)
+            val initialized = CompletableDeferred<Unit>()
+            instance.registerInitCallback(object : EmojiCompat.InitCallback() {
+                override fun onInitialized() {
+                    initialized.complete(Unit)
+                }
+
+                override fun onFailed(throwable: Throwable?) {
+                    initialized.completeExceptionally(throwable ?: IllegalStateException("Emoji font failed to load"))
+                }
+            })
+            instance.load()
+            runBlocking { withTimeout(10_000L) { initialized.await() } }
+
+            var loadedEmojiCompat by mutableStateOf<EmojiCompat?>(null)
+            var replaceAll by mutableStateOf(false)
+            composeRule.setContent {
+                if (showText) EmojiText(text = "🙂", loadedEmojiCompat = loadedEmojiCompat, replaceAll = replaceAll)
+            }
+            assertEmojiSpans(0)
+
+            composeRule.runOnIdle {
+                loadedEmojiCompat = instance
+                replaceAll = true
+            }
+            assertEmojiSpans(1)
+
+            composeRule.runOnIdle { replaceAll = false }
+            assertEmojiSpans(0)
+
+            composeRule.runOnIdle { replaceAll = true }
+            assertEmojiSpans(1)
         } finally {
-            EmojiCompat.reset(previousEmojiCompat)
+            try {
+                // EmojiSpan drawing still reads the global instance; dispose before restoring it.
+                composeRule.runOnIdle { showText = false }
+                composeRule.waitForIdle()
+            } finally {
+                EmojiCompat.reset(previousEmojiCompat)
+            }
         }
     }
 
-    private fun assertViewRecreation() {
-        var useEmojiCompatView by mutableStateOf(false)
-        composeRule.setContent {
-            EmojiText(text = "🙂", useEmojiCompatView = useEmojiCompatView)
+    private fun assertEmojiSpans(expectedCount: Int) = composeRule.runOnIdle {
+        val text = emojiTextView().text
+        val spanned = text as? Spanned
+        val spans = spanned?.getSpans(0, text.length, EmojiSpan::class.java).orEmpty()
+        assertEquals(expectedCount, spans.size)
+        for (span in spans) {
+            val spanText = requireNotNull(spanned)
+            assertEquals(0, spanText.getSpanStart(span))
+            assertEquals(text.length, spanText.getSpanEnd(span))
         }
-
-        val plain = composeRule.runOnIdle { emojiTextView() }
-        assertEquals(TextView::class.java, plain.javaClass)
-
-        composeRule.runOnIdle { useEmojiCompatView = true }
-        val compatible = composeRule.runOnIdle { emojiTextView() }
-        assertTrue(compatible is EmojiTextView)
-        assertNotSame(plain, compatible)
-
-        composeRule.runOnIdle { useEmojiCompatView = false }
-        val plainAgain = composeRule.runOnIdle { emojiTextView() }
-        assertEquals(TextView::class.java, plainAgain.javaClass)
-        assertNotSame(compatible, plainAgain)
     }
 
     private fun emojiTextView(): TextView = requireNotNull(

@@ -1371,7 +1371,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.emoji2)
-    implementation(libs.androidx.emoji2.views)
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.profileinstaller)
@@ -1408,6 +1407,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.emoji2.bundled)
     androidTestImplementation(libs.androidx.room.testing)
 }
 
