@@ -15,8 +15,11 @@ Releasing a move above the dock zone saves the floating position and leaves
 editing enabled. Fixed moves and fixed or floating resizes likewise save their
 matching size and position while keeping editing enabled. Saving preferences
 may be asynchronous; the editor state must not wait for that write.
+Queued saves stay with the form factor they were requested for, even if the
+window changes while a write is pending. Other saved form factors stay unchanged.
 
-The window-controller JVM tests cover docking and representative move/resize paths:
+The window-controller JVM tests cover docking, move/resize paths, and queued
+saves across form-factor changes:
 
 ```shell
 ./gradlew :app:testDebugUnitTest
