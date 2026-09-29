@@ -10,8 +10,10 @@ import org.florisboard.lib.snygg.value.SnyggShapeValue
 import org.florisboard.lib.snygg.value.SnyggStaticColorValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SnyggStylesheetEditorTest {
@@ -66,6 +68,23 @@ class SnyggStylesheetEditorTest {
         val stylesheetAfterEdit = stylesheet.edit().build()
         assertEquals(stylesheet.schema, stylesheetAfterEdit.schema)
         assertEquals(stylesheet.rules, stylesheetAfterEdit.rules)
+    }
+
+    @Test
+    fun `named properties share map edits and preserve built snapshots`() {
+        val editor = SnyggSinglePropertySetEditor()
+        val red = SnyggStaticColorValue(Color.Red)
+        val blue = SnyggStaticColorValue(Color.Blue)
+
+        editor.borderColor = red
+        val snapshot = editor.build()
+        assertEquals(red, editor.properties["border-color"])
+        editor.properties["border-color"] = blue
+        assertEquals(blue, editor.borderColor)
+        editor.borderColor = null
+        assertNull(editor.borderColor)
+        assertFalse(editor.properties.containsKey("border-color"))
+        assertEquals(red, snapshot.properties["border-color"])
     }
 
     @Test
