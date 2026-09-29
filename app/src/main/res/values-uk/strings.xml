@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Емоджі</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Бажаний відтінок шкіри емоджі</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Бажана зачіска емоджі</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Історія емоджі</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">Увімкнути історію емоджі</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">Зберігайте нещодавно використані емоджі для швидкого доступу</string>
@@ -240,7 +239,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">Звук натискання клавіші</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">Звук довгого натискання клавіші</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">Звуки повторюваного натискання клавіш</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">Звуки жестів зарахування</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">Звуки жестів переміщення</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">Тактильний відгук / Вібрація</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">Увімкнути тактильний відгук</string>
@@ -253,12 +251,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Вібрація при натисканні клавіш</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Вібрація при довгому натисканні клавіш</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">Вібрація повторювального натискання клавіш</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">Вібрація жестів змахування</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">Вібрація жестів переміщення</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">напр. клавіші, кнопки, вкладки емоджі</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">напр. спливаюче меню</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">напр. клавіша видалення</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">не реалізовано</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">наприклад, жест переміщення курсора</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Клавіатура</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">Рядок з цифрами</string>
@@ -314,11 +310,6 @@
     <string name="pref__spelling__title" comment="Preference group title">Правопис</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Вимкнено для всієї системи. У текстових полях для неправильних слів червоні лінії не з’являтимуться. Торкніться, щоб змінити.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">Службу перевірки правопису не встановлено. Натисніть, щоб змінити.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Мови</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">Використовувати імена контактів</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">Знаходити імена з вашого списку контактів</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">Використовувати користувацький словник</string>
-    <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref">Шукати записи в користувацьких словниках</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">Користувацькі словники</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Увімкнути системний користувацький словник</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">Запропонувати слова, що зберігаються в словнику користувача системи</string>
@@ -517,8 +508,6 @@
     <string name="devtools__show_primary_clip__summary" comment="Summary of Show primary clip in Devtools">Накладає поточний основний запис з буфера обміну</string>
     <string name="devtools__show_input_state_overlay__label" comment="Label of Show input cache overlay in Devtools">Показати стан входу накладанням</string>
     <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">Накладає поточний стан входу для налагодження</string>
-    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools">Показати правопис накладанням</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">Накладає поточні результати правопису для налагодження</string>
     <string name="devtools__show_inline_autofill_overlay__label">Показати вбудоване накладання автозаповнення</string>
     <string name="devtools__show_inline_autofill_overlay__summary">Накладає поточні результати автозаповнення для налагодження</string>
     <string name="devtools__show_key_touch_boundaries__label" comment="Label of Show key touch boundaries in Devtools">Показати межі дотику клавіш</string>
@@ -564,17 +553,13 @@
     <string name="ext__error__not_found_title">Розширення не знайдено</string>
     <string name="ext__error__not_found_description">Розширення з ідентифікатором «{id}» не знайдено.</string>
     <string name="ext__editor__title_create_any">Створити розширення</string>
-    <string name="ext__editor__title_create_keyboard">Створити розширення клавіатури</string>
     <string name="ext__editor__title_create_theme">Створити розширення теми</string>
-    <string name="ext__editor__title_edit_any">Редагувати розширення</string>
-    <string name="ext__editor__title_edit_keyboard">Редагувати розширення клавіатури</string>
     <string name="ext__editor__title_edit_theme">Редагувати розширення теми</string>
     <string name="ext__editor__metadata__title">Керування метаданими</string>
     <string name="ext__editor__metadata__title_invalid">Невірні метадані</string>
     <string name="ext__editor__metadata__message_invalid">Метадані для цього розширення недійсні, перевірте їх у редакторі метаданих!</string>
     <string name="ext__editor__dependencies__title">Керування залежностями</string>
     <string name="ext__editor__files__title">Керування файлами архівів</string>
-    <string name="ext__editor__create_component__title">Створити компонент</string>
     <string name="ext__editor__create_component__title_theme">Створити тему</string>
     <string name="ext__editor__create_component__from_empty">Пусто</string>
     <string name="ext__editor__create_component__from_existing">З існуючих</string>
@@ -608,8 +593,6 @@
     <string name="ext__validation__error_stylesheet_path">Введіть дійсний шлях до таблиці стилів, що відповідає {stylesheet_path_regex}</string>
     <string name="ext__validation__enter_property">Введіть ім\'я змінної</string>
     <string name="ext__validation__error_property">Введіть дійсне ім\'я змінної, що відповідає {variable_name_regex}</string>
-    <string name="ext__validation__enter_color">Введіть рядок кольору</string>
-    <string name="ext__validation__error_color">Введіть правильний рядок кольору</string>
     <string name="ext__validation__enter_dp_size">Введіть розмір в dp</string>
     <string name="ext__validation__enter_valid_number">Введіть правильне число</string>
     <string name="ext__validation__enter_positive_number">Введіть додатне число (&gt;=0)</string>
@@ -758,8 +741,6 @@
     <string name="enum__space_bar_mode__nothing" comment="Enum value label">Без напису</string>
     <string name="enum__space_bar_mode__current_language" comment="Enum value label">Поточна мова</string>
     <string name="enum__space_bar_mode__space_bar_key" comment="Enum value label">␣</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Використовувати мови системи</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">Використовувати розкладки клавіатури</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">Немає дії</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">Перейти до попереднього режиму клавіатури</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">Перейти до наступного режиму клавіатури</string>

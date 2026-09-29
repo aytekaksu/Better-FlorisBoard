@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">خەندەکان</string>
     <string name="prefs__media__emoji_preferred_skin_tone">ڕەنگی بنەڕەتی خەندەکان</string>
-    <string name="prefs__media__emoji_preferred_hair_style">ڕەنگی بنەڕەتی قژی خەندەکان</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">مێژووی ئیمۆجی</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">مێژووی ئیمۆجی کارا بکە</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">دوایین ئیمۆجییە بەکارھێندراوەکان بھێڵەوە بۆ ئاسانکاری</string>
@@ -226,7 +225,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">دەنگی لەکاتی نووسین</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">دەنگ لەکاتی دەست ڕاگرتن</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">دەنگ لەکاتی فرمانە دووبارەکان</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">دەنگ لەکاتی ئاماژەکان</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">دەنگ لەکاتی جوڵانی ئاماژەکان</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">کاریگەری لەرزین / دەستلێدان</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">چالاککردنی کاریگەری لەرزین</string>
@@ -239,12 +237,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">لەرزین لەکاتی نووسین</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">لەرزین لەکاتی دەست ڕاگرتن</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">لەرزین لەکاتی فرمانە دووبارەکان</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">لەرزین لەکاتی ئاماژەکان</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">لەرزین لەکاتی جوڵانی ئاماژەکان</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">نمونە: دوگمەکان، بەشی ئیمۆجی</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">نمونە: پیتە لاوەکییەکان</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">نمونە: دوگمەی سڕینەوە</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">بەردەست نییە</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">نمونە: دەستخشاندن بۆ لای ڕاست یان چەپ</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">تەختەکلیل</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">لیستی ژمارەکان</string>
@@ -292,11 +288,6 @@
     <string name="pref__spelling__title" comment="Preference group title">ڕاستکردنەوەی هەڵەی ڕێنووس</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">ناچالاککردنی ڕاستکەرەوەی سیستەم، هێڵی سوور پیشان نادرێت لەکاتی نووسینی ووشە هەڵەکاندا، پەنجە لێرە بدە بۆ ڕێکخستن.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">هیچ ڕاستکەرەوەیەکی هەڵەی ڕێنووس دیارینەکراوە، پەنجە لێرە بدە بۆ ڕێکخستن.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">زمان</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">بەکارهێنانی ناوەکانی ناو مۆبایل</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">راستکردنەوە و پیشاندانی ناوەکان</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">زیادکراوەکانی فەرهەنگی تایبەت</string>
-    <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref">پیشاندان و راستکردنەوە لەڕێی فەرهەنگی بەکارهێنەرەوە</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">فەرهەنگی بەکارهێنەر</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">فەرهەنگی تایبەتی بەکارهێنەر</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">پێشنیارکردنی ئەو ووشانەی لەفەرهەنگی تایبەتی بەکارهێنەردا پاشەکەوتکراون</string>
@@ -465,8 +456,6 @@
     <string name="devtools__show_primary_clip__summary" comment="Summary of Show primary clip in Devtools">جێگۆڕینی لەبەرگیراوەکانی ئێستا لەگەڵ لەبەرگیراوەی بەرنامەکە</string>
     <string name="devtools__show_input_state_overlay__label" comment="Label of Show input cache overlay in Devtools">پیشاندانی دۆخی تەختەکلیل</string>
     <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">پیشاندانی زانیاری دۆخی  تەختەکلیل</string>
-    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools">پیشاندانی ڕاستکردنەوەی ڕێنووس</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">پیشاندانی ڕاستکردنەوەی هەڵەی ڕێنووس لەسەروی تەختەکلیل</string>
     <string name="devtools__show_key_touch_boundaries__label" comment="Label of Show key touch boundaries in Devtools">پیشاندانی سنوورەکانی کلیل</string>
     <string name="devtools__show_key_touch_boundaries__summary" comment="Summary of Show key touch boundaries in Devtools">هێڵکاریکردنی سنوورەکانی کلیل دەسلێدان بە سوور</string>
     <string name="devtools__show_drag_and_drop_helpers__label" comment="Label of Show drag and drop helpers in Devtools">پیشاندانی فێرکاری ڕاکێشان و دانان</string>
@@ -500,17 +489,13 @@
     <string name="ext__error__not_found_title">زیادکراو نەدۆزرایەوە</string>
     <string name="ext__error__not_found_description">هیچ زیادکراوێک بەناوی \"{id}\" نەدۆزرایەوە.</string>
     <string name="ext__editor__title_create_any">دروستکردن</string>
-    <string name="ext__editor__title_create_keyboard">دروستکردنی زیادکراوی تەختەکلیل</string>
     <string name="ext__editor__title_create_theme">دروستکردنی ڕووکار</string>
-    <string name="ext__editor__title_edit_any">دەستکاریکردن</string>
-    <string name="ext__editor__title_edit_keyboard">دەستکاریکردنی زیادکراوی تەختەکلیل</string>
     <string name="ext__editor__title_edit_theme">دەستکاریکردنی ڕووکار</string>
     <string name="ext__editor__metadata__title">ڕێکخستنی سەرچاوەکان</string>
     <string name="ext__editor__metadata__title_invalid">داتای سەرچاوە نادروستە</string>
     <string name="ext__editor__metadata__message_invalid">داتای زانیاری بۆ ئەم درێژکراوەیە دروست نیە، تکایە بژارکەری داتای زانیاری بپشکنە بۆ وردەکاریەکان!</string>
     <string name="ext__editor__dependencies__title">ڕێکخستنی سەرچاوەکان</string>
     <string name="ext__editor__files__title">ڕێکخستنی فایلەکانی ئەرشیف</string>
-    <string name="ext__editor__create_component__title">دروستکردنی ناوەڕۆک</string>
     <string name="ext__editor__create_component__title_theme">دروستکردنی ڕووکار</string>
     <string name="ext__editor__create_component__from_empty">دروستکردن لە سەرەتاوە</string>
     <string name="ext__editor__create_component__from_existing">دروستکردن لە ڕووکارەکانەوە</string>
@@ -629,8 +614,6 @@
     <string name="enum__space_bar_mode__nothing" comment="Enum value label">بێ ناو</string>
     <string name="enum__space_bar_mode__current_language" comment="Enum value label">ناوی زمان</string>
     <string name="enum__space_bar_mode__space_bar_key" comment="Enum value label">␣</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">بەکارهێنانی زمانی سیستەم</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">بەکارهێنانی ناوی تەختەکلیل</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">هیچ فرمانێک</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">گەڕانەوە بۆ شێوازی پێشوو</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">گەڕانەوە بۆ شێوازی دواتر</string>

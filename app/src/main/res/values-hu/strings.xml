@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Emodzsik</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Emodzsik előnyben részesített bőrszíne</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Emodzsik előnyben részesített hajstílusa</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emodzsik előzményei</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">Emodzsik előzményeinek engedélyezése</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">A legutóbb használt emodzsik megtartása a könnyű elérés érdekében</string>
@@ -355,7 +354,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">Gombnyomás hangja</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">Hosszú gombnyomás hangja</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">Ismételt billentyűművelet hangja</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">Gesztus hangok</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">Gesztus mozgás hangok</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">Haptikus visszajelzés / rezgés</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">Haptikus visszajelzés engedélyezése</string>
@@ -368,12 +366,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Gombnyomás rezgése</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Hosszú gombnyomás rezgése</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">Ismételt billentyűművelet rezgése</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">Gesztus rezgése</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">Gesztus mozgás rezgése</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">pl. billentyűk, gombok,emodzsi fülek</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">pl. felugró menü</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">pl. törlés gomb</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">nincs implementálva</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">pl. kurzor húzás</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Billentyűzet</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">Számsor</string>
@@ -429,11 +425,6 @@
     <string name="pref__spelling__title" comment="Preference group title">Helyesírás</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Rendszerszintű kikapcsolás. Nem fognak piros vonalak megjelenni a szövegmezőkben a hibás szavak alatt. Érintse meg a változtatáshoz.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">Nincs kiválasztva helyesírás ellenőrző szolgáltatás. Érintse meg a változtatáshoz.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Nyelvek</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">Névjegyekben lévő nevek használata</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">Nevek kikeresése a névjegyekből</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">Felhasználói szótárbejegyzések használata</string>
-    <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref">Bejegyzések kikeresése a felhasználói szótárakból</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">Felhasználói szótárak</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Rendszer felhasználói szótárának engedélyezése</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">A rendszer felhasználói szótárában tárolt szavak ajánlása</string>
@@ -644,8 +635,6 @@
     <string name="devtools__show_primary_clip__summary" comment="Summary of Show primary clip in Devtools">A jelenlegi elsődleges vágólap a billentyűzet fölött jelenik meg</string>
     <string name="devtools__show_input_state_overlay__label" comment="Label of Show input cache overlay in Devtools">Beviteli állapot átfedésének megjelenítése</string>
     <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">A jelenlegi bemeneti állapot megjelenítése átfedésként a hibakereséshez</string>
-    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools">Helyesírási átfedés megjelenítése</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">A jelenlegi helyesírási eredmények felett jelenik meg hibakereséshez</string>
     <string name="devtools__show_inline_autofill_overlay__label">Soron belüli automatikus kitöltés megjelenítése</string>
     <string name="devtools__show_inline_autofill_overlay__summary">A jelenlegi soron belüli automatikus kitöltés találatainak megjelenítése átfedésként a hibakereséshez</string>
     <string name="devtools__show_key_touch_boundaries__label" comment="Label of Show key touch boundaries in Devtools">Billentyűérintési határok megjelenítése</string>
@@ -698,10 +687,7 @@
     <string name="ext__error__not_found_title">A kiterjesztés nem található</string>
     <string name="ext__error__not_found_description">Nem található \"{id}\" azonosítójú kiterjesztés.</string>
     <string name="ext__editor__title_create_any">Kiterjesztés létrehozása</string>
-    <string name="ext__editor__title_create_keyboard">Billentyűzet kiterjesztés létrehozása</string>
     <string name="ext__editor__title_create_theme">Téma kiterjesztés létrehozása</string>
-    <string name="ext__editor__title_edit_any">Kiterjesztés szerkesztése</string>
-    <string name="ext__editor__title_edit_keyboard">Billentyűzet kiterjesztés szerkesztése</string>
     <string name="ext__editor__title_edit_theme">Téma kiterjesztés szerkesztése</string>
     <string name="ext__editor__metadata__title">Metaadatok kezelése</string>
     <string name="ext__editor__metadata__title_invalid">Érvénytelen metaadatok</string>
@@ -710,7 +696,6 @@
     <string name="ext__editor__files__title">Archívumfájlok kezelése</string>
     <string name="ext__editor__files__type_fonts">Betűtípusok</string>
     <string name="ext__editor__files__type_images">Képek</string>
-    <string name="ext__editor__create_component__title">Komponens létrehozása</string>
     <string name="ext__editor__create_component__title_theme">Téma létrehozása</string>
     <string name="ext__editor__create_component__from_empty">Üres</string>
     <string name="ext__editor__create_component__from_existing">Létezőből</string>
@@ -744,8 +729,6 @@
     <string name="ext__validation__error_stylesheet_path">Adjon meg egy érvényes stíluslap-útvonalat a következőhöz: {stylesheet_path_regex}</string>
     <string name="ext__validation__enter_property">Adjon meg egy változónevet</string>
     <string name="ext__validation__error_property">Adjon meg egy változónevet a következőhöz: {variable_name_regex}</string>
-    <string name="ext__validation__enter_color">Adjon meg egy színkarakterláncot</string>
-    <string name="ext__validation__error_color">Adjon meg egy érvényes színkarakterláncot</string>
     <string name="ext__validation__enter_dp_size">Adjon meg egy dp méretet</string>
     <string name="ext__validation__enter_valid_number">Adjon meg egy érvényes számot</string>
     <string name="ext__validation__enter_positive_number">Adjon meg egy pozitív számot (&gt;=0)</string>
@@ -919,8 +902,6 @@
     <string name="enum__space_bar_mode__nothing" comment="Enum value label">Nincs felirat</string>
     <string name="enum__space_bar_mode__current_language" comment="Enum value label">Jelenlegi nyelv</string>
     <string name="enum__space_bar_mode__space_bar_key" comment="Enum value label">␣</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Rendszernyelvek használata</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">Billentyűzet-altípusok használata</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">Nincs művelet</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">Váltás az előző billentyűzetmódra</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">Váltás a következő billentyűzetmódra</string>

@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Emûcî</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Tona çermê emojî ya tercîhkirî</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Tercîha porê emojî</string>
     <!-- Emoji strings -->
     <!-- Quick action strings -->
     <!-- Incognito mode strings -->
@@ -105,7 +104,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">Dengên kilîta çapê</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">Dengê kilîta dirêj ya çapameniyê</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">Dengên çalakiya dubarekirî ya bişkokê</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">Dengên jestê skrîp</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">Dengên bilez ên tevgerê nîşan dide</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">Bersivdana haptîkî / Vibrasyon</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">Paşvegerên bextewar çalak bike</string>
@@ -140,7 +138,6 @@
     <string name="pref__correction__remember_caps_lock_state__summary" comment="Preference summary">Caps lock dê bimîne dema ku diçe qada textek din</string>
     <string name="pref__correction__double_space_period__label" comment="Preference title">Dema du-cihî</string>
     <string name="pref__correction__double_space_period__summary" comment="Preference summary">Lêdana du caran li ser baroya cîhê serdemek li dû cîhek vedigire</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Ziman</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">Ferhengên Bikarhêner</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Ferhenga bikarhêner a systemê çalak bike</string>
     <string name="pref__dictionary__enable_internal_user_dictionary__label" comment="Preference title">Ferhenga navxweyî ya bikarhêner çalak bike</string>
@@ -318,8 +315,6 @@
     <string name="enum__snygg_level__basic" comment="Enum value label">Bingehîn</string>
     <string name="enum__snygg_level__advanced" comment="Enum value label">Pêşketî</string>
     <string name="enum__snygg_level__developer" comment="Enum value label">Pêşdebir</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Zimanên systemê bi kar bîne</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">Cureyên jêr ên klavyeyê bi kar bîne</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">Bê çalakî</string>
     <string name="enum__swipe_action__delete_characters_precisely" comment="Enum value label">Karakteran bi rastî jê bibe</string>
     <string name="enum__swipe_action__delete_words_precisely" comment="Enum value label">Peyvan bi rastî jê bibire</string>

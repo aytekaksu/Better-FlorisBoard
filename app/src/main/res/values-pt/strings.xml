@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Emojis</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Tom de pele preferido para emoji</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Estilo de cabelo preferido para emoji</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Histórico de emojis</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">Ativar histórico de emojis</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">Manter emojis usados para acesso rápido</string>
@@ -345,7 +344,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">Som ao premir as teclas</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">Som na pressão longa das teclas</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">Som nas repetições de teclas</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">Sons de deslize</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">Som para gestos de deslize</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">Resposta táctil/Vibração</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">Ativar resposta táctil</string>
@@ -358,12 +356,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Vibrar ao premir as teclas</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Vibrar ao premir longamente as teclas</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">Vibrar na repetição das teclas</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">Vibrar ao deslizar</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">Vibrar nos gestos de deslize</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">por exemplo: teclas, botões e emoji</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">por exemplo: menus popup</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">por exemplo: tecla delete</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">não implementado</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">por exemplo: deslize do cursor</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Teclado</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">Linha de números</string>
@@ -419,11 +415,6 @@
     <string name="pref__spelling__title" comment="Preference group title">Ortografia</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Desativado globalmente. Não serão mostradas riscas vermelhas se existirem palavras erradas. Toque para alterar.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">Não definiu o serviço de verificação ortográfica. Toque para alterar.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Idiomas</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">Usar nomes de contatos</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">Procure nomes da sua lista de contatos</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">Utilizar entradas do dicionário de utilizador</string>
-    <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref">Procurar entradas nos dicionários do utilizador</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">Dicionários do utilizador</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Ativar dicionário do sistema</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">Sugerir palavras guardadas no dicionário do sistema</string>
@@ -634,8 +625,6 @@
     <string name="devtools__show_primary_clip__summary" comment="Summary of Show primary clip in Devtools">Substitui o item principal existente na área de transferência</string>
     <string name="devtools__show_input_state_overlay__label" comment="Label of Show input cache overlay in Devtools">Mostrar a interface do estado de introdução</string>
     <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">Sobrepõe o estado de entrada atual para depuração</string>
-    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools">Mostrar sobreposição de ortografia</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">Sobrepõe os resultados ortográficos atuais para depuração</string>
     <string name="devtools__show_inline_autofill_overlay__label">Sobrepor preenchimento automático na linha</string>
     <string name="devtools__show_inline_autofill_overlay__summary">Sobrepõe os resultados atuais do preenchimento automático em linha para depuração</string>
     <string name="devtools__show_key_touch_boundaries__label" comment="Label of Show key touch boundaries in Devtools">Mostrar limite das teclas</string>
@@ -684,10 +673,7 @@
     <string name="ext__error__not_found_title">Extensão não encontrada</string>
     <string name="ext__error__not_found_description">Não foi possível encontrar a extensão coma ID \"{id}\".</string>
     <string name="ext__editor__title_create_any">Criar extensão</string>
-    <string name="ext__editor__title_create_keyboard">Criar extensão de teclado</string>
     <string name="ext__editor__title_create_theme">Criar extensão de tema</string>
-    <string name="ext__editor__title_edit_any">Editar extensão</string>
-    <string name="ext__editor__title_edit_keyboard">Editar extensão de teclado</string>
     <string name="ext__editor__title_edit_theme">Editar extensão de tema</string>
     <string name="ext__editor__metadata__title">Gerir meta-dados</string>
     <string name="ext__editor__metadata__title_invalid">Meta-dados inválidos</string>
@@ -696,7 +682,6 @@
     <string name="ext__editor__files__title">Gerir ficheiros de arquivo</string>
     <string name="ext__editor__files__type_fonts">Fontes</string>
     <string name="ext__editor__files__type_images">Imagens</string>
-    <string name="ext__editor__create_component__title">Criar componente</string>
     <string name="ext__editor__create_component__title_theme">Criar tema</string>
     <string name="ext__editor__create_component__from_empty">Vazio</string>
     <string name="ext__editor__create_component__from_existing">De um existente</string>
@@ -730,8 +715,6 @@
     <string name="ext__validation__error_stylesheet_path">Por favor, introduza um caminho de folha de estilo válido que corresponda a {stylesheet_path_regex}</string>
     <string name="ext__validation__enter_property">Por favor, introduza o nome da variável</string>
     <string name="ext__validation__error_property">Por favor, introduza um nome de variável que corresponda a {variable_name_regex}</string>
-    <string name="ext__validation__enter_color">Por favor, introduza uma sequência de cores</string>
-    <string name="ext__validation__error_color">Por favor, introduza uma sequência de cores válida</string>
     <string name="ext__validation__enter_dp_size">Por favor, introduza um tamanho dp</string>
     <string name="ext__validation__enter_valid_number">Por favor, introduza um número válido</string>
     <string name="ext__validation__enter_positive_number">Por favor, introduza um número positivo (&gt;=0)</string>
@@ -902,8 +885,6 @@
     <string name="enum__space_bar_mode__nothing" comment="Enum value label">Sem rótulo</string>
     <string name="enum__space_bar_mode__current_language" comment="Enum value label">Idioma atual</string>
     <string name="enum__space_bar_mode__space_bar_key" comment="Enum value label">␣</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Utilizar idiomas do sistema</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">Utilizar subtipos de teclado</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">Sem ação</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">Mudar para o anterior modo de teclado</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">Mudar para o próximo modo de teclado</string>

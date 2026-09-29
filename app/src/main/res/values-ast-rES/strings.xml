@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Fustaxes</string>
     <string name="prefs__media__emoji_preferred_skin_tone">لون البشرة المفضل للرموز التعبيرية</string>
-    <string name="prefs__media__emoji_preferred_hair_style">تصفيفة الشعر الرموز التعبيرية المفضلة</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">Activar l\'historial de fustaxes</string>
     <!-- Emoji strings -->
     <!-- Quick action strings -->
@@ -111,7 +110,6 @@
     <string name="pref__correction__auto_capitalization__summary" comment="Preference summary">Pon en mayúscula la primer lletra de les pallabres según el contestu de la entrada actual</string>
     <string name="pref__spelling__title" comment="Preference group title">Ortografía</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Desactivóse en tol sistema. Nun apaez nenguna llinia colorada so les pallabres incorreutes. Toca equí pa camudar la configuración.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Llingües</string>
     <string name="settings__udm__word_summary_freq" comment="Summary label for a word entry. The decimal placeholder inserts the frequency for the word it summarizes.">Frecuencia: {freq}</string>
     <string name="settings__udm__word_summary_freq_shortcut" comment="Summary label for a word entry. The first placeholder inserts the frequency for the word it summarizes, the second placeholder the shortcut defined.">Frecuencia: {freq} | Atayu: {shortcut}</string>
     <string name="settings__udm__dialog__word_label" comment="Label for the word in the user dictionary add/edit dialog">Pallabra</string>

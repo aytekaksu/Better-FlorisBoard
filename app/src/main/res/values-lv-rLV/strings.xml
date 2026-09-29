@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Sajūtu rakstzīmes</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Vēlamā sajūtu rakstzīmju ādas nokrāsa</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Vēlamais sajūtu rakstzīmju matu sakārtojums</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emocijzīmju vēsture</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">Iespējot emocijzīmju vēsturi</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">Paturēt nesen izmantotās emocijzīmes ātrai piekļuvei</string>
@@ -308,7 +307,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">Taustiņu nospiešanas skaņas</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">Ilgas taustiņu nospiešanas skaņas</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">Taustiņa atkārtošanās skaņas</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">Pavilkšanas kustību skaņas</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">Pavilkšanas pārvietošanās kustības skaņas</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">Taustes efekti / Vibrācija</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">Iespējot sajūtu atgriezenisko saiti</string>
@@ -321,12 +319,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Taustiņa nospiešanas vibrācija</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Taustiņa ilgās nospiešanas vibrācija</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">Taustiņa atkārtošanas darbības vibrācija</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">Pārvilkšanas žesta vibrācija</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">Pārvilkšanas žesta vibrācija kustības laikā</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">piemēram, taustiņi, pogas, sajūtu rakstzīmju cilnes</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">piemēram, uznirstošā izvēlne</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">piemēram, dzēšanas taustiņš</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">nav īstenots</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">piemēram, rādītāja vadīšanas pavilkšana</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Tastatūra</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">Ciparu rinda</string>
@@ -382,11 +378,6 @@
     <string name="pref__spelling__title" comment="Preference group title">Pareizrakstība</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Atspējots sistēmā. Nepareizi vārdi netiks pasvītroti ar sarkanu līniju. Piesist, lai mainītu.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">Nav norādīta iekļauta teksta lauka pareizrakstības pārbaudīšanas pakalpe. Piesist, lai mainītu.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Valodas</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">Izmantot kontaktpersonu vārdus</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">Meklēt vārdus kontaktpersonu sarakstā</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">Izmantot lietotāja vārdnīcas ierakstus</string>
-    <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref">Meklēt ierakstus lietotāja vārdnīcās</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">Lietotāja vārdnīcas</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Iespējot sistēmas lietotāja vārdnīcu</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">Ieteikt vārdus, kas tiek glabāti sistēmas lietotāja vārdnīcā</string>
@@ -598,8 +589,6 @@
     <string name="devtools__show_primary_clip__summary" comment="Summary of Show primary clip in Devtools">Pārklāj pašreizējo galveno starpliktuves vienumu</string>
     <string name="devtools__show_input_state_overlay__label" comment="Label of Show input cache overlay in Devtools">Rādīt ievades stāvokļa pārklājumu</string>
     <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">Pārklāj pašreizējo ievades stāvokli atkļūdošanai</string>
-    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools">Rādīt pareizrakstības pārklājumu</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">Pārklāj pašreizējo pareizrakstības iznākumu atkļūdošanai</string>
     <string name="devtools__show_inline_autofill_overlay__label">Rādīt iekļauto automātiskās aizpildes pārklājumu</string>
     <string name="devtools__show_inline_autofill_overlay__summary">Pārklāj pašreizējo iekļauto automātiskās aizpildes iznākumu atkļūdošanai</string>
     <string name="devtools__show_key_touch_boundaries__label" comment="Label of Show key touch boundaries in Devtools">Rādīt taustiņa pieskārienu robežas</string>
@@ -648,10 +637,7 @@
     <string name="ext__error__not_found_title">Paplašinājums nav atrasts</string>
     <string name="ext__error__not_found_description">Netika atrasts neviens paplašinājums ar Id \"{id}\".</string>
     <string name="ext__editor__title_create_any">Izveidot paplašinājumu</string>
-    <string name="ext__editor__title_create_keyboard">Izveidot tastatūras paplašinājumu</string>
     <string name="ext__editor__title_create_theme">Izveidot izskata paplašinājumu</string>
-    <string name="ext__editor__title_edit_any">Labot paplašinājumu</string>
-    <string name="ext__editor__title_edit_keyboard">Labot tastatūras paplašinājumu</string>
     <string name="ext__editor__title_edit_theme">Labot izskata paplašinājumu</string>
     <string name="ext__editor__metadata__title">Pārvaldīt metadatus</string>
     <string name="ext__editor__metadata__title_invalid">Nederīgi metadati</string>
@@ -660,7 +646,6 @@
     <string name="ext__editor__files__title">Pārvaldīt arhīva datnes</string>
     <string name="ext__editor__files__type_fonts">Fonti</string>
     <string name="ext__editor__files__type_images">Attēli</string>
-    <string name="ext__editor__create_component__title">Izveidot sastāvdaļu</string>
     <string name="ext__editor__create_component__title_theme">Izveidot izskatu</string>
     <string name="ext__editor__create_component__from_empty">Tukšs</string>
     <string name="ext__editor__create_component__from_existing">No esoša</string>
@@ -694,8 +679,6 @@
     <string name="ext__validation__error_stylesheet_path">Lūgums ievadīt derīgu stila lapas ceļu, kas atbilst {stylesheet_path_regex}</string>
     <string name="ext__validation__enter_property">Lūgums ievadīt mainīgā nosaukumu</string>
     <string name="ext__validation__error_property">Lūgums ievadīt derīgu mainīgā nosaukumu, kas atbilst {variable_name_regex}</string>
-    <string name="ext__validation__enter_color">Lūgums ievadīt krāsas virkni</string>
-    <string name="ext__validation__error_color">Lūgums ievadīt derīgu krāsas virkni</string>
     <string name="ext__validation__enter_dp_size">Lūgums ievadīt dp izmēru</string>
     <string name="ext__validation__enter_valid_number">Lūgums ievadīt derīgu skaitli</string>
     <string name="ext__validation__enter_positive_number">Lūgums ievadīt pozitīvu skaitli (&gt;=0)</string>
@@ -861,8 +844,6 @@
     <string name="enum__space_bar_mode__nothing" comment="Enum value label">Nav etiķetes</string>
     <string name="enum__space_bar_mode__current_language" comment="Enum value label">Pašreizējā valoda</string>
     <string name="enum__space_bar_mode__space_bar_key" comment="Enum value label">␣</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Izmantot sistēmas valodas</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">Izmantot tastatūras apakšveidus</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">Nav darbības</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">Pārslēgties uz iepriekšējo tastatūras veidu</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">Pārslēgties uz nākamo tastatūras veidu</string>

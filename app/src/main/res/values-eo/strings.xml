@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Emoĝioj</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Perferata emoĝiojn haŭtkoloro</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Preferata emoĝiojn hararanĝo</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emoĝia historio</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">Aktivigi emoĝian historion</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">Memorigi antaŭ ne longe uzitaj emoĝioj por rapida alireblo</string>
@@ -210,7 +209,6 @@
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">ekz. klavojn, butonojn, emoĝiajn langetojn</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">ekz. ŝprucmenuo</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">ekz. forigklavon</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">ne efektivigita</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Klavaro</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">Nombra vico</string>
     <string name="pref__keyboard__number_row__summary" comment="Preference summary">Vidigi nombran vicon supre la signa aranĝo</string>
@@ -258,9 +256,6 @@
     <string name="pref__correction__double_space_period__summary" comment="Preference summary">Dufoje tuŝi la spacetklavo enigas punkton kaj spaceto sekve</string>
     <string name="pref__spelling__title" comment="Preference group title">Literumado</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Malŝaltita en la tuta sistemo. Neniu ruĝa linio aperos sub malĝustaj vortoj en tekstaj kampoj. Tuŝu ĉi tie por ŝanĝi tion.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Lingvoj</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">Uzi nomojn el kontaktoj</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">Uzi enigaĵojn de la uzula vortaro</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">Vortaroj uzanton</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Ŝalti sisteman uzulan vortaron</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">Sugesti vortojn konservitajn en la sistema uzula vortaro</string>
@@ -462,17 +457,13 @@
     <string name="ext__error__not_found_title">Netrovita etendaĵo</string>
     <string name="ext__error__not_found_description">Neniu etendaĵo kun identigilo \"{id}\" trovita.</string>
     <string name="ext__editor__title_create_any">Krei etendaĵon</string>
-    <string name="ext__editor__title_create_keyboard">Krei klavaran etendaĵon</string>
     <string name="ext__editor__title_create_theme">Krei etosan etendaĵon</string>
-    <string name="ext__editor__title_edit_any">Redakti etendaĵon</string>
-    <string name="ext__editor__title_edit_keyboard">Redakti klavaran etendaĵon</string>
     <string name="ext__editor__title_edit_theme">Redakti etosan etendaĵon</string>
     <string name="ext__editor__metadata__title">Mastrumi metadatumojn</string>
     <string name="ext__editor__metadata__title_invalid">Malvalidaj metadatumoj</string>
     <string name="ext__editor__metadata__message_invalid">La metadatumoj de tiu etendaĵo estas malvalida, bonvolu kontroli la metadatumredaktilo por detaloj!</string>
     <string name="ext__editor__dependencies__title">Mastrumi dependaĵojn</string>
     <string name="ext__editor__files__title">Mastrumi arkivajn dosierojn</string>
-    <string name="ext__editor__create_component__title">Krei komponanton</string>
     <string name="ext__editor__create_component__title_theme">Krei etoson</string>
     <string name="ext__editor__create_component__from_empty">Malplena</string>
     <string name="ext__editor__create_component__from_existing">El iu jam ekzistanta</string>
@@ -502,8 +493,6 @@
     <string name="ext__validation__error_stylesheet_path">Bonvolu enigi validan stilfolian vojon kongruantan kun {stylesheet_path_regex}</string>
     <string name="ext__validation__enter_property">Bonvolu enigi variablan nomon</string>
     <string name="ext__validation__error_property">Bonvolu enigi validan nomon de variablo kongruantan kun {variable_name_regex}</string>
-    <string name="ext__validation__enter_color">Bonvolu enigi koloran ĉenon</string>
-    <string name="ext__validation__error_color">Bonvolu enigi validan koloran ĉenon</string>
     <string name="ext__validation__enter_dp_size">Bonvolu enigi grandon je dp</string>
     <string name="ext__validation__enter_valid_number">Bonvolu enigi validan nombron</string>
     <string name="ext__validation__enter_positive_number">Bonvolu enigi pozitivan nombron (&gt;=0)</string>
@@ -638,8 +627,6 @@
     <string name="enum__space_bar_mode__nothing" comment="Enum value label">Nenio</string>
     <string name="enum__space_bar_mode__current_language" comment="Enum value label">Aktuala lingvo</string>
     <string name="enum__space_bar_mode__space_bar_key" comment="Enum value label">␣</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Uzi sistemajn lingvojn</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">Uzi klavarajn subspecojn</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">Neniu ago</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">Baskuli al antaŭa klavara reĝimo</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">Baskuli al sekva klavara reĝimo</string>

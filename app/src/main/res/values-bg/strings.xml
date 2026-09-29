@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Емоции</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Предпочитан цвят на кожата за емоции</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Предпочитана прическа за емоции</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">История на емоциите</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">Включване на историята на емоциите</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">Запазване на използваните емоции за по-бърз достъп</string>
@@ -355,7 +354,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">Звук при докосване на клавиш</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">Звук при задържане на клавиш</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">Звук при продължително задържане на клавиш</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">Звук при жестове</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">Звук при движение на жест</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">Тактилна обратна връзка / вибрация</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">Тактилна обратна връзка</string>
@@ -368,12 +366,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Вибрация при докосване на клавиш</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Вибрация при задържане на клавиш</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">Вибрация при продължително задържане на клавиш</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">Вибриране при жестове</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">Вибриране при движение на жест</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">пример: клавиши, бутони, раздели на емоции</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">пример: изскачаща подсказка</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">пример: клавиш за изтриване</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">не е разработено</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">пример: придвижване на курсора с жест</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Клавиатура</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">Ред с цифрите</string>
@@ -430,11 +426,6 @@
     <string name="pref__spelling__title" comment="Preference group title">Поверка на правописа</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Изключено от системните настройки. Правописмите грешки няма да бъдат подчертавани с червено. Докоснете, за да промените.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">Не е избрана услуга за проверка на правописа в текстови полета. Докоснете, за да промените.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Езици</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">Използване на имената от контактите</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">Търси в имената от списъка с контакти</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">Потребителски речнци</string>
-    <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref">Търси в потребителските речници</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">Потребителски речници</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Системен потребителски речник</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">Предлагат се думи от системния потребителски речник</string>
@@ -643,8 +634,6 @@
     <string name="devtools__show_primary_clip__summary" comment="Summary of Show primary clip in Devtools">Слой с текущото съдържание на междинната памет</string>
     <string name="devtools__show_input_state_overlay__label" comment="Label of Show input cache overlay in Devtools">Слой за състояние на полето за въвеждане</string>
     <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">Слой със състоянието на полето за въвеждане, за отстраняване на дефекти</string>
-    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools">Слой за проверка на правописа</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">Слой със съдържанието от проверката на правопис, за отстраняване на дефекти</string>
     <string name="devtools__show_inline_autofill_overlay__label">Автоматично попълване в слой</string>
     <string name="devtools__show_inline_autofill_overlay__summary">Слой с резултатите от автоматичното попълване, за отстраняване на дефекти</string>
     <string name="devtools__show_key_touch_boundaries__label" comment="Label of Show key touch boundaries in Devtools">Видим контур на клавишите</string>
@@ -700,10 +689,7 @@
     <string name="ext__error__not_found_title">Добавката не е намерена</string>
     <string name="ext__error__not_found_description">Няма добавка с идентификатор „{id}“.</string>
     <string name="ext__editor__title_create_any">Създаване на добавка</string>
-    <string name="ext__editor__title_create_keyboard">Създаване на добавка с клавиатура</string>
     <string name="ext__editor__title_create_theme">Създаване на добавка с тема</string>
-    <string name="ext__editor__title_edit_any">Променяне</string>
-    <string name="ext__editor__title_edit_keyboard">Промяна на добавка с клавиатура</string>
     <string name="ext__editor__title_edit_theme">Промяна на добавка с тема</string>
     <string name="ext__editor__metadata__title">Управление на мета данни</string>
     <string name="ext__editor__metadata__title_invalid">Недействителни мета данни</string>
@@ -712,7 +698,6 @@
     <string name="ext__editor__files__title">Управление на архиви</string>
     <string name="ext__editor__files__type_fonts">Шрифтове</string>
     <string name="ext__editor__files__type_images">Изображения</string>
-    <string name="ext__editor__create_component__title">Създаване на компонент</string>
     <string name="ext__editor__create_component__title_theme">Създаване на тема</string>
     <string name="ext__editor__create_component__from_empty">Празна</string>
     <string name="ext__editor__create_component__from_existing">От съществуваща</string>
@@ -746,8 +731,6 @@
     <string name="ext__validation__error_stylesheet_path">Въведете път към стилов лист, удовлетворяващ регулярния израз {stylesheet_path_regex}</string>
     <string name="ext__validation__enter_property">Въведете име на променливата</string>
     <string name="ext__validation__error_property">Въведете име на променлива, удовлетворяващо регулярния израз {variable_name_regex}</string>
-    <string name="ext__validation__enter_color">Въведете низ на цвят</string>
-    <string name="ext__validation__error_color">Въведете низ на съществуващ цвят</string>
     <string name="ext__validation__enter_dp_size">Въведете размер на dp</string>
     <string name="ext__validation__enter_valid_number">Въведете число</string>
     <string name="ext__validation__enter_positive_number">Въведете положително число (&gt;=0)</string>
@@ -921,8 +904,6 @@
     <string name="enum__space_bar_mode__nothing" comment="Enum value label">Без етикет</string>
     <string name="enum__space_bar_mode__current_language" comment="Enum value label">Текущият език</string>
     <string name="enum__space_bar_mode__space_bar_key" comment="Enum value label">␣</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Използване на системните езици</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">Използване на клавиатурни подредби</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">Без действие</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">Предишен режим на клавиатура</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">Следващ режим на клавиатура</string>

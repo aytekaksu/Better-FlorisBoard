@@ -9,7 +9,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Emojis</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Preferred emoji skin tone</string>
-    <string name="prefs__media__emoji_preferred_hair_style" tools:ignore="UnusedResources">Preferred emoji hair style</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emoji history</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">Enable emoji history</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">Retain recently used emojis for quick access</string>
@@ -402,7 +401,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">Key press sounds</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">Key long press sounds</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">Key repeated action sounds</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title" tools:ignore="UnusedResources">Gesture swipe sounds</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">Gesture moving swipe sounds</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">Haptic feedback / Vibration</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">Enable haptic feedback</string>
@@ -415,12 +413,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Key press vibration</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Key long press vibration</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">Key repeated action vibration</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title" tools:ignore="UnusedResources">Gesture swipe vibration</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">Gesture moving swipe vibration</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">e.g. keys, buttons, emoji tabs</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">e.g. popup menu</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">e.g. delete key</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary" tools:ignore="UnusedResources">not implemented</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">e.g. cursor control swipe</string>
 
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Keyboard</string>
@@ -500,11 +496,6 @@
     <string name="pref__spelling__title" comment="Preference group title">Spelling</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Disabled system-wide. No red lines will appear in text fields for incorrect words. Tap to change.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">No inline text spell checker service set. Tap to change.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref" tools:ignore="UnusedResources">Languages</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref" tools:ignore="UnusedResources">Use names from contacts</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref" tools:ignore="UnusedResources">Look up names from your contact list</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref" tools:ignore="UnusedResources">Use user dictionary entries</string>
-    <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref" tools:ignore="UnusedResources">Look up entries from the user dictionaries</string>
 
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">User dictionaries</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Enable system user dictionary</string>
@@ -740,8 +731,6 @@
     <string name="devtools__show_primary_clip__summary" comment="Summary of Show clipboard metadata in Devtools">Shows the primary clipboard item’s type and flags</string>
     <string name="devtools__show_input_state_overlay__label" comment="Label of Show input cache overlay in Devtools">Show input state overlay</string>
     <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">Shows content lengths and state without text</string>
-    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools" tools:ignore="UnusedResources">Show spelling overlay</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools" tools:ignore="UnusedResources">Shows spelling outcomes and suggestion counts</string>
     <string name="devtools__show_inline_autofill_overlay__label">Show inline autofill overlay</string>
     <string name="devtools__show_inline_autofill_overlay__summary">Overlays the current inline autofill results for debugging</string>
     <string name="devtools__show_key_touch_boundaries__label" comment="Label of Show key touch boundaries in Devtools">Show key touch boundaries</string>
@@ -800,10 +789,7 @@
     <string name="ext__error__not_found_title">Extension not found</string>
     <string name="ext__error__not_found_description">No extension with ID "{id}" could be found.</string>
     <string name="ext__editor__title_create_any">Create extension</string>
-    <string name="ext__editor__title_create_keyboard" tools:ignore="UnusedResources">Create keyboard extension</string>
     <string name="ext__editor__title_create_theme">Create theme extension</string>
-    <string name="ext__editor__title_edit_any" tools:ignore="UnusedResources">Edit extension</string>
-    <string name="ext__editor__title_edit_keyboard" tools:ignore="UnusedResources">Edit keyboard extension</string>
     <string name="ext__editor__title_edit_theme">Edit theme extension</string>
     <string name="ext__editor__open_failure">The extension could not be opened safely. Go back and try again.</string>
     <string name="ext__editor__save_failure">The extension could not be saved. Your changes are still open; try again.</string>
@@ -817,7 +803,6 @@
     <string name="ext__editor__files__title">Manage archive files</string>
     <string name="ext__editor__files__type_fonts">Fonts</string>
     <string name="ext__editor__files__type_images">Images</string>
-    <string name="ext__editor__create_component__title" tools:ignore="UnusedResources">Create component</string>
     <string name="ext__editor__create_component__title_theme">Create theme</string>
     <string name="ext__editor__create_component__from_empty">Empty</string>
     <string name="ext__editor__create_component__from_existing">From existing</string>
@@ -851,8 +836,6 @@
     <string name="ext__validation__error_stylesheet_path">Please enter a safe relative stylesheet path</string>
     <string name="ext__validation__enter_property">Please enter a variable name</string>
     <string name="ext__validation__error_property">Please enter a valid variable name matching {variable_name_regex}</string>
-    <string name="ext__validation__enter_color" tools:ignore="UnusedResources">Please enter a color string</string>
-    <string name="ext__validation__error_color" tools:ignore="UnusedResources">Please enter a valid color string</string>
     <string name="ext__validation__enter_dp_size">Please enter a dp size</string>
     <string name="ext__validation__enter_valid_number">Please enter a valid number</string>
     <string name="ext__validation__enter_positive_number">Please enter a positive number (>=0)</string>
@@ -1078,8 +1061,6 @@
     <string name="enum__space_bar_language_label_mode__language_name" comment="Enum value label">Language name</string>
     <string name="enum__space_bar_language_label_mode__language_code" comment="Enum value label">Language code</string>
 
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label" tools:ignore="UnusedResources">Use system languages</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label" tools:ignore="UnusedResources">Use keyboard subtypes</string>
 
     <string name="enum__swipe_activation_area__keys_only" comment="Enum value label">Keys only</string>
     <string name="enum__swipe_activation_area__entire_keyboard" comment="Enum value label">Entire keyboard, including gaps</string>

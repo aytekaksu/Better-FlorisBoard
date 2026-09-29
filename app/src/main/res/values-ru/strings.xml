@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Эмодзи</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Предпочтительный цвет кожи эмодзи</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Предпочтительная прическа эмодзи</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">История эмодзи</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">Включить историю эмодзи</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">Сохраняйте недавно использованные эмодзи для быстрого доступа</string>
@@ -350,7 +349,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">Звук нажатия кнопки</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">Звук долгого нажатия кнопки</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">Звук автоповтора ввода кнопки</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">Звук жестов свайпа</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">Звук жестов перетаскивания</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">Виброотклик / вибрация</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">Использовать виброотклик</string>
@@ -363,12 +361,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Вибрация нажатия кнопки</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Вибрация долгого нажатия кнопки</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">Вибрация автоповтора ввода кнопки</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">Вибрация жестов смахивания</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">Вибрация жестов перетаскивания</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">например кнопки, служебные клавиши или вкладки с эмодзи</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">например, всплывающее меню</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">например, кнопка «удалить»</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">не реализовано</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">например, жест перемещения курсора</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Клавиатура</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">Цифровой ряд</string>
@@ -424,11 +420,6 @@
     <string name="pref__spelling__title" comment="Preference group title">Орфография</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Отключено для всей системы. В случае написания слов неправильно в текстовых полях не появятся красные подчёркивания. Нажмите, чтобы изменить.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">Не настроена служба проверки орфографии текстовых полей. Нажмите, чтобы изменить.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Язык</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">Использовать имена из контактов</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">Поиск имен в списке контактов</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">Использовать записи из словаря пользователя</string>
-    <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref">Поиск записей в пользовательских словарях</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">Пользовательские словари</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Использовать системный словарь пользователя</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">Предлагать слова, находящиеся в системном словаре пользователя</string>
@@ -640,8 +631,6 @@
     <string name="devtools__show_primary_clip__summary" comment="Summary of Show primary clip in Devtools">Наложение текущей основной записи буфера обмена</string>
     <string name="devtools__show_input_state_overlay__label" comment="Label of Show input cache overlay in Devtools">Показывать состояние ввода наложением</string>
     <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">Показывать наложением текущее состояние ввода для отладки</string>
-    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools">Показывать орфографию наложением</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">Показывать наложением текущие результаты проверки орфографии для отладки</string>
     <string name="devtools__show_inline_autofill_overlay__label">Показать встроенное окно автозаполнения</string>
     <string name="devtools__show_inline_autofill_overlay__summary">Отображает текущие результаты автозаполнения строки для отладки</string>
     <string name="devtools__show_key_touch_boundaries__label" comment="Label of Show key touch boundaries in Devtools">Показывать границы нажатия клавиш</string>
@@ -690,10 +679,7 @@
     <string name="ext__error__not_found_title">Расширение не найдено</string>
     <string name="ext__error__not_found_description">Не найдено расширения с ID \"{id}\".</string>
     <string name="ext__editor__title_create_any">Создать расширение</string>
-    <string name="ext__editor__title_create_keyboard">Создать расширение клавиатуры</string>
     <string name="ext__editor__title_create_theme">Создать расширение темы</string>
-    <string name="ext__editor__title_edit_any">Редактировать расширение</string>
-    <string name="ext__editor__title_edit_keyboard">Редактировать расширение клавиатуры</string>
     <string name="ext__editor__title_edit_theme">Редактировать расширение темы</string>
     <string name="ext__editor__metadata__title">Управление метаданными</string>
     <string name="ext__editor__metadata__title_invalid">Неправильные метаданные</string>
@@ -702,7 +688,6 @@
     <string name="ext__editor__files__title">Управление файлами архивов</string>
     <string name="ext__editor__files__type_fonts">Шрифты</string>
     <string name="ext__editor__files__type_images">Изображения</string>
-    <string name="ext__editor__create_component__title">Создать компонент</string>
     <string name="ext__editor__create_component__title_theme">Создать тему</string>
     <string name="ext__editor__create_component__from_empty">Пустой</string>
     <string name="ext__editor__create_component__from_existing">Из существующей</string>
@@ -736,8 +721,6 @@
     <string name="ext__validation__error_stylesheet_path">Укажите правильный путь к стилю, соответствующий {stylesheet_path_regex}</string>
     <string name="ext__validation__enter_property">Укажите название переменной</string>
     <string name="ext__validation__error_property">Укажите правильное название переменной, соответствующее {variable_name_regex}</string>
-    <string name="ext__validation__enter_color">Укажите строку цвета</string>
-    <string name="ext__validation__error_color">Укажите правильную строку цвета</string>
     <string name="ext__validation__enter_dp_size">Укажите размер в dp</string>
     <string name="ext__validation__enter_valid_number">Укажите правильное число</string>
     <string name="ext__validation__enter_positive_number">Укажите положительное число (&gt;=0)</string>
@@ -913,8 +896,6 @@
     <string name="enum__space_bar_mode__nothing" comment="Enum value label">Без надписи</string>
     <string name="enum__space_bar_mode__current_language" comment="Enum value label">Текущий язык</string>
     <string name="enum__space_bar_mode__space_bar_key" comment="Enum value label">␣</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Использовать системные языки</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">Использовать раскладки клавиатуры</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">Не задано</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">Перейти к предыдущему режиму клавиатуры</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">Перейти к следующему режиму клавиатуры</string>

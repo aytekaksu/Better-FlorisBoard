@@ -15,7 +15,8 @@ not mix an upstream import with feature work.
 
 After an upstream sync, keep localized changes out of ordinary pull requests
 and reassess any newly imported keys separately. Do not use upstream Crowdin
-for fork-specific text.
+for fork-specific text. Before restoring a deleted resource key or its
+translations, confirm it has a current consumer.
 
 ## Conflict policy
 
