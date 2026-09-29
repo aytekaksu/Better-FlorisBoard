@@ -58,7 +58,6 @@ import kotlinx.serialization.serializer
 import org.florisboard.lib.android.FileObserver
 import org.florisboard.lib.android.writeFromFile
 import org.florisboard.lib.kotlin.io.FsDir
-import org.florisboard.lib.kotlin.throwOnFailure
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -251,7 +250,7 @@ class ExtensionManager(context: Context) {
                     check(sourceRef.isAssets) { "Unsupported extension source." }
                     null
                 }
-                ZipUtils.unzip(appContext, sourceRef, destination).throwOnFailure()
+                ZipUtils.unzip(appContext, sourceRef, destination).getOrThrow()
                 fingerprint
             }
         }
@@ -269,7 +268,7 @@ class ExtensionManager(context: Context) {
         } else {
             ZipUtils.zipNew(appContext, stagingDir, destination)
         }
-        result.throwOnFailure()
+        result.getOrThrow()
         ext.sourceRef = destination
         ext.sourceArchiveFingerprint = fingerprint(
             ext = ext,
@@ -436,8 +435,8 @@ class ExtensionManager(context: Context) {
                     }
                 }
                 sourceRef.isAssets -> runInterruptible(Dispatchers.IO) {
-                    ZipUtils.unzip(appContext, sourceRef, workspace).throwOnFailure()
-                    ZipUtils.zip(appContext, workspace, uri).throwOnFailure()
+                    ZipUtils.unzip(appContext, sourceRef, workspace).getOrThrow()
+                    ZipUtils.zip(appContext, workspace, uri).getOrThrow()
                 }
                 else -> error("Unsupported extension source")
             }

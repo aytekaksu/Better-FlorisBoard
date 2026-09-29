@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-@file:Suppress("NOTHING_TO_INLINE")
-
 package org.florisboard.lib.kotlin
 
 import kotlinx.coroutines.CoroutineScope
@@ -30,24 +28,4 @@ inline fun <T> CoroutineScope.runCatchingAsync(
     return this.async {
         runCatching { block() }
     }
-}
-
-inline fun resultOk(): Result<Unit> {
-    return Result.success(Unit)
-}
-
-inline fun <T> resultOk(value: T): Result<T> {
-    return Result.success(value)
-}
-
-inline fun <T> resultErr(error: Throwable): Result<T> {
-    return Result.failure(error)
-}
-
-inline fun <T> resultErrStr(error: String): Result<T> {
-    return Result.failure(Exception(error))
-}
-
-inline fun Result<*>.throwOnFailure() {
-    getOrThrow()
 }
