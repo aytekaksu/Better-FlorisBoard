@@ -98,12 +98,9 @@ fork-specific text.
 
 During this development phase, change only the English source file at
 `app/src/main/res/values/strings.xml`. Ordinary pull requests must not edit
-generated/localized `values-*/strings.xml` files. An issue-backed cleanup may
-delete whole localized entries only when the same keys are removed from English;
-it must not add or rewrite translations. The trusted-base workflow checks that
-limited exception. Because a pull request can edit its own workflow file, this
-check does not replace maintainer review of workflow changes or current-head
-approval for outside contributions.
+generated/localized `values-*/strings.xml` files. Because a pull request can
+edit its own workflow file, this check does not replace maintainer review of
+workflow changes or current-head approval for outside contributions.
 
 Open an issue before any other translation work. This fork still needs its own
 translation source before accepting ongoing localized edits.
