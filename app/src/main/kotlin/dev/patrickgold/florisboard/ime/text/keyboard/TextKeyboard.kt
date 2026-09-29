@@ -197,18 +197,16 @@ class TextKeyboard(
         private var keyIndex: Int = 0
 
         override fun hasNext(): Boolean {
-            return rowIndex < arrangement.size && keyIndex < arrangement[rowIndex].size
+            while (rowIndex < arrangement.size && keyIndex >= arrangement[rowIndex].size) {
+                rowIndex++
+                keyIndex = 0
+            }
+            return rowIndex < arrangement.size
         }
 
         override fun next(): TextKey {
-            val next = arrangement[rowIndex][keyIndex]
-            if (keyIndex + 1 == arrangement[rowIndex].size) {
-                rowIndex++
-                keyIndex = 0
-            } else {
-                keyIndex++
-            }
-            return next
+            if (!hasNext()) throw NoSuchElementException()
+            return arrangement[rowIndex][keyIndex++]
         }
     }
 }

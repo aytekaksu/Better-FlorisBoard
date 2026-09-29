@@ -23,11 +23,50 @@ import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyType
 import dev.patrickgold.florisboard.lib.FlorisRect
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 
 class TextKeyboardHitTestTest : FunSpec({
+    test("key iteration crosses empty rows without losing key order or hit targets") {
+        for (rowSizes in listOf(
+            listOf(0, 2, 1),
+            listOf(2, 0, 1),
+            listOf(0, 0, 2, 0, 0, 1, 0, 0),
+            listOf(2, 1, 0),
+            listOf(2, 1),
+            listOf(0, 0),
+            emptyList(),
+        )) {
+            val keys = listOf('a', 'b', 'c').map { TextKey(TextKeyData(code = it.code, label = it.toString())) }
+            var keyCount = 0
+            val rows = rowSizes.map { size -> Array(size) { keys[keyCount++] } }.toTypedArray()
+            val keyboard = createTextKeyboard(KeyboardMode.CHARACTERS, rows)
+            keys.forEachIndexed { index, key -> key.setTestBounds(index * 40f, 0f, (index + 1) * 40f, 40f) }
+            val iterator = keyboard.keys()
+            val visited = buildList {
+                while (iterator.hasNext()) {
+                    iterator.hasNext() shouldBe true
+                    add(iterator.next().computedData.label)
+                }
+            }
+
+            val expectedLabels = listOf("a", "b", "c").take(keyCount)
+            visited shouldBe expectedLabels
+            val directIterator = keyboard.keys()
+            List(keyCount) { directIterator.next().computedData.label } shouldBe expectedLabels
+            shouldThrow<NoSuchElementException> { directIterator.next() }
+            if (keyCount > 0) {
+                keyboard.getKeyForPos((keyCount - 1) * 40f + 20f, 20f) shouldBe keys[keyCount - 1]
+            } else {
+                keyboard.getKeyForPos(20f, 20f).shouldBeNull()
+            }
+            iterator.hasNext() shouldBe false
+            shouldThrow<NoSuchElementException> { iterator.next() }
+        }
+    }
+
     test("directly touched n v and b centers beat adjacent predictive boosts") {
         val fixture = hitTestFixture()
 
