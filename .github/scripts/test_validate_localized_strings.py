@@ -2,7 +2,7 @@
 
 import unittest
 
-from validate_localized_strings import InvalidLocalizedEdit, validate_deletions
+from validate_localized_strings import InvalidLocalizedEdit, string_names, validate_deletions
 
 
 BASE = b'<resources>\n    <string name="keep">Keep</string>\n    <string name="old">Old</string>\n</resources>\n'
@@ -22,8 +22,10 @@ class ValidateLocalizedStringsTest(unittest.TestCase):
 
     def test_rejects_translation_edits_and_unrelated_deletions(self):
         old_line = b'    <string name="old">Old</string>\n'
+        still_english = BASE.replace(old_line, b'    <item type="string" name="old">Old</item>\n')
         invalid = (
             (BASE, HEAD, set()),
+            (BASE, HEAD, string_names(BASE) - string_names(still_english)),
             (BASE, HEAD.replace(b"Keep", b"Changed"), {"old"}),
             (BASE, HEAD.replace(b"</resources>", b'    <string name="new">New</string>\n</resources>'), {"old"}),
             (BASE, b'<resources>\n    <string name="old">Old</string>\n</resources>\n', {"old"}),

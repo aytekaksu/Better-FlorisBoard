@@ -28,7 +28,10 @@ def string_names(xml):
         raise InvalidLocalizedEdit("Resource XML is invalid") from error
     if root.tag != "resources":
         raise InvalidLocalizedEdit("Resource XML needs a resources root")
-    names = [element.get("name") for element in root if element.tag == "string"]
+    names = [
+        element.get("name") for element in root
+        if element.tag == "string" or (element.tag == "item" and element.get("type") == "string")
+    ]
     if None in names or len(names) != len(set(names)):
         raise InvalidLocalizedEdit("Resource string names must be unique")
     return set(names)
