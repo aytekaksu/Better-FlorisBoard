@@ -185,6 +185,14 @@ Public API codecs and Robolectric service lifecycle:
 ./gradlew :lib:autocorrect-api:testDebugUnitTest
 ```
 
+Real editor replacement and one-shot autocorrection revert through Android's
+input connection and selection acknowledgement:
+
+```shell
+./gradlew :app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.patrickgold.florisboard.ime.editor.EditorKeyboardStateAndroidTest
+```
+
 Touch-surface integration when the trace or gesture path changes:
 
 ```shell
