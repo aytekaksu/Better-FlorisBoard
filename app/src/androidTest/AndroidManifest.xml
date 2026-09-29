@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
         <provider
+            android:name="dev.patrickgold.florisboard.app.settings.advanced.BackupShareProbeProvider"
+            android:authorities="dev.patrickgold.florisboard.test.backup-share-probe"
+            android:exported="true"
+            android:process=":backup_share_probe" />
+        <provider
             android:name="dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaTestProvider"
             android:authorities="dev.patrickgold.florisboard.test.clipboard-source"
             android:exported="false"

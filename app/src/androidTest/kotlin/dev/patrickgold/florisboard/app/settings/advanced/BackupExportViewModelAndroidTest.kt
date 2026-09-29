@@ -17,6 +17,7 @@
 package dev.patrickgold.florisboard.app.settings.advanced
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
@@ -24,10 +25,15 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.patrickgold.florisboard.lib.cache.CacheManager
+import java.io.ByteArrayInputStream
 import java.io.File
+import java.util.zip.ZipInputStream
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -111,10 +117,11 @@ class BackupExportViewModelAndroidTest {
     }
 
     @Test
-    fun sharedArchiveRemainsAvailableUntilRouteOwnerCloses() = runBlocking {
+    fun sharedArchiveRemainsReadableAfterAnotherBackupAndRouteClose() = runBlocking {
         val manager = CacheManager(context)
         val existing = workspaceDirectories(manager)
         val owner = TestOwner()
+        var launchedUri: Uri? = null
         try {
             val model = onMain { ViewModelProvider(owner)[BackupExportViewModel::class.java] }
             onMain {
@@ -123,19 +130,47 @@ class BackupExportViewModelAndroidTest {
                 model.submit(context, manager)
             }
             awaitPhase(model, BackupExportPhase.SHARE_PENDING)
-            val source = onlyNewWorkspace(manager, existing)
-            onMain {
-                assertNotNull(model.claimShareWorkspace())
+            val sharedUri = withContext(Dispatchers.Main) {
+                val uri = requireNotNull(model.claimShareUri())
+                val chooser = Backup.createShareIntent(context, uri)
+                val send = requireNotNull(chooser.getParcelableExtra<Intent>(Intent.EXTRA_INTENT))
                 model.onShareLaunched()
+                requireNotNull(send.getParcelableExtra<Uri>(Intent.EXTRA_STREAM))
             }
-            val reattached = onMain { ViewModelProvider(owner)[BackupExportViewModel::class.java] }
-            assertEquals(BackupExportPhase.IDLE, reattached.phase)
-            assertTrue(source.isDirectory)
+            launchedUri = sharedUri
+            val originalBytes = context.contentResolver.openInputStream(sharedUri).use { input ->
+                requireNotNull(input).readBytes()
+            }
+            assertTrue(originalBytes.isNotEmpty())
+            var hasMetadata = false
+            var hasManifest = false
+            ZipInputStream(ByteArrayInputStream(originalBytes)).use { zip ->
+                while (true) {
+                    val entry = zip.nextEntry ?: break
+                    when (entry.name) {
+                        "backup_metadata.json" -> hasMetadata = zip.readBytes().isNotEmpty()
+                        "backup_manifest.json" -> hasManifest = zip.readBytes().isNotEmpty()
+                    }
+                }
+            }
+            assertTrue(hasMetadata && hasManifest)
 
+            onMain { model.submit(context, manager) }
+            awaitPhase(model, BackupExportPhase.SHARE_PENDING)
             onMain { owner.viewModelStore.clear() }
-            awaitRemoval(source)
+            withTimeout(30_000) {
+                while (workspaceDirectories(manager) != existing) delay(20)
+            }
+            context.contentResolver.openInputStream(sharedUri).use { input ->
+                assertArrayEquals(originalBytes, requireNotNull(input).readBytes())
+            }
         } finally {
             onMain { owner.viewModelStore.clear() }
+            launchedUri?.let { uri ->
+                BackupShareLeaseStore(context).release(
+                    BackupShareLeaseStore.Lease(uri, uri.pathSegments[1]),
+                )
+            }
         }
     }
 

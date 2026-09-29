@@ -34,12 +34,15 @@ class BackupShareIntentAndroidTest {
     fun chooserSendsBackupZipMimeUriAndReadGrant() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val workspace = CacheManager(context).backupAndRestore.new()
+        val store = BackupShareLeaseStore(context)
+        var lease: BackupShareLeaseStore.Lease? = null
 
         try {
             val backupBytes = byteArrayOf(1, 3, 3, 7)
             val zipFile = workspace.outputDir.resolve("backup-test.zip")
             zipFile.writeBytes(backupBytes)
-            val chooser = Backup.createShareIntent(context, zipFile)
+            lease = store.publish(zipFile)
+            val chooser = Backup.createShareIntent(context, lease.uri)
             val send = requireNotNull(chooser.getParcelableExtra<Intent>(Intent.EXTRA_INTENT))
             val stream = requireNotNull(send.getParcelableExtra<Uri>(Intent.EXTRA_STREAM))
 
@@ -47,13 +50,16 @@ class BackupShareIntentAndroidTest {
             assertEquals(Intent.ACTION_SEND, send.action)
             assertEquals("application/zip", send.type)
             assertEquals("content", stream.scheme)
-            assertEquals(Backup.FILE_PROVIDER_AUTHORITY, stream.authority)
+            assertEquals(BackupShareLeaseStore.AUTHORITY, stream.authority)
             assertTrue(chooser.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
+            assertTrue(send.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
+            assertEquals(stream, chooser.clipData?.getItemAt(0)?.uri)
             context.contentResolver.openInputStream(stream).use { input ->
                 assertArrayEquals(backupBytes, requireNotNull(input).readBytes())
             }
         } finally {
             workspace.close()
+            lease?.let(store::release)
         }
     }
 }
