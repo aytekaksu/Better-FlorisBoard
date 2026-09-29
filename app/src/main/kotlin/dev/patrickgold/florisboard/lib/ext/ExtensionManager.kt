@@ -32,9 +32,6 @@ import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.io.BoundedExtensionArchive
 import dev.patrickgold.florisboard.lib.io.FlorisRef
 import dev.patrickgold.florisboard.lib.io.ZipUtils
-import dev.patrickgold.florisboard.lib.io.delete
-import dev.patrickgold.florisboard.lib.io.listDirs
-import dev.patrickgold.florisboard.lib.io.listFiles
 import dev.patrickgold.florisboard.lib.io.loadTextAsset
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -462,7 +459,7 @@ class ExtensionManager(context: Context) {
             check(canDelete(ext)) { "Cannot delete extension!" }
             requireUnchangedInternalArchive(ext)
             ext.unload(appContext)
-            ext.sourceRef!!.delete(appContext)
+            ext.sourceRef!!.absoluteFile(appContext).delete()
         }
     }
 
@@ -525,7 +522,13 @@ class ExtensionManager(context: Context) {
         }
 
         private fun indexAssetsModule(): List<T> {
-            val extRefs = assetsModuleRef.listDirs(appContext).getOrElse { error ->
+            val extRefs = runCatching {
+                val path = assetsModuleRef.relativePath
+                appContext.assets.list(path)?.mapNotNull { fileName ->
+                    val children = appContext.assets.list("$path/$fileName") ?: return@mapNotNull null
+                    if (children.isNotEmpty()) assetsModuleRef.subRef(fileName) else null
+                }.orEmpty()
+            }.getOrElse { error ->
                 if (error is CancellationException || error is InterruptedException) throw error
                 flogError { "Failed to list bundled extensions: error=${error.javaClass.simpleName}" }
                 return emptyList()
@@ -549,7 +552,15 @@ class ExtensionManager(context: Context) {
         }
 
         private fun indexInternalModule(): List<T> {
-            val extRefs = internalModuleRef.listFiles(appContext).getOrElse { error ->
+            val extRefs = runCatching {
+                val dir = internalModuleRef.absoluteFile(appContext)
+                if (dir.isDirectory) {
+                    dir.listFiles()!!.filter { it.isFile }
+                        .map { internalModuleRef.subRef(it.name) }
+                } else {
+                    emptyList()
+                }
+            }.getOrElse { error ->
                 if (error is CancellationException || error is InterruptedException) throw error
                 flogError { "Failed to list installed extensions: error=${error.javaClass.simpleName}" }
                 return emptyList()

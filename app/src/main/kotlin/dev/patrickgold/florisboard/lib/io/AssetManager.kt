@@ -28,13 +28,10 @@ import dev.patrickgold.florisboard.ime.keyboard.VariationSelector
 import dev.patrickgold.florisboard.ime.text.keyboard.AutoTextKeyData
 import dev.patrickgold.florisboard.ime.text.keyboard.MultiTextKeyData
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
-import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
-import org.florisboard.lib.kotlin.resultErr
 import org.florisboard.lib.kotlin.resultErrStr
-import org.florisboard.lib.kotlin.resultOk
 
 val DefaultJsonConfig = Json {
     classDiscriminator = "$"
@@ -63,55 +60,9 @@ val DefaultJsonConfig = Json {
     }
 }
 
-fun FlorisRef.delete(context: Context) {
-    when {
-        isCache || isInternal -> {
-            absoluteFile(context).delete()
-        }
-        else -> error("Can not delete directory/file in location '${scheme}'.")
-    }
-}
-
-fun FlorisRef.listFiles(context: Context) = list(context, directories = false)
-
-fun FlorisRef.listDirs(context: Context) = list(context, directories = true)
-
-private fun FlorisRef.list(appContext: Context, directories: Boolean) = runCatching<List<FlorisRef>> {
-    when {
-        isAssets -> {
-            appContext.assets.list(relativePath)?.mapNotNull { fileName ->
-                val subList = appContext.assets.list("${relativePath}/$fileName") ?: return@mapNotNull null
-                if (directories == subList.isNotEmpty()) subRef(fileName) else null
-            }.orEmpty()
-        }
-        isCache || isInternal -> {
-            val dir = absoluteFile(appContext)
-            if (dir.isDirectory) {
-                dir.listFiles()!!
-                    .filter { if (directories) it.isDirectory else it.isFile }
-                    .map { subRef(it.name) }
-            } else {
-                emptyList()
-            }
-        }
-        else -> error("Unsupported FlorisRef source!")
-    }
-}
-
 fun FlorisRef.loadTextAsset(context: Context): Result<String> {
-    return when {
-        isAssets -> runCatching {
-            context.assets.open(relativePath).reader(Charsets.UTF_8).use { it.readText() }
-        }
-        isCache || isInternal -> {
-            val file = File(absolutePath(context))
-            val contents = runCatching { file.readText(Charsets.UTF_8) }.getOrElse { return resultErr(it) }
-            if (contents.isBlank()) {
-                resultErrStr("File is blank!")
-            } else {
-                resultOk(contents)
-            }
-        }
-        else -> resultErrStr("Unsupported asset ref!")
+    if (!isAssets) return resultErrStr("Unsupported asset ref!")
+    return runCatching {
+        context.assets.open(relativePath).reader(Charsets.UTF_8).use { it.readText() }
     }
 }
