@@ -68,8 +68,6 @@ class LanguagePackExtension(
     @Transient private var hanShapeBasedSQLiteDatabase: SQLiteDatabase? = null
 
     override fun onAfterLoad(context: Context, cacheDir: FsDir) {
-        super.onAfterLoad(context, cacheDir)
-
         synchronized(hanDatabaseLock) {
             closeHanDatabaseLocked()
             val databasePath = SafeRelativePath.parse(hanShapeBasedSQLite)
@@ -97,12 +95,8 @@ class LanguagePackExtension(
     }
 
     override fun onBeforeUnload(context: Context, cacheDir: FsDir) {
-        try {
-            super.onBeforeUnload(context, cacheDir)
-        } finally {
-            synchronized(hanDatabaseLock) {
-                closeHanDatabaseLocked()
-            }
+        synchronized(hanDatabaseLock) {
+            closeHanDatabaseLocked()
         }
     }
 
