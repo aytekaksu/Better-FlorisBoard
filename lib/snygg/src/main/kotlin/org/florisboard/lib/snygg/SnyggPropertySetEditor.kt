@@ -52,6 +52,7 @@ import org.florisboard.lib.snygg.value.SnyggValue
 import org.florisboard.lib.snygg.value.isInherit
 import org.florisboard.lib.snygg.value.isUndefined
 import java.util.UUID
+import kotlin.reflect.KProperty
 
 sealed interface SnyggPropertySetEditor {
     fun build(): SnyggPropertySet
@@ -68,9 +69,15 @@ class SnyggSinglePropertySetEditor(initProperties: Map<String, SnyggValue>? = nu
     }
 
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun getProperty(key: String): SnyggValue? {
-        return properties[key]
-    }
+    private inline operator fun String.getValue(thisRef: SnyggSinglePropertySetEditor, property: KProperty<*>): SnyggValue? =
+        thisRef.properties[this]
+
+    @Suppress("NOTHING_TO_INLINE")
+    private inline operator fun String.setValue(
+        thisRef: SnyggSinglePropertySetEditor,
+        property: KProperty<*>,
+        value: SnyggValue?,
+    ) = thisRef.setProperty(this, value)
 
     private fun setProperty(key: String, value: SnyggValue?) {
         if (value == null) {
@@ -122,62 +129,28 @@ class SnyggSinglePropertySetEditor(initProperties: Map<String, SnyggValue>? = nu
         throw IllegalArgumentException("Only snygg values are allowed (given value: $v)")
     }
 
-    var background: SnyggValue?
-        get() =  getProperty(Snygg.Background)
-        set(v) = setProperty(Snygg.Background, v)
-    var foreground: SnyggValue?
-        get() =  getProperty(Snygg.Foreground)
-        set(v) = setProperty(Snygg.Foreground, v)
+    var background: SnyggValue? by Snygg.Background
+    var foreground: SnyggValue? by Snygg.Foreground
 
-    var borderColor: SnyggValue?
-        get() =  getProperty(Snygg.BorderColor)
-        set(v) = setProperty(Snygg.BorderColor, v)
-    var borderWidth: SnyggValue?
-        get() =  getProperty(Snygg.BorderWidth)
-        set(v) = setProperty(Snygg.BorderWidth, v)
+    var borderColor: SnyggValue? by Snygg.BorderColor
+    var borderWidth: SnyggValue? by Snygg.BorderWidth
 
-    var fontFamily: SnyggValue?
-        get() =  getProperty(Snygg.FontFamily)
-        set(v) = setProperty(Snygg.FontFamily, v)
-    var fontSize: SnyggValue?
-        get() =  getProperty(Snygg.FontSize)
-        set(v) = setProperty(Snygg.FontSize, v)
-    var fontStyle: SnyggValue?
-        get() =  getProperty(Snygg.FontStyle)
-        set(v) = setProperty(Snygg.FontStyle, v)
-    var fontWeight: SnyggValue?
-        get() =  getProperty(Snygg.FontWeight)
-        set(v) = setProperty(Snygg.FontWeight, v)
-    var margin: SnyggValue?
-        get() =  getProperty(Snygg.Margin)
-        set(v) = setProperty(Snygg.Margin, v)
-    var padding: SnyggValue?
-        get() =  getProperty(Snygg.Padding)
-        set(v) = setProperty(Snygg.Padding, v)
+    var fontFamily: SnyggValue? by Snygg.FontFamily
+    var fontSize: SnyggValue? by Snygg.FontSize
+    var fontStyle: SnyggValue? by Snygg.FontStyle
+    var fontWeight: SnyggValue? by Snygg.FontWeight
+    var margin: SnyggValue? by Snygg.Margin
+    var padding: SnyggValue? by Snygg.Padding
 
-    var shadowColor: SnyggValue?
-        get() =  getProperty(Snygg.ShadowColor)
-        set(v) = setProperty(Snygg.ShadowColor, v)
-    var shadowElevation: SnyggValue?
-        get() =  getProperty(Snygg.ShadowElevation)
-        set(v) = setProperty(Snygg.ShadowElevation, v)
+    var shadowColor: SnyggValue? by Snygg.ShadowColor
+    var shadowElevation: SnyggValue? by Snygg.ShadowElevation
 
-    var shape: SnyggValue?
-        get() =  getProperty(Snygg.Shape)
-        set(v) = setProperty(Snygg.Shape, v)
-    var src: SnyggValue?
-        get() =  getProperty(Snygg.Src)
-        set(v) = setProperty(Snygg.Src, v)
+    var shape: SnyggValue? by Snygg.Shape
+    var src: SnyggValue? by Snygg.Src
 
-    var textAlign: SnyggValue?
-        get() =  getProperty(Snygg.TextAlign)
-        set(v) = setProperty(Snygg.TextAlign, v)
-    var textMaxLines: SnyggValue?
-        get() =  getProperty(Snygg.TextMaxLines)
-        set(v) = setProperty(Snygg.TextMaxLines, v)
-    var textOverflow: SnyggValue?
-        get() =  getProperty(Snygg.TextOverflow)
-        set(v) = setProperty(Snygg.TextOverflow, v)
+    var textAlign: SnyggValue? by Snygg.TextAlign
+    var textMaxLines: SnyggValue? by Snygg.TextMaxLines
+    var textOverflow: SnyggValue? by Snygg.TextOverflow
 
     fun rgbaColor(
         @IntRange(from = RgbaColor.ColorRangeMin.toLong(), to = RgbaColor.ColorRangeMax.toLong())
