@@ -9,6 +9,10 @@ worker and is cancelled when its data, EmojiCompat instance, or editor metadata
 changes. The palette shows empty category grids until the current result is
 ready. Rendering remains in `EmojiPaletteView`.
 
+Variation popups keep every supported choice except the emoji shown on the
+key. Choices wrap after six columns, scroll when taller than four rows, and
+stay within the window. Mixed skin-tone choices remain available.
+
 The palette's root list uses the glyphs and categories from `en.txt` but drops
 names and keywords as the old generated `root.txt` did. The root asset is no
 longer stored twice. A golden hash test guards the exact original root rows.

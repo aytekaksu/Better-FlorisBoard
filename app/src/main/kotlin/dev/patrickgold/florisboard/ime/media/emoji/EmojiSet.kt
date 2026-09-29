@@ -32,8 +32,8 @@ value class EmojiSet(val emojis: List<Emoji>) {
         return emojis[0] // Fallback
     }
 
-    fun variations(withoutSkinTone: EmojiSkinTone = EmojiSkinTone.DEFAULT): List<Emoji> {
+    fun variations(excluding: Emoji): List<Emoji> {
         if (emojis.size == 1) return emptyList() // Fast compute
-        return emojis.filterNot { it.skinTone == withoutSkinTone }
+        return emojis.filterNot { it == excluding }
     }
 }
