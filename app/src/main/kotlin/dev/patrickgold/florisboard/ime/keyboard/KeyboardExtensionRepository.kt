@@ -24,6 +24,7 @@ import dev.patrickgold.florisboard.ime.popup.PopupMappingComponent
 import dev.patrickgold.florisboard.ime.text.composing.Composer
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
 import dev.patrickgold.florisboard.lib.ext.ExtensionIndexState
+import dev.patrickgold.florisboard.lib.io.FlorisRef
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,6 +36,7 @@ import org.florisboard.lib.kotlin.collectIn
 /** All keyboard-extension metadata is published together for one refresh generation. */
 data class KeyboardExtensionSnapshot(
     val generation: Long,
+    val sourceRefs: Map<String, FlorisRef?>,
     val composers: Map<ExtensionComponentName, Composer>,
     val currencySets: Map<ExtensionComponentName, CurrencySet>,
     val layouts: Map<LayoutType, Map<ExtensionComponentName, LayoutArrangementComponent>>,
@@ -66,6 +68,7 @@ internal fun indexKeyboardExtensions(
     extensions: List<KeyboardExtension>,
     generation: Long,
 ): KeyboardExtensionSnapshot {
+    val sourceRefs = mutableMapOf<String, FlorisRef?>()
     val composers = mutableMapOf<ExtensionComponentName, Composer>()
     val currencySets = mutableMapOf<ExtensionComponentName, CurrencySet>()
     val layouts = LayoutType.entries.associateWith {
@@ -76,6 +79,7 @@ internal fun indexKeyboardExtensions(
     val subtypePresets = mutableListOf<SubtypePreset>()
 
     for (extension in extensions) {
+        if (extension.meta.id !in sourceRefs) sourceRefs[extension.meta.id] = extension.sourceRef
         extension.composers.forEach { composers[ExtensionComponentName(extension.meta.id, it.id)] = it }
         extension.currencySets.forEach { currencySets[ExtensionComponentName(extension.meta.id, it.id)] = it }
         for ((type, components) in extension.layouts) {
@@ -94,6 +98,7 @@ internal fun indexKeyboardExtensions(
 
     return KeyboardExtensionSnapshot(
         generation = generation,
+        sourceRefs = sourceRefs.toMap(),
         composers = composers.toMap(),
         currencySets = currencySets.toMap(),
         layouts = layouts.mapValues { (_, entries) -> entries.toMap() },

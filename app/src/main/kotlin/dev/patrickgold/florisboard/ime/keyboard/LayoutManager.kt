@@ -19,7 +19,6 @@ package dev.patrickgold.florisboard.ime.keyboard
 import android.content.Context
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
-import dev.patrickgold.florisboard.extensionManager
 import dev.patrickgold.florisboard.keyboardExtensionRepository
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.popup.PopupMapping
@@ -108,7 +107,6 @@ data class DebugLayoutComputationResult(
 class LayoutManager(context: Context) {
     private val prefs by FlorisPreferenceStore
     private val appContext by context.appContext()
-    private val extensionManager by context.extensionManager()
     private val keyboardExtensionRepository by context.keyboardExtensionRepository()
 
     private val layoutCache = GenerationCache<LTN, CachedLayout>()
@@ -136,12 +134,12 @@ class LayoutManager(context: Context) {
         layoutCache.load(this, snapshot.generation, ltn, "layout: type=${ltn.type}") {
             val meta = snapshot.layouts[ltn.type]?.get(ltn.name)
                 ?: error("No indexed entry found for ${ltn.type} - ${ltn.name}")
-            val ext = extensionManager.getExtensionById(ltn.name.extensionId)
-                ?: error("Extension ${ltn.name.extensionId} not found")
+            val sourceRef = snapshot.sourceRefs[ltn.name.extensionId]
+                ?: error("Extension ${ltn.name.extensionId} source not found")
             val path = meta.arrangementFile(ltn.type)
             async {
                 runCatching {
-                    val jsonStr = ZipUtils.readFileFromArchive(appContext, ext.sourceRef!!, path).getOrThrow()
+                    val jsonStr = ZipUtils.readFileFromArchive(appContext, sourceRef, path).getOrThrow()
                     val arrangement = DefaultJsonConfig.decodeFromString<LayoutArrangement>(jsonStr)
                     CachedLayout(ltn.type, ltn.name, meta, arrangement)
                 }
@@ -157,12 +155,12 @@ class LayoutManager(context: Context) {
         popupMappingCache.load(this, snapshot.generation, name, "popup mapping") {
             val meta = snapshot.popupMappings[name]
                 ?: error("No indexed entry found for $name")
-            val ext = extensionManager.getExtensionById(name.extensionId)
-                ?: error("Extension ${name.extensionId} not found")
+            val sourceRef = snapshot.sourceRefs[name.extensionId]
+                ?: error("Extension ${name.extensionId} source not found")
             val path = meta.mappingFile()
             async {
                 runCatching {
-                    val jsonStr = ZipUtils.readFileFromArchive(appContext, ext.sourceRef!!, path).getOrThrow()
+                    val jsonStr = ZipUtils.readFileFromArchive(appContext, sourceRef, path).getOrThrow()
                     val mapping = DefaultJsonConfig.decodeFromString<PopupMapping>(jsonStr)
                     CachedPopupMapping(name, meta, mapping)
                 }
