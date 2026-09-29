@@ -4,6 +4,9 @@
 typed key/value lines and calls `migrate()` once for each line before matching
 it to the current schema.
 
+The shared settings back arrow uses the icon's built-in mirroring. Do not also
+mirror its button; that cancels the icon's change in right-to-left layouts.
+
 ## Compatibility rules
 
 - A supported upgrade or backup restore must keep every setting with a current
