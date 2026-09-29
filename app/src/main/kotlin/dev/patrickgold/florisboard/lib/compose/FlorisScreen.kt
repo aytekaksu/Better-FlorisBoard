@@ -47,7 +47,6 @@ import dev.patrickgold.jetpref.datastore.ui.PreferenceLayout
 import dev.patrickgold.jetpref.datastore.ui.PreferenceUiContent
 import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.compose.FlorisIconButton
-import org.florisboard.lib.compose.autoMirrorForRtl
 import org.florisboard.lib.compose.florisVerticalScroll
 
 @Composable
@@ -100,7 +99,6 @@ private class FlorisScreenScopeImpl : FlorisScreenScope {
         val navController = LocalNavController.current
         FlorisIconButton(
             onClick = { navController.popBackStack() },
-            modifier = Modifier.autoMirrorForRtl(),
             icon = Icons.AutoMirrored.Filled.ArrowBack,
         )
     }
