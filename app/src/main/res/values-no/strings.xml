@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Emojier</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Foretrukket emoji-hudfarge</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Foretrukket emoji-sveis</string>
     <!-- Emoji strings -->
     <!-- Quick action strings -->
     <string name="quick_action__arrow_up" comment="Please mind the limited available space for the quick action strings">Pil opp</string>
@@ -158,7 +157,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">Tastetrykk-lyder</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">Tastetrykklyder ved langt trykk</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">Gjentatte tastetrykklyder</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">Sveipe-lyder</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">Sveipe-lyder</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">Haptisk tilbakemelding / Vibrasjon</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">Aktiver haptisk tilbakemelding</string>
@@ -168,12 +166,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Tastevibrasjon</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Tastevibrasjon for lange trykk</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">Gjentatte tastehandlingsvibrasjoner</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">Glidesveipvibrasjoner</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">Sveipebevegelsevibrasjoner</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">f.eks. taster, knapper, emoji faner</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">f.eks. popup meny</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">f.eks. sletteknapp</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">ikke implementert</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">f.eks. markør kontroll sveip</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Tastatur</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">Nummerrad</string>
@@ -205,8 +201,6 @@
     <string name="pref__correction__double_space_period__summary" comment="Preference summary">Om du trykker to ganger på mellomromstasten settes det inn et punktum etterfulgt av et mellomrom</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Deaktivert på systembasis. Ingen røde linjer vil vises i tekstfelt for feil ord. Klikk for å endre.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">Ingen linjebundet stavekontrolltjeneste angitt. Klikk for å endre.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Språk</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">Bruk brukerordlisteoppføringer</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">Brukerordlister</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Aktiver system-brukerordliste</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">Anbefal ord lagret i system-brukerordlisten</string>
@@ -362,10 +356,7 @@
     <string name="ext__error__not_found_title">Kunne ikke finne utvidelsen</string>
     <string name="ext__error__not_found_description">Kunne ikke finne en utvidelse med ID \"{id}\".</string>
     <string name="ext__editor__title_create_any">Opprett utvidelse</string>
-    <string name="ext__editor__title_create_keyboard">Opprett tastaturutvidelse</string>
     <string name="ext__editor__title_create_theme">Opprett temautvidelse</string>
-    <string name="ext__editor__title_edit_any">Rediger utvidelse</string>
-    <string name="ext__editor__title_edit_keyboard">Rediger tastaturutvidelse</string>
     <string name="ext__editor__title_edit_theme">Rediger temautvidelse</string>
     <string name="ext__editor__metadata__title">Behandle metadata</string>
     <string name="ext__editor__metadata__title_invalid">Ugyldig metadata</string>
@@ -426,8 +417,6 @@
     <string name="enum__snygg_level__basic" comment="Enum value label">Enkel</string>
     <string name="enum__snygg_level__advanced" comment="Enum value label">Avansert</string>
     <string name="enum__snygg_level__developer" comment="Enum value label">Utvikler</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Bruk systemspråk</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">Bruk tastatur-undertyper</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">Ingen handling</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">Ruller til forrige tastatur-modus</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">Ruller til neste tastatur-modus</string>

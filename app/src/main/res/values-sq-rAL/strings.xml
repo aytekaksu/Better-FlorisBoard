@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Emojis</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Ngjyra e preferuar e lëkurës</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Modeli i preferuar i flokëve</string>
     <!-- Emoji strings -->
     <!-- Quick action strings -->
     <string name="quick_action__arrow_up" comment="Please mind the limited available space for the quick action strings">Shigjet lart</string>

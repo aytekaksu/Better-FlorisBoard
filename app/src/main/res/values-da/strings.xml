@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Emojier</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Foretrukken emoji-hudfarve</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Foretrukken emoji-frisure</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emoji-historik</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">Aktivér emoji-historik</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">Bibehold nyligt brugte emojier til hurtig adgang</string>
@@ -307,7 +306,6 @@
     <string name="pref__input_feedback__haptic_vibration_strength__label" comment="Preference title">Vibrationsstyrke</string>
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Tasttryksvibration</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Langt tasttryksvibration</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">ikke implementeret</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Tastatur</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">Nummerække</string>
     <string name="pref__keyboard__group_layout__label" comment="Preference group title">Opsætning</string>
@@ -333,7 +331,6 @@
     <string name="pref__correction__double_space_period__label" comment="Preference title">Dobbelt-mellemrumspunktum</string>
     <string name="pref__correction__double_space_period__summary" comment="Preference summary">Tast to gange på mellemrum for at indætte et punktum efterfulgt af mellemrum</string>
     <string name="pref__spelling__title" comment="Preference group title">Stavning</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Sprog</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">Brugerordbøger</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Aktiver systembrugerordbøger</string>
     <string name="settings__udm__all_languages" comment="Label of the For all languages entry in the language list">For alle sprog</string>

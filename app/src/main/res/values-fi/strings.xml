@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Emojit</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Emojien oletusihonväri</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Emojien oletushiustyyli</string>
     <!-- Emoji strings -->
     <!-- Quick action strings -->
     <!-- Incognito mode strings -->
@@ -106,7 +105,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">Painallusäänet</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">Pitkään painalluksen ääni</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">Toistetun painalluksen äänet</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">Pyyhkäisyeleen äänet</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">Pyyhkäisysiirtoeleen äänet</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">Haptinen palaute / värinä</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">Ota haptinen palaute käyttöön</string>
@@ -116,12 +114,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Painalluksen värinä</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Pitkän painalluksen värinä</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">Toistetun painalluksen värinä</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">Pyyhkäisyeleen värinä</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">Pyyhkäisysiirtoeleen värinä</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">esim. näppäin, -painike ja emojivälilehdet</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">esim. ponnahdusvalikko</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">esim. poistonäppäin</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">ei toteutettuna</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Näppäimistö</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">Numerorivi</string>
     <string name="pref__keyboard__number_row__summary" comment="Preference summary">Näytä numerorivi merkkiasettelun yläpuolella</string>
@@ -159,11 +155,6 @@
     <string name="pref__correction__double_space_period__summary" comment="Preference summary">Kun välilyöntiä napautetaan kahdesti, lisätään piste ja välilyönti</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Poissa käytössä koko järjestelmässä. Punaisia viivoja ei näytetä tekstikentässä ilmaisemaan virheellisiä sanoja. Napauta muuttaaksesi.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">Tekstin oikeinkirjoituksen tarkistusta ei ole asetettu. Napauta muuttaaksesi.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Kielet</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">Käytä nimiä yhteystiedoista</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">Hae nimiä laitteen yhteystiedoista</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">Käytä käyttäjän sanakirjan kohteita</string>
-    <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref">Hae kohteita sanakirjoista</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">Käyttäjän sanakirjat</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Ota käyttöön järjestelmän käyttäjän sanakirja</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">Ehdota sanoja, jotka ovat järjestelmän käyttäjän sanakirjassa</string>
@@ -306,17 +297,13 @@
     <string name="ext__error__not_found_title">Laajennusta ei löytynyt</string>
     <string name="ext__error__not_found_description">Laajennusta ID:llä \"{id}\" ei löytynyt.</string>
     <string name="ext__editor__title_create_any">Luo laajennus</string>
-    <string name="ext__editor__title_create_keyboard">Luo näppäimistölaajennus</string>
     <string name="ext__editor__title_create_theme">Luo teemalaajennus</string>
-    <string name="ext__editor__title_edit_any">Muokkaa laajennusta</string>
-    <string name="ext__editor__title_edit_keyboard">Muokkaa näppäimistölaajennusta</string>
     <string name="ext__editor__title_edit_theme">Muokkaa teemalaajennusta</string>
     <string name="ext__editor__metadata__title">Hallinnoi metatietoja</string>
     <string name="ext__editor__metadata__title_invalid">Virheellinen metatieto</string>
     <string name="ext__editor__metadata__message_invalid">Laajennuksen metatiedot eivät ole kelvollisia, tarkista tiedot metadataeditorissa!</string>
     <string name="ext__editor__dependencies__title">Hallinnoi riippuvaisuuksia</string>
     <string name="ext__editor__files__title">Hallinnoi arkistotiedostoja</string>
-    <string name="ext__editor__create_component__title">Luo komponentti</string>
     <string name="ext__editor__create_component__title_theme">Luo teema</string>
     <string name="ext__editor__create_component__from_empty">Tyhjä</string>
     <string name="ext__editor__create_component__from_existing">Perustuen olemassa olevaan</string>
@@ -377,7 +364,6 @@
     <string name="enum__snygg_level__advanced" comment="Enum value label">Lisäasetukset</string>
     <string name="enum__snygg_level__developer" comment="Enum value label">Kehittäjä</string>
     <string name="enum__snygg_level__developer__description" comment="Enum value description">Kaikki ominaisuudet näytetään; ominaisuudet ja säännöt näytetään niinkuin tyylisäännöstötiedostoon on tallennettuna.</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Käytä järjestelmän kieliä</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">Ei toimintoa</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">Siirry edelliseen näppäimistötilaan</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">Siirry seuraavaan näppäimistötilaan</string>

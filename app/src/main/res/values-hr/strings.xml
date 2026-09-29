@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Emotikoni</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Željeni ton boje emotikona</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Željeni stil frizure emotikona</string>
     <!-- Emoji strings -->
     <!-- Quick action strings -->
     <!-- Incognito mode strings -->
@@ -144,7 +143,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">Zvukovi na pritisak pločice</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">Zvukovi na dugi pritisak pločice</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">Zvukovi ponovljene radnje pločice</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">Zvukovi prilikom kliznog pokreta</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">Zvukovi prilikom kliznog pokreta</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">Povratna vibracija na dodir / Vibracija</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">Omogući povratnu vibraciju na dodir</string>
@@ -154,12 +152,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Vibriraj na tipku</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Vibriraj na produljen pritisak tipke</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">Vibriraj na ponovljenu radnju tipke</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">Vibriraj na kliznu gestu</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">Vibriraj na pokret klizne geste</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">npr. tipke, gumbi, pločica emotikona</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">npr. skočni izbornik</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">npr. tipka za brisanje</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">nije implementirano</string>
     <!-- Smartbar strings -->
     <string name="pref__smartbar__enabled__label" comment="Preference title">Omogući Smartbar</string>
     <string name="pref__smartbar__enabled__summary" comment="Preference summary">Prikazivat će se na vrhu tipkovnice</string>
@@ -185,9 +181,6 @@
     <string name="pref__spelling__title" comment="Preference group title">Pravopis</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Sistemski onemogućeno. Crvene linije se neće prikazivati u slučaju pogrešno napisanih riječi. Kliknite kako biste to promijenili.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">Usluga provjere pravopisa nije postavljena. Kliknite kako biste to promijenili.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Jezici</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">Koristi imena iz kontakata</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">Pregledajte imena iz vašeg popisa kontakata</string>
     <!-- About UI strings -->
     <!-- Setup UI strings -->
     <!-- Physical keyboard -->

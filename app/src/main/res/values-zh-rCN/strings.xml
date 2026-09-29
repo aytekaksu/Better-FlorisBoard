@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">表情符号</string>
     <string name="prefs__media__emoji_preferred_skin_tone">首选表情符号肤色</string>
-    <string name="prefs__media__emoji_preferred_hair_style">首选表情符号发型</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emoji表情选择历史</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">开启emoji表情选择历史记录</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">保留近期使用过的emoji表情以便快速访问</string>
@@ -355,7 +354,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">按键声音</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">长按键声音</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">键盘重复操作声音</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">手势滑动声音</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">手势移动滑动声音</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">触感反馈 / 振动</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">使用触感反馈</string>
@@ -368,12 +366,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">按键振动</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">长按键振动</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">键盘重复操作振动</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">手势滑动振动</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">手势移动滑动振动</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">例如：键、按钮、表情符号选项卡</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">例如：弹出菜单</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">例如：删除键</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">功能尚未完成</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">例如：光标控制滑动</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">键盘</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">数字行</string>
@@ -429,11 +425,6 @@
     <string name="pref__spelling__title" comment="Preference group title">拼写</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">已在系统范围内禁用。对于不正确的单词，文本框中不会出现红线。点击进行更改。</string>
     <string name="pref__spelling__active_spellchecker__summary_none">未设置内嵌式文本拼写检查服务。点击进行更改。</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">语言</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">使用通讯录姓名</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">从您的通讯录中查找姓名</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">使用用户词典条目</string>
-    <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref">从用户词典中查找条目</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">用户词典</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">启用系统用户词典</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">建议中使用存储在系统用户词典中的词条</string>
@@ -644,8 +635,6 @@
     <string name="devtools__show_primary_clip__summary" comment="Summary of Show primary clip in Devtools">叠加显示剪贴板当前的主要剪贴板条目</string>
     <string name="devtools__show_input_state_overlay__label" comment="Label of Show input cache overlay in Devtools">显示输入状态叠加层</string>
     <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">覆盖显示当前输入状态，调试用</string>
-    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools">显示拼写叠加层</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">叠加显示当前拼写结果，调试用</string>
     <string name="devtools__show_inline_autofill_overlay__label">显示内联自动填充覆盖层</string>
     <string name="devtools__show_inline_autofill_overlay__summary">启用调试覆盖层,以便匹配到内联自动填充结果后直接展示</string>
     <string name="devtools__show_key_touch_boundaries__label" comment="Label of Show key touch boundaries in Devtools">显示按键触摸边界</string>
@@ -701,10 +690,7 @@
     <string name="ext__error__not_found_title">未找到扩展</string>
     <string name="ext__error__not_found_description">找不到 ID 为“{id}”的扩展。</string>
     <string name="ext__editor__title_create_any">添加新扩展</string>
-    <string name="ext__editor__title_create_keyboard">添加键盘扩展</string>
     <string name="ext__editor__title_create_theme">添加主题扩展</string>
-    <string name="ext__editor__title_edit_any">编辑扩展</string>
-    <string name="ext__editor__title_edit_keyboard">编辑键盘扩展</string>
     <string name="ext__editor__title_edit_theme">编辑主题扩展</string>
     <string name="ext__editor__metadata__title">管理元数据</string>
     <string name="ext__editor__metadata__title_invalid">无效的元数据</string>
@@ -713,7 +699,6 @@
     <string name="ext__editor__files__title">管理档案文件</string>
     <string name="ext__editor__files__type_fonts">字体</string>
     <string name="ext__editor__files__type_images">图片</string>
-    <string name="ext__editor__create_component__title">添加组件</string>
     <string name="ext__editor__create_component__title_theme">添加主题</string>
     <string name="ext__editor__create_component__from_empty">空白</string>
     <string name="ext__editor__create_component__from_existing">从现有</string>
@@ -747,8 +732,6 @@
     <string name="ext__validation__error_stylesheet_path">请输入与 {stylesheet_path_regex} 匹配的有效样式表路径</string>
     <string name="ext__validation__enter_property">请输入变量名称</string>
     <string name="ext__validation__error_property">请输入一个符合 {variable_name_regex} 的有效变量名</string>
-    <string name="ext__validation__enter_color">请输入颜色字符串</string>
-    <string name="ext__validation__error_color">请输入一个有效的颜色字符串</string>
     <string name="ext__validation__enter_dp_size">请输入 dp 尺寸</string>
     <string name="ext__validation__enter_valid_number">请输入有效的数字</string>
     <string name="ext__validation__enter_positive_number">请输入一个正数（>=0）</string>
@@ -922,8 +905,6 @@
     <string name="enum__space_bar_mode__nothing" comment="Enum value label">无标记</string>
     <string name="enum__space_bar_mode__current_language" comment="Enum value label">当前语言</string>
     <string name="enum__space_bar_mode__space_bar_key" comment="Enum value label">␣</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">使用系统语言</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">使用键盘子类型</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">无操作</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">循环切换到上一个键盘模式</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">循环切换到下一个键盘模式</string>

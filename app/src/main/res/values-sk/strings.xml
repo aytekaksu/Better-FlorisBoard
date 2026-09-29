@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Emodži</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Preferovaný tón pleti emodži</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Preferované vlasy emodži</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">História emodži</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">Povoliť históriu emodži</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">Bude uchovávať nedávno použité emodži, aby k nim bol rýchly prístup</string>
@@ -155,12 +154,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Vibrácie pri stlačení tlačidla</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Vibrácie pri dlhom stlačení tlačidla</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">Kľúčové opakované vibrácie</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">Vibrácie pri posúvaní gestom</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">Vibrácie pri posúvaní gestom</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">Napr. Klávesy, tlačidlá, karty emoji</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">Napr. Vyskakovanie menu</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">Napr. Kláves delete</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">nerealizované</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">Napr. Ovládanie kurzora potiahnutím</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Klávesnica</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">Číselný riadok</string>
@@ -199,7 +196,6 @@
     <string name="pref__correction__auto_capitalization__label" comment="Preference title">Automatické veľké písmená</string>
     <string name="pref__correction__auto_space_punctuation__label" comment="Preference title">Automatická medzera za interpunkciou</string>
     <string name="pref__spelling__title" comment="Preference group title">Pravopis</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Jazyky</string>
     <string name="settings__udm__word_summary_freq" comment="Summary label for a word entry. The decimal placeholder inserts the frequency for the word it summarizes.">Frekvencia: {freq}</string>
     <string name="settings__udm__dialog__title_add" comment="Label for the title (when in adding mode) in the user dictionary add/edit dialog">Pridať slovo</string>
     <string name="settings__udm__dialog__title_edit" comment="Label for the title (when in editing mode) in the user dictionary add/edit dialog">Upraviť slovo</string>
@@ -294,8 +290,6 @@
     <string name="devtools__show_primary_clip__summary" comment="Summary of Show primary clip in Devtools">Dá do popredia aktuálny prvý výstrižok v schránke</string>
     <string name="devtools__show_input_state_overlay__label" comment="Label of Show input cache overlay in Devtools">Zobrazovať vrstvu so stavom zadávania</string>
     <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">Na účely ladenia dá do popredia aktuálny stav zadávania</string>
-    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools">Zobrazovať vrstvu s kontrolou pravopisu</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">Na účely ladenia dá do popredia aktuálne výsledky kontroly pravopisu</string>
     <string name="devtools__show_inline_autofill_overlay__label">Zobrazovať vrstvu s automatickým vypĺňaním v riadku</string>
     <string name="devtools__show_inline_autofill_overlay__summary">Na účely ladenia dá do popredia aktuálne výsledky vypĺňania v riadku</string>
     <string name="devtools__show_key_touch_boundaries__label" comment="Label of Show key touch boundaries in Devtools">Zobrazovať hranice stláčania klávesov</string>

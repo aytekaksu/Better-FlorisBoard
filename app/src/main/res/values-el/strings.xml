@@ -64,7 +64,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">Ήχοι πατήματος πλήκτρου</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">Ήχοι παρατεταμένου πατήματος πλήκτρου</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">Ήχοι επαναλαμβανόμενης ενέργειας πλήκτρου</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">Ήχοι χειρονομιών ολίσθησης</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">Ήχοι χειρονομιών ολίσθησης μετακίνησης</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">Απτική ανάδραση / Δόνηση</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">Ενεργοποίηση απτικής ανάδρασης</string>
@@ -74,12 +73,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Δόνηση πατήματος πλήκτρου</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Δόνηση παρατεταμένου πατήματος πλήκτρου</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">Δόνηση επαναλαμβανόμενης ενέργειας πλήκτρου</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">Δόνηση χειρονομιών ολίσθησης</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">Δόνηση χειρονομιών ολίσθησης μετακίνησης</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">π.χ. πλήκτρα, κουμπιά, καρτέλες emoji</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">π.χ. αναδυόμενο μενού</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">π.χ. πλήκτρο διαγραφής</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">δεν έχει εφαρμοστεί</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">π.χ. ολίσθηση ελέγχου κέρσορα</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Πληκτρολόγιο</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">Σειρά αριθμών</string>
@@ -117,8 +114,6 @@
     <string name="pref__correction__double_space_period__summary" comment="Preference summary">Το διπλό πάτημα του πλήκτρου διαστήματος εισάγει μία τελεία ακολουθούμενη από ένα διάστημα</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Απενεργοποιημένο σε επίπεδο συστήματος. Δε θα εμφανιστούν κόκκινες γραμμές σε πεδία κειμένου για λανθασμένες λέξεις. Πατήστε για αλλαγή.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">Δεν έχει οριστεί υπηρεσία ενσωματωμένου ορθογραφικού ελέγχου κειμένου. Πατήστε για αλλαγή.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Γλώσσες</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">Χρήση καταχωρήσεων λεξικού χρήστη</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">Λεξικά χρήστη</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Ενεργοποίηση λεξικού χρήστη στο σύστημα</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">Προτάσεις λέξεων αποθηκευμένων στο λεξικό χρήστη στο σύστημα</string>
@@ -248,8 +243,6 @@
     <string name="devtools__enabled__summary" comment="Summary of Enable developer tools in Devtools">Εργαλεία σχεδιασμένα συγκεκριμένα για αποσφαλμάτωση κι επίλυση προβλημάτων</string>
     <string name="devtools__show_primary_clip__label" comment="Label of Show primary clip in Devtools">Προβολή κυρίου αποκόμματος</string>
     <string name="devtools__show_primary_clip__summary" comment="Summary of Show primary clip in Devtools">Προβάλλει ένα επικάλυμμα με το τρέχον κύριο απόκομμα του προχείρου</string>
-    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools">Εμφάνιση επικαλύμματος ορθογραφικού ελέγχου</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">Δημιουργεί επικάλυμμα με τα τρέχοντα αποτελέσματα ορθογραφικού ελέγχου για αποσφαλμάτωση</string>
     <string name="devtools__clear_udm_internal_database__label" comment="Label of Clear internal user dictionary database in Devtools">Διαγραφή βάσης δεδομένων εσωτερικού λεξικού χρήστη</string>
     <string name="devtools__clear_udm_internal_database__summary" comment="Summary of Clear internal user dictionary database in Devtools">Διαγράφει όλες τις λέξεις από τον πίνακα δεδομένων του λεξικού</string>
     <string name="devtools__reset_flag__label" comment="Label of Reset flag preferences in Devtools">Επαναφορά της ένδειξης \"{flag_name}\"</string>
@@ -331,8 +324,6 @@
     <string name="enum__landscape_input_ui_mode__never_show" comment="Enum value label">Να μην εμφανίζεται ποτέ</string>
     <string name="enum__landscape_input_ui_mode__always_show" comment="Enum value label">Να εμφανίζεται πάντα</string>
     <string name="enum__landscape_input_ui_mode__dynamically_show" comment="Enum value label">Να εμφανίζεται δυναμικά</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Χρήση γλωσσών συστήματος</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">Χρήση υποτύπων πληκτρολογίου</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">Καμία ενέργεια</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">Εναλλαγή στην προηγούμενη λειτουργία πληκτρολογίου</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">Εναλλαγή στην επόμενη λειτουργία πληκτρολογίου</string>

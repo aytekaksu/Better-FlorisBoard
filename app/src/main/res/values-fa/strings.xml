@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">ایموجی ها</string>
     <string name="prefs__media__emoji_preferred_skin_tone">رنگ پوست پیشفرض برای ایموجی</string>
-    <string name="prefs__media__emoji_preferred_hair_style">مدل مو پیشفرض برای ایموجی</string>
     <!-- Emoji strings -->
     <!-- Quick action strings -->
     <string name="quick_action__arrow_up" comment="Please mind the limited available space for the quick action strings">فلش بالا</string>
@@ -148,7 +147,6 @@
     <string name="pref__correction__remember_caps_lock_state__summary" comment="Preference summary">Caps lock با رفتن به محل نوشتن بعدی همانگونه بماند</string>
     <string name="pref__correction__double_space_period__label" comment="Preference title">فاصله زمانی دوبار-فاصله</string>
     <string name="pref__correction__double_space_period__summary" comment="Preference summary">فشردن دو بار فاصله در فاصله زمانی باعث ادامه دادن فاصله گذاشتن شود</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">زبان‌ها</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">فعالسازی سیستم لغتنامه کاربر</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">پیشنهاد دادن کلمات ذخیره شده از سیستم لغتنامه کاربر</string>
     <string name="pref__dictionary__manage_system_user_dictionary__label" comment="Preference title">مدیریت سیستم لغتنامه کاربر</string>
@@ -279,8 +277,6 @@
     <string name="enum__landscape_input_ui_mode__never_show" comment="Enum value label">هرگز نشان نده</string>
     <string name="enum__landscape_input_ui_mode__always_show" comment="Enum value label">همیشه نشان بده</string>
     <string name="enum__landscape_input_ui_mode__dynamically_show" comment="Enum value label">به صورت پویا نشان بده</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">استفاده از زبان سیستم</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">استفاده از زیرنوع های صفحه کلید</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">بدون عمل</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">چرخش به حالت صفحه کلید پیشین</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">چرخش به حالت صفحه کلید پسین</string>

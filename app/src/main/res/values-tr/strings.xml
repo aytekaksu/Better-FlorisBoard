@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">Emojiler</string>
     <string name="prefs__media__emoji_preferred_skin_tone">Tercih edilen emoji ten rengi</string>
-    <string name="prefs__media__emoji_preferred_hair_style">Tercih edilen emoji saç stili</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">Emoji geçmişi</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">Emoji geçmişini etkinleştir</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">Hızlı erişim için son kullanılan emojileri sakla</string>
@@ -347,7 +346,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">Tuşa basma sesleri</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">Tuşa uzun basma sesleri</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">Tekrarlanan tuş eylemi sesleri</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">Kaydırma hareketi sesleri</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">Hareketli kaydırma hareketi sesleri</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">Dokunsal geri bildirim / Titreşim</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">Dokunsal geri bildirimi etkinleştir</string>
@@ -360,12 +358,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">Tuşa basma titreşimi</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">Tuşa uzun basma titreşimi</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">Tekrarlanan tuş eylemi titreşimi</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">Kaydırma hareketi titreşimi</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">Hareketli kaydırma hareketi titreşimi</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">ör. tuşlar, düğmeler, emoji sekmeleri</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">ör. açılır menü</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">ör. silme tuşu</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">uygulanmadı</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">ör. imleç kontrolü kaydırması</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">Klavye</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">Sayı satırı</string>
@@ -421,11 +417,6 @@
     <string name="pref__spelling__title" comment="Preference group title">Yazım Denetimi</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Sistem genelinde devre dışı. Metin alanlarında yanlış kelimeler için kırmızı çizgiler görünmeyecek. Değiştirmek için dokunun.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">Satır içi metin yazım denetimi hizmeti ayarlanmamış. Değiştirmek için dokunun.</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Diller</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">Kişi listesindeki adları kullan</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">Kişi listenizdeki adları ara</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">Kullanıcı sözlüğü girdilerini kullan</string>
-    <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref">Kullanıcı sözlüklerindeki girdileri ara</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">Kullanıcı Sözlükleri</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">Kullanıcı sözlüğünü etkinleştir</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">Kullanıcı sözlüğünde saklanan kelimeleri öner</string>
@@ -632,8 +623,6 @@
     <string name="devtools__show_primary_clip__summary" comment="Summary of Show primary clip in Devtools">Panonun mevcut birincil klibini kaplama olarak gösterir</string>
     <string name="devtools__show_input_state_overlay__label" comment="Label of Show input cache overlay in Devtools">Giriş durumu kaplamasını göster</string>
     <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">Hata ayıklama için mevcut giriş durumunu kaplama olarak gösterir</string>
-    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools">Yazım denetimi kaplamasını göster</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">Hata ayıklama için mevcut yazım denetimi sonuçlarını kaplama olarak gösterir</string>
     <string name="devtools__show_inline_autofill_overlay__label">Satır içi otomatik doldurma kaplamasını göster</string>
     <string name="devtools__show_inline_autofill_overlay__summary">Hata ayıklama için mevcut satır içi otomatik doldurma sonuçlarını kaplama olarak gösterir</string>
     <string name="devtools__show_key_touch_boundaries__label" comment="Label of Show key touch boundaries in Devtools">Tuş dokunma sınırlarını göster</string>
@@ -683,10 +672,7 @@
     <string name="ext__error__not_found_title">Eklenti bulunamadı</string>
     <string name="ext__error__not_found_description">\"{id}\" kimliğine sahip bir eklenti bulunamadı.</string>
     <string name="ext__editor__title_create_any">Eklenti oluştur</string>
-    <string name="ext__editor__title_create_keyboard">Klavye eklentisi oluştur</string>
     <string name="ext__editor__title_create_theme">Tema eklentisi oluştur</string>
-    <string name="ext__editor__title_edit_any">Eklentiyi düzenle</string>
-    <string name="ext__editor__title_edit_keyboard">Klavye eklentisini düzenle</string>
     <string name="ext__editor__title_edit_theme">Tema eklentisini düzenle</string>
     <string name="ext__editor__metadata__title">Meta verileri yönet</string>
     <string name="ext__editor__metadata__title_invalid">Geçersiz meta veriler</string>
@@ -695,7 +681,6 @@
     <string name="ext__editor__files__title">Arşiv dosyalarını yönet</string>
     <string name="ext__editor__files__type_fonts">Yazı Tipleri</string>
     <string name="ext__editor__files__type_images">Resimler</string>
-    <string name="ext__editor__create_component__title">Bileşen oluştur</string>
     <string name="ext__editor__create_component__title_theme">Tema oluştur</string>
     <string name="ext__editor__create_component__from_empty">Boş</string>
     <string name="ext__editor__create_component__from_existing">Mevcuttan</string>
@@ -729,8 +714,6 @@
     <string name="ext__validation__error_stylesheet_path">Lütfen {stylesheet_path_regex} ile eşleşen geçerli bir stil sayfası yolu girin</string>
     <string name="ext__validation__enter_property">Lütfen bir değişken adı girin</string>
     <string name="ext__validation__error_property">Lütfen {variable_name_regex} ile eşleşen geçerli bir değişken adı girin</string>
-    <string name="ext__validation__enter_color">Lütfen bir renk dizesi girin</string>
-    <string name="ext__validation__error_color">Lütfen geçerli bir renk dizesi girin</string>
     <string name="ext__validation__enter_dp_size">Lütfen bir dp boyutu girin</string>
     <string name="ext__validation__enter_valid_number">Lütfen geçerli bir numara girin</string>
     <string name="ext__validation__enter_positive_number">Lütfen pozitif bir sayı girin (&gt;=0)</string>
@@ -899,8 +882,6 @@
     <string name="enum__space_bar_mode__nothing" comment="Enum value label">Etiket yok</string>
     <string name="enum__space_bar_mode__current_language" comment="Enum value label">Mevcut dil</string>
     <string name="enum__space_bar_mode__space_bar_key" comment="Enum value label">␣</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">Sistem dillerini kullan</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">Klavye alt türlerini kullan</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">Eylem yok</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">Önceki klavye moduna geç</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">Sonraki klavye moduna geç</string>

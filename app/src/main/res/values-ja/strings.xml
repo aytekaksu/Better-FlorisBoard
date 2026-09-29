@@ -7,7 +7,6 @@
     <!-- Media strings -->
     <string name="settings__media__title">メディア</string>
     <string name="prefs__media__emoji_preferred_skin_tone">優先する絵文字の肌の色</string>
-    <string name="prefs__media__emoji_preferred_hair_style">優先する絵文字の髪型</string>
     <string name="prefs__media__emoji_history__title" comment="Preference group title">絵文字履歴</string>
     <string name="prefs__media__emoji_history_enabled" comment="Preference title">絵文字履歴を有効化</string>
     <string name="prefs__media__emoji_history_enabled__summary" comment="Preference summary">最近使用した絵文字を保存して素早くアクセスできるようにします</string>
@@ -327,7 +326,6 @@
     <string name="pref__input_feedback__audio_feat_key_press__label" comment="Preference title">キー押下時のサウンド</string>
     <string name="pref__input_feedback__audio_feat_key_long_press__label" comment="Preference title">キー長押し時のサウンド</string>
     <string name="pref__input_feedback__audio_feat_key_repeated_action__label" comment="Preference title">キーリピート時のサウンド</string>
-    <string name="pref__input_feedback__audio_feat_gesture_swipe__label" comment="Preference title">ジェスチャースワイプ時のサウンド</string>
     <string name="pref__input_feedback__audio_feat_gesture_moving_swipe__label" comment="Preference title">ジェスチャームービングスワイプ時のサウンド</string>
     <string name="pref__input_feedback__group_haptic__label" comment="Preference group title">触覚フィードバック（バイブレーション）</string>
     <string name="pref__input_feedback__haptic_enabled__label" comment="Preference title">触覚フィードバックを有効にする</string>
@@ -340,12 +338,10 @@
     <string name="pref__input_feedback__haptic_feat_key_press__label" comment="Preference title">キー押下時のバイブレーション</string>
     <string name="pref__input_feedback__haptic_feat_key_long_press__label" comment="Preference title">キー長押し時のバイブレーション</string>
     <string name="pref__input_feedback__haptic_feat_key_repeated_action__label" comment="Preference title">キーリピート時のバイブレーション</string>
-    <string name="pref__input_feedback__haptic_feat_gesture_swipe__label" comment="Preference title">ジェスチャースワイプ時のバイブレーション</string>
     <string name="pref__input_feedback__haptic_feat_gesture_moving_swipe__label" comment="Preference title">ジェスチャームービングスワイプ時のバイブレーション</string>
     <string name="pref__input_feedback__any_feat_key_press__summary" comment="Preference summary">例：キー、ボタン、絵文字タブ</string>
     <string name="pref__input_feedback__any_feat_key_long_press__summary" comment="Preference summary">例：ポップアップメニュー</string>
     <string name="pref__input_feedback__any_feat_key_repeated_action__summary" comment="Preference summary">例：削除キー</string>
-    <string name="pref__input_feedback__any_feat_gesture_swipe__summary" comment="Preference summary">未実装</string>
     <string name="pref__input_feedback__any_feat_gesture_moving_swipe__summary" comment="Preference summary">例：カーソルコントロールスワイプ</string>
     <string name="settings__keyboard__title" comment="Title of Keyboard preferences screen">キーボード</string>
     <string name="pref__keyboard__number_row__label" comment="Preference title">数字行</string>
@@ -401,11 +397,6 @@
     <string name="pref__spelling__title" comment="Preference group title">スペル</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">システム全体で無効。誤った単語のテキストフィールドに赤い線は表示されません。タップして変更。</string>
     <string name="pref__spelling__active_spellchecker__summary_none">インラインテキストスペルチェッカーサービスが設定されていません。タップして変更。</string>
-    <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">言語</string>
-    <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">連絡先から名前を使用</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">連絡先リストから名前を検索します</string>
-    <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">ユーザー辞書のエントリを使用</string>
-    <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref">ユーザー辞書からエントリを検索します</string>
     <string name="settings__dictionary__title" comment="Title of the User dictionaries screen">ユーザー辞書</string>
     <string name="pref__dictionary__enable_system_user_dictionary__label" comment="Preference title">システムユーザー辞書を有効にする</string>
     <string name="pref__dictionary__enable_system_user_dictionary__summary" comment="Preference summary">システムユーザー辞書に保存されている単語を候補として表示します</string>
@@ -600,8 +591,6 @@
     <string name="devtools__show_primary_clip__summary" comment="Summary of Show primary clip in Devtools">クリップボードの現在のプライマリクリップをオーバーレイ表示します</string>
     <string name="devtools__show_input_state_overlay__label" comment="Label of Show input cache overlay in Devtools">入力状態オーバーレイを表示</string>
     <string name="devtools__show_input_state_overlay__summary" comment="Summary of Show input cache overlay in Devtools">デバッグ用に現在の入力状態をオーバーレイ表示します</string>
-    <string name="devtools__show_spelling_overlay__label" comment="Label of Show spelling overlay in Devtools">スペルオーバーレイを表示</string>
-    <string name="devtools__show_spelling_overlay__summary" comment="Summary of Show spelling overlay in Devtools">デバッグ用に現在のスペル結果をオーバーレイ表示します</string>
     <string name="devtools__show_inline_autofill_overlay__label">インライン自動入力オーバーレイを表示</string>
     <string name="devtools__show_inline_autofill_overlay__summary">デバッグ用に現在のインライン自動入力結果をオーバーレイ表示します</string>
     <string name="devtools__show_key_touch_boundaries__label" comment="Label of Show key touch boundaries in Devtools">キータッチ境界を表示</string>
@@ -650,10 +639,7 @@
     <string name="ext__error__not_found_title">拡張機能が見つかりません</string>
     <string name="ext__error__not_found_description">ID「{id}」の拡張機能が見つかりませんでした。</string>
     <string name="ext__editor__title_create_any">拡張機能を作成</string>
-    <string name="ext__editor__title_create_keyboard">キーボード拡張機能を作成</string>
     <string name="ext__editor__title_create_theme">テーマ拡張機能を作成</string>
-    <string name="ext__editor__title_edit_any">拡張機能を編集</string>
-    <string name="ext__editor__title_edit_keyboard">キーボード拡張機能を編集</string>
     <string name="ext__editor__title_edit_theme">テーマ拡張機能を編集</string>
     <string name="ext__editor__metadata__title">メタデータを管理</string>
     <string name="ext__editor__metadata__title_invalid">無効なメタデータ</string>
@@ -662,7 +648,6 @@
     <string name="ext__editor__files__title">アーカイブファイルを管理</string>
     <string name="ext__editor__files__type_fonts">フォント</string>
     <string name="ext__editor__files__type_images">画像</string>
-    <string name="ext__editor__create_component__title">コンポーネントを作成</string>
     <string name="ext__editor__create_component__title_theme">テーマを作成</string>
     <string name="ext__editor__create_component__from_empty">空</string>
     <string name="ext__editor__create_component__from_existing">既存のものから</string>
@@ -696,8 +681,6 @@
     <string name="ext__validation__error_stylesheet_path">{stylesheet_path_regex} に一致する有効なスタイルシートパスを入力してください</string>
     <string name="ext__validation__enter_property">変数名を入力してください</string>
     <string name="ext__validation__error_property">{variable_name_regex} に一致する有効な変数名を入力してください</string>
-    <string name="ext__validation__enter_color">色の文字列を入力してください</string>
-    <string name="ext__validation__error_color">有効な色の文字列を入力してください</string>
     <string name="ext__validation__enter_dp_size">dpサイズを入力してください</string>
     <string name="ext__validation__enter_valid_number">有効な数値を入力してください</string>
     <string name="ext__validation__enter_positive_number">正の数 (&gt;=0) を入力してください</string>
@@ -859,8 +842,6 @@
     <string name="enum__space_bar_mode__nothing" comment="Enum value label">ラベルなし</string>
     <string name="enum__space_bar_mode__current_language" comment="Enum value label">現在の言語</string>
     <string name="enum__space_bar_mode__space_bar_key" comment="Enum value label">␣</string>
-    <string name="enum__spelling_language_mode__use_system_languages" comment="Enum value label">システム言語を使用</string>
-    <string name="enum__spelling_language_mode__use_keyboard_subtypes" comment="Enum value label">キーボードサブタイプを使用</string>
     <string name="enum__swipe_action__no_action" comment="Enum value label">アクションなし</string>
     <string name="enum__swipe_action__cycle_to_previous_keyboard_mode" comment="Enum value label">前のキーボードモードに切り替える</string>
     <string name="enum__swipe_action__cycle_to_next_keyboard_mode" comment="Enum value label">次のキーボードモードに切り替える</string>
