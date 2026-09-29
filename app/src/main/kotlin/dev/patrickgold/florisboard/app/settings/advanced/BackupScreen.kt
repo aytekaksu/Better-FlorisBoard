@@ -27,11 +27,10 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -39,21 +38,22 @@ import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ShareCompat
 import androidx.core.content.FileProvider
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavBackStackEntry
 import dev.patrickgold.florisboard.BuildConfig
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceModel
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.LocalNavController
+import dev.patrickgold.florisboard.app.OwnedRoutePopResult
 import dev.patrickgold.florisboard.app.popOwnedRoute
-import dev.patrickgold.florisboard.app.popOwnedRouteWhenResumed
 import dev.patrickgold.florisboard.cacheManager
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionArrangementSave
 import dev.patrickgold.florisboard.lib.cache.CacheManager
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
-import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.ext.ExtensionManager
 import dev.patrickgold.florisboard.lib.io.ZipUtils
 import dev.patrickgold.jetpref.datastore.runtime.AndroidAppDataStorage
@@ -62,16 +62,15 @@ import dev.patrickgold.jetpref.material.ui.JetPrefListItem
 import java.io.File
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withContext
 import org.florisboard.lib.android.showLongToast
-import org.florisboard.lib.android.writeFromFile
 import org.florisboard.lib.compose.FlorisButtonBar
 import org.florisboard.lib.compose.FlorisOutlinedBox
 import org.florisboard.lib.compose.defaultFlorisOutlinedBox
@@ -166,251 +165,71 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
     val navController = LocalNavController.current
     val context = LocalContext.current
     val cacheManager by context.cacheManager()
-    val scope = rememberCoroutineScope()
-
-    var backupDestination by remember { mutableStateOf(Backup.Destination.FILE_SYS) }
-    val backupFilesSelector = remember { Backup.FilesSelector() }
-    var backupWorkspace by remember {
-        mutableStateOf<CacheManager.BackupAndRestoreWorkspace?>(null)
+    val model = remember(routeEntry) {
+        ViewModelProvider(routeEntry)[BackupExportViewModel::class.java]
     }
-    var preparedSelection by remember { mutableStateOf<Set<BackupComponent>?>(null) }
-    var isBackupBusy by remember { mutableStateOf(false) }
-
-    fun takeBackupWorkspace() = backupWorkspace.also {
-        backupWorkspace = null
-        preparedSelection = null
-    }
-
-    fun closeBackupWorkspace() {
-        takeBackupWorkspace()?.requestClose()
-    }
-
-    DisposableEffect(Unit) {
-        onDispose(::closeBackupWorkspace)
-    }
+    val phase = model.phase
+    val isBackupBusy = model.isBusy
 
     val backUpToFileSystemLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/zip"),
-        onResult = { uri ->
-            if (uri == null) {
-                isBackupBusy = false
-                // User can modify checkboxes between cancellation and second
-                // trigger, so we make sure to clear out the previous workspace
-                closeBackupWorkspace()
-                return@rememberLauncherForActivityResult
-            }
-            val workspace = takeBackupWorkspace()
-            if (workspace == null || workspace.isClosed()) {
-                isBackupBusy = false
-                scope.launch {
-                    context.showLongToast(
-                        R.string.backup_and_restore__back_up__failure,
-                        "error_message" to "SOURCE_UNAVAILABLE",
-                    )
-                }
-                return@rememberLauncherForActivityResult
-            }
-            scope.launch(start = CoroutineStart.UNDISPATCHED) {
-                var failureClass: String? = null
-                try {
-                    withContext(Dispatchers.IO) {
-                        context.contentResolver.writeFromFile(uri, workspace.zipFile)
-                    }
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (error: Exception) {
-                    failureClass = error.javaClass.simpleName
-                    flogError { "Failed to save backup: failureClass=$failureClass" }
-                } finally {
-                    try {
-                        withContext(NonCancellable + Dispatchers.IO) {
-                            try {
-                                workspace.close()
-                            } catch (error: CancellationException) {
-                                throw error
-                            } catch (error: Exception) {
-                                flogError { "Backup workspace cleanup failed: failureClass=${error.javaClass.simpleName}" }
-                            } finally {
-                                if (!workspace.isClosed()) {
-                                    workspace.requestClose()
-                                }
-                            }
-                        }
-                    } finally {
-                        isBackupBusy = false
-                    }
-                }
-                if (failureClass == null) {
-                    context.showLongToast(R.string.backup_and_restore__back_up__success)
-                    navController.popOwnedRouteWhenResumed(routeEntry)
-                } else {
-                    context.showLongToast(
-                        R.string.backup_and_restore__back_up__failure,
-                        "error_message" to failureClass,
-                    )
-                }
-            }
-        },
+        onResult = { uri -> model.onDocumentResult(context, uri) },
     )
 
-    suspend fun prepareBackupWorkspace(
-        selection: Set<BackupComponent>,
-    ): CacheManager.BackupAndRestoreWorkspace {
-        // Keep cleanup ownership if cancellation happens during the dispatcher handoff.
-        val pendingWorkspace = AtomicReference<CacheManager.BackupAndRestoreWorkspace?>()
-        var accepted = false
-        try {
-            val workspace = withContext(Dispatchers.IO) {
-                cacheManager.backupAndRestore.new().also(pendingWorkspace::set)
+    LaunchedEffect(phase, routeEntry) {
+        if (
+            phase == BackupExportPhase.DOCUMENT_PICKER_PENDING ||
+            phase == BackupExportPhase.SHARE_PENDING ||
+            phase == BackupExportPhase.SUCCEEDED ||
+            phase == BackupExportPhase.FAILED
+        ) {
+            val currentEntryFlow = navController.currentBackStackEntryFlow.onStart {
+                navController.currentBackStackEntry?.let { emit(it) }
             }
-            withContext(Dispatchers.IO) {
-                val operationContext = currentCoroutineContext()
-                val archiveLimits = ArchiveLimits.Default
-                val transferBudget = ZipUtils.TransferBudget(
-                    maxEntries = archiveLimits.maxEntries,
-                    maxBytes = archiveLimits.maxExpandedBytes,
-                    maxFileBytes = archiveLimits.maxEntryBytes,
-                    checkCancelled = { operationContext.ensureActive() },
-                )
-                if (BackupComponent.PREFERENCES in selection) {
-                    val fileBasedStorage = workspace.inputDir
-                        .subDir(AndroidAppDataStorage.JETPREF_DIR_NAME)
-                        .subFile("${FlorisPreferenceModel.NAME}.${AndroidAppDataStorage.JETPREF_FILE_EXT}")
-                        .let { FileBasedStorage(it.path) }
-                    QuickActionArrangementSave.withBarrier {
-                        FlorisPreferenceStore.export(fileBasedStorage).getOrThrow()
-                    }
-                }
-                val workspaceFilesDir = workspace.inputDir.subDir("files")
-                ExtensionManager.withStorageMutation {
-                    if (BackupComponent.KEYBOARD_EXTENSIONS in selection) {
-                        ZipUtils.copyDirectoryNoFollow(
-                            srcDir = context.filesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH),
-                            dstDir = workspaceFilesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH),
-                            allowMissing = true,
-                            budget = transferBudget,
-                        )
-                    }
-                    if (BackupComponent.THEME_EXTENSIONS in selection) {
-                        ZipUtils.copyDirectoryNoFollow(
-                            srcDir = context.filesDir.subDir(ExtensionManager.IME_THEME_PATH),
-                            dstDir = workspaceFilesDir.subDir(ExtensionManager.IME_THEME_PATH),
-                            allowMissing = true,
-                            budget = transferBudget,
-                        )
-                    }
-                }
-
-                val selectedTypes = selection.clipboardItemTypes()
-                if (selectedTypes.isNotEmpty()) {
-                    val clipboardManager by context.clipboardManager()
-                    val snapshot = withContext(NonCancellable) {
-                        clipboardManager.acquireBackupSnapshot(selectedTypes)
-                    }
-                    try {
-                        operationContext.ensureActive()
-                        ClipboardBackupPayload.write(
-                            context = context,
-                            stagedRoot = workspace.inputDir,
-                            sourcePackageName = BuildConfig.APPLICATION_ID,
-                            selectedTypes = selectedTypes,
-                            items = snapshot.items,
-                            transferBudget = transferBudget,
-                            checkActive = operationContext::ensureActive,
-                        )
-                    } finally {
-                        withContext(NonCancellable) {
-                            runCatching { snapshot.release() }
-                        }
-                    }
-                }
-                workspace.metadata = BackupArchive.Metadata(
-                    packageName = BuildConfig.APPLICATION_ID,
-                    versionCode = BuildConfig.VERSION_CODE,
-                    versionName = BuildConfig.VERSION_NAME,
-                    timestamp = System.currentTimeMillis(),
-                )
-                workspace.inputDir.subFile(BackupArchive.METADATA_JSON_NAME).writeJson(workspace.metadata)
-                workspace.inputDir.subFile(BackupArchive.MANIFEST_JSON_NAME).writeJson(
-                    BackupArchive.Manifest(
-                        formatVersion = BackupArchive.CURRENT_MANIFEST_VERSION,
-                        components = BackupComponent.entries
-                            .filter { it in selection }
-                            .map { it.wireId },
-                    ),
-                )
-                operationContext.ensureActive()
-                workspace.zipFile = workspace.outputDir.subFile(BackupArchive.defaultFileName(workspace.metadata))
-                ZipUtils.zip(
-                    workspace.inputDir,
-                    workspace.zipFile,
-                    ZipUtils.WriteLimits(
-                        maxEntries = archiveLimits.maxEntries,
-                        maxSourceBytes = archiveLimits.maxExpandedBytes,
-                        maxFileBytes = archiveLimits.maxEntryBytes,
-                        maxPathBytes = archiveLimits.maxPathBytes,
-                        maxPathSegmentBytes = archiveLimits.maxPathSegmentBytes,
-                        maxOutputBytes = archiveLimits.maxArchiveBytes,
-                        maxFileBytesForPath = archiveLimits::maxEntryBytesFor,
-                        checkCancelled = { operationContext.ensureActive() },
-                    ),
-                )
-                val snapshot = ArchiveSnapshot(workspace.zipFile.toPath(), workspace.zipFile.length())
-                when (val result = BackupArchiveSession.open(snapshot)) {
-                    is BackupArchiveSessionResult.Valid -> result.session.close()
-                    is BackupArchiveSessionResult.Invalid -> error("Generated backup failed validation.")
-                }
-            }
-            accepted = true
-            pendingWorkspace.set(null)
-            return workspace
-        } finally {
-            if (!accepted) {
-                withContext(NonCancellable + Dispatchers.IO) {
-                    pendingWorkspace.getAndSet(null)?.close()
-                }
+            while (true) {
+                combine(routeEntry.lifecycle.currentStateFlow, currentEntryFlow) { ownerState, currentEntry ->
+                    ownerState == Lifecycle.State.DESTROYED ||
+                        (ownerState == Lifecycle.State.RESUMED && currentEntry === routeEntry)
+                }.first { it }
+                if (routeEntry.lifecycle.currentState == Lifecycle.State.DESTROYED) return@LaunchedEffect
+                if (
+                    routeEntry.lifecycle.currentState == Lifecycle.State.RESUMED &&
+                    navController.currentBackStackEntry === routeEntry
+                ) break
             }
         }
-    }
-
-    suspend fun prepareAndPerformBackup() {
-        val selection = backupFilesSelector.snapshot()
-        val destination = backupDestination
-        try {
-            if (backupWorkspace == null ||
-                backupWorkspace!!.isClosed() ||
-                preparedSelection != selection
-            ) {
-                closeBackupWorkspace()
-                backupWorkspace = prepareBackupWorkspace(selection)
-                preparedSelection = selection
-            }
-            when (destination) {
-                Backup.Destination.FILE_SYS -> {
-                    backUpToFileSystemLauncher.launch(backupWorkspace!!.zipFile.name)
-                }
-
-                Backup.Destination.SHARE_INTENT -> {
-                    context.startActivity(Backup.createShareIntent(context, backupWorkspace!!.zipFile))
-                    // Keep the shared file alive for FileProvider, but never
-                    // reuse a snapshot after app data may have changed.
-                    preparedSelection = null
-                    isBackupBusy = false
+        when (phase) {
+            BackupExportPhase.DOCUMENT_PICKER_PENDING -> {
+                model.claimDocumentPicker()?.let { fileName ->
+                    try {
+                        backUpToFileSystemLauncher.launch(fileName)
+                    } catch (error: Exception) {
+                        model.onDocumentPickerLaunchFailed(error)
+                    }
                 }
             }
-        } catch (error: CancellationException) {
-            closeBackupWorkspace()
-            isBackupBusy = false
-            throw error
-        } catch (error: Exception) {
-            val failureClass = error.javaClass.simpleName
-            flogError { "Backup failed: destination=$destination, failureClass=$failureClass" }
-            closeBackupWorkspace()
-            isBackupBusy = false
-            context.showLongToast(
-                R.string.backup_and_restore__back_up__failure,
-                "error_message" to failureClass,
-            )
+            BackupExportPhase.SHARE_PENDING -> {
+                val workspace = model.claimShareWorkspace() ?: return@LaunchedEffect
+                try {
+                    context.startActivity(Backup.createShareIntent(context, workspace.zipFile))
+                    model.onShareLaunched()
+                } catch (error: Exception) {
+                    model.onShareLaunchFailed(error)
+                }
+            }
+            BackupExportPhase.SUCCEEDED -> {
+                if (navController.popOwnedRoute(routeEntry) == OwnedRoutePopResult.POPPED) {
+                    context.showLongToast(R.string.backup_and_restore__back_up__success)
+                }
+            }
+            BackupExportPhase.FAILED -> {
+                context.showLongToast(
+                    R.string.backup_and_restore__back_up__failure,
+                    "error_message" to (model.failureClass ?: "INTERNAL_FAILURE"),
+                )
+                model.acknowledgeFailure()
+            }
+            else -> Unit
         }
     }
 
@@ -419,20 +238,16 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
             ButtonBarSpacer()
             ButtonBarTextButton(
                 onClick = {
-                    closeBackupWorkspace()
+                    model.discard()
                     navController.popOwnedRoute(routeEntry)
                 },
                 text = stringRes(R.string.action__cancel),
                 enabled = !isBackupBusy,
             )
             ButtonBarButton(
-                onClick = {
-                    if (isBackupBusy) return@ButtonBarButton
-                    isBackupBusy = true
-                    scope.launch { prepareAndPerformBackup() }
-                },
+                onClick = { model.submit(context, cacheManager) },
                 text = stringRes(R.string.action__back_up),
-                enabled = !isBackupBusy && backupFilesSelector.atLeastOneSelected(),
+                enabled = !isBackupBusy && model.filesSelector.atLeastOneSelected(),
             )
         }
     }
@@ -443,24 +258,142 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
             title = stringRes(R.string.backup_and_restore__back_up__destination),
         ) {
             RadioListItem(
-                onClick = {
-                    backupDestination = Backup.Destination.FILE_SYS
-                },
-                selected = backupDestination == Backup.Destination.FILE_SYS,
+                onClick = { model.destination = Backup.Destination.FILE_SYS },
+                selected = model.destination == Backup.Destination.FILE_SYS,
                 text = stringRes(R.string.backup_and_restore__back_up__destination_file_sys),
             )
             RadioListItem(
-                onClick = {
-                    backupDestination = Backup.Destination.SHARE_INTENT
-                },
-                selected = backupDestination == Backup.Destination.SHARE_INTENT,
+                onClick = { model.destination = Backup.Destination.SHARE_INTENT },
+                selected = model.destination == Backup.Destination.SHARE_INTENT,
                 text = stringRes(R.string.backup_and_restore__back_up__destination_share_intent),
             )
         }
         BackupFilesSelector(
-            filesSelector = backupFilesSelector,
+            filesSelector = model.filesSelector,
             title = stringRes(R.string.backup_and_restore__back_up__files),
         )
+    }
+}
+
+internal suspend fun prepareBackupWorkspace(
+    context: Context,
+    cacheManager: CacheManager,
+    selection: Set<BackupComponent>,
+): CacheManager.BackupAndRestoreWorkspace {
+    // Keep cleanup ownership if cancellation happens during the dispatcher handoff.
+    val pendingWorkspace = AtomicReference<CacheManager.BackupAndRestoreWorkspace?>()
+    var accepted = false
+    try {
+        val workspace = withContext(Dispatchers.IO) {
+            cacheManager.backupAndRestore.new().also(pendingWorkspace::set)
+        }
+        withContext(Dispatchers.IO) {
+            val operationContext = currentCoroutineContext()
+            val archiveLimits = ArchiveLimits.Default
+            val transferBudget = ZipUtils.TransferBudget(
+                maxEntries = archiveLimits.maxEntries,
+                maxBytes = archiveLimits.maxExpandedBytes,
+                maxFileBytes = archiveLimits.maxEntryBytes,
+                checkCancelled = { operationContext.ensureActive() },
+            )
+            if (BackupComponent.PREFERENCES in selection) {
+                val fileBasedStorage = workspace.inputDir
+                    .subDir(AndroidAppDataStorage.JETPREF_DIR_NAME)
+                    .subFile("${FlorisPreferenceModel.NAME}.${AndroidAppDataStorage.JETPREF_FILE_EXT}")
+                    .let { FileBasedStorage(it.path) }
+                QuickActionArrangementSave.withBarrier {
+                    FlorisPreferenceStore.export(fileBasedStorage).getOrThrow()
+                }
+            }
+            val workspaceFilesDir = workspace.inputDir.subDir("files")
+            ExtensionManager.withStorageMutation {
+                if (BackupComponent.KEYBOARD_EXTENSIONS in selection) {
+                    ZipUtils.copyDirectoryNoFollow(
+                        srcDir = context.filesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH),
+                        dstDir = workspaceFilesDir.subDir(ExtensionManager.IME_KEYBOARD_PATH),
+                        allowMissing = true,
+                        budget = transferBudget,
+                    )
+                }
+                if (BackupComponent.THEME_EXTENSIONS in selection) {
+                    ZipUtils.copyDirectoryNoFollow(
+                        srcDir = context.filesDir.subDir(ExtensionManager.IME_THEME_PATH),
+                        dstDir = workspaceFilesDir.subDir(ExtensionManager.IME_THEME_PATH),
+                        allowMissing = true,
+                        budget = transferBudget,
+                    )
+                }
+            }
+
+            val selectedTypes = selection.clipboardItemTypes()
+            if (selectedTypes.isNotEmpty()) {
+                val clipboardManager by context.clipboardManager()
+                val snapshot = withContext(NonCancellable) {
+                    clipboardManager.acquireBackupSnapshot(selectedTypes)
+                }
+                try {
+                    operationContext.ensureActive()
+                    ClipboardBackupPayload.write(
+                        context = context,
+                        stagedRoot = workspace.inputDir,
+                        sourcePackageName = BuildConfig.APPLICATION_ID,
+                        selectedTypes = selectedTypes,
+                        items = snapshot.items,
+                        transferBudget = transferBudget,
+                        checkActive = operationContext::ensureActive,
+                    )
+                } finally {
+                    withContext(NonCancellable) {
+                        runCatching { snapshot.release() }
+                    }
+                }
+            }
+            workspace.metadata = BackupArchive.Metadata(
+                packageName = BuildConfig.APPLICATION_ID,
+                versionCode = BuildConfig.VERSION_CODE,
+                versionName = BuildConfig.VERSION_NAME,
+                timestamp = System.currentTimeMillis(),
+            )
+            workspace.inputDir.subFile(BackupArchive.METADATA_JSON_NAME).writeJson(workspace.metadata)
+            workspace.inputDir.subFile(BackupArchive.MANIFEST_JSON_NAME).writeJson(
+                BackupArchive.Manifest(
+                    formatVersion = BackupArchive.CURRENT_MANIFEST_VERSION,
+                    components = BackupComponent.entries
+                        .filter { it in selection }
+                        .map { it.wireId },
+                ),
+            )
+            operationContext.ensureActive()
+            workspace.zipFile = workspace.outputDir.subFile(BackupArchive.defaultFileName(workspace.metadata))
+            ZipUtils.zip(
+                workspace.inputDir,
+                workspace.zipFile,
+                ZipUtils.WriteLimits(
+                    maxEntries = archiveLimits.maxEntries,
+                    maxSourceBytes = archiveLimits.maxExpandedBytes,
+                    maxFileBytes = archiveLimits.maxEntryBytes,
+                    maxPathBytes = archiveLimits.maxPathBytes,
+                    maxPathSegmentBytes = archiveLimits.maxPathSegmentBytes,
+                    maxOutputBytes = archiveLimits.maxArchiveBytes,
+                    maxFileBytesForPath = archiveLimits::maxEntryBytesFor,
+                    checkCancelled = { operationContext.ensureActive() },
+                ),
+            )
+            val snapshot = ArchiveSnapshot(workspace.zipFile.toPath(), workspace.zipFile.length())
+            when (val result = BackupArchiveSession.open(snapshot)) {
+                is BackupArchiveSessionResult.Valid -> result.session.close()
+                is BackupArchiveSessionResult.Invalid -> error("Generated backup failed validation.")
+            }
+        }
+        accepted = true
+        pendingWorkspace.set(null)
+        return workspace
+    } finally {
+        if (!accepted) {
+            withContext(NonCancellable + Dispatchers.IO) {
+                pendingWorkspace.getAndSet(null)?.close()
+            }
+        }
     }
 }
 
