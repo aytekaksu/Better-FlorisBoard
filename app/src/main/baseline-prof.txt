@@ -1506,7 +1506,6 @@ HSPLandroidx/compose/ui/text/input/ImeOptions$Companion;-><init>()V
 HSPLandroidx/compose/ui/text/input/ImeOptions;-><clinit>()V
 HSPLandroidx/compose/ui/text/input/TextFieldValue;-><clinit>()V
 HSPLandroidx/compose/ui/text/input/TextFieldValue;-><init>(Landroidx/compose/ui/text/AnnotatedString;JLandroidx/compose/ui/text/TextRange;)V
-HSPLandroidx/compose/ui/text/input/TextFieldValue;-><init>(Ljava/lang/String;JI)V
 HSPLandroidx/compose/ui/text/input/TextInputService;-><init>(Landroidx/compose/ui/text/input/PlatformTextInputService;)V
 HSPLandroidx/compose/ui/text/input/TextInputServiceAndroid$$ExternalSyntheticLambda0;-><init>(Landroidx/compose/ui/text/input/TextInputServiceAndroid;)V
 HSPLandroidx/compose/ui/text/input/TextInputServiceAndroid$baseInputConnection$2;-><init>(Landroidx/compose/ui/text/input/TextInputServiceAndroid;)V
