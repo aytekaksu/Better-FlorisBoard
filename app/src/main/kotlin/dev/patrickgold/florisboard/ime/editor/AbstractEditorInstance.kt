@@ -624,7 +624,6 @@ abstract class AbstractEditorInstance(
                 )
             } else {
                 content.generateCopy(
-                    selection = content.selection.translatedBy(length),
                     textAfterSelection = scopeText.drop(length),
                 )
             }
