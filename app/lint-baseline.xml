@@ -24,28 +24,6 @@
     </issue>
 
     <issue
-        id="ComposableNaming"
-        message="Composable functions that return Unit should start with an uppercase letter"
-        errorLine1="private fun FlorisScreenScope.content("
-        errorLine2="                              ~~~~~~~">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/app/setup/SetupScreen.kt"
-            line="105"
-            column="31"/>
-    </issue>
-
-    <issue
-        id="ComposableNaming"
-        message="Composable functions that return Unit should start with an uppercase letter"
-        errorLine1="private fun footer(context: Context) {"
-        errorLine2="            ~~~~~~">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/app/setup/SetupScreen.kt"
-            line="178"
-            column="13"/>
-    </issue>
-
-    <issue
         id="ModifierFactoryExtensionFunction"
         message="Modifier factory functions should be extensions on Modifier"
         errorLine1="internal fun pluginUiItemModifier("
