@@ -2,28 +2,6 @@
 <issues format="6" by="lint 9.0.0" type="baseline" client="gradle" dependencies="true" name="AGP (9.0.0)" variant="all" version="9.0.0">
 
     <issue
-        id="RestrictedApi"
-        message="EmojiCompat.reset can only be called from within the same library (androidx.emoji2:emoji2)"
-        errorLine1="        private val instance: EmojiCompat? = if (config != null) EmojiCompat.reset(config) else null"
-        errorLine2="                                                                             ~~~~~">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat.kt"
-            line="115"
-            column="78"/>
-    </issue>
-
-    <issue
-        id="VisibleForTests"
-        message="This method should only be accessed from tests or within private scope"
-        errorLine1="            EmojiCompat.reset(instance)"
-        errorLine2="                        ~~~~~">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/ime/media/emoji/FlorisEmojiCompat.kt"
-            line="89"
-            column="25"/>
-    </issue>
-
-    <issue
         id="ModifierFactoryExtensionFunction"
         message="Modifier factory functions should be extensions on Modifier"
         errorLine1="internal fun pluginUiItemModifier("
