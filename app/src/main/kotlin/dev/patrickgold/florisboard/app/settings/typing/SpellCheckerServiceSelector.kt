@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,19 +38,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.lib.util.launchActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
 import org.florisboard.lib.android.AndroidSettings
-import org.florisboard.lib.compose.FlorisCanvasIcon
 import org.florisboard.lib.compose.FlorisErrorCard
 import org.florisboard.lib.compose.FlorisSimpleCard
 import org.florisboard.lib.compose.FlorisWarningCard
 import org.florisboard.lib.compose.observeAsState
+import org.florisboard.lib.compose.rasterizeDrawable
 import org.florisboard.lib.compose.stringRes
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -62,7 +65,11 @@ internal data class SpellCheckerPresentation(
 private sealed interface SpellCheckerLoadState {
     data object Loading : SpellCheckerLoadState
     data object Missing : SpellCheckerLoadState
-    data class Found(val presentation: SpellCheckerPresentation) : SpellCheckerLoadState
+    data class Found(
+        val label: String,
+        val packageName: String,
+        val icon: ImageBitmap?,
+    ) : SpellCheckerLoadState
 }
 
 @Composable
@@ -104,12 +111,22 @@ internal fun SpellCheckerServiceSelectorContent(
     val context = LocalContext.current
     val appContext = context.applicationContext
     val configuration = LocalConfiguration.current
+    val fallbackSizePx = with(LocalDensity.current) { 48.dp.roundToPx() }
     val state = if (enabled == "1" && ComponentName.unflattenFromString(selectedId.orEmpty()) != null) {
-        key(context, configuration, selectedId) {
+        key(context, configuration, selectedId, fallbackSizePx) {
             produceState<SpellCheckerLoadState>(SpellCheckerLoadState.Loading) {
                 value = try {
-                    runInterruptible(Dispatchers.IO) { loader(appContext, selectedId.orEmpty()) }
-                        ?.let(SpellCheckerLoadState::Found) ?: SpellCheckerLoadState.Missing
+                    runInterruptible(Dispatchers.IO) {
+                        loader(appContext, selectedId.orEmpty())?.let { presentation ->
+                            val icon = try {
+                                presentation.icon?.let { rasterizeDrawable(it, fallbackSizePx) }
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                null
+                            }
+                            SpellCheckerLoadState.Found(presentation.label, presentation.packageName, icon)
+                        }
+                    } ?: SpellCheckerLoadState.Missing
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     SpellCheckerLoadState.Missing
@@ -132,15 +149,15 @@ internal fun SpellCheckerServiceSelectorContent(
                     )
                 }
                 is SpellCheckerLoadState.Found -> {
-                    val presentation = state.presentation
                     FlorisSimpleCard(
                         icon = {
-                            if (presentation.icon != null) {
-                                FlorisCanvasIcon(
+                            if (state.icon != null) {
+                                Image(
                                     modifier = Modifier
                                         .padding(end = 8.dp)
                                         .requiredSize(32.dp),
-                                    drawable = presentation.icon,
+                                    bitmap = state.icon,
+                                    contentDescription = null,
                                 )
                             } else {
                                 Icon(
@@ -152,8 +169,8 @@ internal fun SpellCheckerServiceSelectorContent(
                                 )
                             }
                         },
-                        text = presentation.label,
-                        secondaryText = presentation.packageName,
+                        text = state.label,
+                        secondaryText = state.packageName,
                         contentPadding = PaddingValues(all = 8.dp),
                         onClick = onClick,
                     )
