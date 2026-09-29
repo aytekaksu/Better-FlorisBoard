@@ -25,15 +25,19 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -73,12 +77,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
 import androidx.emoji2.text.EmojiCompat
 import androidx.emoji2.widget.EmojiTextView
 import dev.patrickgold.florisboard.R
@@ -399,7 +406,7 @@ private fun EmojiKey(
 ) {
     val inputFeedbackController = LocalInputFeedbackController.current
     val base = emojiSet.base(withSkinTone = preferredSkinTone)
-    val variations = emojiSet.variations(withoutSkinTone = preferredSkinTone)
+    val variations = emojiSet.variations(excluding = base)
     var showVariantsBox by remember { mutableStateOf(false) }
 
     SnyggBox(FlorisImeUi.MediaEmojiKey.elementName,
@@ -472,6 +479,21 @@ private fun EmojiKey(
     }
 }
 
+private object EmojiVariationsPopupPosition : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+    ): IntOffset {
+        val x = (anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2)
+            .coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0))
+        val y = (anchorBounds.top - popupContentSize.height)
+            .coerceIn(0, (windowSize.height - popupContentSize.height).coerceAtLeast(0))
+        return IntOffset(x, y)
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EmojiVariationsPopup(
@@ -485,33 +507,35 @@ private fun EmojiVariationsPopup(
 
     if (visible) {
         Popup(
-            alignment = Alignment.TopCenter,
-            offset = with(LocalDensity.current) {
-                val y = -emojiKeyHeight * ceil(variations.size / 6f)
-                IntOffset(x = 0, y = y.toPx().toInt())
-            },
+            popupPositionProvider = EmojiVariationsPopupPosition,
             onDismissRequest = onDismiss,
         ) {
-            SnyggRow(
+            SnyggBox(
                 elementName = FlorisImeUi.MediaEmojiKeyPopupBox.elementName,
-                modifier = Modifier
-                    .widthIn(max = EmojiBaseWidth * 6),
+                modifier = Modifier.widthIn(max = EmojiBaseWidth * 6),
             ) {
-                for (emoji in variations) {
-                    SnyggBox(
-                        elementName = FlorisImeUi.MediaEmojiKeyPopupElement.elementName,
-                        modifier = Modifier
-                            .pointerInput(Unit) {
-                                detectTapGestures { onEmojiTap(emoji) }
-                            }
-                            .width(EmojiBaseWidth)
-                            .height(emojiKeyHeight),
-                    ) {
-                        EmojiText(
-                            modifier = Modifier.align(Alignment.Center),
-                            text = emoji.value,
-                            useEmojiCompatView = useEmojiCompatView,
-                        )
+                FlowRow(
+                    modifier = Modifier
+                        .heightIn(max = emojiKeyHeight * 4)
+                        .verticalScroll(rememberScrollState()),
+                    maxItemsInEachRow = 6,
+                ) {
+                    for (emoji in variations) {
+                        SnyggBox(
+                            elementName = FlorisImeUi.MediaEmojiKeyPopupElement.elementName,
+                            modifier = Modifier
+                                .pointerInput(Unit) {
+                                    detectTapGestures { onEmojiTap(emoji) }
+                                }
+                                .width(EmojiBaseWidth)
+                                .height(emojiKeyHeight),
+                        ) {
+                            EmojiText(
+                                modifier = Modifier.align(Alignment.Center),
+                                text = emoji.value,
+                                useEmojiCompatView = useEmojiCompatView,
+                            )
+                        }
                     }
                 }
             }
