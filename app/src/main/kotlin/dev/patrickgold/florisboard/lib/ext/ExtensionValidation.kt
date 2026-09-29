@@ -95,19 +95,6 @@ object ExtensionValidation {
         }
     }
 
-    val SnyggStaticColorValue = ValidationRule<String> { input ->
-        val str = input.trim()
-        when {
-            str.isBlank() -> resultInvalid(error = R.string.ext__validation__enter_color)
-
-            org.florisboard.lib.snygg.value.SnyggStaticColorValue.deserialize(str).isFailure -> {
-                resultInvalid(error = R.string.ext__validation__error_color)
-            }
-
-            else -> resultValid()
-        }
-    }
-
     val SnyggDpShapeValue = ValidationRule<String> { str ->
         val floatValue = str.toFloatOrNull()
         when {

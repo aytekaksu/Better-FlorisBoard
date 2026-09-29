@@ -850,8 +850,8 @@
     <string name="ext__validation__error_stylesheet_path">Please enter a safe relative stylesheet path</string>
     <string name="ext__validation__enter_property">Please enter a variable name</string>
     <string name="ext__validation__error_property">Please enter a valid variable name matching {variable_name_regex}</string>
-    <string name="ext__validation__enter_color">Please enter a color string</string>
-    <string name="ext__validation__error_color">Please enter a valid color string</string>
+    <string name="ext__validation__enter_color" tools:ignore="UnusedResources">Please enter a color string</string>
+    <string name="ext__validation__error_color" tools:ignore="UnusedResources">Please enter a valid color string</string>
     <string name="ext__validation__enter_dp_size">Please enter a dp size</string>
     <string name="ext__validation__enter_valid_number">Please enter a valid number</string>
     <string name="ext__validation__enter_positive_number">Please enter a positive number (>=0)</string>

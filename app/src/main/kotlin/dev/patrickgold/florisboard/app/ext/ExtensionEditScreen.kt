@@ -209,7 +209,7 @@ fun ExtensionEditScreen(
     val ext = remember(id, createSerialType, extensionManager) {
         if (isCreateExt) {
             val meta = ExtensionMeta(
-                id = ExtensionDefaults.createLocalId("themes", System.currentTimeMillis().toString()),
+                id = "local.themes.${System.currentTimeMillis()}",
                 version = "0.0.0",
                 title = "My themes",
                 maintainers = listOf(ExtensionMaintainer(name = "Local")),
