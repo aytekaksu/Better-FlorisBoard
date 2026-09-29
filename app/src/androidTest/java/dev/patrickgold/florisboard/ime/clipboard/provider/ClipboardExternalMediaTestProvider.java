@@ -122,6 +122,9 @@ public final class ClipboardExternalMediaTestProvider extends ContentProvider {
         ) {
             return "application/octet-stream";
         }
+        if ("/zip".equals(path)) {
+            return "application/zip";
+        }
         return null;
     }
 
@@ -203,7 +206,7 @@ public final class ClipboardExternalMediaTestProvider extends ContentProvider {
         long generation = requireGeneration(uri);
         store.incrementOpenCount(generation);
         String path = uri.getPath();
-        if ("/healthy".equals(path)) {
+        if ("/healthy".equals(path) || "/zip".equals(path)) {
             store.recordHealthyCaller(
                 generation,
                 Binder.getCallingPid(),

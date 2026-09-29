@@ -53,6 +53,13 @@ published atomically. The generated archive is then opened through the normal
 restore session before it can be shared or saved. Entry order and timestamps
 are stable, so the same staged input produces the same ZIP bytes.
 
+Sharing sends the validated ZIP as `application/zip` through a chooser. The
+backup may contain preferences, extensions, and clipboard history, so its
+non-exported FileProvider exposes the chosen content URI with a temporary
+read grant. The screen retains its private workspace after chooser launch,
+but this does not guarantee that a recipient finishes reading before the
+route closes.
+
 The live flow is deliberately narrow:
 
 1. The selected `content:` document is read exactly once into a counted private

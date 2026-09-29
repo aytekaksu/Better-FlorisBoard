@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard.app.settings.advanced
 
+import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -54,11 +55,11 @@ import dev.patrickgold.florisboard.lib.cache.CacheManager
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.lib.devtools.flogError
 import dev.patrickgold.florisboard.lib.ext.ExtensionManager
-import dev.patrickgold.florisboard.lib.io.FileRegistry
 import dev.patrickgold.florisboard.lib.io.ZipUtils
 import dev.patrickgold.jetpref.datastore.runtime.AndroidAppDataStorage
 import dev.patrickgold.jetpref.datastore.runtime.FileBasedStorage
 import dev.patrickgold.jetpref.material.ui.JetPrefListItem
+import java.io.File
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
@@ -82,6 +83,15 @@ import org.florisboard.lib.kotlin.io.writeJson
 
 object Backup {
     const val FILE_PROVIDER_AUTHORITY = "${BuildConfig.APPLICATION_ID}.provider.file"
+
+    internal fun createShareIntent(context: Context, zipFile: File): Intent {
+        val uri = FileProvider.getUriForFile(context, FILE_PROVIDER_AUTHORITY, zipFile)
+        return ShareCompat.IntentBuilder(context)
+            .setStream(uri)
+            .setType("application/zip")
+            .createChooserIntent()
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
 
     enum class Destination {
         FILE_SYS,
@@ -381,14 +391,7 @@ fun BackupScreen(routeEntry: NavBackStackEntry) = FlorisScreen {
                 }
 
                 Backup.Destination.SHARE_INTENT -> {
-                    val uri =
-                        FileProvider.getUriForFile(context, Backup.FILE_PROVIDER_AUTHORITY, backupWorkspace!!.zipFile)
-                    val shareIntent = ShareCompat.IntentBuilder(context)
-                        .setStream(uri)
-                        .setType(FileRegistry.BACKUP_ARCHIVE_MEDIA_TYPE)
-                        .createChooserIntent()
-                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    context.startActivity(shareIntent)
+                    context.startActivity(Backup.createShareIntent(context, backupWorkspace!!.zipFile))
                     // Keep the shared file alive for FileProvider, but never
                     // reuse a snapshot after app data may have changed.
                     preparedSelection = null
