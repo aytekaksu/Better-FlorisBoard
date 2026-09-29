@@ -67,4 +67,24 @@ class SnyggStylesheetEditorTest {
         assertEquals(stylesheet.schema, stylesheetAfterEdit.schema)
         assertEquals(stylesheet.rules, stylesheetAfterEdit.rules)
     }
+
+    @Test
+    fun `editor orders rules naturally unless a comparator is supplied`() {
+        val defines = SnyggAnnotationRule.Defines
+        val alpha = SnyggElementRule("alpha")
+        val zeta = SnyggElementRule("zeta")
+        val initialRules = linkedMapOf<SnyggRule, SnyggPropertySet>(
+            zeta to SnyggSinglePropertySet(),
+            defines to SnyggSinglePropertySet(),
+            alpha to SnyggSinglePropertySet(),
+        )
+        val expectedNaturalOrder = listOf(defines, alpha, zeta)
+
+        val defaultEditor = SnyggStylesheetEditor(SnyggStylesheet.SCHEMA_V2, initialRules)
+        assertEquals(expectedNaturalOrder, defaultEditor.rules.keys.toList())
+
+        val reversedComparator = Comparator<SnyggRule> { left, right -> right.compareTo(left) }
+        val customEditor = SnyggStylesheetEditor(SnyggStylesheet.SCHEMA_V2, initialRules, reversedComparator)
+        assertEquals(expectedNaturalOrder.reversed(), customEditor.rules.keys.toList())
+    }
 }

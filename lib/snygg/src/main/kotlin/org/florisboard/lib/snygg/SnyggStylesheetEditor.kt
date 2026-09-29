@@ -21,7 +21,7 @@ class SnyggStylesheetEditor(
     initRules: Map<SnyggRule, SnyggPropertySet>? = null,
     comparator: Comparator<SnyggRule>? = null,
 ) {
-    val rules = sortedMapOf<SnyggRule, SnyggPropertySetEditor>(comparator ?: DefaultRuleComparator)
+    val rules = sortedMapOf<SnyggRule, SnyggPropertySetEditor>(comparator ?: naturalOrder<SnyggRule>())
 
     init {
         if (initRules != null) {
@@ -63,11 +63,5 @@ class SnyggStylesheetEditor(
     fun build(): SnyggStylesheet {
         val rulesMap = rules.mapValues { (_, propertySetEditor) -> propertySetEditor.build() }
         return SnyggStylesheet(schema, rulesMap)
-    }
-
-    private object DefaultRuleComparator : Comparator<SnyggRule> {
-        override fun compare(a: SnyggRule, b: SnyggRule): Int {
-            return a.compareTo(b)
-        }
     }
 }

@@ -40,18 +40,12 @@ open class SnyggSpecDecl internal constructor(configure: SnyggSpecDeclBuilder.()
         meta = metaB
     }
 
-    fun propertySetSpecOf(rule: SnyggRule): PropertySet? {
-        val propertySetSpec = when (rule) {
-            is SnyggAnnotationRule -> annotationSpecs[rule.decl()]
-            is SnyggElementRule -> elementsSpec
-        } ?: return null
-        return propertySetSpec
+    fun propertySetSpecOf(rule: SnyggRule): PropertySet? = when (rule) {
+        is SnyggAnnotationRule -> annotationSpecs[rule.decl()]
+        is SnyggElementRule -> elementsSpec
     }
 
-    fun propertiesOf(rule: SnyggRule): Set<String> {
-        val propertySetSpec = propertySetSpecOf(rule)
-        return propertySetSpec?.properties?.keys.orEmpty()
-    }
+    fun propertiesOf(rule: SnyggRule): Set<String> = propertySetSpecOf(rule)?.properties?.keys.orEmpty()
 
     fun encodersOf(rule: SnyggRule, property: String): Set<SnyggValueEncoder>? {
         val propertySetSpec = propertySetSpecOf(rule) ?: return null
@@ -221,7 +215,5 @@ class JsonSchemaMetaBuilder(
     var title: String = "",
     var description: String = "",
 ) {
-    fun build(): JsonSchemaMeta {
-        return JsonSchemaMeta(title, description)
-    }
+    fun build(): JsonSchemaMeta = JsonSchemaMeta(title, description)
 }
