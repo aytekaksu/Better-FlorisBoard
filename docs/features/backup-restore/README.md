@@ -157,6 +157,15 @@ Both use failure classes only, never archive contents or paths. A completed docu
 save remains successful after an initial workspace-close failure; background
 retry handles any remaining workspace without leaving the backup button busy.
 
+Backup export keeps its prepared archive in a route-scoped operation owner while
+the document picker is open, so configuration changes do not discard the source.
+The first picker result owns the document write and its non-cancellable I/O
+cleanup; duplicate results do nothing. A shared FileProvider archive also stays
+owned across rotation. Leaving the route or starting another backup can still
+retire a shared archive before a delayed recipient opens it: the Android chooser
+does not acknowledge completion of the recipient's read. A separate share lease
+is needed to guarantee that later read window.
+
 ## Verification
 
 Run the archive and plan contract tests with the app JVM suite:
@@ -178,5 +187,6 @@ dev.patrickgold.florisboard.app.settings.advanced.BackupArchiveStagerAndroidTest
 dev.patrickgold.florisboard.app.settings.advanced.ClipboardBackupPayloadAndroidTest,\
 dev.patrickgold.florisboard.app.settings.advanced.ClipboardRestoreCommitAndroidTest,\
 dev.patrickgold.florisboard.app.settings.advanced.ClipboardManagerBackupAndroidTest,\
+dev.patrickgold.florisboard.app.settings.advanced.BackupExportViewModelAndroidTest,\
 dev.patrickgold.florisboard.lib.cache.CacheManagerAndroidTest
 ```
