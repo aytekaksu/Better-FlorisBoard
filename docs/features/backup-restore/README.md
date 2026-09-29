@@ -189,5 +189,8 @@ dev.patrickgold.florisboard.app.settings.advanced.ClipboardBackupPayloadAndroidT
 dev.patrickgold.florisboard.app.settings.advanced.ClipboardRestoreCommitAndroidTest,\
 dev.patrickgold.florisboard.app.settings.advanced.ClipboardManagerBackupAndroidTest,\
 dev.patrickgold.florisboard.app.settings.advanced.BackupExportViewModelAndroidTest,\
+dev.patrickgold.florisboard.app.settings.advanced.BackupShareIntentAndroidTest,\
+dev.patrickgold.florisboard.app.settings.advanced.BackupShareLeaseExpiryAndroidTest,\
+dev.patrickgold.florisboard.app.settings.advanced.BackupShareLeaseProviderAuthorizationAndroidTest,\
 dev.patrickgold.florisboard.lib.cache.CacheManagerAndroidTest
 ```
