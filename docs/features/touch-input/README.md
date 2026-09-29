@@ -56,6 +56,8 @@ cancelled.
 Extended popups keep the highest-priority choices near the held key. Left and
 right anchors use the same hit rule, including the existing selection at cell
 edges and a small margin outside the drawn popup.
+Key iteration visits populated rows in layout order. Empty rows keep their
+spacing but do not hide the keys after them.
 
 ## Concurrency and ordering
 
