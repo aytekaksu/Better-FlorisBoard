@@ -125,8 +125,8 @@ messages. Normal import lists may show a bounded, sanitized provider label.
 
 ## Runtime and editor ownership
 
-The app-owned `KeyboardExtensionRepository` publishes one snapshot per keyboard
-index refresh, including replacements whose manifest is unchanged. Layouts,
+The app-owned `KeyboardExtensionRepository` publishes metadata and sources together
+per keyboard index refresh, including replacements with unchanged manifests. Layouts,
 the subtype editor, NLP, and settings read it directly; `SubtypeManager` owns
 saved subtypes and active selection. `KeyboardManager` clears computed
 keyboards, and `LayoutManager` drops decoded layouts and popups from
