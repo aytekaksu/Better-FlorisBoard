@@ -183,10 +183,8 @@ internal fun EditRuleDialog(
         onConfirm = {
             if (isAddRuleDialog && elementsSelectedIndex == 0) {
                 showSelectAsError = true
-            } else {
-                if (!onConfirmRule(initRule, currentRule)) {
-                    showAlreadyExistsError = true
-                }
+            } else if (!onConfirmRule(initRule, currentRule)) {
+                showAlreadyExistsError = true
             }
         },
         dismissLabel = stringRes(R.string.action__cancel),

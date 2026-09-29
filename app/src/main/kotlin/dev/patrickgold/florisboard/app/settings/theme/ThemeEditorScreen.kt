@@ -638,39 +638,22 @@ private fun ThemeEditorReadyScreen(
                             snyggRuleToEdit = null
                             true
                         }
-                        rules.contains(newRule) -> {
-                            false
-                        }
+                        rules.contains(newRule) -> false
                         else -> workspace.update {
-                            val set = rules.remove(oldRule)
-                            when {
-                                set != null -> {
-                                    rules[newRule] = set
-                                    snyggRuleToEdit = null
-                                    scope.launch {
-                                        lazyListState.animateScrollToItem(index = rules.keys.indexOf(newRule))
-                                    }
-                                    true
+                            val set = rules.remove(oldRule) ?: if (oldRule == SnyggEmptyRuleForAdding) {
+                                when (SnyggSpec.propertySetSpecOf(newRule)!!.type) {
+                                    SnyggSpecDecl.PropertySet.Type.SINGLE_SET -> SnyggSinglePropertySetEditor()
+                                    SnyggSpecDecl.PropertySet.Type.MULTIPLE_SETS -> SnyggMultiplePropertySetsEditor()
                                 }
-                                oldRule == SnyggEmptyRuleForAdding -> {
-                                    when (SnyggSpec.propertySetSpecOf(newRule)!!.type) {
-                                        SnyggSpecDecl.PropertySet.Type.SINGLE_SET -> {
-                                            rules[newRule] = SnyggSinglePropertySetEditor()
-                                        }
-                                        SnyggSpecDecl.PropertySet.Type.MULTIPLE_SETS -> {
-                                            rules[newRule] = SnyggMultiplePropertySetsEditor()
-                                        }
-                                    }
-                                    snyggRuleToEdit = null
-                                    scope.launch {
-                                        lazyListState.animateScrollToItem(index = rules.keys.indexOf(newRule))
-                                    }
-                                    true
-                                }
-                                else -> {
-                                    false
-                                }
+                            } else {
+                                return@update false
                             }
+                            rules[newRule] = set
+                            snyggRuleToEdit = null
+                            scope.launch {
+                                lazyListState.animateScrollToItem(index = rules.keys.indexOf(newRule))
+                            }
+                            true
                         }
                     }
                 },
