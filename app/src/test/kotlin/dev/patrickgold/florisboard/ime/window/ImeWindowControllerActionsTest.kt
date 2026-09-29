@@ -16,6 +16,8 @@
 
 package dev.patrickgold.florisboard.ime.window
 
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import app.cash.turbine.test
 import dev.patrickgold.florisboard.app.FlorisPreferenceModel
@@ -23,6 +25,7 @@ import dev.patrickgold.florisboard.plusOrMinus
 import dev.patrickgold.florisboard.shouldBeGreaterThanOrEqualTo
 import dev.patrickgold.florisboard.shouldBeLessThanOrEqualTo
 import dev.patrickgold.jetpref.datastore.jetprefDataStoreOf
+import dev.patrickgold.jetpref.datastore.model.PreferenceData
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.engine.coroutines.backgroundScope
@@ -33,7 +36,16 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.enum
 import io.kotest.property.assume
 import io.kotest.property.checkAll
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runCurrent
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ImeWindowControllerActionsTest : FunSpec({
     val tolerance = 1e-3f.dp
 
@@ -62,6 +74,61 @@ class ImeWindowControllerActionsTest : FunSpec({
                     }
                 }
             }
+        }
+    }
+
+    test("queued floating toggles keep their original form factor during rotation") {
+        val portraitInsets = with(Density(3f)) { ImeInsets.Root.of(IntRect(0, 0, 1080, 2400)) }
+        val landscapeInsets = with(Density(3f)) { ImeInsets.Root.of(IntRect(0, 0, 2400, 1080)) }
+        val portraitConfig = ImeWindowConfig(ImeWindowMode.FIXED)
+        val landscapeConfig = ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = ImeWindowMode.Fixed.COMPACT)
+        val originalConfigs = mapOf(
+            portraitInsets.formFactor.typeGuess to portraitConfig,
+            landscapeInsets.formFactor.typeGuess to landscapeConfig,
+            ImeFormFactor.Type.DESKTOP to ImeWindowConfig(ImeWindowMode.FLOATING),
+        )
+        val prefs by jetprefDataStoreOf(FlorisPreferenceModel::class)
+        val firstWriteEntered = CompletableDeferred<Unit>()
+        val releaseFirstWrite = CompletableDeferred<Unit>()
+        var firstWrite = true
+        prefs.keyboard.windowConfig.init(originalConfigs, PreferenceData.ValuePersistHandler {
+            if (firstWrite) {
+                firstWrite = false
+                firstWriteEntered.complete(Unit)
+                releaseFirstWrite.await()
+            }
+            Result.success(Unit)
+        })
+        val scheduler = TestCoroutineScheduler()
+        val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(scheduler))
+        try {
+            val windowController = ImeWindowController(prefs, scope)
+            windowController.updateRootInsets(portraitInsets)
+            scheduler.runCurrent()
+            windowController.activeWindowConfig.value shouldBe portraitConfig
+
+            // Real preferences publish the first change before awaiting persistence acknowledgement.
+            windowController.actions.toggleFloatingWindow()
+            firstWriteEntered.await()
+            prefs.keyboard.windowConfig.get()
+                .getValue(portraitInsets.formFactor.typeGuess).mode shouldBe ImeWindowMode.FLOATING
+            windowController.actions.toggleFloatingWindow()
+
+            windowController.updateRootInsets(landscapeInsets)
+            scheduler.runCurrent()
+            windowController.activeWindowConfig.value shouldBe landscapeConfig
+
+            releaseFirstWrite.complete(Unit)
+            scheduler.runCurrent()
+            prefs.keyboard.windowConfig.get() shouldBe originalConfigs
+            windowController.activeWindowConfig.value shouldBe landscapeConfig
+
+            windowController.updateRootInsets(portraitInsets)
+            scheduler.runCurrent()
+            windowController.activeWindowConfig.value shouldBe portraitConfig
+        } finally {
+            releaseFirstWrite.complete(Unit)
+            scope.cancel()
         }
     }
 

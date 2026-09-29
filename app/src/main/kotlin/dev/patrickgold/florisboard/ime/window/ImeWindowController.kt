@@ -165,23 +165,20 @@ class ImeWindowController(
     }
 
     /**
-     * Updates the window config in the preferences. It will only update the window config for the type guess of
-     * the active root insets, and will keep other window configs intact.
+     * Updates the saved config for the form factor active when called, keeping other configs intact.
+     * Queued updates use that form factor's latest saved config, even if the root insets change.
      *
-     * This function is thread-safe under the assumption that:
-     * a) The window config pref is only written to by this update function. On other concurrent write accesses
-     *    to the underlying pref the behavior is undefined.
-     * b) The active root insets do not change while the update in ongoing. A snapshot of the active root insets
-     *    will be taken once before any update attempt, and any inset change afterward will not be reflected.
+     * All window-config preference writes must go through this function; concurrent outside writes can be lost.
      */
     fun updateWindowConfig(function: (ImeWindowConfig) -> ImeWindowConfig) {
-        val rootInsets = activeRootInsets.value
-        val typeGuess = rootInsets.formFactor.typeGuess
+        val typeGuess = activeRootInsets.value.formFactor.typeGuess
         scope.launch {
-            // not bullet-proof sync, but good enough considering this is only triggered by tap actions
             updateConfigMutex.withLock {
-                val newWindowConfig = activeWindowConfig.updateAndGet(function)
                 val byType = prefs.keyboard.windowConfig.get()
+                val newWindowConfig = function(byType[typeGuess] ?: ImeWindowConfig.Default)
+                if (activeRootInsets.value.formFactor.typeGuess == typeGuess) {
+                    activeWindowConfig.value = newWindowConfig
+                }
                 prefs.keyboard.windowConfig.set(byType.plus(typeGuess to newWindowConfig))
             }
         }
