@@ -60,10 +60,6 @@ abstract class Extension {
 
     fun isLoaded() = workingDir != null
 
-    open fun onBeforeLoad(context: Context, cacheDir: FsDir) {
-        /* Empty */
-    }
-
     open fun onAfterLoad(context: Context, cacheDir: FsDir) {
         /* Empty */
     }
@@ -90,7 +86,6 @@ abstract class Extension {
                 "Not enough space to load extension data."
             }
             check(cacheDir.mkdirs()) { "Unable to create extension runtime directory." }
-            onBeforeLoad(context, cacheDir)
             ZipUtils.unzip(context, sourceRef, cacheDir).getOrThrow()
             workingDir = cacheDir
             ownedRuntimeDir = cacheDir
@@ -101,7 +96,6 @@ abstract class Extension {
             cacheDir.deleteRecursively()
             workingDir = null
             ownedRuntimeDir = null
-            runCatching { onAfterUnload(context, cacheDir) }
             when (error) {
                 is InterruptedException -> throw error
                 is CancellationException -> throw error
@@ -112,10 +106,6 @@ abstract class Extension {
     }
 
     open fun onBeforeUnload(context: Context, cacheDir: FsDir) {
-        /* Empty */
-    }
-
-    open fun onAfterUnload(context: Context, cacheDir: FsDir) {
         /* Empty */
     }
 
@@ -137,7 +127,6 @@ abstract class Extension {
                 workingDir = null
             }
             ownedRuntimeDir = null
-            onAfterUnload(context, cacheDir)
         }
     }
 
