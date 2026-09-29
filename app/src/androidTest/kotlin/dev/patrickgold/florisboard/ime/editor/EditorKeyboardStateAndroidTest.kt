@@ -411,11 +411,11 @@ class EditorKeyboardStateAndroidTest {
     }
 
     @Test
-    fun directionalCharacterDeletionUsesUtf16LengthsAndStagesContentBeforeEditing() {
+    fun directionalCharacterDeletionStagesTheActualCursorAndKeepsTheNextInputInSync() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         for ((cursor, backwards, expectedDelete, expectedStage) in listOf(
             DeleteCase(3, true, 2 to 0, EditorRange.cursor(1)),
-            DeleteCase(1, false, 0 to 2, EditorRange.cursor(3)),
+            DeleteCase(1, false, 0 to 2, EditorRange.cursor(1)),
         )) {
             val (editor, connection) = newDirectionalEditor("a🙂b", EditorRange.cursor(cursor))
             instrumentation.runOnMainSync {
@@ -433,21 +433,24 @@ class EditorKeyboardStateAndroidTest {
                 assertEquals("ab", staged.text)
                 assertEquals(expectedStage, staged.selection)
                 assertEquals(staged, connection.contentAtBatchStart.first())
-                if (backwards) {
-                    editor.handleSelectionUpdate(staged.selection, staged.composing)
-                    assertEquals(null, editor.expectedContent())
-                }
+                editor.handleSelectionUpdate(connection.currentSelection, staged.composing)
+                assertEquals(null, editor.expectedContent())
+                assertEquals("ab", editor.activeContent.text)
+                assertEquals(connection.currentSelection, editor.activeContent.selection)
+                assertTrue(editor.commitText("x"))
+                assertEquals("axb", connection.currentText)
+                assertEquals("axb", editor.activeContent.text)
             }
         }
     }
 
     @Test
-    fun directionalWordDeletionUsesRichTextBoundaries() {
+    fun directionalWordDeletionKeepsTheCachedCursorAtTheActualBoundary() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val subtype = Subtype.DEFAULT.copy(primaryLocale = FlorisLocale.from("fr"))
         for ((cursor, backwards, expectedDelete, expectedStage) in listOf(
             DeleteCase(7, true, 3 to 0, EditorRange.cursor(4)),
-            DeleteCase(4, false, 0 to 3, EditorRange.cursor(7)),
+            DeleteCase(4, false, 0 to 3, EditorRange.cursor(4)),
         )) {
             val (editor, connection) = newDirectionalEditor("one two", EditorRange.cursor(cursor), subtype = subtype)
             instrumentation.runOnMainSync {
@@ -460,6 +463,10 @@ class EditorKeyboardStateAndroidTest {
                 val staged = requireNotNull(editor.expectedContent())
                 assertEquals("one ", staged.text)
                 assertEquals(expectedStage, staged.selection)
+                editor.handleSelectionUpdate(connection.currentSelection, staged.composing)
+                assertEquals(null, editor.expectedContent())
+                assertEquals("one ", editor.activeContent.text)
+                assertEquals(connection.currentSelection, editor.activeContent.selection)
             }
         }
     }
