@@ -47,7 +47,6 @@ import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.app.LocalNavController
 import dev.patrickgold.florisboard.app.Routes
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
-import dev.patrickgold.florisboard.lib.compose.FlorisScreenScope
 import dev.patrickgold.florisboard.lib.util.InputMethodUtils
 import dev.patrickgold.florisboard.lib.util.launchActivity
 import dev.patrickgold.florisboard.lib.util.launchUrl
@@ -72,9 +71,9 @@ fun SetupScreen() = FlorisScreen {
     val prefs by FlorisPreferenceStore
     val scope = rememberCoroutineScope()
 
-    val isFlorisBoardEnabled by InputMethodUtils.observeIsFlorisboardEnabled(foregroundOnly = true)
-    val isFlorisBoardSelected by InputMethodUtils.observeIsFlorisboardSelected(foregroundOnly = true)
-    val hasNotificationPermission by prefs.internal.notificationPermissionState.collectAsState()
+    val isFlorisBoardEnabled = InputMethodUtils.observeIsFlorisboardEnabled(foregroundOnly = true).value
+    val isFlorisBoardSelected = InputMethodUtils.observeIsFlorisboardSelected(foregroundOnly = true).value
+    val hasNotificationPermission = prefs.internal.notificationPermissionState.collectAsState().value
 
     val requestNotification =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -86,28 +85,6 @@ fun SetupScreen() = FlorisScreen {
                 }
             }
         }
-
-    content(
-        isFlorisBoardEnabled,
-        isFlorisBoardSelected,
-        context,
-        navController,
-        requestNotification,
-        hasNotificationPermission,
-        scope,
-    )
-}
-
-@Composable
-private fun FlorisScreenScope.content(
-    isFlorisBoardEnabled: Boolean,
-    isFlorisBoardSelected: Boolean,
-    context: Context,
-    navController: NavController,
-    requestNotification: ManagedActivityResultLauncher<String, Boolean>,
-    hasNotificationPermission: NotificationPermissionState,
-    scope: CoroutineScope,
-) {
 
     val automaticStep = when {
         !isFlorisBoardEnabled -> Steps.EnableIme.id
@@ -158,14 +135,14 @@ private fun FlorisScreenScope.content(
                 context, navController, requestNotification, scope
             ),
             footer = {
-                footer(context)
+                SetupFooter(context)
             },
         )
     }
 }
 
 @Composable
-private fun footer(context: Context) {
+private fun SetupFooter(context: Context) {
     Spacer(modifier = Modifier.height(16.dp))
     Row(
         modifier = Modifier
