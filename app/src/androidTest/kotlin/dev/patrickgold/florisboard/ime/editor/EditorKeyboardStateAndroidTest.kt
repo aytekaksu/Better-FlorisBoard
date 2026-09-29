@@ -27,6 +27,8 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.ExtractedText
+import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -39,6 +41,9 @@ import dev.patrickgold.florisboard.ime.input.InputShiftState
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.ObservableKeyboardState
 import dev.patrickgold.florisboard.ime.nlp.BreakIteratorGroup
+import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
+import dev.patrickgold.florisboard.ime.nlp.SuggestionReplacement
+import dev.patrickgold.florisboard.ime.nlp.WordSuggestionCandidate
 import dev.patrickgold.florisboard.ime.text.key.KeyVariation
 import dev.patrickgold.florisboard.lib.FlorisLocale
 import org.junit.Assert.assertEquals
@@ -411,6 +416,32 @@ class EditorKeyboardStateAndroidTest {
     }
 
     @Test
+    fun autoCorrectionRevertRestoresTheOriginalWordAfterAnAcknowledgedSpaceCommit() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val (editor, connection) = newDirectionalEditor("teh", EditorRange.cursor(3))
+        instrumentation.runOnMainSync {
+            val candidate = object : SuggestionCandidate by WordSuggestionCandidate(text = "the") {
+                override val replacement = SuggestionReplacement(EditorRange(0, 3), "teh", EditorRange.cursor(3))
+            }
+            assertEquals(EditorEditResult.SUCCESS, editor.commitCompletion(candidate, canRevert = true))
+            assertTrue(editor.commitText(" "))
+            editor.handleSelectionUpdate(
+                connection.currentSelection,
+                EditorRange(
+                    BaseInputConnection.getComposingSpanStart(connection.getEditable()),
+                    BaseInputConnection.getComposingSpanEnd(connection.getEditable()),
+                ),
+            )
+            assertEquals("the ", connection.currentText)
+            assertEquals(EditorRange.cursor(4), connection.currentSelection)
+            assertEquals(EditorEditResult.SUCCESS, editor.revertAutoCorrection())
+            assertEquals("teh", connection.currentText)
+            assertEquals(EditorRange.cursor(3), connection.currentSelection)
+            assertEquals(EditorEditResult.NOT_APPLICABLE, editor.revertAutoCorrection())
+        }
+    }
+
+    @Test
     fun directionalCharacterDeletionStagesTheActualCursorAndKeepsTheNextInputInSync() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         for ((cursor, backwards, expectedDelete, expectedStage) in listOf(
@@ -608,6 +639,15 @@ private class RecordingInputConnection(
     fun keyEventSignatures() = keyEvents.map { Triple(it.action, it.keyCode, it.repeatCount) }
 
     override fun getEditable(): Editable = editable
+
+    override fun getExtractedText(request: ExtractedTextRequest?, flags: Int): ExtractedText = ExtractedText().apply {
+        text = currentText
+        startOffset = 0
+        partialStartOffset = -1
+        partialEndOffset = -1
+        selectionStart = currentSelection.start
+        selectionEnd = currentSelection.end
+    }
 
     override fun beginBatchEdit(): Boolean {
         expectedAtBatchStart?.let { contentAtBatchStart += it() }
