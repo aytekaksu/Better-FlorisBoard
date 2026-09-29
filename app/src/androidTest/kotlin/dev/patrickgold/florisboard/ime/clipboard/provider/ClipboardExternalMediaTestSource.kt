@@ -31,6 +31,8 @@ internal object ClipboardExternalMediaTestSource {
 
     val healthyUri: Uri
         get() = sourceUri("healthy")
+    val zipUri: Uri
+        get() = sourceUri("zip")
     val emptyUri: Uri
         get() = sourceUri("empty")
     val svgUri: Uri
@@ -197,6 +199,7 @@ internal object ClipboardExternalMediaTestSource {
 
     private fun sourceUris(): List<Uri> = listOf(
         healthyUri,
+        zipUri,
         emptyUri,
         svgUri,
         orientedJpegUri,

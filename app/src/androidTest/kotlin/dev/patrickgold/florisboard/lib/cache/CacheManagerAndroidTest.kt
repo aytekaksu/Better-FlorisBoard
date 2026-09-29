@@ -29,7 +29,6 @@ import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMedia
 import dev.patrickgold.florisboard.ime.theme.ThemeExtension
 import dev.patrickgold.florisboard.lib.ext.ExtensionMaintainer
 import dev.patrickgold.florisboard.lib.ext.ExtensionMeta
-import dev.patrickgold.florisboard.lib.io.FileRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
@@ -86,7 +85,6 @@ class CacheManagerAndroidTest {
             assertEquals(4L, fileInfo.size)
             assertNull(fileInfo.ext)
             assertFalse(fileInfo.file.exists())
-            assertEquals(FileRegistry.FLEX_EXTENSION_MEDIA_TYPE, fileInfo.mediaType)
             assertTrue(fileInfo.file.name.endsWith(".flex"))
             assertNotEquals(fileInfo.displayLabel, fileInfo.file.name)
             assertEquals(
@@ -104,6 +102,35 @@ class CacheManagerAndroidTest {
 
         assertTrue(workspace.isClosed())
         assertNull(cacheManager.importer.getWorkspaceByUuid(workspace.uuid))
+    }
+
+    @Test
+    fun importedProviderMimeAlternativesNormalizeAndSpecificTypesPassThrough() = runBlocking {
+        val cacheManager = CacheManager(context)
+        ClipboardExternalMediaTestSource.grantReadAccess(
+            ClipboardExternalMediaTestSource.zipUri,
+            ClipboardExternalMediaTestSource.svgUri,
+        )
+        val workspace = cacheManager.readFromUriIntoCache(
+            listOf(
+                ClipboardExternalMediaTestSource.healthyUri,
+                ClipboardExternalMediaTestSource.zipUri,
+                ClipboardExternalMediaTestSource.svgUri,
+            ),
+        )
+
+        try {
+            assertEquals(
+                listOf(
+                    "application/vnd.florisboard.extension+zip",
+                    "application/vnd.florisboard.extension+zip",
+                    "image/svg+xml",
+                ),
+                workspace.inputFileInfos.map { it.mediaType },
+            )
+        } finally {
+            workspace.close()
+        }
     }
 
     @Test

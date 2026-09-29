@@ -39,7 +39,6 @@ import dev.patrickgold.florisboard.lib.ext.validateForImport
 import dev.patrickgold.florisboard.lib.io.BoundedExtensionArchive
 import dev.patrickgold.florisboard.lib.io.ExtensionImportBudget
 import dev.patrickgold.florisboard.lib.io.ExtensionImportLimitException
-import dev.patrickgold.florisboard.lib.io.FileRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -270,7 +269,11 @@ class CacheManager(context: Context) {
                                 FileInfo(
                                     file,
                                     displayLabel,
-                                    FileRegistry.guessMediaType(file, sourceMimeType),
+                                    when (sourceMimeType) {
+                                        "application/zip", "application/octet-stream" ->
+                                            "application/vnd.florisboard.extension+zip"
+                                        else -> sourceMimeType
+                                    },
                                     actualSize,
                                     ext,
                                 ),

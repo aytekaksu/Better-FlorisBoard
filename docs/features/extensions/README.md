@@ -19,6 +19,10 @@ Import therefore follows one path:
 6. Decode and structurally validate the manifest before extracting or exposing
    package data.
 
+`CacheManager` owns the import-list MIME label: ZIP and octet-stream provider
+types become the extension MIME type, while other types pass through. The label
+does not decide whether an archive may be installed.
+
 Import workspaces retire on app-owned I/O after selection changes or screen
 disposal. Cancellation before handoff awaits cleanup; an install retains its
 extracted files until it finishes. Deletion gets one delayed retry, then an
