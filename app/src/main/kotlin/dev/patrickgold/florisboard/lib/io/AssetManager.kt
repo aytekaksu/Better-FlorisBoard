@@ -31,7 +31,6 @@ import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
-import org.florisboard.lib.kotlin.resultErrStr
 
 val DefaultJsonConfig = Json {
     classDiscriminator = "$"
@@ -61,7 +60,7 @@ val DefaultJsonConfig = Json {
 }
 
 fun FlorisRef.loadTextAsset(context: Context): Result<String> {
-    if (!isAssets) return resultErrStr("Unsupported asset ref!")
+    if (!isAssets) return Result.failure(Exception("Unsupported asset ref!"))
     return runCatching {
         context.assets.open(relativePath).reader(Charsets.UTF_8).use { it.readText() }
     }

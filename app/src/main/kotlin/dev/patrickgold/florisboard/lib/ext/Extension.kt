@@ -29,8 +29,6 @@ import kotlinx.coroutines.CancellationException
 import org.florisboard.lib.android.conservativeUsableSpace
 import org.florisboard.lib.kotlin.io.FsDir
 import org.florisboard.lib.kotlin.io.subDir
-import org.florisboard.lib.kotlin.resultErr
-import org.florisboard.lib.kotlin.resultOk
 import java.util.UUID
 
 /**
@@ -66,16 +64,16 @@ abstract class Extension {
 
     fun load(context: Context, force: Boolean = false): Result<Unit> = synchronized(lifecycleGuard) {
         if (!force && workingDir?.isDirectory == true) {
-            return@synchronized resultOk()
+            return@synchronized Result.success(Unit)
         }
         if (workingDir != null || ownedRuntimeDir != null) {
             unloadLocked(context)
         }
-        val sourceRef = sourceRef ?: return@synchronized resultOk()
+        val sourceRef = sourceRef ?: return@synchronized Result.success(Unit)
         val runtimeRoot = try {
             prepareRuntimeRoot(context)
         } catch (error: Exception) {
-            return@synchronized resultErr(error)
+            return@synchronized Result.failure(error)
         }
         val cacheDir = runtimeRoot.subDir(UUID.randomUUID().toString())
         try {
@@ -90,7 +88,7 @@ abstract class Extension {
             workingDir = cacheDir
             ownedRuntimeDir = cacheDir
             onAfterLoad(context, cacheDir)
-            resultOk()
+            Result.success(Unit)
         } catch (error: Throwable) {
             runCatching { onBeforeUnload(context, cacheDir) }
             cacheDir.deleteRecursively()
@@ -99,7 +97,7 @@ abstract class Extension {
             when (error) {
                 is InterruptedException -> throw error
                 is CancellationException -> throw error
-                is Exception -> resultErr(error)
+                is Exception -> Result.failure(error)
                 else -> throw error
             }
         }

@@ -67,7 +67,6 @@ import org.florisboard.lib.compose.FlorisOutlinedButton
 import org.florisboard.lib.compose.defaultFlorisOutlinedBox
 import org.florisboard.lib.compose.stringRes
 import org.florisboard.lib.android.showLongToast
-import org.florisboard.lib.kotlin.resultOk
 
 enum class ExtensionImportScreenType(
     @param:StringRes val titleResId: Int,
@@ -143,7 +142,7 @@ fun ExtensionImportScreen(
 
     var importResult by remember(initUuid) {
         val workspace = initUuid?.let { cacheManager.importer.getWorkspaceByUuid(it) }
-            ?.let { resultOk(it) }
+            ?.let { Result.success(it) }
             ?.mapSkipReasons()
         mutableStateOf(workspace)
     }
