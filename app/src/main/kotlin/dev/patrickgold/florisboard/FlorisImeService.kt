@@ -287,7 +287,7 @@ class FlorisImeService : LifecycleInputMethodService(), KeyboardImeActions {
     private var imeRootView: View? = null
 
     private val activeState get() = keyboardManager.activeState
-    val inputFeedbackController by lazy { InputFeedbackController.new(this) }
+    val inputFeedbackController by lazy { InputFeedbackController(this, lifecycleScope) }
     private val systemLocalesFlow = MutableStateFlow(LocaleList())
     var resourcesContext by mutableStateOf(this as Context)
         private set
