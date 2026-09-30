@@ -26,6 +26,7 @@ class HangulUnicode : Composer {
     override val label: String = "Hangul Unicode"
     override val toRead: Int = 1
 
+    // These private tables are also configurable extension fields.
     // Initial consonants, ordered for syllable creation
     private val initials = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
     // Medial vowels, ordered for syllable creation
@@ -60,20 +61,17 @@ class HangulUnicode : Composer {
     private val finalCompRev = reverseComp(finalComp)
     private val medialCompRev = reverseComp(medialComp)
 
-    private fun syllable(ini: Int, med: Int, fin:Int): Char {
-        return (ini*588 + med*28 + fin + 44032).toChar()
-    }
+    private fun syllable(ini: Int, med: Int, fin: Int): Char =
+        (ini * 588 + med * 28 + fin + 44032).toChar()
 
-    private fun syllableBlocks(syllOrd: Int): List<Int> {
-        val initial = (syllOrd-44032)/588
-        val medial = (syllOrd-44032-initial*588)/28
-        val fin = (syllOrd-44032)%28
-        return listOf(initial, medial, fin)
+    private fun compound(map: Map<Char, List<String>>, first: Char, second: Char): Char? {
+        val composition = map[first] ?: return null
+        val index = composition[0].indexOf(second)
+        return if (index >= 0) composition[1][index] else null
     }
 
     override fun getActions(precedingText: String, toInsert: String): Pair<Int, String> {
         val c = toInsert.firstOrNull()
-        // precedingText is "at least the last 1 character of what's currently here"
         if (precedingText.isEmpty() || c == null) {
             return 0 to toInsert
         }
@@ -81,44 +79,42 @@ class HangulUnicode : Composer {
         val lastOrd = lastChar.code
 
         if (lastChar in initials && c in medials) {
-            return Pair(1, "${syllable(initials.indexOf(lastChar), medials.indexOf(c), 0)}")
+            return 1 to "${syllable(initials.indexOf(lastChar), medials.indexOf(c), 0)}"
         } else if (lastOrd in 44032..55203) { // syllable
-            val (ini, med, fin) = syllableBlocks(lastOrd)
+            val offset = lastOrd - 44032
+            val ini = offset / 588
+            val med = offset % 588 / 28
+            val fin = offset % 28
 
-            // underscore is a sentinel in the "finals" string
+            // Underscore marks an absent final consonant; it is not composed input.
             if (c == '_') {
                 return 0 to toInsert
             }
 
-            //  if there is no final and the new char is a final, merge
+            // Add a final consonant.
             if (fin == 0 && c in finals) {
                 return 1 to "${syllable(ini, med, finals.indexOf(c))}"
             }
 
-            // if there is already a final but it is mergeable with the new char into a composed final, merge
-            if ((finals[fin] in finalComp) && c in finalComp[finals[fin]]!![0]) {
-                val tple = finalComp[finals[fin]]
-                return 1 to "${syllable(ini, med, finals.indexOf(tple!![1][tple[0].indexOf(c)]))}"
+            compound(finalComp, finals[fin], c)?.let { combined ->
+                return 1 to "${syllable(ini, med, finals.indexOf(combined))}"
             }
 
-            // if there is a simple final and the new char is a medial, split the old syllable
-            if (fin != 0 && finals[fin] !in finalCompRev && c in medials)
-                return 1 to "${syllable(ini, med, 0)}${syllable(initials.indexOf(finals[fin]), medials.indexOf(c), 0)}"
-
-            // if there is a composed final and the new char is a medial, split the old final
-            if (finals[fin] in finalCompRev && c in medials) {
-                return 1 to "${syllable(ini, med, finals.indexOf(finalCompRev.getValue(finals[fin])[0]))}${syllable(initials.indexOf(finalCompRev.getValue(finals[fin])[1]), medials.indexOf(c), 0)}"
+            // Move a simple final, or the second half of a compound final, to the next syllable.
+            val finalParts = finalCompRev[finals[fin]]
+            if ((fin != 0 || finalParts != null) && c in medials) {
+                val previousFinal = if (finalParts == null) 0 else finals.indexOf(finalParts[0])
+                val nextInitial = initials.indexOf(finalParts?.get(1) ?: finals[fin])
+                return 1 to "${syllable(ini, med, previousFinal)}${syllable(nextInitial, medials.indexOf(c), 0)}"
             }
 
-            // if no final yet, and current medial can be composed with new char, merge
-            if (medials[med] in medialComp && c in medialComp.getValue(medials[med])[0] && fin == 0) {
-                val tple = medialComp[medials[med]]
-                return 1 to "${syllable(ini, medials.indexOf(tple!![1][tple[0].indexOf(c)]), 0)}"
+            val medial = medialComp[medials[med]]
+            if (medial != null && c in medial[0] && fin == 0) {
+                return 1 to "${syllable(ini, medials.indexOf(medial[1][medial[0].indexOf(c)]), 0)}"
             }
-        } else if (lastChar in medialComp.keys && medialComp[lastChar]?.get(0)?.contains(c) == true) { // medial+final
-            return 1 to ""+ medialComp[lastChar]?.get(1)!![medialComp[lastChar]?.get(0)!!.indexOf(c)]
-        } else if (lastChar in finalComp.keys && finalComp[lastChar]?.get(0)?.contains(c) == true) { // final+final
-            return 1 to ""+ finalComp[lastChar]?.get(1)!![finalComp[lastChar]?.get(0)!!.indexOf(c)]
+        } else {
+            val combined = compound(medialComp, lastChar, c) ?: compound(finalComp, lastChar, c)
+            if (combined != null) return 1 to combined.toString()
         }
 
         return 0 to toInsert

@@ -76,6 +76,69 @@ class ComposerTest :
             }
         }
 
+        test("Hangul combines and splits syllables without changing unmatched input") {
+            val composer = HangulUnicode()
+            for ((before, inserted, action) in listOf(
+                Triple("", "ㅏtail", 0 to "ㅏtail"),
+                Triple("가", "", 0 to ""),
+                Triple("prefixㄱ", "ㅏ", 1 to "가"),
+                Triple("가", "ㄱ", 1 to "각"),
+                Triple("각", "ㅅ", 1 to "갃"),
+                Triple("각", "ㅏ", 1 to "가가"),
+                Triple("갃", "ㅏ", 1 to "각사"),
+                Triple("고", "ㅏ", 1 to "과"),
+                Triple("구", "ㅓ", 1 to "궈"),
+                Triple("ㅗ", "ㅏ", 1 to "ㅘ"),
+                Triple("ㅡ", "ㅣ", 1 to "ㅢ"),
+                Triple("ㄱ", "ㅅ", 1 to "ㄳ"),
+                Triple("ㅂ", "ㅅ", 1 to "ㅄ"),
+                Triple("가", "_tail", 0 to "_tail"),
+                Triple("과", "ㅣtail", 0 to "ㅣtail"),
+                Triple("\uABFF", "ㅏtail", 0 to "ㅏtail"),
+                Triple("힤", "ㅏtail", 0 to "ㅏtail"),
+                Triple("가", "🙂", 0 to "🙂"),
+                Triple("ㄱ", "ㅏ\u0301", 1 to "가"),
+            )) {
+                composer.getActions(before, inserted) shouldBe action
+            }
+        }
+
+        test("configured Hangul alphabets and independent reverse rules survive export") {
+            val json = """{
+                "${'$'}":"hangul-unicode", "id":"configured", "label":"Configured", "toRead":2,
+                "initials":"ㄴㄱ", "medials":"ㅏㅐ", "finals":"_ㄱㄲㄳ",
+                "medialComp":{"ㅏ":["ㅐ","ㅘ"]}, "finalComp":{"ㄱ":["ㅅ","ㄲ"]},
+                "finalCompRev":{"ㄳ":["ㄱ","ㄴ"],"_":["ㄱ","ㄴ"]},
+                "medialCompRev":{"ㅙ":["ㅗ","ㅐ"]}
+            }"""
+            val composer = ExtensionJsonConfig.decodeFromString<Composer>(json)
+
+            composer.id shouldBe "configured"
+            composer.label shouldBe "Configured"
+            composer.toRead shouldBe 2
+            composer.getActions("ㄱ", "ㅏ") shouldBe (1 to "까")
+            composer.getActions("ㅏ", "ㅐ") shouldBe (1 to "ㅘ")
+            composer.getActions("각", "ㅅ") shouldBe (1 to "갂")
+            composer.getActions("갃", "ㅏ") shouldBe (1 to "각가")
+            composer.getActions("가", "ㅏ") shouldBe (1 to "각가")
+            ExtensionJsonConfig.parseToJsonElement(ExtensionJsonConfig.encodeToString(composer)) shouldBe
+                ExtensionJsonConfig.parseToJsonElement(json)
+        }
+
+        test("configured Hangul reads malformed replacements only for matched actions") {
+            val composer = ExtensionJsonConfig.decodeFromString<Composer>(
+                """{"${'$'}":"hangul-unicode",
+                    "finalComp":{"ㄱ":["ㅅ"]}, "finalCompRev":{},
+                    "medialComp":{"ㅗ":["x"]}, "medialCompRev":{}
+                }""",
+            )
+
+            composer.getActions("각", "text") shouldBe (0 to "text")
+            composer.getActions("곡", "x") shouldBe (0 to "x")
+            shouldThrow<IndexOutOfBoundsException> { composer.getActions("각", "ㅅ") }
+            shouldThrow<IndexOutOfBoundsException> { composer.getActions("고", "x") }
+        }
+
         test("every Kana dakuten mapping round-trips through each mark") {
             KanaUnicode().assertRoundTrips(DAKUTEN_PAIRS, "゙゛ﾞ")
         }
