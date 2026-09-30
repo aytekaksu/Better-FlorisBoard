@@ -441,27 +441,26 @@ private class BackupArchiveZipGateInspector(
         val tailBytes = minOf(archiveSize, MAX_END_SEARCH_BYTES).toInt()
         val tailOffset = archiveSize - tailBytes
         val tail = readExact(tailOffset, tailBytes) ?: return EndRecordSearch.Missing
-        var sawSignature = false
         for (index in tail.size - END_RECORD_BYTES.toInt() downTo 0) {
             if (tail.u32(index) == END_RECORD_SIGNATURE) {
-                sawSignature = true
                 val commentBytes = tail.u16(index + END_COMMENT_LENGTH_OFFSET)
-                if (index + END_RECORD_BYTES + commentBytes == tail.size.toLong()) {
-                    return EndRecordSearch.Found(
-                        EndRecord(
-                            offset = tailOffset + index,
-                            diskNumber = tail.u16(index + END_DISK_NUMBER_OFFSET),
-                            centralDirectoryDisk = tail.u16(index + END_CENTRAL_DISK_OFFSET),
-                            entriesOnDisk = tail.u16(index + END_ENTRIES_ON_DISK_OFFSET),
-                            totalEntries = tail.u16(index + END_TOTAL_ENTRIES_OFFSET),
-                            centralDirectoryBytes = tail.u32(index + END_CENTRAL_SIZE_OFFSET),
-                            centralDirectoryOffset = tail.u32(index + END_CENTRAL_OFFSET_OFFSET),
-                        ),
-                    )
-                }
+                // Commons selects the latest signature too; never admit a different directory.
+                return if (index + END_RECORD_BYTES + commentBytes != tail.size.toLong()) {
+                    EndRecordSearch.TrailingMismatch
+                } else EndRecordSearch.Found(
+                    EndRecord(
+                        offset = tailOffset + index,
+                        diskNumber = tail.u16(index + END_DISK_NUMBER_OFFSET),
+                        centralDirectoryDisk = tail.u16(index + END_CENTRAL_DISK_OFFSET),
+                        entriesOnDisk = tail.u16(index + END_ENTRIES_ON_DISK_OFFSET),
+                        totalEntries = tail.u16(index + END_TOTAL_ENTRIES_OFFSET),
+                        centralDirectoryBytes = tail.u32(index + END_CENTRAL_SIZE_OFFSET),
+                        centralDirectoryOffset = tail.u32(index + END_CENTRAL_OFFSET_OFFSET),
+                    ),
+                )
             }
         }
-        return if (sawSignature) EndRecordSearch.TrailingMismatch else EndRecordSearch.Missing
+        return EndRecordSearch.Missing
     }
 
     private fun hasZip64Locator(endRecordOffset: Long): Boolean {

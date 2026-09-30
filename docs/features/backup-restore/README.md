@@ -69,7 +69,9 @@ The live flow is deliberately narrow:
    snapshot. Provider size metadata is not trusted.
 2. A bounded EOCD/ZIP64 scan checks the central directory before a ZIP reader is
    opened. The central directory is capped at 16 MiB, and entry names, extras,
-   and comments are bounded before the ZIP reader can allocate them.
+   and comments are bounded before the ZIP reader can allocate them. The latest
+   end signature is authoritative: a malformed trailing length cannot fall back
+   to an older record and admit a different directory than the reader selects.
 3. One session keeps the validated archive tied to the exact ZIP entries that
    produced it. Metadata and the optional manifest use strict UTF-8 decoding,
    bounded reads, exact sizes, and CRC checks.
