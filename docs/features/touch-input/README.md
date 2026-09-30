@@ -24,6 +24,7 @@ provider transport is covered by
 | Swipe detector | [`SwipeGesture.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/SwipeGesture.kt) |
 | Glide detector | [`GlideTypingGesture.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/GlideTypingGesture.kt) |
 | Semantic key dispatch | [`KeyboardManager.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyboardManager.kt) |
+| Audio/haptic feedback and service-owned worker jobs | [`InputFeedbackController.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/input/InputFeedbackController.kt) |
 | Localized IME-action labels and Android fallback | [`FlorisImeService.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/FlorisImeService.kt) |
 | Fast state and hit-test tests | [`app/src/test/.../keyboard`](../../../app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/) |
 | Popup position tests | [`PopupUiControllerGeometryTest.kt`](../../../app/src/test/kotlin/dev/patrickgold/florisboard/ime/popup/PopupUiControllerGeometryTest.kt) |
@@ -64,6 +65,11 @@ spacing but do not hide the keys after them.
 Pointer mutation and drawing state are main-thread owned. Expensive suggestion
 or glide work is handed to feature managers. Long-press callbacks and delayed
 work must re-check that their pointer and key are still active.
+
+`FlorisImeService` supplies feedback its lifecycle scope. Audio and haptic
+requests stay asynchronous on `Dispatchers.Default`. Destroying the service
+cancels its feedback jobs; an already-entered platform call may still finish.
+Hiding the keyboard does not destroy this scope.
 
 Semantic input order is more important than callback completion order.
 Multi-pointer transitions, gesture completion, and selection dragging must
@@ -140,6 +146,13 @@ Fast state, hit-test, and transition rules:
 ./gradlew :app:testDebugUnitTest
 ```
 
+For feedback's audio output, worker routing, and lifecycle-job ownership:
+
+```shell
+./gradlew :app:testDebugUnitTest \
+  --tests 'dev.patrickgold.florisboard.ime.input.InputFeedbackControllerTest'
+```
+
 Run the focused device suite only when real Android touch dispatch, timing,
 multi-pointer behavior, popups, or editor integration changes:
 
@@ -167,6 +180,9 @@ accessibility, and stale prediction hints.
 
 ## Known limits
 
+- View-based haptics still run off Main. Moving them needs separate responsiveness
+  proof: API26 uses synchronous Binder here. The JVM audio test does not prove
+  haptic hardware, fallback behavior, or timing.
 - The real-touch fixture currently assumes a fixed keyboard window; floating mode adds a caption row below the keys.
 - Rendering, touch control, glide trail, swipe actions, selection drag, popups,
   and autocorrect trace capture still share one large source file.

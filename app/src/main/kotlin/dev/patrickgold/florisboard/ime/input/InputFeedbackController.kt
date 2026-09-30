@@ -31,26 +31,17 @@ import org.florisboard.lib.android.systemVibratorOrNull
 import org.florisboard.lib.android.vibrate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 val LocalInputFeedbackController = staticCompositionLocalOf<InputFeedbackController> { error("not init") }
 
-/**
- * Input feedback controller is responsible to process and perform audio and haptic
- * feedback for user interactions based on the system and floris preferences.
- */
-class InputFeedbackController private constructor(private val ims: InputMethodService) {
-    companion object {
-        fun new(ims: InputMethodService) = InputFeedbackController(ims)
-    }
-
+/** Plays audio and haptic feedback using the owner's coroutine scope. */
+class InputFeedbackController(private val ims: InputMethodService, private val scope: CoroutineScope) {
     private val prefs by FlorisPreferenceStore
 
     private val audioManager = ims.systemServiceOrNull(AudioManager::class)
     private val vibrator = ims.systemVibratorOrNull()
     private val contentResolver = ims.contentResolver
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     private var systemAudioEnabled: Boolean = false
     private var systemHapticEnabled: Boolean = false
@@ -91,7 +82,7 @@ class InputFeedbackController private constructor(private val ims: InputMethodSe
         if (prefs.inputFeedback.audioActivationMode.get() ==
             InputFeedbackActivationMode.RESPECT_SYSTEM_SETTINGS && !systemAudioEnabled) return
 
-        scope.launch {
+        scope.launch(Dispatchers.Default) {
             val volume = (prefs.inputFeedback.audioVolume.get() * factor) / 100.0
             val effect = when (data.code) {
                 KeyCode.DELETE -> AudioManager.FX_KEYPRESS_DELETE
@@ -111,7 +102,7 @@ class InputFeedbackController private constructor(private val ims: InputMethodSe
         if (prefs.inputFeedback.hapticActivationMode.get() ==
             InputFeedbackActivationMode.RESPECT_SYSTEM_SETTINGS && !systemHapticEnabled) return
 
-        scope.launch {
+        scope.launch(Dispatchers.Default) {
             if (prefs.inputFeedback.hapticVibrationMode.get() == HapticVibrationMode.USE_HAPTIC_FEEDBACK_INTERFACE) {
                 val view = ims.window?.window?.decorView ?: return@launch
                 val hfc = if (factor < 1.0 && AndroidVersion.ATLEAST_API27_O_MR1) {
