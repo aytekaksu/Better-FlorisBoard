@@ -113,6 +113,9 @@ highly compressible preferences and clipboard text remain compatible. The ZIP
 session also checks encryption and Unix entry kinds from the central directory;
 `java.util.zip.ZipEntry` alone does not expose enough information.
 
+Backup and extension gates share bounded record decoding, not acceptance policy:
+backups support single-disk ZIP64; extensions reject it and use their own metadata limits.
+
 ## Restore plans
 
 A plan is created only from a validated archive and a non-empty selection of

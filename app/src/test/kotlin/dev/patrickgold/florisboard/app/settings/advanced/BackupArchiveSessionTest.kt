@@ -290,7 +290,8 @@ class BackupArchiveSessionTest :
             BackupArchiveSession.open(snapshot, limits) shouldBe BackupArchiveSessionResult.Invalid(
                 BackupArchiveSessionFailure.ZipGateRejected(BackupArchiveZipGateFailure.TOO_MANY_ENTRIES),
             )
-            BackupArchiveSession.open(snapshot.withShadowedEndRecord(), limits) shouldBe BackupArchiveSessionResult.Invalid(
+            val rejected = BackupArchiveSession.open(snapshot.withShadowedEndRecord(), limits)
+            rejected shouldBe BackupArchiveSessionResult.Invalid(
                 BackupArchiveSessionFailure.ZipGateRejected(BackupArchiveZipGateFailure.END_RECORD_TRAILING_MISMATCH),
             )
         }

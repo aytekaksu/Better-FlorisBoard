@@ -18,8 +18,16 @@
 
 package dev.patrickgold.florisboard.app.settings.advanced
 
+import dev.patrickgold.florisboard.lib.io.ZipCentralHeader
+import dev.patrickgold.florisboard.lib.io.ZipEndRecord
+import dev.patrickgold.florisboard.lib.io.ZipEndRecordSearch
+import dev.patrickgold.florisboard.lib.io.ZipRecordReader
+import dev.patrickgold.florisboard.lib.io.ZipRecordReader.Companion.CENTRAL_HEADER_BYTES
+import dev.patrickgold.florisboard.lib.io.zipCheckedAdd
+import dev.patrickgold.florisboard.lib.io.zipU16
+import dev.patrickgold.florisboard.lib.io.zipU32
+import dev.patrickgold.florisboard.lib.io.zipU64
 import java.io.IOException
-import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.channels.NonReadableChannelException
 
@@ -109,7 +117,7 @@ internal class BackupArchiveZipLayout(
 }
 
 private class BackupArchiveZipGateInspector(
-    private val channel: FileChannel,
+    channel: FileChannel,
     private val archiveSize: Long,
     private val maxEntries: Int,
     private val maxCentralDirectoryBytes: Long,
@@ -117,19 +125,21 @@ private class BackupArchiveZipGateInspector(
     private val maxExtraBytes: Int,
     private val maxCommentBytes: Int,
 ) {
-    fun inspect(): BackupArchiveZipGateResult {
-        val endRecord = when (val search = findEndRecord()) {
-            is EndRecordSearch.Found -> search.record
+    private val reader = ZipRecordReader(channel)
 
-            EndRecordSearch.Missing -> {
+    fun inspect(): BackupArchiveZipGateResult {
+        val endRecord = when (val search = reader.findEndRecord(archiveSize)) {
+            is ZipEndRecordSearch.Found -> search.record
+
+            ZipEndRecordSearch.Missing -> {
                 return invalid(BackupArchiveZipGateFailure.END_RECORD_NOT_FOUND)
             }
 
-            EndRecordSearch.TrailingMismatch -> {
+            ZipEndRecordSearch.TrailingMismatch -> {
                 return invalid(BackupArchiveZipGateFailure.END_RECORD_TRAILING_MISMATCH)
             }
         }
-        val hasLocator = hasZip64Locator(endRecord.offset)
+        val hasLocator = reader.hasZip64Locator(endRecord.offset, archiveSize) == true
         return if (endRecord.hasZip64Sentinel || hasLocator) {
             inspectZip64(endRecord, hasLocator)
         } else {
@@ -137,7 +147,7 @@ private class BackupArchiveZipGateInspector(
         }
     }
 
-    private fun inspectClassic(endRecord: EndRecord): BackupArchiveZipGateResult {
+    private fun inspectClassic(endRecord: ZipEndRecord): BackupArchiveZipGateResult {
         if (endRecord.diskNumber != SINGLE_DISK_NUMBER ||
             endRecord.centralDirectoryDisk != SINGLE_DISK_NUMBER ||
             endRecord.entriesOnDisk != endRecord.totalEntries
@@ -153,7 +163,7 @@ private class BackupArchiveZipGateInspector(
         )
     }
 
-    private fun inspectZip64(endRecord: EndRecord, hasLocator: Boolean): BackupArchiveZipGateResult =
+    private fun inspectZip64(endRecord: ZipEndRecord, hasLocator: Boolean): BackupArchiveZipGateResult =
         when (val locator = readZip64Locator(endRecord, hasLocator)) {
             is GateValue.Invalid -> invalid(locator.failure)
 
@@ -174,10 +184,14 @@ private class BackupArchiveZipGateInspector(
             }
         }
 
-    private fun readZip64Locator(endRecord: EndRecord, hasLocator: Boolean): GateValue<LocatedZip64Locator> {
+    private fun readZip64Locator(endRecord: ZipEndRecord, hasLocator: Boolean): GateValue<LocatedZip64Locator> {
         if (!hasLocator) return GateValue.Invalid(BackupArchiveZipGateFailure.INVALID_ZIP64)
         val locatorOffset = endRecord.offset - ZIP64_LOCATOR_BYTES
-        val locator = readExact(locatorOffset, ZIP64_LOCATOR_BYTES.toInt())?.let(Zip64Locator::parse)
+        val locator = reader.readExact(
+            locatorOffset,
+            ZIP64_LOCATOR_BYTES.toInt(),
+            archiveSize,
+        )?.let(Zip64Locator::parse)
         val recordOffset = locator?.recordOffset?.toLongOrNull()
         return when {
             locator == null || recordOffset == null -> {
@@ -193,9 +207,9 @@ private class BackupArchiveZipGateInspector(
     }
 
     private fun readZip64EndRecord(locator: LocatedZip64Locator): GateValue<LocatedZip64EndRecord> {
-        val record = readExact(locator.recordOffset, ZIP64_END_RECORD_MIN_BYTES.toInt())
+        val record = reader.readExact(locator.recordOffset, ZIP64_END_RECORD_MIN_BYTES.toInt(), archiveSize)
             ?.let(Zip64EndRecord::parse)
-        val recordEnd = record?.recordBytes?.checkedAdd(locator.recordOffset)
+        val recordEnd = record?.recordBytes?.zipCheckedAdd(locator.recordOffset)
         return when {
             record == null || recordEnd == null || recordEnd != locator.locatorOffset -> {
                 GateValue.Invalid(BackupArchiveZipGateFailure.INVALID_ZIP64)
@@ -249,7 +263,7 @@ private class BackupArchiveZipGateInspector(
         val size = centralDirectoryBytes.toLongOrNull()
             ?: return GateValue.Invalid(BackupArchiveZipGateFailure.INVALID_CENTRAL_DIRECTORY)
         val count = entryCount.toLong()
-        val end = size.checkedAdd(offset)
+        val end = size.zipCheckedAdd(offset)
         val boundsFailure = directoryBoundsFailure(end, centralDirectoryBoundary, count, size)
         return if (boundsFailure != null || end == null) {
             GateValue.Invalid(boundsFailure ?: BackupArchiveZipGateFailure.INVALID_CENTRAL_DIRECTORY)
@@ -289,7 +303,7 @@ private class BackupArchiveZipGateInspector(
             BackupArchiveZipGateFailure.INVALID_CENTRAL_DIRECTORY
         }
 
-        entryCount > 0L && centralDirectoryBytes < entryCount * CENTRAL_DIRECTORY_HEADER_BYTES -> {
+        entryCount > 0L && centralDirectoryBytes < entryCount * CENTRAL_HEADER_BYTES -> {
             BackupArchiveZipGateFailure.INVALID_CENTRAL_DIRECTORY
         }
 
@@ -304,24 +318,20 @@ private class BackupArchiveZipGateInspector(
         var cursor = startOffset
         var actualEntries = 0L
         while (cursor < endOffset) {
-            val header = readExact(cursor, CENTRAL_DIRECTORY_HEADER_BYTES.toInt())
-            if (header == null || header.u32(0) != CENTRAL_DIRECTORY_HEADER_SIGNATURE) {
+            val header = reader.centralHeader(cursor, archiveSize)
+            if (header == null) {
                 return BackupArchiveZipGateFailure.INVALID_CENTRAL_DIRECTORY
             }
             actualEntries++
-            val nameBytes = header.u16(CENTRAL_NAME_LENGTH_OFFSET)
-            val extraBytes = header.u16(CENTRAL_EXTRA_LENGTH_OFFSET)
-            val commentBytes = header.u16(CENTRAL_COMMENT_LENGTH_OFFSET)
-            val variableBytes = nameBytes + extraBytes + commentBytes
-            val nextOffset = (CENTRAL_DIRECTORY_HEADER_BYTES + variableBytes).checkedAdd(cursor)
+            val nextOffset = cursor.zipCheckedAdd(header.recordBytes)
             val entryFailure = centralEntryLayoutFailure(
                 entryNumber = actualEntries,
-                nameBytes = nameBytes,
-                extraBytes = extraBytes,
-                commentBytes = commentBytes,
+                nameBytes = header.nameBytes.toLong(),
+                extraBytes = header.extraBytes.toLong(),
+                commentBytes = header.commentBytes.toLong(),
                 nextOffset = nextOffset,
                 endOffset = endOffset,
-            ) ?: centralEntryDiskFailure(header, cursor, nameBytes, extraBytes)
+            ) ?: centralEntryDiskFailure(header, cursor)
             if (entryFailure != null) return entryFailure
             cursor = nextOffset ?: return BackupArchiveZipGateFailure.INVALID_CENTRAL_DIRECTORY
         }
@@ -348,22 +358,17 @@ private class BackupArchiveZipGateInspector(
         else -> null
     }
 
-    private fun centralEntryDiskFailure(
-        header: ByteArray,
-        headerOffset: Long,
-        nameBytes: Long,
-        extraBytes: Long,
-    ): BackupArchiveZipGateFailure? {
-        val diskNumber = header.u16(CENTRAL_DISK_NUMBER_OFFSET)
+    private fun centralEntryDiskFailure(header: ZipCentralHeader, headerOffset: Long): BackupArchiveZipGateFailure? {
+        val diskNumber = header.diskStart.toLong()
         return when {
             diskNumber == SINGLE_DISK_NUMBER -> null
 
             diskNumber != UINT16_MAX -> BackupArchiveZipGateFailure.MULTI_DISK_ARCHIVE
 
             else -> {
-                val extraOffset = headerOffset.checkedAdd(CENTRAL_DIRECTORY_HEADER_BYTES)
-                    ?.checkedAdd(nameBytes)
-                val extra = extraOffset?.let { readExact(it, extraBytes.toInt()) }
+                val extraOffset = headerOffset.zipCheckedAdd(CENTRAL_HEADER_BYTES.toLong())
+                    ?.zipCheckedAdd(header.nameBytes.toLong())
+                val extra = extraOffset?.let { reader.readExact(it, header.extraBytes, archiveSize) }
                 if (extra == null) {
                     BackupArchiveZipGateFailure.INVALID_CENTRAL_DIRECTORY
                 } else {
@@ -373,7 +378,7 @@ private class BackupArchiveZipGateInspector(
         }
     }
 
-    private fun resolveZip64DiskNumber(header: ByteArray, extra: ByteArray): BackupArchiveZipGateFailure? {
+    private fun resolveZip64DiskNumber(header: ZipCentralHeader, extra: ByteArray): BackupArchiveZipGateFailure? {
         var cursor = 0
         var resolvedDisk: Long? = null
         var failure: BackupArchiveZipGateFailure? = null
@@ -391,7 +396,7 @@ private class BackupArchiveZipGateInspector(
     }
 
     private fun inspectZip64ExtraField(
-        header: ByteArray,
+        header: ZipCentralHeader,
         extra: ByteArray,
         cursor: Int,
         resolvedDisk: Long?,
@@ -399,8 +404,8 @@ private class BackupArchiveZipGateInspector(
         if (extra.size - cursor < EXTRA_HEADER_BYTES) {
             return Zip64ExtraFieldInspection.invalid(cursor, resolvedDisk)
         }
-        val id = extra.u16(cursor)
-        val valueBytes = extra.u16(cursor + Short.SIZE_BYTES).toInt()
+        val id = extra.zipU16(cursor)
+        val valueBytes = extra.zipU16(cursor + Short.SIZE_BYTES)
         val valueOffset = cursor + EXTRA_HEADER_BYTES
         val nextOffset = valueOffset + valueBytes
         if (nextOffset > extra.size) {
@@ -416,106 +421,46 @@ private class BackupArchiveZipGateInspector(
 
             else -> Zip64ExtraFieldInspection(
                 nextOffset = nextOffset,
-                resolvedDisk = extra.u32(valueOffset + diskOffset),
+                resolvedDisk = extra.zipU32(valueOffset + diskOffset),
                 failure = null,
             )
         }
     }
 
-    private fun zip64DiskOffset(header: ByteArray): Int {
+    private fun zip64DiskOffset(header: ZipCentralHeader): Int {
         var offset = 0
-        if (header.u32(CENTRAL_UNCOMPRESSED_SIZE_OFFSET) == UINT32_MAX) {
+        if (header.expandedBytes == UINT32_MAX) {
             offset += Long.SIZE_BYTES
         }
-        if (header.u32(CENTRAL_COMPRESSED_SIZE_OFFSET) == UINT32_MAX) {
+        if (header.compressedBytes == UINT32_MAX) {
             offset += Long.SIZE_BYTES
         }
-        if (header.u32(CENTRAL_LOCAL_HEADER_OFFSET) == UINT32_MAX) {
+        if (header.localHeaderOffset == UINT32_MAX) {
             offset += Long.SIZE_BYTES
         }
         return offset
-    }
-
-    private fun findEndRecord(): EndRecordSearch {
-        if (archiveSize < END_RECORD_BYTES) return EndRecordSearch.Missing
-        val tailBytes = minOf(archiveSize, MAX_END_SEARCH_BYTES).toInt()
-        val tailOffset = archiveSize - tailBytes
-        val tail = readExact(tailOffset, tailBytes) ?: return EndRecordSearch.Missing
-        for (index in tail.size - END_RECORD_BYTES.toInt() downTo 0) {
-            if (tail.u32(index) == END_RECORD_SIGNATURE) {
-                val commentBytes = tail.u16(index + END_COMMENT_LENGTH_OFFSET)
-                // Commons selects the latest signature too; never admit a different directory.
-                return if (index + END_RECORD_BYTES + commentBytes != tail.size.toLong()) {
-                    EndRecordSearch.TrailingMismatch
-                } else EndRecordSearch.Found(
-                    EndRecord(
-                        offset = tailOffset + index,
-                        diskNumber = tail.u16(index + END_DISK_NUMBER_OFFSET),
-                        centralDirectoryDisk = tail.u16(index + END_CENTRAL_DISK_OFFSET),
-                        entriesOnDisk = tail.u16(index + END_ENTRIES_ON_DISK_OFFSET),
-                        totalEntries = tail.u16(index + END_TOTAL_ENTRIES_OFFSET),
-                        centralDirectoryBytes = tail.u32(index + END_CENTRAL_SIZE_OFFSET),
-                        centralDirectoryOffset = tail.u32(index + END_CENTRAL_OFFSET_OFFSET),
-                    ),
-                )
-            }
-        }
-        return EndRecordSearch.Missing
-    }
-
-    private fun hasZip64Locator(endRecordOffset: Long): Boolean {
-        if (endRecordOffset < ZIP64_LOCATOR_BYTES) return false
-        val signature = readExact(endRecordOffset - ZIP64_LOCATOR_BYTES, SIGNATURE_BYTES)
-            ?: return false
-        return signature.u32(0) == ZIP64_LOCATOR_SIGNATURE
-    }
-
-    private fun readExact(offset: Long, byteCount: Int): ByteArray? {
-        if (offset < 0L || byteCount < 0) return null
-        val end = byteCount.toLong().checkedAdd(offset) ?: return null
-        if (end > archiveSize) return null
-        val bytes = ByteArray(byteCount)
-        val buffer = ByteBuffer.wrap(bytes)
-        var cursor = offset
-        var complete = true
-        while (buffer.hasRemaining() && complete) {
-            val readCount = channel.read(buffer, cursor)
-            if (readCount <= 0) {
-                complete = false
-            } else {
-                cursor += readCount
-            }
-        }
-        return bytes.takeIf { complete }
     }
 
     private fun invalid(failure: BackupArchiveZipGateFailure): BackupArchiveZipGateResult.Invalid =
         BackupArchiveZipGateResult.Invalid(failure)
 }
 
-private data class EndRecord(
-    val offset: Long,
-    val diskNumber: Long,
-    val centralDirectoryDisk: Long,
-    val entriesOnDisk: Long,
-    val totalEntries: Long,
-    val centralDirectoryBytes: Long,
-    val centralDirectoryOffset: Long,
-) {
-    val hasZip64Sentinel: Boolean
-        get() = diskNumber == UINT16_MAX ||
-            centralDirectoryDisk == UINT16_MAX ||
-            entriesOnDisk == UINT16_MAX ||
-            totalEntries == UINT16_MAX ||
-            centralDirectoryBytes == UINT32_MAX ||
-            centralDirectoryOffset == UINT32_MAX
+private val ZipEndRecord.hasZip64Sentinel: Boolean
+    get() = when {
+        diskNumber == UINT16_MAX || centralDirectoryDisk == UINT16_MAX -> true
+        entriesOnDisk == UINT16_MAX || totalEntries == UINT16_MAX -> true
+        centralDirectoryBytes == UINT32_MAX || centralDirectoryOffset == UINT32_MAX -> true
+        else -> false
+    }
 
-    fun matches(zip64: Zip64EndRecord): Boolean = diskNumber.matchesZip64(UINT16_MAX, zip64.diskNumber.toULong()) &&
-        centralDirectoryDisk.matchesZip64(UINT16_MAX, zip64.centralDirectoryDisk.toULong()) &&
-        entriesOnDisk.matchesZip64(UINT16_MAX, zip64.entriesOnDisk) &&
-        totalEntries.matchesZip64(UINT16_MAX, zip64.totalEntries) &&
-        centralDirectoryBytes.matchesZip64(UINT32_MAX, zip64.centralDirectoryBytes) &&
+private fun ZipEndRecord.matches(zip64: Zip64EndRecord): Boolean {
+    val disksMatch = diskNumber.matchesZip64(UINT16_MAX, zip64.diskNumber.toULong()) &&
+        centralDirectoryDisk.matchesZip64(UINT16_MAX, zip64.centralDirectoryDisk.toULong())
+    val countsMatch = entriesOnDisk.matchesZip64(UINT16_MAX, zip64.entriesOnDisk) &&
+        totalEntries.matchesZip64(UINT16_MAX, zip64.totalEntries)
+    val directoryMatches = centralDirectoryBytes.matchesZip64(UINT32_MAX, zip64.centralDirectoryBytes) &&
         centralDirectoryOffset.matchesZip64(UINT32_MAX, zip64.centralDirectoryOffset)
+    return disksMatch && countsMatch && directoryMatches
 }
 
 private sealed interface GateValue<out T> {
@@ -544,22 +489,14 @@ private data class Zip64ExtraFieldInspection(
     }
 }
 
-private sealed interface EndRecordSearch {
-    data class Found(val record: EndRecord) : EndRecordSearch
-
-    data object Missing : EndRecordSearch
-
-    data object TrailingMismatch : EndRecordSearch
-}
-
 private data class Zip64Locator(val recordDisk: Long, val recordOffset: ULong, val totalDisks: Long) {
     companion object {
         fun parse(bytes: ByteArray): Zip64Locator? {
-            if (bytes.size != ZIP64_LOCATOR_BYTES.toInt() || bytes.u32(0) != ZIP64_LOCATOR_SIGNATURE) return null
+            if (bytes.size != ZIP64_LOCATOR_BYTES.toInt() || bytes.zipU32(0) != ZIP64_LOCATOR_SIGNATURE) return null
             return Zip64Locator(
-                recordDisk = bytes.u32(ZIP64_LOCATOR_DISK_OFFSET),
-                recordOffset = bytes.u64(ZIP64_LOCATOR_RECORD_OFFSET),
-                totalDisks = bytes.u32(ZIP64_LOCATOR_TOTAL_DISKS_OFFSET),
+                recordDisk = bytes.zipU32(ZIP64_LOCATOR_DISK_OFFSET),
+                recordOffset = bytes.zipU64(ZIP64_LOCATOR_RECORD_OFFSET),
+                totalDisks = bytes.zipU32(ZIP64_LOCATOR_TOTAL_DISKS_OFFSET),
             )
         }
     }
@@ -577,76 +514,41 @@ private data class Zip64EndRecord(
     companion object {
         fun parse(bytes: ByteArray): Zip64EndRecord? {
             if (bytes.size != ZIP64_END_RECORD_MIN_BYTES.toInt() ||
-                bytes.u32(0) != ZIP64_END_RECORD_SIGNATURE ||
-                bytes.u16(ZIP64_END_RECORD_VERSION_NEEDED_OFFSET) < ZIP64_MIN_VERSION
+                bytes.zipU32(0) != ZIP64_END_RECORD_SIGNATURE ||
+                bytes.zipU16(ZIP64_END_RECORD_VERSION_NEEDED_OFFSET) < ZIP64_MIN_VERSION
             ) {
                 return null
             }
-            val recordBytes = bytes.u64(ZIP64_END_RECORD_SIZE_OFFSET)
+            val recordBytes = bytes.zipU64(ZIP64_END_RECORD_SIZE_OFFSET)
                 .toLongOrNull()
                 ?.takeIf { it >= ZIP64_END_RECORD_MIN_BODY_BYTES }
-                ?.let { ZIP64_END_RECORD_PREFIX_BYTES.checkedAdd(it) }
+                ?.let { ZIP64_END_RECORD_PREFIX_BYTES.zipCheckedAdd(it) }
                 ?: return null
             return Zip64EndRecord(
                 recordBytes = recordBytes,
-                diskNumber = bytes.u32(ZIP64_END_RECORD_DISK_OFFSET),
-                centralDirectoryDisk = bytes.u32(ZIP64_END_RECORD_CENTRAL_DISK_OFFSET),
-                entriesOnDisk = bytes.u64(ZIP64_END_RECORD_ENTRIES_ON_DISK_OFFSET),
-                totalEntries = bytes.u64(ZIP64_END_RECORD_TOTAL_ENTRIES_OFFSET),
-                centralDirectoryBytes = bytes.u64(ZIP64_END_RECORD_CENTRAL_SIZE_OFFSET),
-                centralDirectoryOffset = bytes.u64(ZIP64_END_RECORD_CENTRAL_OFFSET_OFFSET),
+                diskNumber = bytes.zipU32(ZIP64_END_RECORD_DISK_OFFSET),
+                centralDirectoryDisk = bytes.zipU32(ZIP64_END_RECORD_CENTRAL_DISK_OFFSET),
+                entriesOnDisk = bytes.zipU64(ZIP64_END_RECORD_ENTRIES_ON_DISK_OFFSET),
+                totalEntries = bytes.zipU64(ZIP64_END_RECORD_TOTAL_ENTRIES_OFFSET),
+                centralDirectoryBytes = bytes.zipU64(ZIP64_END_RECORD_CENTRAL_SIZE_OFFSET),
+                centralDirectoryOffset = bytes.zipU64(ZIP64_END_RECORD_CENTRAL_OFFSET_OFFSET),
             )
         }
     }
 }
 
-private fun ByteArray.u16(offset: Int): Long = (this[offset].toLong() and BYTE_MASK) or
-    ((this[offset + 1].toLong() and BYTE_MASK) shl Byte.SIZE_BITS)
-
-private fun ByteArray.u32(offset: Int): Long = u16(offset) or (u16(offset + Short.SIZE_BYTES) shl Short.SIZE_BITS)
-
-private fun ByteArray.u64(offset: Int): ULong =
-    u32(offset).toULong() or (u32(offset + Int.SIZE_BYTES).toULong() shl Int.SIZE_BITS)
-
 private fun ULong.toLongOrNull(): Long? = takeIf { it <= Long.MAX_VALUE.toULong() }?.toLong()
-
-private fun Long.checkedAdd(other: Long): Long? =
-    takeIf { this >= 0L && other >= 0L && this <= Long.MAX_VALUE - other }?.plus(other)
 
 private fun Long.matchesZip64(sentinel: Long, zip64Value: ULong): Boolean = this == sentinel || toULong() == zip64Value
 
-private const val BYTE_MASK = 0xffL
 private const val UINT16_MAX = 0xffffL
 private const val UINT32_MAX = 0xffff_ffffL
 
 private const val SINGLE_DISK_NUMBER = 0L
 private const val SINGLE_DISK_COUNT = 1L
 
-private const val SIGNATURE_BYTES = 4
-private const val CENTRAL_DIRECTORY_HEADER_SIGNATURE = 0x02014b50L
-private const val CENTRAL_DIRECTORY_HEADER_BYTES = 46L
-private const val CENTRAL_COMPRESSED_SIZE_OFFSET = 20
-private const val CENTRAL_UNCOMPRESSED_SIZE_OFFSET = 24
-private const val CENTRAL_NAME_LENGTH_OFFSET = 28
-private const val CENTRAL_EXTRA_LENGTH_OFFSET = 30
-private const val CENTRAL_COMMENT_LENGTH_OFFSET = 32
-private const val CENTRAL_DISK_NUMBER_OFFSET = 34
-private const val CENTRAL_LOCAL_HEADER_OFFSET = 42
-
 private const val EXTRA_HEADER_BYTES = 4
-private const val ZIP64_EXTRA_ID = 0x0001L
-
-private const val END_RECORD_SIGNATURE = 0x06054b50L
-private const val END_RECORD_BYTES = 22L
-private const val END_DISK_NUMBER_OFFSET = 4
-private const val END_CENTRAL_DISK_OFFSET = 6
-private const val END_ENTRIES_ON_DISK_OFFSET = 8
-private const val END_TOTAL_ENTRIES_OFFSET = 10
-private const val END_CENTRAL_SIZE_OFFSET = 12
-private const val END_CENTRAL_OFFSET_OFFSET = 16
-private const val END_COMMENT_LENGTH_OFFSET = 20
-private const val MAX_ZIP_COMMENT_BYTES = 0xffffL
-private const val MAX_END_SEARCH_BYTES = END_RECORD_BYTES + MAX_ZIP_COMMENT_BYTES
+private const val ZIP64_EXTRA_ID = 0x0001
 
 private const val ZIP64_LOCATOR_SIGNATURE = 0x07064b50L
 private const val ZIP64_LOCATOR_BYTES = 20L
