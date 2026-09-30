@@ -279,6 +279,22 @@ class BackupArchiveSessionTest :
             result.toString() shouldNotContain file.toString()
         }
 
+        test("a malformed latest end record is rejected before opening another directory") {
+            val limits = ArchiveLimits.Default.copy(maxEntries = 2)
+            val snapshot = root.snapshot(
+                "oversized-directory.zip",
+                BackupArchive.METADATA_JSON_NAME to metadataJson(),
+                BackupArchive.PREFERENCES_PATH to byteArrayOf(1),
+                "opaque/entry" to byteArrayOf(),
+            )
+            BackupArchiveSession.open(snapshot, limits) shouldBe BackupArchiveSessionResult.Invalid(
+                BackupArchiveSessionFailure.ZipGateRejected(BackupArchiveZipGateFailure.TOO_MANY_ENTRIES),
+            )
+            BackupArchiveSession.open(snapshot.withShadowedEndRecord(), limits) shouldBe BackupArchiveSessionResult.Invalid(
+                BackupArchiveSessionFailure.ZipGateRejected(BackupArchiveZipGateFailure.END_RECORD_TRAILING_MISMATCH),
+            )
+        }
+
         test("close is idempotent and removes all exact-entry authority") {
             val snapshot = root.snapshot(
                 "close.zip",
@@ -348,6 +364,36 @@ private fun metadataJson(): ByteArray =
 private fun manifestJson(vararg components: BackupComponent): ByteArray =
     """{"formatVersion":1,"components":[${components.joinToString { "\"${it.wireId}\"" }}]}"""
         .encodeToByteArray()
+
+private fun ArchiveSnapshot.withShadowedEndRecord(): ArchiveSnapshot {
+    val original = Files.readAllBytes(path)
+    val originalEndOffset = original.size - 22
+    val originalDirectoryOffset = original.u32(originalEndOffset + 16)
+    val admittedDirectory = listOf(BackupArchive.METADATA_JSON_NAME, BackupArchive.PREFERENCES_PATH)
+        .map { name ->
+            val offset = original.findCentralEntry(name)
+            val bytes = 46 + original.u16(offset + 28) + original.u16(offset + 30) + original.u16(offset + 32)
+            original.copyOfRange(offset, offset + bytes)
+        }.reduce { left, right -> left + right }
+    val admittedEnd = ByteArray(22).apply {
+        putU32(0, 0x06054b50L)
+        putU16(8, 2)
+        putU16(10, 2)
+        putU32(12, admittedDirectory.size.toLong())
+        putU32(16, original.size.toLong())
+        putU16(20, 22)
+    }
+    val latestEndOffset = original.size + admittedDirectory.size + admittedEnd.size
+    val latestEnd = original.copyOfRange(originalEndOffset, original.size).apply {
+        // Keep Commons' prepended-data adjustment at zero so it reads the original oversized CEN.
+        putU32(12, latestEndOffset - originalDirectoryOffset)
+        putU16(20, 1) // No byte follows this record: only this EOCD has an invalid comment length.
+    }
+    val forgedBytes = original + admittedDirectory + admittedEnd + latestEnd
+    val forgedFile = path.resolveSibling("shadowed-end-record.zip")
+    Files.write(forgedFile, forgedBytes)
+    return ArchiveSnapshot(forgedFile, forgedBytes.size.toLong())
+}
 
 private const val CENTRAL_VERSION_MADE_BY_OFFSET = 4
 private const val CENTRAL_FLAGS_OFFSET = 8
