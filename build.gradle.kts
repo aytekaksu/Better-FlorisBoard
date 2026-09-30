@@ -59,6 +59,7 @@ val extensionHardeningKotlinSources = files(
     file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/io/BoundedExtensionArchive.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/io/ExtensionImportBudget.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/io/ExtensionZipContainerGate.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/io/ZipRecordReader.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/ext/ExtensionEditorLifecycleTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/han/LanguagePackConnectionsTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyboardExtensionRepositoryTest.kt"),

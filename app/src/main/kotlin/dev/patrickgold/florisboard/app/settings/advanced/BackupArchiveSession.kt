@@ -16,6 +16,10 @@
 
 package dev.patrickgold.florisboard.app.settings.advanced
 
+import dev.patrickgold.florisboard.lib.io.ZipLocalHeader
+import dev.patrickgold.florisboard.lib.io.ZipRecordReader
+import dev.patrickgold.florisboard.lib.io.ZipRecordReader.Companion.LOCAL_HEADER_BYTES
+import dev.patrickgold.florisboard.lib.io.zipCheckedAdd
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -321,11 +325,12 @@ private class BackupArchiveSessionOpener(private val snapshot: ArchiveSnapshot, 
         preflight: ArchivePreflight,
         boundEntries: IdentityHashMap<ValidatedArchiveEntry, ZipArchiveEntry>,
     ): Boolean = try {
+        val reader = ZipRecordReader(channel)
         for (validatedEntry in preflight.retainedEntries()) {
             coroutineContext.ensureActive()
             val zipEntry = boundEntries[validatedEntry] ?: return false
             val expectedDataOffset = validateLocalHeader(
-                channel = channel,
+                reader = reader,
                 zipEntry = zipEntry,
                 centralDirectoryOffset = centralDirectoryOffset,
             ) ?: return false
@@ -342,21 +347,16 @@ private class BackupArchiveSessionOpener(private val snapshot: ArchiveSnapshot, 
     }
 
     private fun validateLocalHeader(
-        channel: FileChannel,
+        reader: ZipRecordReader,
         zipEntry: ZipArchiveEntry,
         centralDirectoryOffset: Long,
     ): Long? {
-        val header = channel.readExact(
-            offset = zipEntry.localHeaderOffset,
-            byteCount = LOCAL_HEADER_BYTES,
-            upperBound = centralDirectoryOffset,
-        ) ?: return null
-        if (header.u32(LOCAL_SIGNATURE_OFFSET) != LOCAL_HEADER_SIGNATURE) return null
+        val header = reader.localHeader(zipEntry.localHeaderOffset, centralDirectoryOffset) ?: return null
         if (!header.matches(zipEntry)) return null
-        return resolveLocalDataOffset(channel, header, zipEntry, centralDirectoryOffset)
+        return resolveLocalDataOffset(reader, header, zipEntry, centralDirectoryOffset)
     }
 
-    private fun ByteArray.matches(zipEntry: ZipArchiveEntry): Boolean {
+    private fun ZipLocalHeader.matches(zipEntry: ZipArchiveEntry): Boolean {
         val centralFlags = zipEntry.rawFlag
         val centralMethod = zipEntry.method
         val allowedFlags = when (centralMethod) {
@@ -364,49 +364,31 @@ private class BackupArchiveSessionOpener(private val snapshot: ArchiveSnapshot, 
             ZipMethod.DEFLATED.code -> DEFLATED_ALLOWED_FLAGS
             else -> return false
         }
-        return u16(LOCAL_METHOD_OFFSET) == centralMethod &&
-            u16(LOCAL_FLAGS_OFFSET) == centralFlags &&
-            centralFlags and allowedFlags.inv() == 0
+        return method == centralMethod && flags == centralFlags && centralFlags and allowedFlags.inv() == 0
     }
 
     private fun resolveLocalDataOffset(
-        channel: FileChannel,
-        header: ByteArray,
+        reader: ZipRecordReader,
+        header: ZipLocalHeader,
         zipEntry: ZipArchiveEntry,
         centralDirectoryOffset: Long,
     ): Long? {
         val centralName = zipEntry.rawName
-        val localNameBytes = header.u16(LOCAL_NAME_LENGTH_OFFSET)
-        val localExtraBytes = header.u16(LOCAL_EXTRA_LENGTH_OFFSET)
-        if (centralName == null || localNameBytes != centralName.size) return null
-        val layout = checkedLocalDataLayout(
-            localHeaderOffset = zipEntry.localHeaderOffset,
-            localNameBytes = localNameBytes,
-            localExtraBytes = localExtraBytes,
-            compressedSize = zipEntry.compressedSize,
-            centralDirectoryOffset = centralDirectoryOffset,
-        ) ?: return null
-        val localName = channel.readExact(
-            offset = layout.nameOffset,
-            byteCount = localNameBytes,
-            upperBound = layout.dataOffset,
-        ) ?: return null
-        return layout.dataOffset.takeIf { localName.contentEquals(centralName) }
+        if (centralName == null || header.nameBytes != centralName.size) return null
+        val dataOffset = checkedLocalDataOffset(header, zipEntry, centralDirectoryOffset) ?: return null
+        val nameOffset = zipEntry.localHeaderOffset + LOCAL_HEADER_BYTES
+        val localName = reader.readExact(nameOffset, header.nameBytes, dataOffset) ?: return null
+        return dataOffset.takeIf { localName.contentEquals(centralName) }
     }
 
-    private fun checkedLocalDataLayout(
-        localHeaderOffset: Long,
-        localNameBytes: Int,
-        localExtraBytes: Int,
-        compressedSize: Long,
+    private fun checkedLocalDataOffset(
+        header: ZipLocalHeader,
+        zipEntry: ZipArchiveEntry,
         centralDirectoryOffset: Long,
-    ): LocalDataLayout? {
-        val nameOffset = localHeaderOffset.checkedAdd(LOCAL_HEADER_BYTES.toLong()) ?: return null
-        val dataOffset = nameOffset.checkedAdd(localNameBytes.toLong())
-            ?.checkedAdd(localExtraBytes.toLong())
-            ?: return null
-        val dataEnd = dataOffset.checkedAdd(compressedSize) ?: return null
-        return LocalDataLayout(nameOffset, dataOffset).takeIf { dataEnd <= centralDirectoryOffset }
+    ): Long? {
+        val dataOffset = header.dataOffset(zipEntry.localHeaderOffset) ?: return null
+        val dataEnd = dataOffset.zipCheckedAdd(zipEntry.compressedSize) ?: return null
+        return dataOffset.takeIf { dataEnd <= centralDirectoryOffset }
     }
 
     private suspend fun enumerateEntries(zipFile: ZipFile): List<BoundZipEntry> = buildList {
@@ -524,14 +506,6 @@ private class BackupArchiveSessionOpener(private val snapshot: ArchiveSnapshot, 
         private const val MAX_CONTROL_COMPRESSED_OVERHEAD_BYTES = 1L shl 10
         private const val CONTROL_READ_BUFFER_BYTES = 8 * 1024
 
-        private const val LOCAL_HEADER_SIGNATURE = 0x04034b50L
-        private const val LOCAL_HEADER_BYTES = 30
-        private const val LOCAL_SIGNATURE_OFFSET = 0
-        private const val LOCAL_FLAGS_OFFSET = 6
-        private const val LOCAL_METHOD_OFFSET = 8
-        private const val LOCAL_NAME_LENGTH_OFFSET = 26
-        private const val LOCAL_EXTRA_LENGTH_OFFSET = 28
-
         private const val DATA_DESCRIPTOR_FLAG = 1 shl 3
         private const val UTF8_NAMES_FLAG = 1 shl 11
         private const val DEFLATE_OPTION_FLAGS = (1 shl 1) or (1 shl 2)
@@ -557,8 +531,6 @@ private data class BoundZipEntry(val entry: ZipArchiveEntry, val fact: ArchiveEn
 }
 
 private data class ZipEntryKey(val path: String, val kind: ArchiveEntryKind)
-
-private data class LocalDataLayout(val nameOffset: Long, val dataOffset: Long)
 
 private fun ZipArchiveEntry.toFact(zipFile: ZipFile): ArchiveEntryFact {
     val isEncrypted = generalPurposeBit.usesEncryption() || method == ZipMethod.AES_ENCRYPTED.code
@@ -606,31 +578,6 @@ private fun closeQuietly(closeable: Closeable) {
         // The session reports the original typed failure.
     }
 }
-
-private fun FileChannel.readExact(offset: Long, byteCount: Int, upperBound: Long): ByteArray? {
-    val end = offset.checkedAdd(byteCount.toLong())
-    if (byteCount < 0 || upperBound < 0L || end == null || end > upperBound) return null
-    val bytes = ByteArray(byteCount)
-    val buffer = ByteBuffer.wrap(bytes)
-    var cursor = offset
-    while (buffer.hasRemaining()) {
-        val readCount = read(buffer, cursor)
-        if (readCount <= 0) return null
-        cursor += readCount
-    }
-    return bytes
-}
-
-private fun ByteArray.u16(offset: Int): Int = (this[offset].toInt() and BYTE_MASK) or
-    ((this[offset + 1].toInt() and BYTE_MASK) shl Byte.SIZE_BITS)
-
-private fun ByteArray.u32(offset: Int): Long =
-    u16(offset).toLong() or (u16(offset + Short.SIZE_BYTES).toLong() shl Short.SIZE_BITS)
-
-private fun Long.checkedAdd(other: Long): Long? =
-    takeIf { this >= 0L && other >= 0L && this <= Long.MAX_VALUE - other }?.plus(other)
-
-private const val BYTE_MASK = 0xff
 
 private inline fun <T> runOrNullPreservingCancellation(closeOnCancellation: Closeable? = null, block: () -> T): T? =
     try {

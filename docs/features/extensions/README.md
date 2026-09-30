@@ -50,6 +50,8 @@ Compress builds its entry table. It also checks the latest end record, the
 exact central-directory layout, local/central header agreement, bounded
 metadata, and UTF-8 entry names.
 
+Record decoding is shared with backup ZIPs; extension limits and ZIP64 rejection stay separate.
+
 | Budget | Limit |
 | --- | ---: |
 | ZIP file | 64 MiB |
