@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.florisboard.autocorrect.host.core.BindingState
+import org.florisboard.autocorrect.host.core.DiscoveryState
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -134,7 +135,7 @@ class AutocorrectHostBinderAndroidTest {
             oldSuggestionsEnabled?.let { prefs.suggestion.enabled.set(it).getOrThrow() }
         }
         manager.onSelectedProviderChanged()
-        awaitHostCommandBarrier()
+        awaitDiscoveryApplied()
         if (bindingBeforeRestore != BindingState.Unbound &&
             eventsBeforeRestore.lastIndexOfAny("UI_REQUEST", "START") >
             eventsBeforeRestore.lastIndexOf("UNBOUND")
@@ -276,7 +277,7 @@ class AutocorrectHostBinderAndroidTest {
             pickerLease = pickerLease,
         )
         assertTrue(manager.pluginUiError.value)
-        awaitHostCommandBarrier()
+        awaitDiscoveryApplied()
         assertEquals(
             released.events.count { it == "UI_REQUEST" },
             snapshot().events.count { it == "UI_REQUEST" },
@@ -347,7 +348,7 @@ class AutocorrectHostBinderAndroidTest {
             pickerLease = pickerLease,
         )
         assertTrue(manager.pluginUiError.value)
-        awaitHostCommandBarrier()
+        awaitDiscoveryApplied()
         val newBindingStarted = manager.diagnosticsSnapshot().records.any { record ->
             val binding = record.event as? AutocorrectPluginDiagnosticEvent.Binding
             record.sequence > diagnosticsBeforeDeath &&
@@ -368,7 +369,7 @@ class AutocorrectHostBinderAndroidTest {
             manager.sendPluginUiDocument("fixture-b-document", Uri.fromFile(document), false, lease)
 
             waitForEvent("B_UI_DOCUMENT")
-            awaitHostCommandBarrier()
+            awaitDiscoveryApplied()
             assertTrue(synchronized(manager) { uiOperations().hasDocument })
             assertTrue(manager.hostStateSnapshot().uiBindingDemand)
             assertFalse("binding released before document reply", snapshot().events.contains("B_UNBOUND"))
@@ -415,7 +416,7 @@ class AutocorrectHostBinderAndroidTest {
             manager.finishSession()
             waitForEvent("FINISH")
             assertTrue(manager.hostStateSnapshot().pendingFinishes.isNotEmpty())
-            awaitHostCommandBarrier()
+            awaitDiscoveryApplied()
             assertFalse("binding released before finish acknowledgement", snapshot().events.contains("UNBOUND"))
 
             control("release_finish")
@@ -506,7 +507,7 @@ class AutocorrectHostBinderAndroidTest {
             )
             val next = async(Dispatchers.Default) { suggestOnce(generation) }
             val held = waitForEvent("FINISH")
-            awaitHostCommandBarrier()
+            awaitDiscoveryApplied()
             val pending = manager.hostStateSnapshot()
             assertTrue(pending.pendingFinishes.isNotEmpty())
             assertFalse(pending.session?.configuration?.allowPersonalizedLearning ?: true)
@@ -951,7 +952,7 @@ class AutocorrectHostBinderAndroidTest {
             "current malformed reply did not fail its request",
             manager.diagnosticsSnapshot().records.any { record ->
                 val event = record.event as? AutocorrectPluginDiagnosticEvent.Operation
-                event?.requestId?.value == requestId &&
+                event?.requestId == requestId &&
                     event.operation == AutocorrectPluginDiagnosticOperation.SUGGESTION &&
                     event.state == AutocorrectPluginDiagnosticState.FAILED &&
                     event.error == AutocorrectPluginDiagnosticError.MALFORMED_MESSAGE
@@ -981,22 +982,23 @@ class AutocorrectHostBinderAndroidTest {
         assertTrue("old-epoch reply was not rejected", staleReplyCount() >= expected)
     }
 
-    private fun latestDiscoveryFinishSequence() = manager.diagnosticsSnapshot().records
-        .lastOrNull { record ->
-            (record.event as? AutocorrectPluginDiagnosticEvent.Discovery)?.state in setOf(
-                AutocorrectPluginDiagnosticState.SUCCEEDED,
-                AutocorrectPluginDiagnosticState.FAILED,
-            )
-        }?.sequence ?: 0L
-
-    private fun awaitHostCommandBarrier() {
-        val previous = latestDiscoveryFinishSequence()
-        manager.refreshProviders()
+    // Fences earlier synchronous host commands and discovery publication, not later bind effects.
+    private fun awaitDiscoveryApplied() {
+        val expectedRevision = synchronized(manager) {
+            manager.hostStateSnapshot().nextDiscoveryRevision.also { manager.refreshProviders() }
+        }
+        fun applied() = synchronized(manager) {
+            when (val discovery = manager.hostStateSnapshot().discovery) {
+                is DiscoveryState.Ready -> discovery.revision.value >= expectedRevision
+                is DiscoveryState.Failed -> discovery.revision.value >= expectedRevision
+                else -> false
+            }
+        }
         val deadline = SystemClock.uptimeMillis() + 10_000
-        while (latestDiscoveryFinishSequence() <= previous && SystemClock.uptimeMillis() < deadline) {
+        while (!applied() && SystemClock.uptimeMillis() < deadline) {
             SystemClock.sleep(25)
         }
-        assertTrue("host command barrier did not complete", latestDiscoveryFinishSequence() > previous)
+        assertTrue("provider discovery was not applied", applied())
     }
 
     private fun List<String>.lastIndexOfAny(first: String, second: String) =

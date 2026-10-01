@@ -397,7 +397,6 @@ class AutocorrectPluginManager internal constructor(
     private val admittedSessionId get() = hostState.session
         ?.takeIf { it.phase == SessionPhase.ACTIVE }?.sessionId?.value ?: -1L
     private val editorGeneration get() = hostState.editorGeneration.value
-    private val pendingSessionFinishes get() = hostState.pendingFinishes.keys.map { it.value }.toSet()
     @Volatile private var boostedCodePoints = emptySet<Int>()
     @Volatile private var uiClientCount = 0
     private val activePluginUiPickerLeaseIds = mutableSetOf<Long>()
@@ -537,13 +536,7 @@ class AutocorrectPluginManager internal constructor(
             (hostState.discovery as? DiscoveryState.Loading)?.revision == effect.revision
         }
         if (!current) return
-        diagnostics.discoveryStarted()
         val result = runCatching { discoverProviders() }
-        diagnostics.discoveryFinished(
-            providerCount = result.getOrNull()?.size ?: 0,
-            error = if (result.isSuccess) AutocorrectPluginDiagnosticError.NONE
-            else AutocorrectPluginDiagnosticError.QUERY_FAILED,
-        )
         synchronized(this) {
             if ((hostState.discovery as? DiscoveryState.Loading)?.revision != effect.revision) return
             result.fold(
@@ -583,14 +576,6 @@ class AutocorrectPluginManager internal constructor(
                 bindingLease?.epoch == effect.lease.epoch
             ) {
                 connectionReady.completeIfCurrent(readiness, service)
-                diagnostics.record(
-                    AutocorrectPluginDiagnosticEvent.Session(
-                        bindingEpoch = effect.lease.epoch.value,
-                        sessionId = AutocorrectPluginDiagnosticId.fromHostId(effect.lease.sessionId.value),
-                        state = AutocorrectPluginDiagnosticState.SUCCEEDED,
-                        error = AutocorrectPluginDiagnosticError.NONE,
-                    ),
-                )
                 if (uiClientCount > 0) requestPluginUi(service)
             } else if (!sent && bindingLease?.epoch == effect.lease.epoch) {
                 connectionReady.completeIfCurrent(readiness, null)
@@ -608,11 +593,6 @@ class AutocorrectPluginManager internal constructor(
     }
 
     private fun executeFinishSession(effect: HostEffect.FinishSession, session: AutocorrectSession?) {
-        diagnostics.operationStarted(
-            operation = AutocorrectPluginDiagnosticOperation.FINISH_SESSION,
-            bindingEpoch = effect.lease.epoch.value,
-            sessionId = effect.lease.sessionId.value,
-        )
         val sent = synchronized(this) {
             val service = remote.takeIf {
                 (serviceConnection as? LeaseServiceConnection)?.lease?.let { boundLease ->
@@ -643,13 +623,6 @@ class AutocorrectPluginManager internal constructor(
         }
         if (!sent) {
             dispatchHost(HostEvent.FinishSendFailed(effect.lease, monotonicNow()))
-            diagnostics.operationFinished(
-                operation = AutocorrectPluginDiagnosticOperation.FINISH_SESSION,
-                bindingEpoch = effect.lease.epoch.value,
-                sessionId = effect.lease.sessionId.value,
-                state = AutocorrectPluginDiagnosticState.FAILED,
-                error = AutocorrectPluginDiagnosticError.SEND_FAILED,
-            )
         }
     }
 
@@ -1178,15 +1151,7 @@ class AutocorrectPluginManager internal constructor(
         if (session.sessionId != previousSessionId) {
             latestSuggestionRequestId = -1L
             clearInputTrace()
-            cancelPending(previousSessionId ?: 0L)
-            diagnostics.record(
-                AutocorrectPluginDiagnosticEvent.Session(
-                    bindingEpoch = providerBindingEpoch,
-                    sessionId = AutocorrectPluginDiagnosticId.fromHostId(session.sessionId),
-                    state = AutocorrectPluginDiagnosticState.STARTED,
-                    error = AutocorrectPluginDiagnosticError.NONE,
-                ),
-            )
+            cancelPending()
         }
         return session
     }
@@ -1243,17 +1208,7 @@ class AutocorrectPluginManager internal constructor(
         if (sessionId != null) connectionReady.close()
         latestSuggestionRequestId = -1L
         clearInputTrace()
-        cancelPending(sessionId ?: 0L)
-        if (sessionId != null) {
-            diagnostics.record(
-                AutocorrectPluginDiagnosticEvent.Session(
-                    bindingEpoch = providerBindingEpoch,
-                    sessionId = AutocorrectPluginDiagnosticId.fromHostId(sessionId),
-                    state = AutocorrectPluginDiagnosticState.CLEARED,
-                    error = AutocorrectPluginDiagnosticError.NONE,
-                ),
-            )
-        }
+        cancelPending()
         return sessionId != null
     }
 
@@ -1301,12 +1256,6 @@ class AutocorrectPluginManager internal constructor(
             )
             return
         }
-        diagnostics.operationFinished(
-            operation = AutocorrectPluginDiagnosticOperation.FINISH_SESSION,
-            bindingEpoch = pending.lease.epoch.value,
-            sessionId = sessionId,
-            state = AutocorrectPluginDiagnosticState.ACKNOWLEDGED,
-        )
         dispatchHost(
             HostEvent.FinishAcknowledged(
                 pending.lease.providerId,
@@ -1465,17 +1414,7 @@ class AutocorrectPluginManager internal constructor(
             admission.effects.filterIsInstance<HostEffect.CancelSuggestions>().forEach { cancellation ->
                 val cancelledLease = cancellation.lease
                 val cancelledRequestId = cancelledLease.requestId.value
-                pendingSuggestions.remove(cancelledRequestId)?.let { previous ->
-                    previous.cancel()
-                    diagnostics.operationFinished(
-                        operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                        bindingEpoch = providerBindingEpoch,
-                        sessionId = session.sessionId,
-                        requestId = cancelledRequestId,
-                        state = AutocorrectPluginDiagnosticState.CANCELLED,
-                        error = AutocorrectPluginDiagnosticError.SUPERSEDED,
-                    )
-                }
+                pendingSuggestions.remove(cancelledRequestId)?.cancel()
                 send(
                     AutocorrectPluginContract.MSG_CANCEL,
                     cancellationBundle(cancelledRequestId),
@@ -1484,12 +1423,6 @@ class AutocorrectPluginManager internal constructor(
             }
             val deferred = CompletableDeferred<AutocorrectSuggestionResult>()
             pendingSuggestions[requestId] = deferred
-            diagnostics.operationStarted(
-                operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                bindingEpoch = providerBindingEpoch,
-                sessionId = session.sessionId,
-                requestId = requestId,
-            )
             if (
                 !send(
                     AutocorrectPluginContract.MSG_SUGGEST,
@@ -1504,19 +1437,9 @@ class AutocorrectPluginManager internal constructor(
                         at = monotonicNow(),
                     ),
                 )
-                val wasPending = pendingSuggestions.remove(requestId) != null
+                pendingSuggestions.remove(requestId)
                 if (latestSuggestionRequestId == requestId) {
                     latestSuggestionRequestId = -1L
-                }
-                if (wasPending) {
-                    diagnostics.operationFinished(
-                        operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                        bindingEpoch = providerBindingEpoch,
-                        sessionId = session.sessionId,
-                        requestId = requestId,
-                        state = AutocorrectPluginDiagnosticState.FAILED,
-                        error = AutocorrectPluginDiagnosticError.SEND_FAILED,
-                    )
                 }
                 return null
             }
@@ -1538,13 +1461,6 @@ class AutocorrectPluginManager internal constructor(
                             AutocorrectPluginContract.MSG_CANCEL,
                             cancellationBundle(requestId),
                             service,
-                        )
-                        diagnostics.operationFinished(
-                            operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                            bindingEpoch = providerBindingEpoch,
-                            sessionId = session.sessionId,
-                            requestId = requestId,
-                            state = AutocorrectPluginDiagnosticState.CANCELLED,
                         )
                     }
                 }
@@ -1627,28 +1543,13 @@ class AutocorrectPluginManager internal constructor(
             val requestId = nextId.getAndIncrement()
             val deferred = CompletableDeferred<Boolean>()
             pendingRemovals[requestId] = deferred
-            diagnostics.operationStarted(
-                operation = AutocorrectPluginDiagnosticOperation.REMOVE_CANDIDATE,
-                bindingEpoch = providerBindingEpoch,
-                sessionId = sessionId,
-                requestId = requestId,
-            )
             if (!send(
                     AutocorrectPluginContract.MSG_REMOVE,
                     removalRequestBundle(sessionId, requestId, candidate.pluginCandidateId),
                     service,
                 )
             ) {
-                if (pendingRemovals.remove(requestId) != null) {
-                    diagnostics.operationFinished(
-                        operation = AutocorrectPluginDiagnosticOperation.REMOVE_CANDIDATE,
-                        bindingEpoch = providerBindingEpoch,
-                        sessionId = sessionId,
-                        requestId = requestId,
-                        state = AutocorrectPluginDiagnosticState.FAILED,
-                        error = AutocorrectPluginDiagnosticError.SEND_FAILED,
-                    )
-                }
+                pendingRemovals.remove(requestId)
                 return false
             }
             requestId to deferred
@@ -1656,14 +1557,7 @@ class AutocorrectPluginManager internal constructor(
         return try {
             awaitProviderResult(deferred) ?: false
         } finally {
-            if (pendingRemovals.remove(requestId, deferred)) {
-                diagnostics.operationFinished(
-                    operation = AutocorrectPluginDiagnosticOperation.REMOVE_CANDIDATE,
-                    bindingEpoch = providerBindingEpoch,
-                    requestId = requestId,
-                    state = AutocorrectPluginDiagnosticState.CANCELLED,
-                )
-            }
+            pendingRemovals.remove(requestId, deferred)
         }
     }
 
@@ -1775,17 +1669,7 @@ class AutocorrectPluginManager internal constructor(
     }
 
     private fun loseConnection(lease: BindingLease, kind: ConnectionLossKind) {
-        val pendingFinishes = pendingSessionFinishes
         dispatchHost(HostEvent.ConnectionLost(lease, kind, monotonicNow()))
-        pendingFinishes.forEach { sessionId ->
-            diagnostics.operationFinished(
-                operation = AutocorrectPluginDiagnosticOperation.FINISH_SESSION,
-                bindingEpoch = lease.epoch.value,
-                sessionId = sessionId,
-                state = AutocorrectPluginDiagnosticState.FAILED,
-                error = AutocorrectPluginDiagnosticError.NOT_CONNECTED,
-            )
-        }
         remote = null
         boostedCodePoints = emptySet()
         invalidatePluginUiDocuments()
@@ -1944,7 +1828,7 @@ class AutocorrectPluginManager internal constructor(
             providerPluginUi = null
             _pluginUi.value = null
             if (uiClientCount > 0 && bindingLease == null) _pluginUiLoading.value = false
-            failPending(bindingEpoch = lease.epoch.value)
+            failPending()
         }
         if (wasBound) runCatching { appContext.unbindService(connection) }
         recordBinding(
@@ -1953,60 +1837,22 @@ class AutocorrectPluginManager internal constructor(
         )
     }
 
-    private fun cancelPending(sessionId: Long = activeSessionId ?: 0L) {
+    private fun cancelPending() {
         latestSuggestionRequestId = -1L
         boostedCodePoints = emptySet()
-        pendingSuggestions.keys.forEach { requestId ->
-            diagnostics.operationFinished(
-                operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                bindingEpoch = providerBindingEpoch,
-                sessionId = sessionId,
-                requestId = requestId,
-                state = AutocorrectPluginDiagnosticState.CANCELLED,
-            )
-        }
         pendingSuggestions.values.forEach { it.cancel() }
         pendingSuggestions.clear()
-        pendingRemovals.keys.forEach { requestId ->
-            diagnostics.operationFinished(
-                operation = AutocorrectPluginDiagnosticOperation.REMOVE_CANDIDATE,
-                bindingEpoch = providerBindingEpoch,
-                sessionId = sessionId,
-                requestId = requestId,
-                state = AutocorrectPluginDiagnosticState.CANCELLED,
-            )
-        }
         pendingRemovals.values.forEach { it.cancel() }
         pendingRemovals.clear()
     }
 
-    private fun failPending(bindingEpoch: Long = providerBindingEpoch) {
+    private fun failPending() {
         latestSuggestionRequestId = -1L
         boostedCodePoints = emptySet()
-        val sessionId = activeSessionId ?: 0L
-        pendingSuggestions.keys.forEach { requestId ->
-            diagnostics.operationFinished(
-                operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                bindingEpoch = bindingEpoch,
-                sessionId = sessionId,
-                requestId = requestId,
-                state = AutocorrectPluginDiagnosticState.FAILED,
-                error = AutocorrectPluginDiagnosticError.NOT_CONNECTED,
-            )
-        }
         pendingSuggestions.values.forEach {
             it.complete(AutocorrectSuggestionResult.Unhandled)
         }
         pendingSuggestions.clear()
-        pendingRemovals.keys.forEach { requestId ->
-            diagnostics.operationFinished(
-                operation = AutocorrectPluginDiagnosticOperation.REMOVE_CANDIDATE,
-                bindingEpoch = bindingEpoch,
-                requestId = requestId,
-                state = AutocorrectPluginDiagnosticState.FAILED,
-                error = AutocorrectPluginDiagnosticError.NOT_CONNECTED,
-            )
-        }
         pendingRemovals.values.forEach { it.complete(false) }
         pendingRemovals.clear()
     }
@@ -2049,11 +1895,6 @@ class AutocorrectPluginManager internal constructor(
             )
             return
         }
-        diagnostics.operationStarted(
-            operation = AutocorrectPluginDiagnosticOperation.USER_DICTIONARY,
-            bindingEpoch = bindingEpoch,
-            requestId = request.requestId,
-        )
         scope.launch(Dispatchers.IO) {
             val result = userDictionaryRequestGuard.withLock {
                 val access = synchronized(this@AutocorrectPluginManager) {
@@ -2076,64 +1917,24 @@ class AutocorrectPluginManager internal constructor(
                     }
                 }
             }
-            val delivery = synchronized(this@AutocorrectPluginManager) {
-                if (!isCurrentProviderBinding(providerId, bindingEpoch, providerBinder)) null
-                else runCatching {
-                    replyTo.send(
-                        Message.obtain(
-                            null,
-                            AutocorrectPluginContract.MSG_HOST_USER_DICTIONARY_RESULT,
-                        ).apply {
-                            data = userDictionaryResultBundle(
-                                requestId = request.requestId,
-                                status = result.status,
-                                entries = result.entries,
-                                nextAfterId = result.nextAfterId,
-                            )
-                        },
-                    )
-                }.isSuccess
-            }
-            if (delivery == null) {
-                diagnostics.operationFinished(
-                    operation = AutocorrectPluginDiagnosticOperation.USER_DICTIONARY,
-                    bindingEpoch = bindingEpoch,
-                    requestId = request.requestId,
-                    state = AutocorrectPluginDiagnosticState.REJECTED,
-                    error = AutocorrectPluginDiagnosticError.STALE_BINDING,
-                )
-            } else if (delivery) {
-                val error = when (result.status) {
-                    AutocorrectUserDictionaryStatus.OK ->
-                        AutocorrectPluginDiagnosticError.NONE
-                    AutocorrectUserDictionaryStatus.DENIED ->
-                        AutocorrectPluginDiagnosticError.ACCESS_DENIED
-                    AutocorrectUserDictionaryStatus.INVALID ->
-                        AutocorrectPluginDiagnosticError.INVALID_REQUEST
-                    AutocorrectUserDictionaryStatus.UNAVAILABLE ->
-                        AutocorrectPluginDiagnosticError.OPERATION_UNAVAILABLE
+            synchronized(this@AutocorrectPluginManager) {
+                if (isCurrentProviderBinding(providerId, bindingEpoch, providerBinder)) {
+                    runCatching {
+                        replyTo.send(
+                            Message.obtain(
+                                null,
+                                AutocorrectPluginContract.MSG_HOST_USER_DICTIONARY_RESULT,
+                            ).apply {
+                                data = userDictionaryResultBundle(
+                                    requestId = request.requestId,
+                                    status = result.status,
+                                    entries = result.entries,
+                                    nextAfterId = result.nextAfterId,
+                                )
+                            },
+                        )
+                    }
                 }
-                diagnostics.operationFinished(
-                    operation = AutocorrectPluginDiagnosticOperation.USER_DICTIONARY,
-                    bindingEpoch = bindingEpoch,
-                    requestId = request.requestId,
-                    state = if (error == AutocorrectPluginDiagnosticError.NONE) {
-                        AutocorrectPluginDiagnosticState.SUCCEEDED
-                    } else {
-                        AutocorrectPluginDiagnosticState.REJECTED
-                    },
-                    itemCount = result.entries.size,
-                    error = error,
-                )
-            } else {
-                // The selected provider disappeared while its request was in flight.
-                diagnostics.operationFinished(
-                    operation = AutocorrectPluginDiagnosticOperation.USER_DICTIONARY,
-                    bindingEpoch = bindingEpoch,
-                    requestId = request.requestId,
-                    state = AutocorrectPluginDiagnosticState.FAILED,
-                    error = AutocorrectPluginDiagnosticError.REMOTE_FAILURE,
-                )
             }
         }
     }
@@ -2220,14 +2021,6 @@ class AutocorrectPluginManager internal constructor(
         if (selectedProviderId.isBlank()) return
         if (prefs.suggestion.autocorrectPluginComponent.get() != selectedProviderId) return
         if (discoveredProviders.none { it.id == selectedProviderId }) {
-            diagnostics.record(
-                AutocorrectPluginDiagnosticEvent.Discovery(
-                    state = AutocorrectPluginDiagnosticState.REJECTED,
-                    duration = AutocorrectPluginDiagnosticDuration.UNKNOWN,
-                    providerCount = discoveredProviders.size,
-                    error = AutocorrectPluginDiagnosticError.PROVIDER_NOT_FOUND,
-                ),
-            )
             if (uiClientCount > 0) {
                 providerPluginUi = null
                 _pluginUi.value = null
@@ -2473,14 +2266,6 @@ class AutocorrectPluginManager internal constructor(
                 return
             }
             boostedCodePoints = result.boostedCodePoints.takeIf { result.handled }.orEmpty()
-            diagnostics.operationFinished(
-                operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                bindingEpoch = bindingEpoch,
-                sessionId = accepted.lease.sessionId.value,
-                requestId = requestId,
-                state = AutocorrectPluginDiagnosticState.SUCCEEDED,
-                itemCount = result.candidates.size,
-            )
             pendingResult.complete(result)
         }
 
@@ -2508,13 +2293,14 @@ class AutocorrectPluginManager internal constructor(
                 latestSuggestionRequestId = -1L
                 boostedCodePoints = emptySet()
             }
-            diagnostics.operationFinished(
-                operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                bindingEpoch = bindingEpoch,
-                sessionId = lease.sessionId.value,
-                requestId = failedId,
-                state = AutocorrectPluginDiagnosticState.FAILED,
-                error = AutocorrectPluginDiagnosticError.MALFORMED_MESSAGE,
+            diagnostics.record(
+                AutocorrectPluginDiagnosticEvent.Operation(
+                    bindingEpoch = bindingEpoch,
+                    requestId = failedId,
+                    operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
+                    state = AutocorrectPluginDiagnosticState.FAILED,
+                    error = AutocorrectPluginDiagnosticError.MALFORMED_MESSAGE,
+                ),
             )
             pendingSuggestions.remove(failedId)?.complete(AutocorrectSuggestionResult.Unhandled)
         }
@@ -2536,13 +2322,6 @@ class AutocorrectPluginManager internal constructor(
                 )
                 return
             }
-            diagnostics.operationFinished(
-                operation = AutocorrectPluginDiagnosticOperation.REMOVE_CANDIDATE,
-                bindingEpoch = bindingEpoch,
-                requestId = requestId,
-                state = AutocorrectPluginDiagnosticState.SUCCEEDED,
-                itemCount = if (removed) 1 else 0,
-            )
             pending.complete(removed)
         }
 

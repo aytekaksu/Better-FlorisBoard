@@ -17,8 +17,8 @@ Inspect in this order:
 7. accepted, rejected, cancelled, or fallback decision;
 8. provider-health state and recovery timer.
 
-The in-memory diagnostics ring stores only typed events, opaque IDs, counts,
-state, duration buckets, and error categories. It is bounded and process-local.
+The bounded, process-local diagnostics ring records physical binds, rejected
+replies and request-scoped malformed failures using opaque IDs and typed states/errors.
 It must never accept arbitrary strings, protocol objects, text, candidates,
 dictionaries, touch data, editor packages, or exception messages.
 
