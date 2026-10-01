@@ -644,6 +644,7 @@ class BackupArchiveTest :
                     .toSet()
                 val result = RestorePlanner.create(archive, selected) as RestorePlanResult.Valid
                 result.plan.componentsToStage.mapTo(linkedSetOf()) { it.component } shouldBe selected
+                result.plan.componentsToStage.size shouldBe selected.size
                 val needsMedia = selected.any {
                     it == BackupComponent.CLIPBOARD_IMAGES ||
                         it == BackupComponent.CLIPBOARD_VIDEOS
@@ -651,25 +652,6 @@ class BackupArchiveTest :
                 result.plan.clipboardMediaCandidatesToStage.map { it.archivePath } shouldBe
                     if (needsMedia) listOf("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/1") else emptyList()
             }
-        }
-
-        test("partial clipboard selection includes one index with shared media candidates") {
-            val archive = validArchive(
-                metadataEntry(),
-                file(BackupArchive.CLIPBOARD_IMAGES_PATH),
-                file(BackupArchive.CLIPBOARD_VIDEO_PATH),
-                file("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/1"),
-            )
-            val plan = (
-                RestorePlanner.create(
-                    archive,
-                    setOf(BackupComponent.CLIPBOARD_IMAGES),
-                ) as RestorePlanResult.Valid
-                ).plan
-
-            plan.componentsToStage.map { it.component } shouldBe listOf(BackupComponent.CLIPBOARD_IMAGES)
-            plan.clipboardMediaCandidatesToStage.map { it.archivePath } shouldBe
-                listOf("${BackupArchive.CLIPBOARD_MEDIA_ROOT}/1")
         }
 
         test("validated snapshots and plans do not expose mutable collections") {

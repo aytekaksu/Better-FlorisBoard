@@ -21,6 +21,7 @@ import android.net.Uri
 import android.os.CancellationSignal
 import android.os.Process
 import android.os.SystemClock
+import android.provider.OpenableColumns
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.patrickgold.florisboard.BuildConfig
@@ -420,13 +421,85 @@ class ClipboardExternalMediaImporterAndroidTest {
             Uri.parse("content://external%2Eexample/source.flex"),
             Uri.parse("content://${BuildConfig.APPLICATION_ID}.provider.file/source.flex"),
         )
+        val canonicalSource = ClipboardExternalMediaTestSource.healthyUri
+        val encodedAuthoritySource = canonicalSource.buildUpon()
+            .encodedAuthority(ClipboardExternalMediaTestSource.AUTHORITY.replaceFirst(".", "%2E"))
+            .build()
+        var controlStage: StagedExternalContent? = null
+        var unexpectedStage: StagedExternalContent? = null
 
         try {
+            ClipboardExternalMediaTestSource.revokeReadAccess()
+            ClipboardExternalMediaTestSource.grantReadAccess(canonicalSource)
+
+            val mimeQueriesBeforePlatformControl = ClipboardExternalMediaTestSource.mimeTypeQueryCount()
+            val nameQueriesBeforePlatformControl = ClipboardExternalMediaTestSource.displayNameQueryCount()
+            val opensBeforePlatformControl = ClipboardExternalMediaTestSource.openCount()
+            requireNotNull(
+                context.contentResolver.acquireUnstableContentProviderClient(encodedAuthoritySource),
+            ).use { provider ->
+                assertEquals("application/octet-stream", provider.getType(encodedAuthoritySource))
+                requireNotNull(
+                    provider.query(
+                        encodedAuthoritySource,
+                        arrayOf(OpenableColumns.DISPLAY_NAME),
+                        null,
+                        null,
+                        null,
+                        CancellationSignal(),
+                    ),
+                ).use { cursor ->
+                    assertTrue(cursor.moveToFirst())
+                    assertEquals(
+                        " \u0000vector.svg ",
+                        cursor.getString(cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)),
+                    )
+                    assertFalse(cursor.moveToNext())
+                }
+                requireNotNull(
+                    provider.openAssetFile(encodedAuthoritySource, "r", CancellationSignal()),
+                ).use { descriptor ->
+                    descriptor.createInputStream().use { input ->
+                        assertArrayEquals(byteArrayOf(1, 3, 3, 7), input.readBytes())
+                    }
+                }
+            }
+            assertEquals(mimeQueriesBeforePlatformControl + 1, ClipboardExternalMediaTestSource.mimeTypeQueryCount())
+            assertEquals(nameQueriesBeforePlatformControl + 1, ClipboardExternalMediaTestSource.displayNameQueryCount())
+            assertEquals(opensBeforePlatformControl + 1, ClipboardExternalMediaTestSource.openCount())
+
+            val mimeQueriesBeforeCanonicalControl = ClipboardExternalMediaTestSource.mimeTypeQueryCount()
+            val nameQueriesBeforeCanonicalControl = ClipboardExternalMediaTestSource.displayNameQueryCount()
+            val opensBeforeCanonicalControl = ClipboardExternalMediaTestSource.openCount()
+            controlStage = importer.stage(canonicalSource)
+            val readableStage = requireNotNull(controlStage)
+            assertEquals(4L, readableStage.byteCount)
+            assertEquals("application/octet-stream", readableStage.sourceMimeType)
+            assertArrayEquals(byteArrayOf(1, 3, 3, 7), Files.readAllBytes(readableStage.path))
+            readableStage.close()
+            controlStage = null
+            assertEquals(mimeQueriesBeforeCanonicalControl + 1, ClipboardExternalMediaTestSource.mimeTypeQueryCount())
+            assertEquals(
+                nameQueriesBeforeCanonicalControl + 1,
+                ClipboardExternalMediaTestSource.displayNameQueryCount(),
+            )
+            assertEquals(opensBeforeCanonicalControl + 1, ClipboardExternalMediaTestSource.openCount())
+
+            val mimeQueriesBeforeRejection = ClipboardExternalMediaTestSource.mimeTypeQueryCount()
+            val nameQueriesBeforeRejection = ClipboardExternalMediaTestSource.displayNameQueryCount()
+            val opensBeforeRejection = ClipboardExternalMediaTestSource.openCount()
+            unexpectedStage = importer.stage(encodedAuthoritySource)
+            assertEquals(mimeQueriesBeforeRejection, ClipboardExternalMediaTestSource.mimeTypeQueryCount())
+            assertEquals(nameQueriesBeforeRejection, ClipboardExternalMediaTestSource.displayNameQueryCount())
+            assertEquals(opensBeforeRejection, ClipboardExternalMediaTestSource.openCount())
+            assertNull(unexpectedStage)
             rejectedSources.forEach { source ->
                 assertNull(importer.stage(source))
             }
             assertTrue(partialFiles(directoryName).isEmpty())
         } finally {
+            unexpectedStage?.close()
+            controlStage?.close()
             importer.close()
             awaitCondition { partialFiles(directoryName).isEmpty() }
         }

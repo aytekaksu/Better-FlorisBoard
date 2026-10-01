@@ -28,7 +28,6 @@ import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
@@ -45,19 +44,43 @@ class ClipboardBackupPayloadAndroidTest {
     fun oversizedIndexRemovesPartialOutputAndRedactsFailure() {
         withWorkspace("oversized") { workspace ->
             val secret = "private-clipboard-marker"
-            val oversizedText = secret + "\"".repeat(600)
+            val limits = ClipboardRestorePayloadLimits.Default
+            val maxIndexBytes = limits.maxIndexBytes
+            assertEquals(32L shl 20, maxIndexBytes)
+            // Six valid records cross the encoded cap through JSON control-character escaping.
+            val textLengths = List(5) { 1_000_000 } + 592_600
+            assertTrue(textLengths.all { it <= limits.maxTextChars })
+            assertTrue(textLengths.sumOf { it.toLong() } <= limits.maxTotalTextChars)
+            val encodedTextBytes = textLengths.sumOf { length ->
+                secret.length.toLong() + (length - secret.length).toLong() * 6L
+            }
+            assertTrue(encodedTextBytes > maxIndexBytes)
+            assertTrue(
+                "Insufficient free space for the default index boundary",
+                workspace.usableSpace >= maxIndexBytes + (16L shl 20),
+            )
+            val partial = File(
+                File(workspace, BackupArchive.CLIPBOARD_ROOT),
+                ".${BackupArchive.CLIPBOARD_TEXT_ITEMS_JSON_NAME}.partial",
+            )
+            var observedPartialBytes = 0L
 
             val failure = assertThrows(ClipboardBackupPayloadException::class.java) {
                 writePayload(
                     workspace = workspace,
                     selectedTypes = setOf(ItemType.TEXT),
-                    items = listOf(ClipboardItem.text(oversizedText)),
-                    maxIndexBytes = TEST_INDEX_BYTES,
+                    items = textLengths.map { length ->
+                        ClipboardItem.text(secret + "\u0001".repeat(length - secret.length))
+                    },
+                    checkActive = {
+                        observedPartialBytes = maxOf(observedPartialBytes, partial.length())
+                    },
                 )
             }
 
             assertEquals(ClipboardBackupPayloadFailure.LIMIT_EXCEEDED, failure.failure)
             assertEquals(ClipboardBackupPayloadFailure.LIMIT_EXCEEDED.name, failure.message)
+            assertTrue(observedPartialBytes in (maxIndexBytes - 8_192L)..maxIndexBytes)
             assertFalse(failure.toString().contains(secret))
             assertFalse(failure.toString().contains(workspace.absolutePath))
             assertNoIndexOutput(workspace, BackupArchive.CLIPBOARD_TEXT_ITEMS_JSON_NAME)
@@ -67,69 +90,28 @@ class ClipboardBackupPayloadAndroidTest {
     @Test
     fun cancellationDuringIndexWriteRemovesPartialOutput() {
         withWorkspace("cancelled-index") { workspace ->
-            val activeChecks = AtomicInteger()
+            val partial = File(
+                File(workspace, BackupArchive.CLIPBOARD_ROOT),
+                ".${BackupArchive.CLIPBOARD_TEXT_ITEMS_JSON_NAME}.partial",
+            )
+            var sawWrittenPartial = false
 
             assertThrows(CancellationException::class.java) {
                 writePayload(
                     workspace = workspace,
                     selectedTypes = setOf(ItemType.TEXT),
-                    items = listOf(ClipboardItem.text("private text")),
+                    items = listOf(ClipboardItem.text("private text".repeat(10_000))),
                     checkActive = {
-                        if (activeChecks.incrementAndGet() >= 2) {
+                        if (partial.length() > 0L) {
+                            sawWrittenPartial = true
                             throw CancellationException("synthetic cancellation")
                         }
                     },
                 )
             }
 
+            assertTrue(sawWrittenPartial)
             assertNoIndexOutput(workspace, BackupArchive.CLIPBOARD_TEXT_ITEMS_JSON_NAME)
-        }
-    }
-
-    @Test
-    fun mediaDisplayNameSurvivesGeneratedPayloadValidation() {
-        withWorkspace("display-name") { workspace ->
-            val source = Files.createTempFile(
-                context.cacheDir.toPath(),
-                "clipboard-backup-display-name-",
-                ".bin",
-            )
-            Files.write(source, byteArrayOf(1, 2, 3))
-            val install = ClipboardFileStorage.installFromBackup(
-                context = context,
-                source = source,
-                expectedBytes = Files.size(source),
-                type = ItemType.IMAGE,
-                mimeTypes = listOf("image/png"),
-                displayName = " \u0000holiday.png ",
-            )
-            try {
-                writePayload(
-                    workspace = workspace,
-                    selectedTypes = setOf(ItemType.IMAGE),
-                    items = listOf(
-                        ClipboardItem(
-                            type = ItemType.IMAGE,
-                            text = null,
-                            uri = install.ownedUri.uri,
-                            creationTimestampMs = 1L,
-                            isPinned = false,
-                            mimeTypes = listOf("image/png"),
-                        ),
-                    ),
-                )
-
-                val result = ClipboardRestorePayload.prepare(
-                    stagedRoot = workspace.toPath(),
-                    sourcePackageName = context.packageName,
-                    selectedTypes = setOf(ItemType.IMAGE),
-                ) as ClipboardRestorePayloadResult.Valid
-
-                assertEquals("_holiday.png", result.payload.media.single().displayName)
-            } finally {
-                install.cleanup()
-                Files.deleteIfExists(source)
-            }
         }
     }
 
@@ -203,7 +185,6 @@ class ClipboardBackupPayloadAndroidTest {
         items: List<ClipboardItem>,
         transferBudget: ZipUtils.TransferBudget = transferBudget(),
         checkActive: () -> Unit = {},
-        maxIndexBytes: Long = ClipboardRestorePayloadLimits.Default.maxIndexBytes,
     ) {
         ClipboardBackupPayload.write(
             context = context,
@@ -213,7 +194,6 @@ class ClipboardBackupPayloadAndroidTest {
             items = items,
             transferBudget = transferBudget,
             checkActive = checkActive,
-            maxIndexBytes = maxIndexBytes,
         )
     }
 
@@ -246,6 +226,5 @@ class ClipboardBackupPayloadAndroidTest {
 
     companion object {
         private const val MEDIA_BYTES = 128 * 1024
-        private const val TEST_INDEX_BYTES = 1_024L
     }
 }

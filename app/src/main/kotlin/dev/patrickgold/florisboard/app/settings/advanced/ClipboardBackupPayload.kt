@@ -68,11 +68,7 @@ internal object ClipboardBackupPayload {
         items: List<ClipboardItem>,
         transferBudget: ZipUtils.TransferBudget,
         checkActive: () -> Unit,
-        maxIndexBytes: Long = ClipboardRestorePayloadLimits.Default.maxIndexBytes,
     ) {
-        require(
-            maxIndexBytes in 1L..ClipboardRestorePayloadLimits.Default.maxIndexBytes,
-        )
         if (selectedTypes.isEmpty() || items.any { it.type !in selectedTypes }) {
             fail(ClipboardBackupPayloadFailure.INVALID_ITEM)
         }
@@ -134,7 +130,6 @@ internal object ClipboardBackupPayload {
                     .toPath(),
                 items = canonicalItems.filter { it.type == type },
                 checkActive = checkActive,
-                maxBytes = maxIndexBytes,
             )
         }
 
@@ -194,7 +189,6 @@ internal object ClipboardBackupPayload {
         destination: Path,
         items: List<SerializedClipboardItem>,
         checkActive: () -> Unit,
-        maxBytes: Long,
     ) {
         val partial = destination.resolveSibling(".${destination.fileName}.partial")
         try {
@@ -206,7 +200,6 @@ internal object ClipboardBackupPayload {
             ).use { channel ->
                 val output = BoundedOutputStream(
                     delegate = Channels.newOutputStream(channel),
-                    maxBytes = maxBytes,
                     checkActive = checkActive,
                 )
                 JSON.encodeToStream(
@@ -239,9 +232,9 @@ internal object ClipboardBackupPayload {
 
     private class BoundedOutputStream(
         delegate: OutputStream,
-        private val maxBytes: Long,
         private val checkActive: () -> Unit,
     ) : FilterOutputStream(delegate) {
+        private val maxBytes = ClipboardRestorePayloadLimits.Default.maxIndexBytes
         private var writtenBytes = 0L
 
         override fun write(value: Int) {

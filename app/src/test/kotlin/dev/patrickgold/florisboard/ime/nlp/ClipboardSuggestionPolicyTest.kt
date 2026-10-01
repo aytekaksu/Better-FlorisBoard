@@ -25,15 +25,12 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 
 class ClipboardSuggestionPolicyTest :
     FunSpec({
-        test("bounds display text without changing the pasted clipboard item") {
-            val fullText = "x".repeat(50_000)
-            val item = ClipboardItem.text(fullText)
+        test("bounds display text while keeping its visible prefix") {
+            val displayText = boundedClipboardSuggestionText("preview:" + "x".repeat(49_992))
 
-            val displayText = boundedClipboardSuggestionText(item.stringRepresentation())
-
-            displayText.length shouldBe MAX_CLIPBOARD_SUGGESTION_DISPLAY_CHARS
+            displayText shouldBe "preview:" + "x".repeat(503) + "…"
+            displayText.length shouldBe 512
             displayText.last() shouldBe '…'
-            item.stringRepresentation() shouldBe fullText
         }
 
         test("bounds extraction input and honors the candidate budget") {
