@@ -17,11 +17,27 @@ The root `build.gradle.kts` defines the exact Detekt (`qualityKotlinSources`)
 and Spotless (`formattedKotlinSources`) scopes. Detekt covers autocorrect
 plugins/API/host core, backup archives, extension hardening, shared policies,
 cache janitors and import workspace retirement, and inherited Kotlin core,
-Android library, app platform, and archive IO utilities.
+Android library, app platform, app Compose, and archive IO utilities. Both
+checks also cover the keyboard-height owner pair, `FlorisImeSizing` and `ImeWindow`.
 Spotless formats a narrower set of fork-owned code and selected tests; it does
 not cover the Android library package. Expand coverage deliberately to avoid a
 noisy repository-wide diff. Do not relax Detekt thresholds to hide old findings;
 regenerate its baseline only after reviewing each changed finding.
+
+## Compose naming
+
+Keep Detekt's ordinary function-naming rule. Unit-returning composables use
+PascalCase; value-returning composables use camelCase. Android lint checks that
+first-letter distinction, but not the full Kotlin name pattern.
+
+The baseline's `CurrentIssues` section tracks existing debt.
+`ManuallySuppressedIssues` holds individually reviewed naming exceptions, not
+debt fixes. Its IDs use the file name and function header, skipping parameters
+and bodies. Matching overloads share an ID. Re-review an exception when the
+name, annotations, return type, overloads, or same-named files change.
+Avoid Detekt annotation-wide or function-wide naming suppressions: they can hide
+value-returning functions and local helpers. After regenerating a baseline,
+check that reviewed exceptions have not also returned to `CurrentIssues`.
 
 ## Documentation links
 

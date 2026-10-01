@@ -21,7 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import dev.patrickgold.florisboard.lib.ValidationResult
 
-@Suppress("FunctionNaming")
 @Composable
 fun Validation(showValidationErrors: Boolean, validationResult: ValidationResult?) {
     if (showValidationErrors) {

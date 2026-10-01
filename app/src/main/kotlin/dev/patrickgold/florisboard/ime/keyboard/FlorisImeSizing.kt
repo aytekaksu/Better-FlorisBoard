@@ -58,7 +58,9 @@ object FlorisImeSizing {
             KeyboardMode.CHARACTERS,
             KeyboardMode.NUMERIC_ADVANCED,
             KeyboardMode.SYMBOLS,
-            KeyboardMode.SYMBOLS2 -> lastCharactersEvaluator.keyboard as TextKeyboard
+            KeyboardMode.SYMBOLS2,
+            -> lastCharactersEvaluator.keyboard as TextKeyboard
+
             else -> evaluator.keyboard as TextKeyboard
         }.rowCount.coerceAtLeast(4)
         return (keyboardRowBaseHeight * rowCount)
@@ -83,7 +85,8 @@ object FlorisImeSizing {
             derivedStateOf {
                 if (smartbarEnabled) {
                     if (smartbarLayout == SmartbarLayout.SUGGESTIONS_ACTIONS_EXTENDED && extendedActionsExpanded &&
-                        extendedActionsPlacement != ExtendedActionsPlacement.OVERLAY_APP_UI) {
+                        extendedActionsPlacement != ExtendedActionsPlacement.OVERLAY_APP_UI
+                    ) {
                         2
                     } else {
                         1
@@ -102,7 +105,5 @@ object FlorisImeSizing {
     }
 
     @Composable
-    fun imeUiHeight(): Dp {
-        return keyboardUiHeight() + smartbarUiHeight()
-    }
+    fun imeUiHeight(): Dp = keyboardUiHeight() + smartbarUiHeight()
 }
