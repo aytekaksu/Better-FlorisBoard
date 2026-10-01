@@ -517,8 +517,10 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             val userLength = userGesture.getLength()
             for (word in words) {
                 currentCoroutineContext().ensureActive()
-                val idealGestures = Gesture.generateIdealGestures(word, keyIndex)
-                for (wordIdealLength in getCachedIdealLengths(word, idealGestures)) {
+                val idealLengths = cachedIdealLengths.getOrPut(word) {
+                    Gesture.generateIdealGestures(word, keyIndex).map(Gesture::getLength)
+                }
+                for (wordIdealLength in idealLengths) {
                     if (abs(userLength - wordIdealLength) < lengthThreshold * radius) {
                         remainingWords.add(word)
                         break
@@ -529,9 +531,6 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         }
 
         private val cachedIdealLengths = ConcurrentHashMap<String, List<Float>>()
-        private fun getCachedIdealLengths(word: String, idealGestures: List<Gesture>): List<Float> {
-            return cachedIdealLengths.getOrPut(word) { idealGestures.map(Gesture::getLength) }
-        }
 
         companion object {
             private fun getFirstKeyLastKeys(

@@ -50,6 +50,11 @@ subtype, editor generation, or editor content changes invalidate old work.
 Disposal, pause, disablement, and newer semantic input cancel or supersede the
 pending gesture.
 
+Each cached pruner belongs to its subtype, word-data revision, and key geometry.
+It caches all ideal lengths per word, but filters each user gesture separately.
+Length pruning builds ideal paths only on a cache miss; scoring still builds
+paths for retained words.
+
 ## Concurrency and ordering
 
 Detection and drawing state are main-thread owned. Provider and built-in

@@ -24,6 +24,31 @@ import io.kotest.matchers.shouldBe
 import java.text.Normalizer
 
 class StatisticalGlideTypingClassifierTest : FunSpec({
+    test("warm length pruning evaluates each gesture and repeated-key lengths") {
+        val keys = listOf(
+            GlideTypingKey('a'.code, 0f, 0f, 40f, 40f, "a"),
+            GlideTypingKey('b'.code, 80f, 0f, 120f, 40f, "b"),
+        )
+        val words = arrayListOf("ab", "abababab", "aaaaaaaa")
+        val pruner = StatisticalGlideTypingClassifier.Pruner(
+            lengthThreshold = 8.42,
+            words = words,
+            keyIndex = StatisticalGlideTypingClassifier.buildKeyIndex(keys, Subtype.DEFAULT),
+        )
+
+        for ((length, expected) in listOf(
+            80f to listOf("ab", "aaaaaaaa"),
+            560f to listOf("abababab", "aaaaaaaa"),
+        )) {
+            val gesture = StatisticalGlideTypingClassifier.Gesture().apply {
+                addPoint(0f, 0f)
+                addPoint(length, 0f)
+            }
+
+            pruner.pruneByLength(gesture, words, keys) shouldBe expected
+        }
+    }
+
     test("multiple geometries keep only the best score for each word") {
         val candidates = mutableListOf("alpha", "beta")
         val weights = mutableListOf(1f, 3f)
