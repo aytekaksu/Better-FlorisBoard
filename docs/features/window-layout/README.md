@@ -6,6 +6,10 @@ form factor. [`ImeWindow`](../../../app/src/main/kotlin/dev/patrickgold/florisbo
 renders the resulting window and docking indicator.
 System-bar setup follows context wrappers to the hosting activity or IME service.
 
+The inner window provides keyboard and Smartbar row heights from the current
+computed spec, including live resizing. Inline-autofill chip height uses the
+same Smartbar height and density, minus its existing vertical margins.
+
 Releasing a floating move in the dock zone switches to fixed mode and closes
 the move editor immediately. The dock zone ends at `dockToFixedHeight`; the
 indicator and release decision use that same threshold. Docking keeps the saved

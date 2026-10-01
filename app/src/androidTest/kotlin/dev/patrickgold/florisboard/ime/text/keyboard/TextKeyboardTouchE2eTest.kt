@@ -45,17 +45,24 @@ import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.imeActionResourceName
+import dev.patrickgold.florisboard.ime.ImeUiMode
 import dev.patrickgold.florisboard.ime.clipboard.ClipboardSyncBehavior
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.core.SubtypeJsonConfig
 import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
+import dev.patrickgold.florisboard.ime.nlp.NlpInlineAutofill
+import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
+import dev.patrickgold.florisboard.ime.smartbar.SmartbarMotionMode
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyType
 import dev.patrickgold.florisboard.ime.window.ImeWindowMode
 import dev.patrickgold.florisboard.ime.window.ImeWindowProps
+import dev.patrickgold.florisboard.ime.window.ImeWindowSpec
+import dev.patrickgold.florisboard.ime.window.KeyboardContentScaleMode
 import dev.patrickgold.florisboard.keyboardManager
+import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -67,6 +74,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -149,6 +157,175 @@ class TextKeyboardTouchE2eTest {
                     prefs.keyboard.windowConfig.get()[formFactor] == original
             }
             runBlocking { prefs.keyboard.windowConfig.set(originalStored).getOrThrow() }
+        }
+    }
+
+    @Test
+    fun liveResizeUpdatesRenderedHeightAndInlineChipSize() {
+        val prefs by FlorisPreferenceStore
+        val keyboardManager by instrumentation.targetContext.keyboardManager()
+        val controller = requireNotNull(FlorisImeService.windowControllerOrNull())
+        val originalConfig = controller.activeWindowConfig.value
+        val originalStoredConfigs = prefs.keyboard.windowConfig.get()
+        val originalNumberRow = prefs.keyboard.numberRow.get()
+        val originalContentScaleMode = prefs.keyboard.contentScaleMode.get()
+        val originalSmartbarEnabled = prefs.smartbar.enabled.get()
+        val originalSmartbarLayout = prefs.smartbar.layout.get()
+        val originalMotionMode = prefs.smartbar.motionMode.get()
+        val originalSharedActionsExpanded = prefs.smartbar.sharedActionsExpanded.get()
+        val nlpManager by instrumentation.targetContext.nlpManager()
+        val originalUiMode = keyboardManager.activeState.value.imeUiMode
+        val originalEditorEnabled = controller.editor.state.value.isEnabled
+        assertTrue("window editor already has an active gesture", !controller.editor.state.value.isAnyGesture)
+
+        var density = 0f
+        var keyboardHeight = 0f
+        fun renderedHeight(
+            message: String = "rendered IME height did not settle",
+            matches: (Int) -> Boolean = { true },
+        ): Int {
+            var height = 0
+            var previous: Pair<Int, Int>? = null
+            var stablePolls = 0
+            waitUntil(message) {
+                instrumentation.runOnMainSync {
+                    density =
+                        requireNotNull(FlorisImeService.currentImeRootViewOrNull()).resources.displayMetrics.density
+                    keyboardHeight = (keyboardManager.activeEvaluator.value.keyboard as TextKeyboard).layoutHeight()
+                    height = controller.activeWindowInsets.value?.boundsPx?.height ?: 0
+                }
+                val current = height to NlpInlineAutofill.suggestionsChipHeightPx
+                stablePolls = if (height > 0 && matches(height) && current == previous) stablePolls + 1 else 0
+                previous = current
+                stablePolls >= REQUIRED_STABLE_LAYOUT_POLLS
+            }
+            return height
+        }
+
+        try {
+            runBlocking {
+                prefs.keyboard.numberRow.set(false).getOrThrow()
+                // Keep the floating caption's font height unchanged while measuring the window delta.
+                prefs.keyboard.contentScaleMode.set(KeyboardContentScaleMode.FIXED).getOrThrow()
+                prefs.smartbar.layout.set(SmartbarLayout.SUGGESTIONS_ONLY).getOrThrow()
+                prefs.smartbar.motionMode.set(SmartbarMotionMode.OFF).getOrThrow()
+            }
+            instrumentation.runOnMainSync { keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT }
+            waitUntil("height fixture did not load four rows with fixed content scaling") {
+                (keyboardManager.activeEvaluator.value.keyboard as? TextKeyboard)?.rowCount == 4 &&
+                    (keyboardManager.lastCharactersEvaluator.value.keyboard as? TextKeyboard)?.rowCount == 4 &&
+                    controller.activeWindowSpec.value.userPreferredOptions.contentScaleMode ==
+                    KeyboardContentScaleMode.FIXED
+            }
+
+            for (mode in listOf(ImeWindowMode.FIXED, ImeWindowMode.FLOATING)) {
+                instrumentation.runOnMainSync {
+                    controller.editor.cancelGesture()
+                    controller.editor.enable()
+                }
+                runBlocking { prefs.smartbar.enabled.set(false).getOrThrow() }
+                controller.updateWindowConfig { it.copy(mode = mode, fixedMode = ImeWindowMode.Fixed.NORMAL) }
+                waitUntil("window mode $mode did not settle") {
+                    controller.activeWindowConfig.value.mode == mode &&
+                        when (val spec = controller.activeWindowSpec.value) {
+                            is ImeWindowSpec.Fixed ->
+                                mode == ImeWindowMode.FIXED &&
+                                    spec.fixedMode == ImeWindowMode.Fixed.NORMAL
+
+                            is ImeWindowSpec.Floating -> mode == ImeWindowMode.FLOATING
+                        }
+                }
+                val initialSpec = controller.activeWindowSpec.value
+                val constraints = initialSpec.constraints
+                val range = constraints.maxKeyboardHeight - constraints.minKeyboardHeight
+                val savedHeight = constraints.minKeyboardHeight + range * 0.25f
+                val draftHeight = constraints.minKeyboardHeight + range * 0.5f
+                assertTrue(
+                    "fixture needs distinct non-default heights",
+                    savedHeight < draftHeight &&
+                        savedHeight != constraints.defKeyboardHeight && draftHeight != constraints.defKeyboardHeight,
+                )
+                val savedSpec = when (initialSpec) {
+                    is ImeWindowSpec.Fixed -> initialSpec.copy(
+                        props = initialSpec.constraints.defaultProps.copy(keyboardHeight = savedHeight),
+                    )
+
+                    is ImeWindowSpec.Floating -> initialSpec.copy(
+                        props = initialSpec.constraints.defaultProps.copy(keyboardHeight = savedHeight),
+                    )
+                }
+                controller.updateWindowConfig { config ->
+                    when (savedSpec) {
+                        is ImeWindowSpec.Fixed -> config.copy(
+                            fixedProps =
+                            config.fixedProps + (savedSpec.fixedMode to savedSpec.props),
+                        )
+
+                        is ImeWindowSpec.Floating -> config.copy(
+                            floatingProps =
+                            config.floatingProps + (savedSpec.floatingMode to savedSpec.props),
+                        )
+                    }
+                }
+                waitUntil("saved height $mode did not settle") {
+                    controller.activeWindowSpec.value.props.keyboardHeight == savedHeight &&
+                        prefs.keyboard.windowConfig.get()[controller.activeRootInsets.value.formFactor.typeGuess] ==
+                        controller.activeWindowConfig.value
+                }
+                instrumentation.runOnMainSync { controller.editor.beginResizeGesture() }
+                val savedConfig = prefs.keyboard.windowConfig.get()
+                val beforeResize = renderedHeight("$mode saved height must reach the four-row layout") {
+                    abs(keyboardHeight - savedHeight.value * density) <= 1f &&
+                        NlpInlineAutofill.suggestionsChipHeightPx > 0
+                }
+                val savedChipHeight = NlpInlineAutofill.suggestionsChipHeightPx
+                val draftSpec = when (savedSpec) {
+                    is ImeWindowSpec.Fixed -> savedSpec.copy(props = savedSpec.props.copy(keyboardHeight = draftHeight))
+
+                    is ImeWindowSpec.Floating -> savedSpec.copy(
+                        props = savedSpec.props.copy(keyboardHeight = draftHeight),
+                    )
+                }
+                instrumentation.runOnMainSync { controller.editor.onSpecUpdated(draftSpec) }
+                val afterResize = renderedHeight("$mode live resize must update the rendered window and chip size") {
+                    abs((it - beforeResize) - (draftHeight - savedHeight).value * density) <= 1f &&
+                        NlpInlineAutofill.suggestionsChipHeightPx > savedChipHeight
+                }
+                assertEquals("draft resize must not save the config", savedConfig, prefs.keyboard.windowConfig.get())
+
+                runBlocking { prefs.smartbar.enabled.set(true).getOrThrow() }
+                renderedHeight("$mode inline chip must match the rendered row minus its two 5dp margins") {
+                    abs((it - afterResize) - (NlpInlineAutofill.suggestionsChipHeightPx + 10f * density)) <= 1f
+                }
+            }
+        } finally {
+            instrumentation.runOnMainSync {
+                controller.editor.cancelGesture()
+                keyboardManager.activeState.imeUiMode = originalUiMode
+            }
+            controller.updateWindowConfig { originalConfig }
+            waitUntil("original window config was not restored") {
+                controller.activeWindowConfig.value == originalConfig &&
+                    prefs.keyboard.windowConfig.get()[controller.activeRootInsets.value.formFactor.typeGuess] ==
+                    originalConfig
+            }
+            runBlocking {
+                listOf(
+                    // The controller's queued writes have finished; restore absent profiles too.
+                    prefs.keyboard.windowConfig.set(originalStoredConfigs),
+                    prefs.keyboard.numberRow.set(originalNumberRow),
+                    prefs.keyboard.contentScaleMode.set(originalContentScaleMode),
+                    prefs.smartbar.enabled.set(originalSmartbarEnabled),
+                    prefs.smartbar.layout.set(originalSmartbarLayout),
+                    prefs.smartbar.motionMode.set(originalMotionMode),
+                )
+            }.forEach { it.getOrThrow() }
+            nlpManager.setSharedActionsExpandedByUser(originalSharedActionsExpanded)
+            waitUntil("original shared actions state was not restored") {
+                prefs.smartbar.sharedActionsExpanded.get() == originalSharedActionsExpanded
+            }
+            instrumentation.runOnMainSync { if (originalEditorEnabled) controller.editor.enable() }
+            renderedHeight()
         }
     }
 
