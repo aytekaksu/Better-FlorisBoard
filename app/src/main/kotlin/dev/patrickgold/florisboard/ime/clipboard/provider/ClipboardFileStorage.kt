@@ -949,8 +949,8 @@ object ClipboardFileStorage {
     }
 
     /**
-     * Repairs ownership after process death. New pending or retiring installs
-     * are removed unless history or the durable system root still owns them.
+     * Reconciles durable and live roots, including after process death.
+     * Returns deferred deletes and failed ownership repairs for the actor to retry.
      */
     internal fun reconcileOwnership(
         context: Context,
@@ -998,7 +998,7 @@ object ClipboardFileStorage {
                                     sharePendingDeadlineElapsedRealtimeMs = 0L,
                                 ),
                             )
-                        }
+                        }.onFailure { failed += ownedUri }
                     }
                     liveInstalls.remove(ownedUri)
                     continue

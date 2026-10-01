@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard.app.settings.advanced
 
+import android.content.ClipData
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -24,8 +25,10 @@ import dev.patrickgold.florisboard.PreferenceStoreInitializationState
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.clipboard.ClipboardManager
+import dev.patrickgold.florisboard.ime.clipboard.ClipboardSyncBehavior
 import dev.patrickgold.florisboard.ime.clipboard.provider.ArchiveClipboardMediaRef
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardFileStorage
+import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardFilesDatabase
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardHistoryDatabase
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardMediaOwnershipState
@@ -42,8 +45,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
+import org.florisboard.lib.android.AndroidClipboardManager
+import org.florisboard.lib.android.setOrClearPrimaryClip
+import org.florisboard.lib.android.systemService
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -62,9 +69,9 @@ class ClipboardRestoreCommitAndroidTest {
 
     @Before
     fun prepareEmptyHistory() = runBlocking {
-        dropHistoryInsertFailureTrigger()
+        dropFailureTriggers()
         awaitReadyClipboardManager()
-        dropHistoryInsertFailureTrigger()
+        dropFailureTriggers()
         manager.commitHistoryRestore(
             items = emptyList(),
             selectedTypes = ItemType.entries.toSet(),
@@ -75,14 +82,14 @@ class ClipboardRestoreCommitAndroidTest {
     @After
     fun clearHistory() = runBlocking {
         try {
-            dropHistoryInsertFailureTrigger()
+            dropFailureTriggers()
             manager.commitHistoryRestore(
                 items = emptyList(),
                 selectedTypes = ItemType.entries.toSet(),
                 replaceSelected = true,
             )
         } finally {
-            dropHistoryInsertFailureTrigger()
+            dropFailureTriggers()
         }
     }
 
@@ -110,11 +117,24 @@ class ClipboardRestoreCommitAndroidTest {
 
     @Test
     fun commitRemapsArchiveMediaAndReplacesOnlySelectedTypes() = runBlocking {
+        val prefs by FlorisPreferenceStore
+        val previousInternalClipboard = prefs.clipboard.useInternalClipboard.get()
+        val previousInboundSync = prefs.clipboard.syncToFloris.get()
+        val (platformClipboard, previousSystemClip) = withContext(Dispatchers.Main) {
+            val clipboard = context.systemService(AndroidClipboardManager::class)
+            clipboard to clipboard.primaryClip
+        }
         val sourceBytes = byteArrayOf(2, 4, 6, 8)
         val source = Files.createTempFile(context.cacheDir.toPath(), "clipboard-restore-", ".bin")
-        Files.write(source, sourceBytes)
         var restoredOwned: OwnedClipboardMediaUri? = null
-        try {
+        val testResult = runCatching {
+            Files.write(source, sourceBytes)
+            prefs.clipboard.useInternalClipboard.set(true).getOrThrow()
+            prefs.clipboard.syncToFloris.set(ClipboardSyncBehavior.NO_EVENTS).getOrThrow()
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                platformClipboard.setPrimaryClip(ClipData.newPlainText("Clipboard test", "unrelated text"))
+                assertEquals("unrelated text", platformClipboard.primaryClip?.getItemAt(0)?.text?.toString())
+            }
             manager.commitHistoryRestore(
                 items = listOf(
                     ClipboardItem.text("retained text"),
@@ -159,6 +179,38 @@ class ClipboardRestoreCommitAndroidTest {
                 ClipboardFileStorage.fileInfo(context, owned)?.displayName,
             )
 
+            // Releasing a real media lease requests a fenced actor observation.
+            manager.acquireBackupSnapshot(setOf(ItemType.IMAGE)).release()
+            executeDatabaseSql(
+                """
+                    CREATE TRIGGER $MEDIA_ACTIVE_FAILURE_TRIGGER
+                    BEFORE UPDATE OF ownership_state ON $MEDIA_DATABASE_NAME
+                    WHEN NEW._id = ${owned.id}
+                        AND NEW.ownership_state = ${ClipboardMediaOwnershipState.ACTIVE.value}
+                    BEGIN
+                        SELECT RAISE(ABORT, 'synthetic ownership failure');
+                    END
+                """.trimIndent(),
+                databaseName = MEDIA_DATABASE_NAME,
+            )
+            manager.commitHistoryRestore(
+                items = listOf(restored.copy(isPinned = true)),
+                selectedTypes = setOf(ItemType.IMAGE),
+                replaceSelected = true,
+            )
+            val replacement = storedHistoryItems().single { it.type == ItemType.IMAGE }
+            assertEquals(owned.uri, replacement.uri)
+            assertTrue(replacement.isPinned)
+            assertEquals(ClipboardMediaOwnershipState.RETIRING, storedMediaOwnership(owned))
+            assertArrayEquals(sourceBytes, requireNotNull(liveFile).readBytes())
+
+            dropFailureTriggers()
+            // This no-op cannot independently activate the retained image.
+            manager.commitHistoryRestore(emptyList(), setOf(ItemType.TEXT), replaceSelected = false)
+            assertEquals(ClipboardMediaOwnershipState.ACTIVE, storedMediaOwnership(owned))
+            assertEquals(replacement, storedHistoryItems().single { it.type == ItemType.IMAGE })
+            assertArrayEquals(sourceBytes, requireNotNull(liveFile).readBytes())
+
             manager.commitHistoryRestore(
                 items = emptyList(),
                 selectedTypes = setOf(ItemType.IMAGE),
@@ -176,12 +228,33 @@ class ClipboardRestoreCommitAndroidTest {
                     item.uri?.let(OwnedClipboardMediaUri::parse)
                 },
             )
-        } finally {
-            restoredOwned?.let { owned ->
-                runCatching { ClipboardFileStorage.deleteOwned(context, owned) }
-            }
-            Files.deleteIfExists(source)
         }
+        val triggerCleanup = runCatching { dropFailureTriggers() }
+        val historyCleanup = runCatching {
+            manager.commitHistoryRestore(emptyList(), setOf(ItemType.IMAGE), replaceSelected = true)
+        }
+        val mediaCleanup = runCatching {
+            if (historyCleanup.isSuccess) {
+                restoredOwned?.let { ClipboardFileStorage.deleteOwned(context, it) }
+            }
+        }
+        val sourceCleanup = runCatching { Files.deleteIfExists(source) }
+        val systemRestore = runCatching {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                platformClipboard.setOrClearPrimaryClip(previousSystemClip)
+            }
+        }
+        val inboundRestore = runCatching {
+            prefs.clipboard.syncToFloris.set(previousInboundSync).getOrThrow()
+        }
+        val internalRestore = runCatching {
+            prefs.clipboard.useInternalClipboard.set(previousInternalClipboard).getOrThrow()
+        }
+        testResult.getOrThrow()
+        listOf(
+            triggerCleanup, historyCleanup, mediaCleanup, sourceCleanup,
+            systemRestore, inboundRestore, internalRestore,
+        ).forEach { it.getOrThrow() }
     }
 
     @Test
@@ -454,7 +527,7 @@ class ClipboardRestoreCommitAndroidTest {
             assertEquals(requireNotNull(before), storedMediaNames())
             assertEquals(listOf(requireNotNull(retainedRow)), storedHistoryItems())
         } finally {
-            dropHistoryInsertFailureTrigger()
+            dropFailureTriggers()
             runCatching {
                 manager.commitHistoryRestore(
                     items = emptyList(),
@@ -705,8 +778,8 @@ class ClipboardRestoreCommitAndroidTest {
     }
 
     private fun installHistoryInsertFailureTrigger() {
-        dropHistoryInsertFailureTrigger()
-        executeHistorySql(
+        dropFailureTriggers()
+        executeDatabaseSql(
             """
                 CREATE TRIGGER $HISTORY_INSERT_FAILURE_TRIGGER
                 BEFORE INSERT ON $HISTORY_DATABASE_NAME
@@ -717,14 +790,23 @@ class ClipboardRestoreCommitAndroidTest {
         )
     }
 
-    private fun dropHistoryInsertFailureTrigger() {
-        if (!context.getDatabasePath(HISTORY_DATABASE_NAME).isFile) return
-        executeHistorySql("DROP TRIGGER IF EXISTS $HISTORY_INSERT_FAILURE_TRIGGER")
+    private fun dropFailureTriggers() {
+        val results = listOf(
+            HISTORY_DATABASE_NAME to HISTORY_INSERT_FAILURE_TRIGGER,
+            MEDIA_DATABASE_NAME to MEDIA_ACTIVE_FAILURE_TRIGGER,
+        ).map { (databaseName, triggerName) ->
+            runCatching {
+                if (context.getDatabasePath(databaseName).isFile) {
+                    executeDatabaseSql("DROP TRIGGER IF EXISTS $triggerName", databaseName)
+                }
+            }
+        }
+        results.forEach { it.getOrThrow() }
     }
 
-    private fun executeHistorySql(statement: String) {
+    private fun executeDatabaseSql(statement: String, databaseName: String = HISTORY_DATABASE_NAME) {
         SQLiteDatabase.openDatabase(
-            context.getDatabasePath(HISTORY_DATABASE_NAME).absolutePath,
+            context.getDatabasePath(databaseName).absolutePath,
             null,
             SQLiteDatabase.OPEN_READWRITE,
         ).use { database ->
@@ -786,6 +868,15 @@ class ClipboardRestoreCommitAndroidTest {
         }
     }
 
+    private fun storedMediaOwnership(owned: OwnedClipboardMediaUri): ClipboardMediaOwnershipState {
+        val database = ClipboardFilesDatabase.new(context)
+        return try {
+            database.clipboardFilesDao().getAll().single { it.id == owned.id }.ownershipState
+        } finally {
+            database.close()
+        }
+    }
+
     private suspend fun awaitReadyClipboardManager() {
         val application = context.applicationContext as FlorisApplication
         val preferenceState = withTimeout(STARTUP_TIMEOUT_MS) {
@@ -813,5 +904,7 @@ class ClipboardRestoreCommitAndroidTest {
         private const val HISTORY_DATABASE_NAME = "clipboard_history"
         private const val HISTORY_INSERT_FAILURE_TRIGGER =
             "clipboard_restore_test_abort_insert"
+        private const val MEDIA_DATABASE_NAME = "clipboard_files"
+        private const val MEDIA_ACTIVE_FAILURE_TRIGGER = "clipboard_restore_test_abort_active"
     }
 }

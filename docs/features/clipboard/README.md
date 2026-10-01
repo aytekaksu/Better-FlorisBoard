@@ -63,6 +63,9 @@ A media file moves through these rules:
 
 When Android hides or cannot read clipboard state, storage fails closed and
 retains the media. Quarantined media still counts toward the storage budget.
+Storage owns physical retirement and reports failed deletes or ownership repairs
+to the actor. The actor replaces its retry list only after a complete,
+generation-current reconciliation; a failed read or stale callback keeps it.
 
 Editor media paste uses a short admission receipt and an in-memory lease. A
 rejection before editor dispatch rolls the admission back. Once dispatch
