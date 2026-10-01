@@ -16,7 +16,6 @@
 
 package org.florisboard.lib.compose
 
-import androidx.compose.runtime.saveable.Saver
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -29,11 +28,6 @@ import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-
-val DpSizeSaver = Saver<Dp, Float>(
-    save = { it.value },
-    restore = { it.dp },
-)
 
 context(density: Density)
 fun IntRect.toDpRect(): DpRect {
