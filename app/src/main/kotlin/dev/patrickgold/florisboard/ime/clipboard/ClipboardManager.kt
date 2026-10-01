@@ -1359,7 +1359,6 @@ private class ClipboardActorState(
         }
         publishHistory()
         retryOwnershipReconciliation()
-        retryRetiredMedia()
     }
 
     private fun normalizeHistoryMetadata() {
@@ -2026,7 +2025,6 @@ private class ClipboardActorState(
             // The next successful command republishes the database state.
         }
         retryOwnershipReconciliation()
-        retryRetiredMedia()
     }
 
     private suspend fun refreshSystemClipboardOwnershipForCleanup() {
@@ -2140,14 +2138,18 @@ private class ClipboardActorState(
                     systemEventGate.isStable(lastAppliedCallbackSequence)
                 },
             )
-            pendingMediaCleanup += failed
-            if (failed.isNotEmpty()) {
-                systemObservationConfirmed = false
-                systemObservationRequested = true
+            val durableSystemRoots = if (observed) {
+                ClipboardFileStorage.systemRoots(context)
+            } else {
+                systemPrimaryMedia
             }
             if (systemEventGate.isStable(lastAppliedCallbackSequence)) {
-                if (observed) {
-                    systemPrimaryMedia = ClipboardFileStorage.systemRoots(context)
+                pendingMediaCleanup.clear()
+                pendingMediaCleanup += failed
+                systemPrimaryMedia = durableSystemRoots
+                if (failed.isNotEmpty()) {
+                    systemObservationConfirmed = false
+                    systemObservationRequested = true
                 }
                 completed = true
             }
@@ -2235,92 +2237,6 @@ private class ClipboardActorState(
         systemObservationConfirmed = false
         systemObservationRequested = true
         ownershipReconciliationRequested = true
-    }
-
-    private fun retryRetiredMedia() {
-        if (pendingMediaCleanup.isEmpty() ||
-            !systemPrimaryKnown ||
-            !systemObservationConfirmed ||
-            !systemEventGate.isStable(lastAppliedCallbackSequence)
-        ) {
-            return
-        }
-        val localReferencedMedia: Set<OwnedClipboardMediaUri>
-        val systemReferencedMedia: Set<OwnedClipboardMediaUri>
-        try {
-            localReferencedMedia = buildSet {
-                dao.getAll().mapNotNullTo(this) { item ->
-                    ownedMediaFromItem(item)
-                }
-                ownedMediaFromItem(readPrimaryClip())?.let(::add)
-                addAll(ClipboardFileStorage.pasteRoots(context))
-                addAll(activePasteMedia())
-                backupLeaseMedia.values.forEach(::addAll)
-            }
-            systemReferencedMedia =
-                systemPrimaryMedia + ClipboardFileStorage.systemRoots(context)
-        } catch (_: Exception) {
-            return
-        }
-        val referencedMedia = localReferencedMedia + systemReferencedMedia
-        if (runCatching {
-            ClipboardFileStorage.markActive(
-                context,
-                pendingMediaCleanup.filter(referencedMedia::contains),
-            )
-        }.isFailure) {
-            ownershipReconciliationRequested = true
-            return
-        }
-        val iterator = pendingMediaCleanup.iterator()
-        var retryNeedsFreshObservation = false
-        while (iterator.hasNext()) {
-            if (!systemEventGate.isStable(lastAppliedCallbackSequence)) break
-            val ownedMedia = iterator.next()
-            if (ownedMedia in localReferencedMedia) {
-                iterator.remove()
-                continue
-            }
-            if (ownedMedia in systemReferencedMedia) {
-                retryNeedsFreshObservation = true
-                continue
-            }
-            if (!reservePasteDeletion(ownedMedia)) {
-                retryNeedsFreshObservation = true
-                continue
-            }
-            val deletedOrAbsent = try {
-                if (!systemEventGate.isStable(lastAppliedCallbackSequence)) {
-                    false
-                } else {
-                    try {
-                        ClipboardFileStorage.deleteOwned(
-                            context,
-                            ownedMedia,
-                        ) {
-                            systemEventGate.isStable(lastAppliedCallbackSequence)
-                        } || ClipboardFileStorage.fileInfo(context, ownedMedia) == null
-                    } catch (_: Exception) {
-                        false
-                    }
-                }
-            } finally {
-                releasePasteDeletion(ownedMedia)
-            }
-            if (deletedOrAbsent) {
-                iterator.remove()
-            } else if (runCatching {
-                    ClipboardFileStorage.isDeletionQuarantined(context, ownedMedia)
-                }.getOrDefault(false)
-            ) {
-                iterator.remove()
-            } else {
-                retryNeedsFreshObservation = true
-            }
-        }
-        if (retryNeedsFreshObservation) {
-            systemObservationConfirmed = false
-        }
     }
 
     private fun requireValidRestoreItem(item: ClipboardItem) {
