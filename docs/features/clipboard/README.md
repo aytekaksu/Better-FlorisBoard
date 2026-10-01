@@ -118,6 +118,8 @@ file is safe to unlink.
 
 ## Verification
 
+Follow the [test ownership rules](AGENTS.md) when changing clipboard coverage.
+
 Run pure policies and payload contracts with:
 
 ```shell

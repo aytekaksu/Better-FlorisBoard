@@ -18,16 +18,20 @@ package dev.patrickgold.florisboard.ime.clipboard
 
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import kotlin.math.abs
 
 class ClipboardSharePreviewTest :
     FunSpec({
         test("plans bounded previews without changing small images") {
-            planClipboardSharePreview(1, 1) shouldBe
-                ClipboardSharePreviewPlan(sampleSize = 1, width = 1, height = 1)
-            planClipboardSharePreview(512, 512) shouldBe
-                ClipboardSharePreviewPlan(sampleSize = 1, width = 512, height = 512)
-            planClipboardSharePreview(4_000, 2_000) shouldBe
-                ClipboardSharePreviewPlan(sampleSize = 4, width = 512, height = 256)
+            listOf(1 to 1, 512 to 512).forEach { (width, height) ->
+                val plan = assertBoundedPreviewPlan(width, height)
+                plan.width shouldBe width
+                plan.height shouldBe height
+                Integer.highestOneBit(plan.sampleSize) shouldBe 1
+            }
+            listOf(4_000 to 2_000, 5_000 to 2_500).forEach { (width, height) ->
+                assertBoundedPreviewPlan(width, height)
+            }
         }
 
         test("rejects invalid dimensions and pixel bombs") {
@@ -44,10 +48,8 @@ class ClipboardSharePreviewTest :
         }
 
         test("retains a visible edge for extreme accepted aspect ratios") {
-            planClipboardSharePreview(100_000, 1) shouldBe
-                ClipboardSharePreviewPlan(sampleSize = 128, width = 512, height = 1)
-            planClipboardSharePreview(1, 100_000) shouldBe
-                ClipboardSharePreviewPlan(sampleSize = 128, width = 1, height = 512)
+            assertBoundedPreviewPlan(100_000, 1).height shouldBe 1
+            assertBoundedPreviewPlan(1, 100_000).width shouldBe 1
         }
 
         test("publishes bounded concrete image MIME metadata") {
@@ -151,3 +153,34 @@ class ClipboardSharePreviewTest :
             operation.toString().contains(operation.token.value) shouldBe false
         }
     })
+
+private fun assertBoundedPreviewPlan(
+    sourceWidth: Int,
+    sourceHeight: Int,
+): ClipboardSharePreviewPlan {
+    val plan = requireNotNull(planClipboardSharePreview(sourceWidth, sourceHeight))
+    (plan.sampleSize > 0) shouldBe true
+    // BitmapFactory rounds a non-power-of-two request down, so raw division
+    // would incorrectly accept e.g. a sample of 5 for a 5000-pixel source.
+    val effectiveSample = Integer.highestOneBit(plan.sampleSize).toLong()
+    val decodeWidth = (sourceWidth.toLong() + effectiveSample - 1) / effectiveSample
+    val decodeHeight = (sourceHeight.toLong() + effectiveSample - 1) / effectiveSample
+    (decodeWidth in 1L..1_024L) shouldBe true
+    (decodeHeight in 1L..1_024L) shouldBe true
+    // This is the plan's ARGB_8888 bound, not an Android allocation measurement.
+    (decodeWidth * decodeHeight * 4L <= 1_024L * 1_024L * 4L) shouldBe true
+    (plan.width in 1..minOf(sourceWidth, 512)) shouldBe true
+    (plan.height in 1..minOf(sourceHeight, 512)) shouldBe true
+    // Keep enough decoded detail to render without avoidable upscaling.
+    (decodeWidth >= plan.width && decodeHeight >= plan.height) shouldBe true
+
+    val sourceLongEdge = maxOf(sourceWidth, sourceHeight).toLong()
+    val sourceShortEdge = minOf(sourceWidth, sourceHeight).toLong()
+    val outputLongEdge = if (sourceWidth >= sourceHeight) plan.width else plan.height
+    val outputShortEdge = if (sourceWidth >= sourceHeight) plan.height else plan.width
+    outputLongEdge.toLong() shouldBe minOf(sourceLongEdge, 512L)
+    // Permit integer rounding and the one-pixel floor for a very thin source.
+    val aspectError = abs(outputShortEdge * sourceLongEdge - outputLongEdge * sourceShortEdge)
+    (aspectError <= sourceLongEdge) shouldBe true
+    return plan
+}

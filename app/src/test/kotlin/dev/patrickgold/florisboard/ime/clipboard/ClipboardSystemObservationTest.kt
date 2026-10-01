@@ -41,67 +41,32 @@ class ClipboardSystemObservationTest : FunSpec({
         ).forEach { it shouldBe false }
     }
 
-    test("startup polling applies an existing system clipboard value") {
+    test("stable polling applies set and clear observations exactly once") {
         runTest {
-            var internalValue: String? = null
-            var observations = 0
+            listOf<String?>("existing", null).forEach { systemValue ->
+                var internalValue: String? = "old"
+                var observations = 0
+                val appliedValues = mutableListOf<String?>()
 
-            val converged = convergeSystemClipboardPoll(
-                isStable = { true },
-                awaitFence = {},
-                observe = {
-                    observations += 1
-                    "existing"
-                },
-                apply = { value ->
-                    internalValue = value
-                    true
-                },
-            )
+                val converged = convergeSystemClipboardPoll<String?>(
+                    isStable = { true },
+                    awaitFence = {},
+                    observe = {
+                        observations += 1
+                        systemValue
+                    },
+                    apply = { value ->
+                        appliedValues += value
+                        internalValue = value
+                        true
+                    },
+                )
 
-            converged shouldBe true
-            internalValue shouldBe "existing"
-            observations shouldBe 1
-        }
-    }
-
-    test("maintenance polling applies a set event missed by the callback") {
-        runTest {
-            var internalValue: String? = "old"
-            val systemValue = "new"
-
-            val converged = convergeSystemClipboardPoll(
-                isStable = { true },
-                awaitFence = {},
-                observe = { systemValue },
-                apply = { value ->
-                    internalValue = value
-                    true
-                },
-            )
-
-            converged shouldBe true
-            internalValue shouldBe "new"
-        }
-    }
-
-    test("maintenance polling applies a clear event missed by the callback") {
-        runTest {
-            var internalValue: String? = "old"
-            val systemValue: String? = null
-
-            val converged = convergeSystemClipboardPoll(
-                isStable = { true },
-                awaitFence = {},
-                observe = { systemValue },
-                apply = { value ->
-                    internalValue = value
-                    true
-                },
-            )
-
-            converged shouldBe true
-            internalValue shouldBe null
+                converged shouldBe true
+                observations shouldBe 1
+                appliedValues shouldBe listOf(systemValue)
+                internalValue shouldBe systemValue
+            }
         }
     }
 
@@ -229,11 +194,11 @@ class ClipboardSystemObservationTest : FunSpec({
         }
     }
 
-    test("stable foreign media polls reuse one import and callbacks bypass the cache") {
+    test("foreign media cache matches identity and owner until invalidated") {
         val source = "content://example.provider/media/42"
-        val identity = checkNotNull(
+        fun observation(uri: String) = checkNotNull(
             ForeignMediaObservationIdentity.create(
-                sourceUri = source,
+                sourceUri = uri,
                 type = ItemType.IMAGE,
                 mimeTypes = listOf("image/png"),
                 itemCount = 1,
@@ -243,42 +208,25 @@ class ClipboardSystemObservationTest : FunSpec({
                 isRemoteDevice = false,
             ),
         )
+        val identity = observation(source)
+        val sameObservation = observation(source)
+        val changedSource = observation("content://example.provider/media/43")
         val cache = ForeignMediaObservationCache<Long>()
-        val history = mutableSetOf<Long>()
-        val files = mutableSetOf<Long>()
-        var currentOwner: Long? = null
-        var importCount = 0
+        val owner = 42L
 
-        fun synchronize(isPlatformCallback: Boolean) {
-            if (isPlatformCallback) {
-                cache.invalidate()
-            }
-            if (cache.shouldSkip(identity, currentOwner)) return
-            importCount += 1
-            currentOwner = importCount.toLong()
-            history += checkNotNull(currentOwner)
-            files += checkNotNull(currentOwner)
-            cache.record(identity, currentOwner)
-        }
-
-        synchronize(isPlatformCallback = false)
-        repeat(1_024) {
-            synchronize(isPlatformCallback = false)
-        }
-
-        importCount shouldBe 1
-        history.size shouldBe 1
-        files.size shouldBe 1
+        cache.shouldSkip(identity, owner) shouldBe false
+        cache.record(identity, owner)
+        cache.shouldSkip(identity, owner) shouldBe true
+        cache.shouldSkip(sameObservation, owner) shouldBe true
+        cache.shouldSkip(identity, owner + 1L) shouldBe false
+        cache.shouldSkip(changedSource, owner) shouldBe false
         identity.toString().contains(source) shouldBe false
 
-        synchronize(isPlatformCallback = true)
-
-        importCount shouldBe 2
-        history.size shouldBe 2
-        files.size shouldBe 2
+        cache.invalidate()
+        cache.shouldSkip(identity, owner) shouldBe false
     }
 
-    test("overlong foreign URI has a bounded identity and is not repeatedly imported") {
+    test("overlong foreign URI is redacted from the cache identity") {
         val source = "content://example.provider/" + "segment".repeat(100_000)
         val identity = checkNotNull(
             ForeignMediaObservationIdentity.create(

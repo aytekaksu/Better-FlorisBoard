@@ -76,13 +76,12 @@ class ClipboardInputSinkAndroidTest {
     fun bothPasteTypesUsePortsProvidedForEachCall() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
-        var textDispatches = 0
-        var mediaDeferrals = 0
-        var editorCommits = 0
-        var textResult: Boolean? = null
-        val fakeSink = object : ClipboardInputSink {
+        val routes = mutableListOf<String>()
+        val commits = mutableListOf<Pair<String, String?>>()
+        val results = mutableListOf<Pair<String, Boolean>>()
+        fun sink(port: String) = object : ClipboardInputSink {
             override fun dispatchPaste(action: () -> Unit) {
-                textDispatches++
+                routes += "$port:text"
                 action()
             }
 
@@ -91,15 +90,17 @@ class ClipboardInputSinkAndroidTest {
                 onInvalidated: () -> Unit,
                 start: ((() -> Unit) -> Unit),
             ) {
-                mediaDeferrals++
+                routes += "$port:media"
+                // Only observe routing; do not start media admission or delivery.
             }
         }
+        val firstSink = sink("A")
+        val secondSink = sink("B")
         lateinit var manager: ClipboardManager
         instrumentation.runOnMainSync {
             manager = ClipboardManager(context)
         }
         try {
-            assertEquals(0, editorCommits)
             val owned = requireNotNull(OwnedClipboardMediaUri.create(1L, ItemType.IMAGE))
             val image = ClipboardItem(
                 type = ItemType.IMAGE,
@@ -109,23 +110,32 @@ class ClipboardInputSinkAndroidTest {
                 isPinned = false,
                 mimeTypes = listOf("image/png"),
             )
-            val commitToEditor: (ClipboardItem, ClipboardMediaPasteAccess?) -> Boolean = { item, access ->
-                assertEquals(ItemType.TEXT, item.type)
-                assertEquals(null, access)
-                editorCommits++
-                true
-            }
-            instrumentation.runOnMainSync {
-                manager.pasteItem(ClipboardItem.text("synthetic paste"), fakeSink, commitToEditor) {
-                    textResult = it
+            fun commitToEditor(port: String): (ClipboardItem, ClipboardMediaPasteAccess?) -> Boolean =
+                { item, access ->
+                    assertEquals(ItemType.TEXT, item.type)
+                    assertEquals(null, access)
+                    commits += port to item.text
+                    true
                 }
-                manager.pasteItem(image, fakeSink, commitToEditor)
+            val firstCommit = commitToEditor("A")
+            val secondCommit = commitToEditor("B")
+            instrumentation.runOnMainSync {
+                manager.pasteItem(ClipboardItem.text("first synthetic paste"), firstSink, firstCommit) {
+                    results += "A" to it
+                }
+                manager.pasteItem(ClipboardItem.text("second synthetic paste"), secondSink, secondCommit) {
+                    results += "B" to it
+                }
+                manager.pasteItem(image, firstSink, firstCommit)
+                manager.pasteItem(image, secondSink, secondCommit)
             }
 
-            assertEquals(1, textDispatches)
-            assertEquals(1, mediaDeferrals)
-            assertEquals(1, editorCommits)
-            assertEquals(true, textResult)
+            assertEquals(listOf("A:text", "B:text", "A:media", "B:media"), routes)
+            assertEquals(
+                listOf("A" to "first synthetic paste", "B" to "second synthetic paste"),
+                commits,
+            )
+            assertEquals(listOf("A" to true, "B" to true), results)
         } finally {
             manager.close()
         }

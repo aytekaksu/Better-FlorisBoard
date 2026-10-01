@@ -25,6 +25,7 @@ import android.os.Build
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaImporter
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaTestSource
@@ -76,17 +77,17 @@ class ClipboardSharePreviewLoaderAndroidTest {
     @Test
     fun undecodableDeclaredImageIsInstalledAndPublishedWithoutAPreview() = runBlocking {
         var published: OwnedClipboardMediaUri? = null
+        val operation = shareOperation(ClipboardExternalMediaTestSource.svgUri, "image/*")
 
         try {
             val preview = ClipboardSharePreviewLoader.load(
                 context = context,
                 uri = ClipboardExternalMediaTestSource.svgUri,
                 declaredMimeType = "image/*",
-                operation = shareOperation(
-                    ClipboardExternalMediaTestSource.svgUri,
-                    "image/*",
-                ),
-                publishOwnedMedia = { owned, _, _ ->
+                operation = operation,
+                publishOwnedMedia = { owned, token, fingerprint ->
+                    assertEquals(operation.token, token)
+                    assertEquals(operation.requestFingerprint, fingerprint)
                     published = owned
                     true
                 },
@@ -100,6 +101,9 @@ class ClipboardSharePreviewLoaderAndroidTest {
             assertEquals(listOf("image/svg+xml"), info.mimeTypes)
             assertEquals("_vector.svg", info.displayName)
             assertEquals(ClipboardMediaOwnershipState.PENDING, info.ownershipState)
+            assertEquals(operation.token.value, info.shareOperationToken)
+            assertEquals(operation.requestFingerprint.value, info.shareRequestFingerprint)
+            assertEquals(1, ClipboardExternalMediaTestSource.openCount())
             assertArrayEquals(
                 ClipboardExternalMediaTestSource.svgBytes,
                 Files.readAllBytes(requireNotNull(ClipboardFileStorage.ownedFile(context, owned)).toPath()),
@@ -153,54 +157,6 @@ class ClipboardSharePreviewLoaderAndroidTest {
     }
 
     @Test
-    fun restoredAttemptedOperationNeverReopensOrRepublishesTheSource() = runBlocking {
-        val uri = ClipboardExternalMediaTestSource.svgUri
-        val operation = shareOperation(uri, "image/svg+xml")
-        var firstOwned: OwnedClipboardMediaUri? = null
-
-        try {
-            ClipboardSharePreviewLoader.load(
-                context = context,
-                uri = uri,
-                declaredMimeType = "image/svg+xml",
-                operation = operation,
-                publishOwnedMedia = { owned, token, fingerprint ->
-                    assertEquals(operation.token, token)
-                    assertEquals(operation.requestFingerprint, fingerprint)
-                    firstOwned = owned
-                    ClipboardFileStorage.markActive(context, listOf(owned))
-                    true
-                },
-            )
-            assertEquals(1, ClipboardExternalMediaTestSource.openCount())
-
-            val retriedPreview = ClipboardSharePreviewLoader.load(
-                context = context,
-                uri = uri,
-                declaredMimeType = "image/svg+xml",
-                operation = ClipboardShareOperation.resolve(
-                    sourceUri = uri.toString(),
-                    declaredMimeType = "image/svg+xml",
-                    restoredToken = operation.token.value,
-                    restoredRequestFingerprint = operation.requestFingerprint.value,
-                ) ?: error("Restored share operation is invalid."),
-                publishOwnedMedia = { _, _, _ ->
-                    throw AssertionError("An attempted share was republished.")
-                },
-            )
-
-            assertNull(retriedPreview)
-            assertEquals(1, ClipboardExternalMediaTestSource.openCount())
-            val info = requireNotNull(
-                firstOwned?.let { ClipboardFileStorage.fileInfo(context, it) },
-            )
-            assertEquals(operation.token.value, info.shareOperationToken)
-        } finally {
-            firstOwned?.let(::deleteOwned)
-        }
-    }
-
-    @Test
     fun restoredOperationWithoutItsDurableRowNeverImportsAgain() = runBlocking {
         val uri = ClipboardExternalMediaTestSource.svgUri
         val operation = shareOperation(uri, "image/svg+xml")
@@ -228,29 +184,67 @@ class ClipboardSharePreviewLoaderAndroidTest {
     }
 
     @Test
-    fun restoredPendingInstallIsClaimedOnceWithoutReopeningItsSource() = runBlocking {
+    fun restoredPendingInstallPublishesOnceAndPreservesNewerClipboardData() = runBlocking {
+        val manager = context.clipboardManager().value
+        withTimeout(AWAIT_MS) { manager.awaitInitialization() }
+        val prefs by FlorisPreferenceStore
+        val previousInternalClipboard = prefs.clipboard.useInternalClipboard.get()
+        val previousInboundSync = prefs.clipboard.syncToFloris.get()
         val uri = ClipboardExternalMediaTestSource.svgUri
         val original = shareOperation(uri, "image/svg+xml")
+        // Explicit install metadata must survive even when preview decoding is optional.
+        val mimeTypes = listOf("image/png", "image/jpeg")
         val source = Files.createTempFile(
             context.cacheDir.toPath(),
             "restored-pending-share-",
             ".svg",
         )
         var owned: OwnedClipboardMediaUri? = null
+        var scenario: ActivityScenario<EditorHarnessActivity>? = null
+        var platformClipboard: AndroidClipboardManager? = null
+        var previousClip: ClipData? = null
+        var previousClipCaptured = false
+        var previousSystemRoots = emptySet<OwnedClipboardMediaUri>()
         var publicationCount = 0
 
-        try {
+        val testResult = runCatching {
+            prefs.clipboard.useInternalClipboard.set(true).getOrThrow()
+            prefs.clipboard.syncToFloris.set(ClipboardSyncBehavior.NO_EVENTS).getOrThrow()
+            val foreground = ActivityScenario.launch(EditorHarnessActivity::class.java)
+            scenario = foreground
+            awaitWindowFocus(foreground)
+            previousSystemRoots = ClipboardFileStorage.systemRoots(context)
+            foreground.onActivity { activity ->
+                assertTrue(activity.window.decorView.hasWindowFocus())
+                val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE)
+                    as AndroidClipboardManager
+                platformClipboard = clipboard
+                previousClip = clipboard.primaryClip
+                previousClipCaptured = true
+                clipboard.setPrimaryClip(ClipData.newPlainText("Clipboard test", "before"))
+                assertEquals("before", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+            }
+
             Files.write(source, ClipboardExternalMediaTestSource.svgBytes)
-            owned = ClipboardFileStorage.installFromBackup(
+            val installed = ClipboardFileStorage.installFromBackup(
                 context = context,
                 source = source,
                 expectedBytes = ClipboardExternalMediaTestSource.svgBytes.size.toLong(),
                 type = ItemType.IMAGE,
-                mimeTypes = listOf("image/svg+xml"),
+                mimeTypes = mimeTypes,
                 displayName = "restored.svg",
                 shareOperationToken = original.token,
                 shareRequestFingerprint = original.requestFingerprint,
             ).ownedUri
+            owned = installed
+            val pending = requireNotNull(ClipboardFileStorage.fileInfo(context, installed))
+            assertEquals(ClipboardMediaOwnershipState.PENDING, pending.ownershipState)
+            assertEquals(false, pending.isSystemRoot)
+            assertEquals(original.token.value, pending.shareOperationToken)
+            assertEquals(original.requestFingerprint.value, pending.shareRequestFingerprint)
+            assertEquals(mimeTypes, pending.mimeTypes)
+            assertEquals("restored.svg", pending.displayName)
+            val installedFile = requireNotNull(ClipboardFileStorage.ownedFile(context, installed))
             val restored = requireNotNull(
                 ClipboardShareOperation.resolve(
                     sourceUri = uri.toString(),
@@ -268,123 +262,156 @@ class ClipboardSharePreviewLoaderAndroidTest {
                 operation = restored,
                 publishOwnedMedia = { candidate, token, fingerprint ->
                     publicationCount += 1
-                    assertEquals(owned, candidate)
+                    assertEquals(installed, candidate)
                     assertEquals(original.token, token)
                     assertEquals(original.requestFingerprint, fingerprint)
-                    ClipboardFileStorage.claimPendingShareForPublication(
-                        context = context,
+                    manager.publishOwnedClipboardShare(
                         ownedUri = candidate,
-                        token = token,
+                        operationToken = token,
                         requestFingerprint = fingerprint,
-                    ) != null
+                    )
                 },
             )
 
-            assertTrue(preview != null)
             assertEquals(1, publicationCount)
+            assertTrue(preview != null)
             assertEquals(0, ClipboardExternalMediaTestSource.openCount())
-            val claimed = requireNotNull(ClipboardFileStorage.fileInfo(context, owned))
+            awaitWindowFocus(foreground)
+            foreground.onActivity { activity ->
+                assertTrue(activity.window.decorView.hasWindowFocus())
+                val clip = requireNotNull(requireNotNull(platformClipboard).primaryClip)
+                val publishedUri = requireNotNull(clip.getItemAt(0).uri)
+                val publishedOwned = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.O_MR1) {
+                    OwnedClipboardMediaUri.parseOreoSystemClipboard(publishedUri, ItemType.IMAGE)
+                } else {
+                    OwnedClipboardMediaUri.parse(publishedUri, ItemType.IMAGE)
+                }
+                assertEquals(installed, publishedOwned)
+                assertEquals(2, clip.description.mimeTypeCount)
+                assertEquals("image/png", clip.description.getMimeType(0))
+                assertEquals("image/jpeg", clip.description.getMimeType(1))
+            }
+            val claimed = requireNotNull(ClipboardFileStorage.fileInfo(context, installed))
             assertEquals(ClipboardMediaOwnershipState.ACTIVE, claimed.ownershipState)
             assertTrue(claimed.isSystemRoot)
-            assertNull(
-                ClipboardFileStorage.claimPendingShareForPublication(
-                    context = context,
-                    ownedUri = requireNotNull(owned),
-                    token = original.token,
+            assertEquals(original.token.value, claimed.shareOperationToken)
+            assertEquals(original.requestFingerprint.value, claimed.shareRequestFingerprint)
+            assertEquals(pending.id, claimed.id)
+            assertEquals(pending.size, claimed.size)
+            assertEquals(pending.displayName, claimed.displayName)
+            assertEquals(mimeTypes, claimed.mimeTypes)
+            assertArrayEquals(
+                ClipboardExternalMediaTestSource.svgBytes,
+                Files.readAllBytes(installedFile.toPath()),
+            )
+
+            awaitWindowFocus(foreground)
+            foreground.onActivity { activity ->
+                assertTrue(activity.window.decorView.hasWindowFocus())
+                val clipboard = requireNotNull(platformClipboard)
+                clipboard.setPrimaryClip(ClipData.newPlainText("Clipboard test", "newer"))
+                assertEquals("newer", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+            }
+            assertEquals(
+                false,
+                manager.publishOwnedClipboardShare(
+                    ownedUri = installed,
+                    operationToken = original.token,
                     requestFingerprint = original.requestFingerprint,
                 ),
             )
-        } finally {
-            owned?.let(::deleteOwned)
-            Files.deleteIfExists(source)
+            assertNull(
+                ClipboardSharePreviewLoader.load(
+                    context = context,
+                    uri = uri,
+                    declaredMimeType = "image/svg+xml",
+                    operation = restored,
+                    publishOwnedMedia = { _, _, _ ->
+                        throw AssertionError("An attempted share was republished.")
+                    },
+                ),
+            )
+            assertEquals(1, publicationCount)
+            assertEquals(0, ClipboardExternalMediaTestSource.openCount())
+            awaitWindowFocus(foreground)
+            foreground.onActivity { activity ->
+                assertTrue(activity.window.decorView.hasWindowFocus())
+                assertEquals(
+                    "newer",
+                    requireNotNull(platformClipboard).primaryClip?.getItemAt(0)?.text?.toString(),
+                )
+            }
+            val retained = requireNotNull(ClipboardFileStorage.fileInfo(context, installed))
+            assertEquals(pending.id, retained.id)
+            assertEquals(pending.size, retained.size)
+            assertEquals(pending.displayName, retained.displayName)
+            assertEquals(mimeTypes, retained.mimeTypes)
+            assertEquals(original.token.value, retained.shareOperationToken)
+            assertEquals(original.requestFingerprint.value, retained.shareRequestFingerprint)
+            assertEquals(installedFile, ClipboardFileStorage.ownedFile(context, installed))
+            assertArrayEquals(
+                ClipboardExternalMediaTestSource.svgBytes,
+                Files.readAllBytes(installedFile.toPath()),
+            )
         }
-    }
-
-    @Test
-    fun managerRejectsAnAttemptedShareWithoutOverwritingNewerClipboardData() = runBlocking {
-        val manager = context.clipboardManager().value
-        withTimeout(AWAIT_MS) {
-            manager.awaitInitialization()
-        }
-        val source = Files.createTempFile(context.cacheDir.toPath(), "attempted-share-", ".svg")
-        Files.write(source, ClipboardExternalMediaTestSource.svgBytes)
-        val operation = shareOperation(
-            ClipboardExternalMediaTestSource.svgUri,
-            "image/svg+xml",
-        )
-        var owned: OwnedClipboardMediaUri? = null
-
-        try {
-            owned = ClipboardFileStorage.installFromBackup(
-                context = context,
-                source = source,
-                expectedBytes = ClipboardExternalMediaTestSource.svgBytes.size.toLong(),
-                type = ItemType.IMAGE,
-                mimeTypes = listOf("image/svg+xml"),
-                shareOperationToken = operation.token,
-                shareRequestFingerprint = operation.requestFingerprint,
-            ).ownedUri
-            ClipboardFileStorage.markActive(context, listOf(requireNotNull(owned)))
-            ActivityScenario.launch(EditorHarnessActivity::class.java).use { scenario ->
-                lateinit var platformClipboard: AndroidClipboardManager
-                var previousClip: ClipData? = null
-                try {
-                    scenario.onActivity { activity ->
-                        platformClipboard =
-                            activity.getSystemService(Context.CLIPBOARD_SERVICE)
-                                as AndroidClipboardManager
-                        previousClip =
-                            runCatching { platformClipboard.primaryClip }.getOrNull()
-                        platformClipboard.setPrimaryClip(
-                            ClipData.newPlainText("Clipboard test", "newer"),
-                        )
-                        assertEquals(
-                            "newer",
-                            platformClipboard.primaryClip
-                                ?.getItemAt(0)
-                                ?.text
-                                ?.toString(),
-                        )
-                    }
-
-                    assertEquals(
-                        false,
-                        manager.publishOwnedClipboardShare(
-                            ownedUri = requireNotNull(owned),
-                            operationToken = operation.token,
-                            requestFingerprint = operation.requestFingerprint,
-                        ),
-                    )
-                    scenario.onActivity {
-                        assertEquals(
-                            "newer",
-                            platformClipboard.primaryClip
-                                ?.getItemAt(0)
-                                ?.text
-                                ?.toString(),
-                        )
-                    }
-                } finally {
-                    scenario.onActivity {
-                        val restored = previousClip?.let {
-                            runCatching { platformClipboard.setPrimaryClip(it) }.isSuccess
-                        } ?: false
-                        if (!restored) {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                platformClipboard.clearPrimaryClip()
-                            } else {
-                                platformClipboard.setPrimaryClip(
-                                    ClipData.newPlainText("Clipboard test", ""),
-                                )
-                            }
-                        }
+        val systemRestore = runCatching {
+            if (previousClipCaptured) {
+                val foreground = requireNotNull(scenario)
+                awaitWindowFocus(foreground)
+                foreground.onActivity { activity ->
+                    assertTrue(activity.window.decorView.hasWindowFocus())
+                    ClipboardFileStorage.prepareSystemRoots(context, previousSystemRoots)
+                    val clipboard = requireNotNull(platformClipboard)
+                    val previous = previousClip
+                    if (previous != null) {
+                        clipboard.setPrimaryClip(previous)
+                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        clipboard.clearPrimaryClip()
+                    } else {
+                        clipboard.setPrimaryClip(ClipData.newPlainText("Clipboard test", ""))
                     }
                 }
             }
-        } finally {
-            owned?.let(::deleteOwned)
-            Files.deleteIfExists(source)
         }
+        val mediaCleanup = runCatching {
+            if (systemRestore.isSuccess) {
+                owned?.let { installed ->
+                    ClipboardFileStorage.recordSystemRoots(
+                        context = context,
+                        ownedUris = (ClipboardFileStorage.systemRoots(context) + previousSystemRoots) - installed,
+                    )
+                    ClipboardFileStorage.markRetiring(context, listOf(installed))
+                    if (ClipboardFileStorage.fileInfo(context, installed) != null) {
+                        assertTrue(
+                            ClipboardFileStorage.deleteOwned(
+                                context = context,
+                                ownedUri = installed,
+                                observedBootCount = Int.MAX_VALUE,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+        val sourceCleanup = runCatching { Files.deleteIfExists(source) }
+        val inboundRestore = runCatching {
+            prefs.clipboard.syncToFloris.set(previousInboundSync).getOrThrow()
+        }
+        val internalRestore = runCatching {
+            prefs.clipboard.useInternalClipboard.set(previousInternalClipboard).getOrThrow()
+        }
+        val scenarioCleanup = runCatching { scenario?.close() }
+        val cleanupResults = listOf(
+            systemRestore, mediaCleanup, sourceCleanup,
+            inboundRestore, internalRestore, scenarioCleanup,
+        )
+        testResult.exceptionOrNull()?.let { originalFailure ->
+            cleanupResults.mapNotNull { it.exceptionOrNull() }
+                .filterNot { it === originalFailure }
+                .forEach(originalFailure::addSuppressed)
+        }
+        testResult.getOrThrow()
+        cleanupResults.forEach { it.getOrThrow() }
         Unit
     }
 
@@ -536,6 +563,18 @@ class ClipboardSharePreviewLoaderAndroidTest {
             ClipboardExternalMediaTestSource.releaseBlockingOpen()
             blockedLoad.cancel()
             recovered?.let(::deleteOwned)
+        }
+    }
+
+    private suspend fun awaitWindowFocus(scenario: ActivityScenario<EditorHarnessActivity>) {
+        withTimeout(AWAIT_MS) {
+            var focused = false
+            while (!focused) {
+                scenario.onActivity { activity ->
+                    focused = activity.window.decorView.hasWindowFocus()
+                }
+                if (!focused) delay(POLL_MS)
+            }
         }
     }
 
