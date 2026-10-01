@@ -7,6 +7,10 @@ it to the current schema.
 The shared settings back arrow uses the icon's built-in mirroring. Do not also
 mirror its button; that cancels the icon's change in right-to-left layouts.
 
+`FlorisScreenScope` owns each screen's options and content. Read preview visibility
+during composition before publishing it to the shared field; a read only inside
+`SideEffect` misses preview-only changes.
+
 ## Compatibility rules
 
 - A supported upgrade or backup restore must keep every setting with a current
@@ -78,3 +82,4 @@ Run the focused contracts with:
 ```
 
 Run `./gradlew qualityGate` before merging a persistence change.
+For screen chrome or preview changes, run `FlorisScreenAndroidTest` on a device.
