@@ -185,10 +185,10 @@ internal object BackupArchiveStager {
         onPartialRootCreated: (Path) -> Unit,
         pendingRestore: AtomicReference<StagedRestore?>,
     ): BackupArchiveStagingResult {
-        val input = when (val validated = validateStageInput(session, plan)) {
-            is StageInputResult.Invalid -> return invalid(validated.failure)
-            is StageInputResult.Valid -> validated
+        if (!session.owns(plan)) {
+            return invalid(BackupArchiveStagingFailure.PLAN_SESSION_MISMATCH)
         }
+        val componentEntries = plan.componentsToStage.flatMap { it.entries }
 
         val locations = StageLocations(stagingParent, stageId)
         val activeCopy = AtomicReference<Closeable?>()
@@ -206,11 +206,11 @@ internal object BackupArchiveStager {
             val outcome = withContext(Dispatchers.IO) {
                 stageBlocking(
                     session = session,
-                    componentEntries = input.componentEntries,
+                    componentEntries = componentEntries,
                     mediaCandidates = plan.clipboardMediaCandidatesToStage,
                     selectedComponents = plan.componentsToStage,
                     sourcePackageName = session.archive.metadata.packageName,
-                    declaredComponentBytes = input.declaredComponentBytes,
+                    declaredComponentBytes = plan.declaredComponentBytes,
                     locations = locations,
                     budget = budget,
                     operationContext = operationContext,
@@ -250,21 +250,6 @@ internal object BackupArchiveStager {
             }
         }
         return result ?: invalid(BackupArchiveStagingFailure.IO_FAILURE)
-    }
-
-    private fun validateStageInput(session: BackupArchiveSession, plan: RestorePlan): StageInputResult {
-        val componentEntries = flattenComponentEntries(plan)
-            ?: return StageInputResult.Invalid(BackupArchiveStagingFailure.PLAN_INCONSISTENT)
-        if (!session.owns(plan)) {
-            return StageInputResult.Invalid(BackupArchiveStagingFailure.PLAN_SESSION_MISMATCH)
-        }
-        val declaredComponentBytes = declaredSize(componentEntries)
-            ?: return StageInputResult.Invalid(BackupArchiveStagingFailure.PLAN_INCONSISTENT)
-        return if (declaredComponentBytes == plan.declaredComponentBytes) {
-            StageInputResult.Valid(componentEntries, declaredComponentBytes)
-        } else {
-            StageInputResult.Invalid(BackupArchiveStagingFailure.PLAN_INCONSISTENT)
-        }
     }
 
     private fun stageBlocking(
@@ -565,14 +550,6 @@ internal object BackupArchiveStager {
             }
         }
 
-    private fun flattenComponentEntries(plan: RestorePlan): List<ValidatedArchiveEntry>? {
-        val entries = buildList {
-            plan.componentsToStage.forEach { component -> addAll(component.entries) }
-        }
-        val paths = HashSet<String>(entries.size)
-        return entries.takeIf { list -> list.all { paths.add(it.archivePath) } }
-    }
-
     private fun declaredSize(entries: List<ValidatedArchiveEntry>): Long? {
         var total = 0L
         entries.forEach { entry ->
@@ -850,13 +827,6 @@ private sealed interface ReferencedMediaResult {
     data class Valid(val entries: List<ValidatedArchiveEntry>) : ReferencedMediaResult
 
     data class Invalid(val failure: ClipboardRestorePayloadFailure) : ReferencedMediaResult
-}
-
-private sealed interface StageInputResult {
-    data class Valid(val componentEntries: List<ValidatedArchiveEntry>, val declaredComponentBytes: Long) :
-        StageInputResult
-
-    data class Invalid(val failure: BackupArchiveStagingFailure) : StageInputResult
 }
 
 private class StageFailureException(

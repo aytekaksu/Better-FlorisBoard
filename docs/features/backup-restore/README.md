@@ -123,6 +123,9 @@ available components. It selects payloads for staging in a deterministic order:
 preferences, keyboard extensions, themes, then clipboard text, images, and
 videos. The live screen controls merge or replacement separately.
 
+Plans hold immutable validated entries and declared sizes. Staging checks their
+exact session ownership, then verifies the copied bytes and CRCs.
+
 After bounded staging, it snapshots selected preferences and extension
 directories, validates preferences in an isolated store, applies preferences
 and extensions, and commits clipboard history last in one Room transaction.
