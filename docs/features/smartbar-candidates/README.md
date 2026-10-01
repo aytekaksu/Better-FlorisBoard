@@ -11,10 +11,22 @@ uses the latest click and long-press callbacks, and a successful long press
 does not also click. Changing the long-press delay applies to the next press.
 Cancellation clears the pressed appearance.
 
+Inline autofill chips belong to their native view, not their metadata or row
+position. A new response replaces the old view even when its metadata matches,
+without clearing the row first. Scrolling, clipping, and surface ordering stay
+with the current row and views.
+
 Candidate text stays in the keyboard process. Do not log suggestions or raw
 pointer events.
 
 The fast display-order checks run with `./gradlew :app:testDebugUnitTest`.
+Native-view replacement runs on Robolectric SDK 34 without a device:
+
+```shell
+./gradlew :app:testDebugUnitTest \
+  --tests dev.patrickgold.florisboard.ime.smartbar.InlineSuggestionsUiTest
+```
+
 Real press timing and replacement are covered by:
 
 ```shell
