@@ -41,25 +41,8 @@ import org.junit.runner.RunWith
 class ClipboardFileStorageAndroidTest {
     @Test
     fun pendingShareSurvivesStartupStyleReconciliationOnlyUntilItsExpiry() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val source =
-            Files.createTempFile(context.cacheDir.toPath(), "clipboard-share-pending-", ".bin")
-        Files.write(source, byteArrayOf(1, 2, 3))
-        var installed: InstalledClipboardMedia? = null
-
-        try {
-            installed = ClipboardFileStorage.installFromBackup(
-                context = context,
-                source = source,
-                expectedBytes = 3L,
-                type = ItemType.IMAGE,
-                mimeTypes = listOf("image/png"),
-                shareOperationToken = ClipboardShareOperationToken.create(),
-                shareRequestFingerprint = requireNotNull(
-                    ClipboardShareRequestFingerprint.parse("c".repeat(64)),
-                ),
-            )
-            val owned = requireNotNull(installed).ownedUri
+        withInstalledImage(byteArrayOf(1, 2, 3), "c".repeat(64)) { context, installed ->
+            val owned = installed.ownedUri
             val info = requireNotNull(
                 ClipboardFileStorage.fileInfo(context, owned),
             )
@@ -88,33 +71,13 @@ class ClipboardFileStorageAndroidTest {
                 shareElapsedRealtimeMs = deadline,
             )
             assertNull(ClipboardFileStorage.fileInfo(context, owned))
-        } finally {
-            runCatching { installed?.cleanup() }
-            Files.deleteIfExists(source)
         }
     }
 
     @Test
     fun unavailableBootCountDefersPendingShareUntilItCanBeVerified() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val source =
-            Files.createTempFile(context.cacheDir.toPath(), "clipboard-share-unknown-boot-", ".bin")
-        Files.write(source, byteArrayOf(1, 2, 3))
-        var installed: InstalledClipboardMedia? = null
-
-        try {
-            installed = ClipboardFileStorage.installFromBackup(
-                context = context,
-                source = source,
-                expectedBytes = 3L,
-                type = ItemType.IMAGE,
-                mimeTypes = listOf("image/png"),
-                shareOperationToken = ClipboardShareOperationToken.create(),
-                shareRequestFingerprint = requireNotNull(
-                    ClipboardShareRequestFingerprint.parse("d".repeat(64)),
-                ),
-            )
-            val owned = requireNotNull(installed).ownedUri
+        withInstalledImage(byteArrayOf(1, 2, 3), "d".repeat(64)) { context, installed ->
+            val owned = installed.ownedUri
             val info = requireNotNull(ClipboardFileStorage.fileInfo(context, owned))
             val bootCount = requireNotNull(info.sharePendingBootCount)
             val beforeDeadline = info.sharePendingDeadlineElapsedRealtimeMs - 1L
@@ -144,33 +107,13 @@ class ClipboardFileStorageAndroidTest {
                 ClipboardMediaOwnershipState.PENDING,
                 ClipboardFileStorage.fileInfo(context, owned)?.ownershipState,
             )
-        } finally {
-            runCatching { installed?.cleanup() }
-            Files.deleteIfExists(source)
         }
     }
 
     @Test
     fun rebootExpiresPendingShareBeforeItsMonotonicDeadline() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val source =
-            Files.createTempFile(context.cacheDir.toPath(), "clipboard-share-reboot-", ".bin")
-        Files.write(source, byteArrayOf(1, 2, 3))
-        var installed: InstalledClipboardMedia? = null
-
-        try {
-            installed = ClipboardFileStorage.installFromBackup(
-                context = context,
-                source = source,
-                expectedBytes = 3L,
-                type = ItemType.IMAGE,
-                mimeTypes = listOf("image/png"),
-                shareOperationToken = ClipboardShareOperationToken.create(),
-                shareRequestFingerprint = requireNotNull(
-                    ClipboardShareRequestFingerprint.parse("e".repeat(64)),
-                ),
-            )
-            val owned = requireNotNull(installed).ownedUri
+        withInstalledImage(byteArrayOf(1, 2, 3), "e".repeat(64)) { context, installed ->
+            val owned = installed.ownedUri
             val info = requireNotNull(ClipboardFileStorage.fileInfo(context, owned))
             val bootCount = requireNotNull(info.sharePendingBootCount)
             val nextBootCount =
@@ -186,9 +129,6 @@ class ClipboardFileStorageAndroidTest {
             )
 
             assertNull(ClipboardFileStorage.fileInfo(context, owned))
-        } finally {
-            runCatching { installed?.cleanup() }
-            Files.deleteIfExists(source)
         }
     }
 
@@ -448,20 +388,8 @@ class ClipboardFileStorageAndroidTest {
 
     @Test
     fun reconciliationRetainsLivePendingInstallWithoutPromotingIt() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val source = Files.createTempFile(context.cacheDir.toPath(), "clipboard-pending-", ".bin")
-        Files.write(source, byteArrayOf(1))
-        var installed: InstalledClipboardMedia? = null
-
-        try {
-            installed = ClipboardFileStorage.installFromBackup(
-                context = context,
-                source = source,
-                expectedBytes = 1L,
-                type = ItemType.IMAGE,
-                mimeTypes = listOf("image/png"),
-            )
-            val ownedUri = requireNotNull(installed).ownedUri
+        withInstalledImage { context, installed ->
+            val ownedUri = installed.ownedUri
 
             val failed = ClipboardFileStorage.reconcileOwnership(
                 context = context,
@@ -475,65 +403,48 @@ class ClipboardFileStorageAndroidTest {
                 ClipboardMediaOwnershipState.PENDING,
                 ClipboardFileStorage.fileInfo(context, ownedUri)?.ownershipState,
             )
-            assertTrue(requireNotNull(installed).cleanup())
+            assertTrue(installed.cleanup())
             assertNull(ClipboardFileStorage.fileInfo(context, ownedUri))
-        } finally {
-            runCatching { installed?.cleanup() }
-            installed?.ownedUri?.let { runCatching { ClipboardFileStorage.deleteOwned(context, it) } }
-            Files.deleteIfExists(source)
         }
     }
 
     @Test
     fun reconciliationRetainsDurablePasteRoot() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val source = Files.createTempFile(context.cacheDir.toPath(), "clipboard-paste-", ".bin")
-        Files.write(source, byteArrayOf(1))
-        var installed: InstalledClipboardMedia? = null
+        withInstalledImage { context, installed ->
+            try {
+                val ownedUri = installed.ownedUri
+                ClipboardFileStorage.markPasteRoot(
+                    context,
+                    ownedUri,
+                    observedBootCount = ACTIVE_BOOT_COUNT,
+                )
 
-        try {
-            installed = ClipboardFileStorage.installFromBackup(
-                context = context,
-                source = source,
-                expectedBytes = 1L,
-                type = ItemType.IMAGE,
-                mimeTypes = listOf("image/png"),
-            )
-            val ownedUri = requireNotNull(installed).ownedUri
-            ClipboardFileStorage.markPasteRoot(
-                context,
-                ownedUri,
-                observedBootCount = ACTIVE_BOOT_COUNT,
-            )
+                val failed = ClipboardFileStorage.reconcileOwnership(
+                    context = context,
+                    historyRoots = emptySet(),
+                    observedSystemRoots = emptySet(),
+                    systemClipboardObserved = true,
+                )
 
-            val failed = ClipboardFileStorage.reconcileOwnership(
-                context = context,
-                historyRoots = emptySet(),
-                observedSystemRoots = emptySet(),
-                systemClipboardObserved = true,
-            )
-
-            assertTrue(failed.isEmpty())
-            assertEquals(setOf(ownedUri), ClipboardFileStorage.pasteRoots(context))
-            assertTrue(
-                requireNotNull(
-                    ClipboardFileStorage.fileInfo(context, ownedUri),
-                ).pasteRetainedUntilMs > System.currentTimeMillis(),
-            )
-            assertFalse(requireNotNull(installed).cleanup())
-            assertNotNull(ClipboardFileStorage.fileInfo(context, ownedUri))
-        } finally {
-            ClipboardFileStorage.trimPasteRoots(context, now = Long.MAX_VALUE)
-            installed?.ownedUri?.let {
+                assertTrue(failed.isEmpty())
+                assertEquals(setOf(ownedUri), ClipboardFileStorage.pasteRoots(context))
+                assertTrue(
+                    requireNotNull(
+                        ClipboardFileStorage.fileInfo(context, ownedUri),
+                    ).pasteRetainedUntilMs > System.currentTimeMillis(),
+                )
+                assertFalse(installed.cleanup())
+                assertNotNull(ClipboardFileStorage.fileInfo(context, ownedUri))
+            } finally {
+                ClipboardFileStorage.trimPasteRoots(context, now = Long.MAX_VALUE)
                 runCatching {
                     ClipboardFileStorage.deleteOwned(
                         context,
-                        it,
+                        installed.ownedUri,
                         observedBootCount = NEXT_BOOT_COUNT,
                     )
                 }
             }
-            Files.deleteIfExists(source)
         }
     }
 
@@ -811,20 +722,8 @@ class ClipboardFileStorageAndroidTest {
 
     @Test
     fun reconciliationHonorsDeletionReservation() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val source = Files.createTempFile(context.cacheDir.toPath(), "clipboard-reserved-", ".bin")
-        Files.write(source, byteArrayOf(1))
-        var installed: InstalledClipboardMedia? = null
-
-        try {
-            installed = ClipboardFileStorage.installFromBackup(
-                context = context,
-                source = source,
-                expectedBytes = 1L,
-                type = ItemType.IMAGE,
-                mimeTypes = listOf("image/png"),
-            )
-            val ownedUri = requireNotNull(installed).ownedUri
+        withInstalledImage { context, installed ->
+            val ownedUri = installed.ownedUri
             ClipboardFileStorage.markActive(context, listOf(ownedUri))
             ClipboardFileStorage.markRetiring(context, listOf(ownedUri))
             var released = false
@@ -869,10 +768,6 @@ class ClipboardFileStorageAndroidTest {
                 ).isEmpty(),
             )
             assertNull(ClipboardFileStorage.fileInfo(context, ownedUri))
-        } finally {
-            runCatching { installed?.cleanup() }
-            installed?.ownedUri?.let { runCatching { ClipboardFileStorage.deleteOwned(context, it) } }
-            Files.deleteIfExists(source)
         }
     }
 
@@ -1332,6 +1227,37 @@ class ClipboardFileStorageAndroidTest {
             )
         } finally {
             deleteIfPresent(source)
+        }
+    }
+
+    private fun withInstalledImage(
+        bytes: ByteArray = byteArrayOf(1),
+        pendingShareFingerprint: String? = null,
+        block: (android.content.Context, InstalledClipboardMedia) -> Unit,
+    ) {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val source = Files.createTempFile(context.cacheDir.toPath(), "clipboard-source-", ".bin")
+        var installed: InstalledClipboardMedia? = null
+        try {
+            Files.write(source, bytes)
+            installed = ClipboardFileStorage.installFromBackup(
+                context = context,
+                source = source,
+                expectedBytes = bytes.size.toLong(),
+                type = ItemType.IMAGE,
+                mimeTypes = listOf("image/png"),
+                shareOperationToken = pendingShareFingerprint?.let {
+                    ClipboardShareOperationToken.create()
+                },
+                shareRequestFingerprint = pendingShareFingerprint?.let {
+                    requireNotNull(ClipboardShareRequestFingerprint.parse(it))
+                },
+            )
+            block(context, requireNotNull(installed))
+        } finally {
+            runCatching { installed?.cleanup() }
+            installed?.ownedUri?.let { runCatching { ClipboardFileStorage.deleteOwned(context, it) } }
+            Files.deleteIfExists(source)
         }
     }
 
