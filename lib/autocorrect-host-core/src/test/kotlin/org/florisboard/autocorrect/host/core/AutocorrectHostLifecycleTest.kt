@@ -260,13 +260,7 @@ class AutocorrectHostLifecycleTest :
 
         test("closing before START is sent does not queue a phantom finish") {
             val host = HostTestHarness()
-            host.discover(setOf(ProviderA))
-            host.dispatch(HostEvent.SelectProvider(ProviderA))
-            val binding = host.dispatch(
-                HostEvent.OpenSession(DefaultSessionConfiguration, host.state.editorGeneration, T0),
-            ).singleEffect<HostEffect.Bind>().lease
-            val start = host.dispatch(HostEvent.BindingConnected(binding))
-                .singleEffect<HostEffect.StartSession>().lease
+            val start = host.queueSessionStart(host.awaitSessionBinding())
             host.state.session?.phase shouldBe SessionPhase.STARTING
 
             host.dispatch(HostEvent.CloseSession)
@@ -280,13 +274,7 @@ class AutocorrectHostLifecycleTest :
 
         test("closing during a START send retains the binding until its ordered finish") {
             val host = HostTestHarness()
-            host.discover(setOf(ProviderA))
-            host.dispatch(HostEvent.SelectProvider(ProviderA))
-            val binding = host.dispatch(
-                HostEvent.OpenSession(DefaultSessionConfiguration, host.state.editorGeneration, T0),
-            ).singleEffect<HostEffect.Bind>().lease
-            val start = host.dispatch(HostEvent.BindingConnected(binding))
-                .singleEffect<HostEffect.StartSession>().lease
+            val start = host.queueSessionStart(host.awaitSessionBinding())
             host.dispatch(HostEvent.SessionStartSending(start))
             host.state.session?.phase shouldBe SessionPhase.SENDING_START
 
@@ -300,13 +288,8 @@ class AutocorrectHostLifecycleTest :
 
         test("transport failure during a closed START drops its unsent finish") {
             val host = HostTestHarness()
-            host.discover(setOf(ProviderA))
-            host.dispatch(HostEvent.SelectProvider(ProviderA))
-            val binding = host.dispatch(
-                HostEvent.OpenSession(DefaultSessionConfiguration, host.state.editorGeneration, T0),
-            ).singleEffect<HostEffect.Bind>().lease
-            val start = host.dispatch(HostEvent.BindingConnected(binding))
-                .singleEffect<HostEffect.StartSession>().lease
+            val binding = host.awaitSessionBinding()
+            val start = host.queueSessionStart(binding)
             host.dispatch(HostEvent.SessionStartSending(start))
             val finish = host.dispatch(HostEvent.CloseSession)
                 .singleEffect<HostEffect.FinishSession>().lease
@@ -322,13 +305,7 @@ class AutocorrectHostLifecycleTest :
 
         test("privacy configuration change skips an old queued START and its phantom finish") {
             val host = HostTestHarness()
-            host.discover(setOf(ProviderA))
-            host.dispatch(HostEvent.SelectProvider(ProviderA))
-            val binding = host.dispatch(
-                HostEvent.OpenSession(DefaultSessionConfiguration, host.state.editorGeneration, T0),
-            ).singleEffect<HostEffect.Bind>().lease
-            val oldStart = host.dispatch(HostEvent.BindingConnected(binding))
-                .singleEffect<HostEffect.StartSession>().lease
+            val oldStart = host.queueSessionStart(host.awaitSessionBinding())
 
             val privateConfiguration = DefaultSessionConfiguration.copy(allowPersonalizedLearning = false)
             val effects = host.dispatch(
@@ -348,13 +325,7 @@ class AutocorrectHostLifecycleTest :
 
         test("privacy configuration change during START sends FINISH before the next START") {
             val host = HostTestHarness()
-            host.discover(setOf(ProviderA))
-            host.dispatch(HostEvent.SelectProvider(ProviderA))
-            val binding = host.dispatch(
-                HostEvent.OpenSession(DefaultSessionConfiguration, host.state.editorGeneration, T0),
-            ).singleEffect<HostEffect.Bind>().lease
-            val oldStart = host.dispatch(HostEvent.BindingConnected(binding))
-                .singleEffect<HostEffect.StartSession>().lease
+            val oldStart = host.queueSessionStart(host.awaitSessionBinding())
             host.dispatch(HostEvent.SessionStartSending(oldStart))
 
             val effects = host.dispatch(
@@ -637,15 +608,7 @@ class AutocorrectHostLifecycleTest :
 
         test("a connection callback for an old epoch cannot attach") {
             val host = HostTestHarness()
-            host.discover(setOf(ProviderA))
-            host.dispatch(HostEvent.SelectProvider(ProviderA))
-            val current = host.dispatch(
-                HostEvent.OpenSession(
-                    DefaultSessionConfiguration,
-                    host.state.editorGeneration,
-                    T0,
-                ),
-            ).singleEffect<HostEffect.Bind>().lease
+            val current = host.awaitSessionBinding()
             val stale = current.copy(epoch = BindingEpoch(current.epoch.value + 10))
 
             host.dispatch(

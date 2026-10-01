@@ -25,15 +25,7 @@ class AutocorrectHostFailureRecoveryTest :
     FunSpec({
         test("bind rejection ends the waiting session and degrades only the bound provider") {
             val host = HostTestHarness()
-            host.discover(setOf(ProviderA))
-            host.dispatch(HostEvent.SelectProvider(ProviderA))
-            val binding = host.dispatch(
-                HostEvent.OpenSession(
-                    DefaultSessionConfiguration,
-                    host.state.editorGeneration,
-                    T0,
-                ),
-            ).singleEffect<HostEffect.Bind>().lease
+            val binding = host.awaitSessionBinding()
 
             val effects = host.dispatch(HostEvent.BindingFailed(binding, at = T0))
 
@@ -50,20 +42,11 @@ class AutocorrectHostFailureRecoveryTest :
 
         test("failed session-start send cannot leave an admitted-looking session") {
             val host = HostTestHarness()
-            host.discover(setOf(ProviderA))
-            host.dispatch(HostEvent.SelectProvider(ProviderA))
-            val binding = host.dispatch(
-                HostEvent.OpenSession(
-                    DefaultSessionConfiguration,
-                    host.state.editorGeneration,
-                    T0,
-                ),
-            ).singleEffect<HostEffect.Bind>().lease
-            val start = host.dispatch(HostEvent.BindingConnected(binding))
-                .singleEffect<HostEffect.StartSession>()
+            val binding = host.awaitSessionBinding()
+            val start = host.queueSessionStart(binding)
 
             val effects = host.dispatch(
-                HostEvent.SessionStartResult(start.lease, successful = false, T0),
+                HostEvent.SessionStartResult(start, successful = false, T0),
             )
 
             assertSoftly {
