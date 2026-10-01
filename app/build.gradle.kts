@@ -1403,6 +1403,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.junit4)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.turbine)
     testRuntimeOnly(libs.junit.vintage.engine)
     androidTestImplementation(libs.androidx.test.ext)
