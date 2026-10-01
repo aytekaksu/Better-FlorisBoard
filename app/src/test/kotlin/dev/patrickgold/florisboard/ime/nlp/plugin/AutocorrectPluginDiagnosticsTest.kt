@@ -50,80 +50,14 @@ class AutocorrectPluginDiagnosticsTest :
             snapshot.records.map { it.sequence } shouldContainExactly listOf(3L, 4L, 5L)
         }
 
-        test("operation duration is coarse and IDs stay opaque") {
-            var now = 1_000_000L
-            val diagnostics = AutocorrectPluginDiagnostics(
-                monotonicNanos = { now },
-            )
-            diagnostics.operationStarted(
-                operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                bindingEpoch = 7L,
-                sessionId = 11L,
-                requestId = 19L,
-            )
-            now += 73_000_000L
-            diagnostics.operationFinished(
-                operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                bindingEpoch = 7L,
-                requestId = 19L,
-                state = AutocorrectPluginDiagnosticState.SUCCEEDED,
-                itemCount = Int.MAX_VALUE,
-            )
-
-            diagnostics.snapshot().records.map { it.event } shouldContainExactly listOf(
-                AutocorrectPluginDiagnosticEvent.Operation(
-                    bindingEpoch = 7L,
-                    sessionId = AutocorrectPluginDiagnosticId.fromHostId(11L),
-                    requestId = AutocorrectPluginDiagnosticId.fromHostId(19L),
-                    operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                    state = AutocorrectPluginDiagnosticState.STARTED,
-                    duration = AutocorrectPluginDiagnosticDuration.UNKNOWN,
-                    itemCount = 0,
-                    error = AutocorrectPluginDiagnosticError.NONE,
-                ),
-                AutocorrectPluginDiagnosticEvent.Operation(
-                    bindingEpoch = 7L,
-                    sessionId = AutocorrectPluginDiagnosticId.fromHostId(11L),
-                    requestId = AutocorrectPluginDiagnosticId.fromHostId(19L),
-                    operation = AutocorrectPluginDiagnosticOperation.SUGGESTION,
-                    state = AutocorrectPluginDiagnosticState.SUCCEEDED,
-                    duration = AutocorrectPluginDiagnosticDuration.FROM_50_TO_149_MS,
-                    itemCount = 10_000,
-                    error = AutocorrectPluginDiagnosticError.NONE,
-                ),
-            )
-        }
-
-        test("duration boundaries do not expose exact timings") {
-            listOf(
-                0L to AutocorrectPluginDiagnosticDuration.UNDER_1_MS,
-                1L to AutocorrectPluginDiagnosticDuration.FROM_1_TO_4_MS,
-                5L to AutocorrectPluginDiagnosticDuration.FROM_5_TO_15_MS,
-                16L to AutocorrectPluginDiagnosticDuration.FROM_16_TO_49_MS,
-                50L to AutocorrectPluginDiagnosticDuration.FROM_50_TO_149_MS,
-                150L to AutocorrectPluginDiagnosticDuration.FROM_150_TO_499_MS,
-                500L to AutocorrectPluginDiagnosticDuration.FROM_500_TO_1_999_MS,
-                2_000L to AutocorrectPluginDiagnosticDuration.AT_LEAST_2_SECONDS,
-            ).forEach { (millis, expected) ->
-                diagnosticDurationForNanos(millis * 1_000_000L) shouldBe expected
-            }
-        }
-
-        test("event schema only permits closed enums IDs epochs and counts") {
-            val eventClasses = listOf(
-                AutocorrectPluginDiagnosticEvent.Discovery::class.java,
-                AutocorrectPluginDiagnosticEvent.Binding::class.java,
-                AutocorrectPluginDiagnosticEvent.Session::class.java,
-                AutocorrectPluginDiagnosticEvent.Operation::class.java,
-                AutocorrectPluginDiagnosticEvent.ReplyRejected::class.java,
-            )
+        test("event schema only permits closed enums IDs and epochs") {
+            val eventClasses = AutocorrectPluginDiagnosticEvent::class.sealedSubclasses.map { it.java }
+            eventClasses.isNotEmpty() shouldBe true
             val permittedFieldTypes = setOf(
-                java.lang.Integer.TYPE,
                 java.lang.Long.TYPE,
                 AutocorrectPluginDiagnosticOperation::class.java,
                 AutocorrectPluginDiagnosticState::class.java,
                 AutocorrectPluginDiagnosticError::class.java,
-                AutocorrectPluginDiagnosticDuration::class.java,
             )
 
             val unexpectedFields = eventClasses.flatMap { eventClass ->

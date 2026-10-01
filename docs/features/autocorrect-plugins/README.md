@@ -23,7 +23,7 @@ The wire format and provider responsibilities are documented in the
 | Provider-side Messenger service | [`AutocorrectPluginService.kt`](../../../lib/autocorrect-api/src/main/kotlin/org/florisboard/autocorrect/api/AutocorrectPluginService.kt) |
 | Platform-neutral host state and transition rules | [`lib/autocorrect-host-core`](../../../lib/autocorrect-host-core/src/main/kotlin/org/florisboard/autocorrect/host/core/) |
 | Android discovery, binding, session transport, and dictionary bridge | [`AutocorrectPluginManager.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginManager.kt) |
-| Bounded content-free lifecycle diagnostics | [`AutocorrectPluginDiagnostics.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginDiagnostics.kt) |
+| Bounded content-free bind and reply history | [`AutocorrectPluginDiagnostics.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginDiagnostics.kt) |
 | Host-rendered UI entry point | [`AutocorrectPluginUi.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginUi.kt) |
 | App settings renderer | [`AutocorrectPluginUiApp.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginUiApp.kt) |
 | Keyboard renderer | [`AutocorrectPluginUiKeyboard.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginUiKeyboard.kt) |
@@ -225,6 +225,8 @@ Include handled-empty versus `Unhandled`, oversized replies, and replies with
 missing or stale IDs.
 Inspect `diagnosticsSnapshot()` and, for a lingering bind, typing, UI/picker,
 document, and finish-acknowledgement demand.
+The ring records physical binding, rejected replies and matching malformed
+request failures, not successful operations, session history or latency metrics.
 
 ## Known limits
 
