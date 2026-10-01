@@ -47,6 +47,7 @@ reuses the same owned file and URI, so retrying across the system-clipboard
 write cannot create another media row, root, or history item. Tokens are not
 included in backups or diagnostics. A pre-publication snapshot remains
 claimable for 15 minutes; maintenance removes it after that deadline.
+Cleanup reads the deadline's clock after any ongoing storage write finishes.
 
 ## Media lifetime
 
