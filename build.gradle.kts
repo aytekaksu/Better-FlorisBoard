@@ -109,7 +109,6 @@ val sharedQualityKotlinSources = files(
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/theme/FlorisImeUi.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/settings/theme/ThemeElementCatalogTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/Validation.kt"),
-    file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/compose/Validation.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/ext/ExtensionValidation.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/ValidationRuleTest.kt"),
     file("lib/compose/src/main/kotlin/org/florisboard/lib/compose/ScrollableModifiers.kt"),
@@ -153,6 +152,13 @@ val inheritedDevtoolsSources = fileTree("app/src") {
 val inheritedIoSources = fileTree("app/src/main/kotlin/dev/patrickgold/florisboard/lib/io") {
     include("**/*.kt")
 }
+val inheritedAppComposeSources = fileTree("app/src/main/kotlin/dev/patrickgold/florisboard/lib/compose") {
+    include("**/*.kt")
+}
+val imeHeightKotlinSources = files(
+    "app/src/main/kotlin/dev/patrickgold/florisboard/ime/keyboard/FlorisImeSizing.kt",
+    "app/src/main/kotlin/dev/patrickgold/florisboard/ime/window/ImeWindow.kt",
+)
 
 val qualityKotlinSources = files(
     autocorrectPluginKotlinSources,
@@ -168,6 +174,8 @@ val qualityKotlinSources = files(
     inheritedSubtypeCoreSources,
     inheritedDevtoolsSources,
     inheritedIoSources,
+    inheritedAppComposeSources,
+    imeHeightKotlinSources,
     autocorrectApiKotlinSources,
     autocorrectHostCoreKotlinSources,
 )
@@ -175,6 +183,8 @@ val qualityKotlinSources = files(
 val formattedKotlinSources = files(
     autocorrectHostCoreKotlinSources,
     sharedQualityKotlinSources,
+    inheritedAppComposeSources,
+    imeHeightKotlinSources,
     file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/io/PortablePathSyntax.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/io/PortablePathSyntaxTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummary.kt"),
@@ -252,6 +262,8 @@ val verifyQualitySourceScope by tasks.registering {
         "inherited subtype core" to inheritedSubtypeCoreSources,
         "inherited devtools" to inheritedDevtoolsSources,
         "inherited IO" to inheritedIoSources,
+        "inherited app Compose" to inheritedAppComposeSources,
+        "IME height owners" to imeHeightKotlinSources,
     )
     doLast {
         val missing = sources.files.filterNot { it.isFile }

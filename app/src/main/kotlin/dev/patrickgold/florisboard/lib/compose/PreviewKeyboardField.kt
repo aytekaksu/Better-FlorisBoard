@@ -61,17 +61,15 @@ import org.florisboard.lib.android.showShortToast
 import org.florisboard.lib.compose.stringRes
 import org.florisboard.lib.compose.verticalTween
 
-private const val AnimationDuration = 200
+private const val ANIMATION_DURATION_MS = 200
 
-private val PreviewEnterTransition = EnterTransition.verticalTween(AnimationDuration)
-private val PreviewExitTransition = ExitTransition.verticalTween(AnimationDuration)
+private val PreviewEnterTransition = EnterTransition.verticalTween(ANIMATION_DURATION_MS)
+private val PreviewExitTransition = ExitTransition.verticalTween(ANIMATION_DURATION_MS)
 
 val LocalPreviewFieldController = staticCompositionLocalOf<PreviewFieldController?> { null }
 
 @Composable
-fun rememberPreviewFieldController(): PreviewFieldController {
-    return remember { PreviewFieldController() }
-}
+fun rememberPreviewFieldController(): PreviewFieldController = remember { PreviewFieldController() }
 
 class PreviewFieldController {
     val focusRequester = FocusRequester()
@@ -120,7 +118,9 @@ fun PreviewKeyboardField(
                     Row {
                         IconButton(onClick = {
                             if (!InputMethodUtils.showImePicker(context)) {
-                                scope.launch { context.showShortToast("Error: InputMethodManager service not available!") }
+                                scope.launch {
+                                    context.showShortToast("Error: InputMethodManager service not available!")
+                                }
                             }
                         }) {
                             Icon(

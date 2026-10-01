@@ -1,6 +1,31 @@
 <?xml version="1.0" ?>
 <SmellBaseline>
-  <ManuallySuppressedIssues/>
+  <!-- Reviewed Unit-returning composables use PascalCase. Keep these naming exceptions exact. -->
+  <ManuallySuppressedIssues>
+    <ID>FunctionNaming:AutocorrectPluginUi.kt:@Composable fun AutocorrectPluginUiHost</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable internal fun AppPluginUiPage</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun &lt;I&gt; AppPluginDocumentItem</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginChoiceListItem</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginListItem</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginUiItem</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginValueDialog</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiKeyboard.kt:@Composable internal fun KeyboardPluginUiPage</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiKeyboard.kt:@Composable private fun KeyboardPluginUiItem</ID>
+    <ID>FunctionNaming:AutocorrectPluginUiPresentation.kt:@Composable internal fun PluginListItem</ID>
+    <ID>FunctionNaming:FlorisDialogs.kt:@Composable fun FlorisConfirmDeleteDialog</ID>
+    <ID>FunctionNaming:FlorisDialogs.kt:@Composable fun FlorisUnsavedChangesDialog</ID>
+    <ID>FunctionNaming:FlorisHyperlinkText.kt:@Composable fun FlorisHyperlinkText</ID>
+    <ID>FunctionNaming:FlorisScreen.kt:@Composable fun FlorisScreen</ID>
+    <ID>FunctionNaming:FlorisScreen.kt:FlorisScreenScope$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun Render</ID>
+    <ID>FunctionNaming:ImeWindow.kt:@Composable fun BoxScope.ImeWindow</ID>
+    <ID>FunctionNaming:ImeWindow.kt:@Composable fun ImeRootWindow</ID>
+    <ID>FunctionNaming:ImeWindow.kt:@Composable private fun BoxScope.FloatingDockToFixedIndicator</ID>
+    <ID>FunctionNaming:ImeWindow.kt:@Composable private fun BoxScope.OneHandedPanel</ID>
+    <ID>FunctionNaming:ImeWindow.kt:@Composable private fun ImeInnerWindow</ID>
+    <ID>FunctionNaming:PreviewKeyboardField.kt:@Composable fun PreviewKeyboardField</ID>
+    <ID>FunctionNaming:SelectSubtypePanel.kt:@Composable fun SelectSubtypePanel</ID>
+    <ID>FunctionNaming:Validation.kt:@Composable fun Validation</ID>
+  </ManuallySuppressedIssues>
   <CurrentIssues>
     <ID>ComplexCondition:AutocorrectPluginManager.kt:AutocorrectPluginManager$!prefs.suggestion.enabled.get() || prefs.suggestion.autocorrectPluginComponent.get().isBlank() || !editorInstance.activeInfo.inputAttributes.allowsAutocorrectPluginSession( isPrivateSession = isPrivateSession, isRawInputEditor = editorInstance.activeInfo.isRawInputEditor, ) || !data.isAutocorrectTraceInput(inputLayout.mode) || width &lt;= 0f || height &lt;= 0f</ID>
     <ID>ComplexCondition:AutocorrectPluginManager.kt:AutocorrectPluginManager$!releaseBindingIfIdle() &amp;&amp; hadSession &amp;&amp; uiClientCount &gt; 0 &amp;&amp; remote != null &amp;&amp; prefs.suggestion.autocorrectPluginComponent.get() == boundProviderId</ID>
@@ -25,17 +50,6 @@
     <ID>CyclomaticComplexMethod:AutocorrectProtocolV4GoldenTest.kt:AutocorrectProtocolV4GoldenTest$private fun Any?.canonicalValue: String</ID>
     <ID>CyclomaticComplexMethod:AutocorrectPublicApiCompatibilityTest.kt:AutocorrectPublicApiCompatibilityTest$private fun classSignature: String</ID>
     <ID>CyclomaticComplexMethod:AutocorrectUserDictionary.kt:fun userDictionaryRequestFromBundle: AutocorrectUserDictionaryRequest?</ID>
-    <ID>FunctionNaming:AutocorrectPluginUi.kt:@Composable fun AutocorrectPluginUiHost</ID>
-    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable internal fun AppPluginUiPage</ID>
-    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun &lt;I&gt; AppPluginDocumentItem</ID>
-    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginChoiceListItem</ID>
-    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginListItem</ID>
-    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginUiItem</ID>
-    <ID>FunctionNaming:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginValueDialog</ID>
-    <ID>FunctionNaming:AutocorrectPluginUiKeyboard.kt:@Composable internal fun KeyboardPluginUiPage</ID>
-    <ID>FunctionNaming:AutocorrectPluginUiKeyboard.kt:@Composable private fun KeyboardPluginUiItem</ID>
-    <ID>FunctionNaming:AutocorrectPluginUiPresentation.kt:@Composable internal fun PluginListItem</ID>
-    <ID>FunctionNaming:SelectSubtypePanel.kt:@Composable fun SelectSubtypePanel</ID>
     <ID>LargeClass:AutocorrectPluginManager.kt:AutocorrectPluginManager : SuggestionProvider</ID>
     <ID>LongMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized internal fun sendPluginUiDocument</ID>
     <ID>LongMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized private fun ensureSession: AutocorrectSession?</ID>

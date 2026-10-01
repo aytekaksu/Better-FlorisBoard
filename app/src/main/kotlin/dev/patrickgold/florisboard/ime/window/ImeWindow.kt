@@ -84,6 +84,8 @@ import org.florisboard.lib.snygg.ui.SnyggIcon
 import org.florisboard.lib.snygg.ui.SnyggIconButton
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
+private const val DOCK_FEEDBACK_DELAY_MS = 150L
+
 /**
  * The main entry point of the IME user interface. This includes the keyboard itself, devtools overlays,
  * bottom sheets, and system bars management.
@@ -285,7 +287,7 @@ private fun BoxScope.FloatingDockToFixedIndicator() {
 
     LaunchedEffect(visible) {
         if (visible) {
-            delay(150)
+            delay(DOCK_FEEDBACK_DELAY_MS)
             inputFeedbackController.keyPress()
         }
     }
@@ -325,6 +327,7 @@ private fun BoxScope.OneHandedPanel() {
         is ImeWindowSpec.Fixed if spec.fixedMode == ImeWindowMode.Fixed.COMPACT -> {
             OneHandedPanel(spec)
         }
+
         else -> { }
     }
 }
@@ -337,7 +340,7 @@ private fun BoxScope.OneHandedPanel(spec: ImeWindowSpec.Fixed) {
 
     val attributes = remember(windowConfig.mode) {
         mapOf(
-            FlorisImeUi.Attr.WindowMode to windowConfig.mode.toString()
+            FlorisImeUi.Attr.WindowMode to windowConfig.mode.toString(),
         )
     }
 
@@ -359,7 +362,7 @@ private fun BoxScope.OneHandedPanel(spec: ImeWindowSpec.Fixed) {
                             Modifier
                                 .width(spec.props.paddingRight)
                                 .align(Alignment.CenterEnd)
-                        }
+                        },
                     ),
                 verticalArrangement = Arrangement.SpaceAround,
                 horizontalAlignment = Alignment.CenterHorizontally,
