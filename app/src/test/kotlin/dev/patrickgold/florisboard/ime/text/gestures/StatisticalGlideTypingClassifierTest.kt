@@ -62,25 +62,25 @@ class StatisticalGlideTypingClassifierTest : FunSpec({
         weights shouldBe listOf(0.5f, 1f, 2f)
     }
 
-    test("dedicated accented keys are indexed by their actual code points") {
+    test("accented endpoints retain every valid word in input order") {
         val accentedCodePoint = 'é'.code
         val lastCodePoint = 't'.code
         val accentedKey = GlideTypingKey(accentedCodePoint, 0f, 0f, 40f, 40f, "é")
         val lastKey = GlideTypingKey(lastCodePoint, 80f, 0f, 120f, 40f, "t")
         val keys = listOf(accentedKey, lastKey)
         val keyIndex = StatisticalGlideTypingClassifier.buildKeyIndex(keys, Subtype.DEFAULT)
-        val word = "ét"
+        val words = listOf("ét", "éét", "éjét")
         val userGesture = StatisticalGlideTypingClassifier.Gesture().apply {
             addPoint(accentedKey.centerX, accentedKey.centerY)
             addPoint(lastKey.centerX, lastKey.centerY)
         }
         val pruner = StatisticalGlideTypingClassifier.Pruner(
             lengthThreshold = 8.42,
-            words = listOf(word),
+            words = words,
             keyIndex = keyIndex,
         )
 
-        pruner.pruneByExtremities(userGesture, keys) shouldContain word
+        pruner.pruneByExtremities(userGesture, keys) shouldBe listOf("ét", "éét")
     }
 
     test("accented word endpoints fall back to their base keys") {

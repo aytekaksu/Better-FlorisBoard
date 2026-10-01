@@ -51,6 +51,8 @@ Disposal, pause, disablement, and newer semantic input cancel or supersede the
 pending gesture.
 
 Each cached pruner belongs to its subtype, word-data revision, and key geometry.
+Its read-only endpoint index keeps every valid word in input order within each
+physical-key pair. Start and end keys are still considered nearest first.
 It caches all ideal lengths per word, but filters each user gesture separately.
 Length pruning builds ideal paths only on a cache miss; scoring still builds
 paths for retained words.
