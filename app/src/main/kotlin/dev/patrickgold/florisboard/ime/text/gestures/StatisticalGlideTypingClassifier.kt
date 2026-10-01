@@ -28,7 +28,6 @@ import dev.patrickgold.florisboard.nlpManager
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import java.text.Normalizer
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.PI
 import kotlin.math.abs
@@ -327,48 +326,24 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         }
         lruSuggestionCache.evictAll()
         if (keys.isNotEmpty() && wordDataSubtype == layoutSubtype) {
-            initializePruner()
-        }
-    }
-
-    /**
-     * Exists because Pruner requires both word data and layout are initialized,
-     * however we don't know what order they're initialized in.
-     */
-    private fun initializePruner() {
-        val currentSubtype = this.layoutSubtype!!
-        val cacheKey = PrunerCacheKey(currentSubtype, wordDataRevision, keys.toList())
-        val cached = prunerCache.get(cacheKey)
-        if (cached == null) {
-            this.pruner = Pruner(
+            val cacheKey = PrunerCacheKey(subtype, wordDataRevision, this.keys)
+            val cached = prunerCache.get(cacheKey)
+            pruner = cached ?: Pruner(
                 lengthThreshold = PRUNING_LENGTH_THRESHOLD,
-                words = this.words,
+                words = words,
                 keyIndex = keyIndex,
             )
-            prunerCache.put(cacheKey, this.pruner)
-        } else {
-            this.pruner = cached
+            if (cached == null) prunerCache.put(cacheKey, pruner)
         }
     }
 
     private val lruSuggestionCache = LruCache<Pair<Gesture, Int>, List<String>>(SUGGESTION_CACHE_SIZE)
 
     override suspend fun getSuggestions(maxSuggestionCount: Int): List<String> {
-        val cacheKey = Pair(this.gesture, maxSuggestionCount)
-        return when (val cached = lruSuggestionCache.get(cacheKey)) {
-            null -> {
-                val suggestions = unCachedGetSuggestions(maxSuggestionCount)
-                lruSuggestionCache.put(
-                    Pair(this.gesture.clone(), maxSuggestionCount),
-                    suggestions,
-                )
-
-                suggestions
+        return lruSuggestionCache.get(gesture to maxSuggestionCount)
+            ?: unCachedGetSuggestions(maxSuggestionCount).also { suggestions ->
+                lruSuggestionCache.put(gesture.clone() to maxSuggestionCount, suggestions)
             }
-            else -> {
-                cached
-            }
-        }
     }
 
     private suspend fun unCachedGetSuggestions(maxSuggestionCount: Int): List<String> {
@@ -463,8 +438,15 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         words: List<String>,
         private val keyIndex: KeyIndex,
     ) {
-        /** A tree that provides fast access to words based on their first and last letter.  */
-        private val wordTree = Collections.synchronizedMap(HashMap<Pair<Int, Int>, ArrayList<String>>())
+        /** Words indexed by their possible first and last physical keys. */
+        private val wordsByEndpoints: Map<Pair<Int, Int>, List<String>> =
+            buildMap<Pair<Int, Int>, MutableList<String>> {
+                for (word in words) {
+                    getFirstKeyLastKeys(word, keyIndex).forEach { keyPair ->
+                        getOrPut(keyPair) { mutableListOf() }.add(word)
+                    }
+                }
+            }
 
         /**
          * Finds the words whose start and end letter are closest to the start and end points of the
@@ -487,11 +469,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             val endKeys = findNClosestKeys(endX, endY, 2, keys)
             for (startKey in startKeys) {
                 for (endKey in endKeys) {
-                    val keyPair = Pair(startKey, endKey)
-                    val wordsForKeys = synchronized(wordTree) { wordTree[keyPair] }
-                    if (wordsForKeys != null) {
-                        remainingWords.addAll(wordsForKeys)
-                    }
+                    wordsByEndpoints[startKey to endKey]?.let(remainingWords::addAll)
                 }
             }
             return ArrayList(remainingWords)
@@ -557,16 +535,6 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                 return keys.sortedBy { key ->
                     Gesture.distance(key.centerX, key.centerY, x, y)
                 }.take(n).map(GlideTypingKey::id)
-            }
-        }
-
-        init {
-            synchronized(wordTree) {
-                for (word in words) {
-                    getFirstKeyLastKeys(word, keyIndex).forEach { keyPair ->
-                        wordTree.getOrPut(keyPair) { arrayListOf() }.add(word)
-                    }
-                }
             }
         }
     }
