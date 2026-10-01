@@ -1926,11 +1926,11 @@ HSPLdev/patrickgold/florisboard/lib/FlorisLocale;-><init>(Ljava/util/Locale;)V
 HSPLdev/patrickgold/florisboard/lib/compose/ComposableSingletons$FlorisScreenKt;-><clinit>()V
 HSPLdev/patrickgold/florisboard/lib/compose/ComposableSingletons$FlorisScreenKt;-><init>()V
 HSPLdev/patrickgold/florisboard/lib/compose/FlorisScreenKt;->FlorisScreen(Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;I)V
-HSPLdev/patrickgold/florisboard/lib/compose/FlorisScreenScopeImpl;-><init>()V
-HSPLdev/patrickgold/florisboard/lib/compose/FlorisScreenScopeImpl;->Render(Landroidx/compose/runtime/Composer;I)V
-HSPLdev/patrickgold/florisboard/lib/compose/FlorisScreenScopeImpl;->content(Lkotlin/jvm/functions/Function3;)V
-HSPLdev/patrickgold/florisboard/lib/compose/FlorisScreenScopeImpl;->setScrollable()V
-HSPLdev/patrickgold/florisboard/lib/compose/FlorisScreenScopeImpl;->setTitle(Ljava/lang/String;)V
+HSPLdev/patrickgold/florisboard/lib/compose/FlorisScreenScope;-><init>()V
+HSPLdev/patrickgold/florisboard/lib/compose/FlorisScreenScope;->Render$app(Landroidx/compose/runtime/Composer;I)V
+HSPLdev/patrickgold/florisboard/lib/compose/FlorisScreenScope;->content(Lkotlin/jvm/functions/Function3;)V
+HSPLdev/patrickgold/florisboard/lib/compose/FlorisScreenScope;->setScrollable()V
+HSPLdev/patrickgold/florisboard/lib/compose/FlorisScreenScope;->setTitle(Ljava/lang/String;)V
 HSPLdev/patrickgold/florisboard/lib/compose/PreviewFieldController;-><clinit>()V
 HSPLdev/patrickgold/florisboard/lib/compose/PreviewFieldController;-><init>()V
 HSPLdev/patrickgold/florisboard/lib/compose/PreviewFieldController;->setVisible(Z)V
@@ -3357,7 +3357,6 @@ Ldev/patrickgold/florisboard/lib/FlorisLocale;
 Ldev/patrickgold/florisboard/lib/compose/ComposableSingletons$FlorisScreenKt;
 Ldev/patrickgold/florisboard/lib/compose/FlorisScreenKt;
 Ldev/patrickgold/florisboard/lib/compose/FlorisScreenScope;
-Ldev/patrickgold/florisboard/lib/compose/FlorisScreenScopeImpl;
 Ldev/patrickgold/florisboard/lib/compose/PreviewFieldController;
 Ldev/patrickgold/florisboard/lib/compose/PreviewKeyboardFieldKt;
 Ldev/patrickgold/florisboard/lib/crashutility/CrashDialogActivity;

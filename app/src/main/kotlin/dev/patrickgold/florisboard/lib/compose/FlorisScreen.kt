@@ -51,7 +51,7 @@ import org.florisboard.lib.compose.florisVerticalScroll
 
 @Composable
 fun FlorisScreen(builder: @Composable FlorisScreenScope.() -> Unit) {
-    val scope = remember { FlorisScreenScopeImpl() }
+    val scope = remember { FlorisScreenScope() }
     builder(scope)
     scope.Render()
 }
@@ -62,34 +62,12 @@ typealias FlorisScreenContent = PreferenceUiContent<FlorisPreferenceModel>
 typealias FlorisScreenFab = @Composable () -> Unit
 typealias FlorisScreenNavigationIcon = @Composable () -> Unit
 
-interface FlorisScreenScope {
-    var title: String
-
-    var navigationIconVisible: Boolean
-
-    var previewFieldVisible: Boolean
-
-    var scrollable: Boolean
-
-    var iconSpaceReserved: Boolean
-
-    fun actions(actions: FlorisScreenActions)
-
-    fun bottomBar(bottomBar: FlorisScreenBottomBar)
-
-    fun content(content: FlorisScreenContent)
-
-    fun floatingActionButton(fab: FlorisScreenFab)
-
-    fun navigationIcon(navigationIcon: FlorisScreenNavigationIcon)
-}
-
-private class FlorisScreenScopeImpl : FlorisScreenScope {
-    override var title: String by mutableStateOf("")
-    override var navigationIconVisible: Boolean by mutableStateOf(true)
-    override var previewFieldVisible: Boolean by mutableStateOf(false)
-    override var scrollable: Boolean by mutableStateOf(true)
-    override var iconSpaceReserved: Boolean by mutableStateOf(true)
+class FlorisScreenScope internal constructor() {
+    var title: String by mutableStateOf("")
+    var navigationIconVisible: Boolean by mutableStateOf(true)
+    var previewFieldVisible: Boolean by mutableStateOf(false)
+    var scrollable: Boolean by mutableStateOf(true)
+    var iconSpaceReserved: Boolean by mutableStateOf(true)
 
     private var actions: FlorisScreenActions = @Composable { }
     private var bottomBar: FlorisScreenBottomBar = @Composable { }
@@ -103,36 +81,37 @@ private class FlorisScreenScopeImpl : FlorisScreenScope {
         )
     }
 
-    override fun actions(actions: FlorisScreenActions) {
+    fun actions(actions: FlorisScreenActions) {
         this.actions = actions
     }
 
-    override fun bottomBar(bottomBar: FlorisScreenBottomBar) {
+    fun bottomBar(bottomBar: FlorisScreenBottomBar) {
         this.bottomBar = bottomBar
     }
 
-    override fun content(content: FlorisScreenContent) {
+    fun content(content: FlorisScreenContent) {
         this.content = content
     }
 
-    override fun floatingActionButton(fab: FlorisScreenFab) {
+    fun floatingActionButton(fab: FlorisScreenFab) {
         this.fab = fab
     }
 
-    override fun navigationIcon(navigationIcon: FlorisScreenNavigationIcon) {
+    fun navigationIcon(navigationIcon: FlorisScreenNavigationIcon) {
         this.navigationIcon = navigationIcon
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun Render() {
+    internal fun Render() {
         val context = LocalContext.current
         val previewFieldController = LocalPreviewFieldController.current
         val colorScheme = MaterialTheme.colorScheme
+        val previewVisible = previewFieldVisible
 
         SideEffect {
             val window = (context as Activity).window
-            previewFieldController?.isVisible = previewFieldVisible
+            previewFieldController?.isVisible = previewVisible
             window.statusBarColor = Color.Transparent.toArgb()
             if (AndroidVersion.ATLEAST_API29_Q) {
                 window.navigationBarColor = Color.Transparent.toArgb()
