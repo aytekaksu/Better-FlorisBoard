@@ -47,7 +47,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -90,7 +89,6 @@ import dev.patrickgold.jetpref.material.ui.JetPrefListItem
 import dev.patrickgold.jetpref.material.ui.JetPrefTextField
 import dev.patrickgold.jetpref.material.ui.rememberJetPrefColorPickerState
 import org.florisboard.lib.color.ColorPalette
-import org.florisboard.lib.compose.DpSizeSaver
 import org.florisboard.lib.compose.FlorisChip
 import org.florisboard.lib.compose.FlorisIconButton
 import org.florisboard.lib.compose.FlorisTextButton
@@ -723,33 +721,13 @@ private fun PaddingValueEditor(
     modifier: Modifier = Modifier,
 ) {
     val layoutDirection = LocalLayoutDirection.current
-    val paddingValue = value.values
-    var showDialogInitDp by rememberSaveable(stateSaver = DpSizeSaver) {
-        mutableStateOf(0.dp)
-    }
+    val paddingValues = value.values
+    val start = paddingValues.calculateStartPadding(layoutDirection)
+    val end = paddingValues.calculateEndPadding(layoutDirection)
+    val top = paddingValues.calculateTopPadding()
+    val bottom = paddingValues.calculateBottomPadding()
     var showDialogForPaddingValue by rememberSaveable {
         mutableStateOf<PaddingValue?>(null)
-    }
-    var start by rememberSaveable(stateSaver = DpSizeSaver) {
-        mutableStateOf(paddingValue.calculateStartPadding(layoutDirection))
-    }
-    var end by rememberSaveable(stateSaver = DpSizeSaver) {
-        mutableStateOf(paddingValue.calculateEndPadding(layoutDirection))
-    }
-    var top by rememberSaveable(stateSaver = DpSizeSaver) {
-        mutableStateOf(paddingValue.calculateTopPadding())
-    }
-    var bottom by rememberSaveable(stateSaver = DpSizeSaver) {
-        mutableStateOf(paddingValue.calculateBottomPadding())
-    }
-    val paddingValues = remember(start, end, top, bottom) {
-        PaddingValues(start, top, end, bottom)
-    }
-
-    LaunchedEffect(paddingValues) {
-        onValueChange(
-            SnyggPaddingValue(paddingValues)
-        )
     }
 
     fun sizeFor(side: PaddingValue): Dp = when (side) {
@@ -767,10 +745,7 @@ private fun PaddingValueEditor(
             contentAlignment = alignment,
         ) {
             FlorisChip(
-                onClick = {
-                    showDialogInitDp = size
-                    showDialogForPaddingValue = side
-                },
+                onClick = { showDialogForPaddingValue = side },
                 text = stringRes(R.string.unit__display_pixel__symbol).curlyFormat("v" to size.value.toStringWithoutDotZero()),
                 shape = MaterialTheme.shapes.medium,
             )
@@ -808,24 +783,20 @@ private fun PaddingValueEditor(
     if (dialogForPaddingValue != null) {
         ValidatedSizeDialog(
             title = dialogForPaddingValue.label(),
-            initialSize = showDialogInitDp.value.toStringWithoutDotZero(),
+            initialSize = sizeFor(dialogForPaddingValue).value.toStringWithoutDotZero(),
             validationRule = ExtensionValidation.SnyggDpShapeValue,
             applyAllLabel = "Apply for all",
             onApply = { size ->
                 val sizeDp = size.toFloat().dp
-                when (dialogForPaddingValue) {
-                    PaddingValue.TOP -> top = sizeDp
-                    PaddingValue.BOTTOM -> bottom = sizeDp
-                    PaddingValue.START -> start = sizeDp
-                    PaddingValue.END -> end = sizeDp
-                }
+                onValueChange(SnyggPaddingValue(PaddingValues(
+                    start = if (dialogForPaddingValue == PaddingValue.START) sizeDp else start,
+                    top = if (dialogForPaddingValue == PaddingValue.TOP) sizeDp else top,
+                    end = if (dialogForPaddingValue == PaddingValue.END) sizeDp else end,
+                    bottom = if (dialogForPaddingValue == PaddingValue.BOTTOM) sizeDp else bottom,
+                )))
             },
             onApplyToAll = { size ->
-                val sizeDp = size.toFloat().dp
-                top = sizeDp
-                bottom = sizeDp
-                start = sizeDp
-                end = sizeDp
+                onValueChange(SnyggPaddingValue(PaddingValues(size.toFloat().dp)))
             },
             onDismiss = { showDialogForPaddingValue = null },
         )
