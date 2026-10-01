@@ -17,9 +17,7 @@
 package dev.patrickgold.florisboard.ime.keyboard
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
@@ -27,21 +25,17 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
-import dev.patrickgold.florisboard.ime.nlp.NlpInlineAutofill
 import dev.patrickgold.florisboard.ime.smartbar.ExtendedActionsPlacement
-import dev.patrickgold.florisboard.ime.smartbar.InlineSuggestionsChipMargin
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboard
-import dev.patrickgold.florisboard.ime.window.LocalWindowController
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.jetpref.datastore.model.collectAsState
 
-private val LocalKeyboardRowBaseHeight = compositionLocalOf { 65.dp }
-private val LocalSmartbarHeight = compositionLocalOf { 40.dp }
+internal val LocalKeyboardRowBaseHeight = compositionLocalOf { 65.dp }
+internal val LocalSmartbarHeight = compositionLocalOf { 40.dp }
 
 object FlorisImeSizing {
     val keyboardRowBaseHeight: Dp
@@ -110,38 +104,5 @@ object FlorisImeSizing {
     @Composable
     fun imeUiHeight(): Dp {
         return keyboardUiHeight() + smartbarUiHeight()
-    }
-}
-
-@Deprecated("TODO: move logic fully into ImeWindow impl")
-@Composable
-fun ProvideKeyboardRowBaseHeight(content: @Composable () -> Unit) {
-    val windowController = LocalWindowController.current
-    val density = LocalDensity.current
-
-    val windowSpec by windowController.activeWindowSpec.collectAsState()
-
-    val heights by remember {
-        derivedStateOf {
-            val rowHeight = windowSpec.calcRowHeight(windowSpec.props.keyboardHeight)
-            val smartbarRowHeight = windowSpec.calcSmartbarRowHeight(windowSpec.props.keyboardHeight)
-            rowHeight to smartbarRowHeight
-        }
-    }
-    val (rowHeight, smartbarRowHeight) = heights
-
-    SideEffect {
-        val marginV = InlineSuggestionsChipMargin.calculateTopPadding() +
-            InlineSuggestionsChipMargin.calculateBottomPadding()
-        NlpInlineAutofill.suggestionsChipHeightPx = with(density) {
-            (smartbarRowHeight - marginV).roundToPx()
-        }
-    }
-
-    CompositionLocalProvider(
-        LocalKeyboardRowBaseHeight provides rowHeight,
-        LocalSmartbarHeight provides smartbarRowHeight,
-    ) {
-        content()
     }
 }

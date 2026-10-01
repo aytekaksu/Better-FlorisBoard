@@ -35,7 +35,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -61,9 +63,12 @@ import dev.patrickgold.florisboard.app.devtools.DevtoolsOverlay
 import dev.patrickgold.florisboard.ime.ImeUiMode
 import dev.patrickgold.florisboard.ime.clipboard.ClipboardInputLayout
 import dev.patrickgold.florisboard.ime.input.LocalInputFeedbackController
-import dev.patrickgold.florisboard.ime.keyboard.ProvideKeyboardRowBaseHeight
+import dev.patrickgold.florisboard.ime.keyboard.LocalKeyboardRowBaseHeight
+import dev.patrickgold.florisboard.ime.keyboard.LocalSmartbarHeight
 import dev.patrickgold.florisboard.ime.media.MediaInputLayout
+import dev.patrickgold.florisboard.ime.nlp.NlpInlineAutofill
 import dev.patrickgold.florisboard.ime.sheet.BottomSheetWindow
+import dev.patrickgold.florisboard.ime.smartbar.InlineSuggestionsChipMargin
 import dev.patrickgold.florisboard.ime.text.TextInputLayout
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.keyboardManager
@@ -178,9 +183,7 @@ fun BoxScope.ImeWindow() {
         allowClip = false,
     ) {
         OneHandedPanel()
-        ProvideKeyboardRowBaseHeight {
-            ImeInnerWindow()
-        }
+        ImeInnerWindow()
         ImeWindowResizeHandlesFloating()
     }
 }
@@ -188,49 +191,65 @@ fun BoxScope.ImeWindow() {
 @Composable
 private fun ImeInnerWindow() {
     val context = LocalContext.current
+    val density = LocalDensity.current
     val windowController = LocalWindowController.current
 
     val keyboardManager by context.keyboardManager()
 
     val state by keyboardManager.activeState.collectAsState()
     val windowSpec by windowController.activeWindowSpec.collectAsState()
+    val rowHeight = windowSpec.calcRowHeight(windowSpec.props.keyboardHeight)
+    val smartbarRowHeight = windowSpec.calcSmartbarRowHeight(windowSpec.props.keyboardHeight)
 
-    ProvideActualLayoutDirection {
-        val layoutDirection = LocalLayoutDirection.current
-        LaunchedEffect(layoutDirection) {
-            keyboardManager.activeState.layoutDirection = layoutDirection
+    SideEffect {
+        val marginV = InlineSuggestionsChipMargin.calculateTopPadding() +
+            InlineSuggestionsChipMargin.calculateBottomPadding()
+        NlpInlineAutofill.suggestionsChipHeightPx = with(density) {
+            (smartbarRowHeight - marginV).roundToPx()
         }
     }
 
-    SnyggBox(
-        elementName = FlorisImeUi.WindowInner.elementName,
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .ifIsInstance<ImeWindowProps.Fixed>(windowSpec.props) { props ->
-                Modifier
-                    .safeDrawingPadding()
-                    .systemGestureExclusion()
-                    .padding(
-                        start = props.paddingLeft.coerceAtLeast(0.dp),
-                        end = props.paddingRight.coerceAtLeast(0.dp),
-                        bottom = props.paddingBottom.coerceAtLeast(0.dp),
-                    )
-            }
-            .ifIsInstance<ImeWindowProps.Floating>(windowSpec.props) {
-                Modifier.systemGestureExclusion()
-            },
-        allowClip = false,
+    CompositionLocalProvider(
+        LocalKeyboardRowBaseHeight provides rowHeight,
+        LocalSmartbarHeight provides smartbarRowHeight,
     ) {
-        Column {
-            when (state.imeUiMode) {
-                ImeUiMode.TEXT -> TextInputLayout()
-                ImeUiMode.MEDIA -> ProvideActualLayoutDirection { MediaInputLayout() }
-                ImeUiMode.CLIPBOARD -> ProvideActualLayoutDirection { ClipboardInputLayout() }
+        ProvideActualLayoutDirection {
+            val layoutDirection = LocalLayoutDirection.current
+            LaunchedEffect(layoutDirection) {
+                keyboardManager.activeState.layoutDirection = layoutDirection
             }
-            ImeSystemUiFloating()
         }
-        ImeWindowResizeHandlesFixed()
+
+        SnyggBox(
+            elementName = FlorisImeUi.WindowInner.elementName,
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .ifIsInstance<ImeWindowProps.Fixed>(windowSpec.props) { props ->
+                    Modifier
+                        .safeDrawingPadding()
+                        .systemGestureExclusion()
+                        .padding(
+                            start = props.paddingLeft.coerceAtLeast(0.dp),
+                            end = props.paddingRight.coerceAtLeast(0.dp),
+                            bottom = props.paddingBottom.coerceAtLeast(0.dp),
+                        )
+                }
+                .ifIsInstance<ImeWindowProps.Floating>(windowSpec.props) {
+                    Modifier.systemGestureExclusion()
+                },
+            allowClip = false,
+        ) {
+            Column {
+                when (state.imeUiMode) {
+                    ImeUiMode.TEXT -> TextInputLayout()
+                    ImeUiMode.MEDIA -> ProvideActualLayoutDirection { MediaInputLayout() }
+                    ImeUiMode.CLIPBOARD -> ProvideActualLayoutDirection { ClipboardInputLayout() }
+                }
+                ImeSystemUiFloating()
+            }
+            ImeWindowResizeHandlesFixed()
+        }
     }
 }
 
