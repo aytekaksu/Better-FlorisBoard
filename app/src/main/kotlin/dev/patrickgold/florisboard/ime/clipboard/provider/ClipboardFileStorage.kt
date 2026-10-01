@@ -962,11 +962,13 @@ object ClipboardFileStorage {
         isSystemStateCurrent: () -> Boolean = { true },
         observedBootCount: Int = currentBootCount(context),
         nowMs: Long = System.currentTimeMillis().coerceAtLeast(0L),
-        shareElapsedRealtimeMs: Long = SystemClock.elapsedRealtime(),
+        shareElapsedRealtimeMs: Long? = null,
     ): Set<OwnedClipboardMediaUri> {
         return synchronized(mutationLock) {
             initialize(context)
             val now = nowMs.coerceAtLeast(0L)
+            // A waiting caller must not compare a new install against an older clock sample.
+            val shareNow = shareElapsedRealtimeMs ?: SystemClock.elapsedRealtime()
             if (systemClipboardObserved) {
                 if (!isSystemStateCurrent()) return@synchronized emptySet()
                 val validObservedRoots = observedSystemRoots.takeIf { candidates ->
@@ -1007,7 +1009,7 @@ object ClipboardFileStorage {
                     sharePendingStatus(
                         info = info,
                         currentBootCount = observedBootCount,
-                        elapsedRealtimeMs = shareElapsedRealtimeMs,
+                        elapsedRealtimeMs = shareNow,
                     )
                 ) {
                     SharePendingStatus.UNEXPIRED -> {
