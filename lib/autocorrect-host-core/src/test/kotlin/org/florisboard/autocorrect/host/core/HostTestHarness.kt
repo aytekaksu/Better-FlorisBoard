@@ -49,19 +49,30 @@ internal class HostTestHarness(policy: CircuitPolicy = CircuitPolicy()) {
         return dispatch(HostEvent.ProvidersDiscovered(revision, providers))
     }
 
+    fun awaitSessionBinding(
+        providerId: ProviderId = ProviderA,
+        configuration: SessionConfiguration = DefaultSessionConfiguration,
+        at: MonotonicMillis = T0,
+        providers: Set<ProviderId> = setOf(ProviderA),
+    ): BindingLease {
+        discover(providers)
+        dispatch(HostEvent.SelectProvider(providerId))
+        return dispatch(
+            HostEvent.OpenSession(configuration, state.editorGeneration, at),
+        ).singleEffect<HostEffect.Bind>().lease
+    }
+
+    fun queueSessionStart(binding: BindingLease): SessionLease = dispatch(HostEvent.BindingConnected(binding))
+        .singleEffect<HostEffect.StartSession>()
+        .lease
+
     fun startActiveSession(
         providerId: ProviderId = ProviderA,
         configuration: SessionConfiguration = DefaultSessionConfiguration,
         at: MonotonicMillis = T0,
     ): SessionLease {
-        discover(setOf(ProviderA, ProviderB))
-        dispatch(HostEvent.SelectProvider(providerId))
-        val binding = dispatch(
-            HostEvent.OpenSession(configuration, state.editorGeneration, at),
-        ).singleEffect<HostEffect.Bind>().lease
-        val session = dispatch(HostEvent.BindingConnected(binding))
-            .singleEffect<HostEffect.StartSession>()
-            .lease
+        val binding = awaitSessionBinding(providerId, configuration, at, providers = setOf(ProviderA, ProviderB))
+        val session = queueSessionStart(binding)
         dispatch(HostEvent.SessionStartSending(session))
         dispatch(HostEvent.SessionStartResult(session, successful = true, at))
         return session
