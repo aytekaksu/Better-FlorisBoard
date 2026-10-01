@@ -213,13 +213,14 @@ class ClipboardSharePreviewLoaderAndroidTest {
             val foreground = ActivityScenario.launch(EditorHarnessActivity::class.java)
             scenario = foreground
             awaitWindowFocus(foreground)
-            previousSystemRoots = ClipboardFileStorage.systemRoots(context)
             foreground.onActivity { activity ->
                 assertTrue(activity.window.decorView.hasWindowFocus())
                 val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE)
                     as AndroidClipboardManager
                 platformClipboard = clipboard
                 previousClip = clipboard.primaryClip
+                previousSystemRoots = ClipboardFileStorage.systemRoots(context)
+                ClipboardFileStorage.prepareSystemRoots(context, previousSystemRoots)
                 previousClipCaptured = true
                 clipboard.setPrimaryClip(ClipData.newPlainText("Clipboard test", "before"))
                 assertEquals("before", clipboard.primaryClip?.getItemAt(0)?.text?.toString())

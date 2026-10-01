@@ -18,6 +18,7 @@ package dev.patrickgold.florisboard.app.settings.advanced
 
 import android.content.ClipData
 import android.database.sqlite.SQLiteDatabase
+import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.patrickgold.florisboard.FlorisApplication
@@ -36,6 +37,7 @@ import dev.patrickgold.florisboard.ime.clipboard.provider.InstalledClipboardMedi
 import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.clipboard.provider.OwnedClipboardMediaUri
 import dev.patrickgold.florisboard.lib.io.ZipUtils
+import dev.patrickgold.florisboard.test.EditorHarnessActivity
 import java.io.RandomAccessFile
 import java.nio.file.Files
 import java.nio.file.Path
@@ -43,6 +45,7 @@ import java.util.concurrent.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -120,20 +123,42 @@ class ClipboardRestoreCommitAndroidTest {
         val prefs by FlorisPreferenceStore
         val previousInternalClipboard = prefs.clipboard.useInternalClipboard.get()
         val previousInboundSync = prefs.clipboard.syncToFloris.get()
-        val (platformClipboard, previousSystemClip) = withContext(Dispatchers.Main) {
-            val clipboard = context.systemService(AndroidClipboardManager::class)
-            clipboard to clipboard.primaryClip
+        var scenario: ActivityScenario<EditorHarnessActivity>? = null
+        var platformClipboard: AndroidClipboardManager? = null
+        var previousSystemClip: ClipData? = null
+        var previousSystemRoots = emptySet<OwnedClipboardMediaUri>()
+        var previousClipCaptured = false
+        suspend fun awaitWindowFocus() = withTimeout(15_000L) {
+            var focused = false
+            while (!focused) {
+                requireNotNull(scenario).onActivity { focused = it.window.decorView.hasWindowFocus() }
+                if (!focused) delay(10L)
+            }
         }
         val sourceBytes = byteArrayOf(2, 4, 6, 8)
         val source = Files.createTempFile(context.cacheDir.toPath(), "clipboard-restore-", ".bin")
         var restoredOwned: OwnedClipboardMediaUri? = null
         val testResult = runCatching {
+            scenario = ActivityScenario.launch(EditorHarnessActivity::class.java)
+            awaitWindowFocus()
+            requireNotNull(scenario).onActivity { activity ->
+                assertTrue(activity.window.decorView.hasWindowFocus())
+                val clipboard = context.systemService(AndroidClipboardManager::class)
+                platformClipboard = clipboard
+                previousSystemClip = clipboard.primaryClip
+                previousSystemRoots = ClipboardFileStorage.systemRoots(context)
+                ClipboardFileStorage.prepareSystemRoots(context, previousSystemRoots)
+                previousClipCaptured = true
+            }
             Files.write(source, sourceBytes)
             prefs.clipboard.useInternalClipboard.set(true).getOrThrow()
             prefs.clipboard.syncToFloris.set(ClipboardSyncBehavior.NO_EVENTS).getOrThrow()
-            InstrumentationRegistry.getInstrumentation().runOnMainSync {
-                platformClipboard.setPrimaryClip(ClipData.newPlainText("Clipboard test", "unrelated text"))
-                assertEquals("unrelated text", platformClipboard.primaryClip?.getItemAt(0)?.text?.toString())
+            awaitWindowFocus()
+            requireNotNull(scenario).onActivity { activity ->
+                assertTrue(activity.window.decorView.hasWindowFocus())
+                val clipboard = requireNotNull(platformClipboard)
+                clipboard.setPrimaryClip(ClipData.newPlainText("Clipboard test", "unrelated text"))
+                assertEquals("unrelated text", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
             }
             manager.commitHistoryRestore(
                 items = listOf(
@@ -230,31 +255,49 @@ class ClipboardRestoreCommitAndroidTest {
             )
         }
         val triggerCleanup = runCatching { dropFailureTriggers() }
+        val systemRestore = runCatching {
+            if (previousClipCaptured) {
+                awaitWindowFocus()
+                requireNotNull(scenario).onActivity { activity ->
+                    assertTrue(activity.window.decorView.hasWindowFocus())
+                    ClipboardFileStorage.prepareSystemRoots(context, previousSystemRoots)
+                    requireNotNull(platformClipboard).setOrClearPrimaryClip(previousSystemClip)
+                }
+            }
+        }
         val historyCleanup = runCatching {
             manager.commitHistoryRestore(emptyList(), setOf(ItemType.IMAGE), replaceSelected = true)
         }
         val mediaCleanup = runCatching {
-            if (historyCleanup.isSuccess) {
-                restoredOwned?.let { ClipboardFileStorage.deleteOwned(context, it) }
+            if (historyCleanup.isSuccess && systemRestore.isSuccess) {
+                restoredOwned?.let { owned ->
+                    ClipboardFileStorage.recordSystemRoots(
+                        context,
+                        (ClipboardFileStorage.systemRoots(context) + previousSystemRoots) - owned,
+                    )
+                    ClipboardFileStorage.deleteOwned(context, owned)
+                }
             }
         }
         val sourceCleanup = runCatching { Files.deleteIfExists(source) }
-        val systemRestore = runCatching {
-            InstrumentationRegistry.getInstrumentation().runOnMainSync {
-                platformClipboard.setOrClearPrimaryClip(previousSystemClip)
-            }
-        }
         val inboundRestore = runCatching {
             prefs.clipboard.syncToFloris.set(previousInboundSync).getOrThrow()
         }
         val internalRestore = runCatching {
             prefs.clipboard.useInternalClipboard.set(previousInternalClipboard).getOrThrow()
         }
-        testResult.getOrThrow()
-        listOf(
+        val scenarioCleanup = runCatching { scenario?.close() }
+        val cleanupResults = listOf(
             triggerCleanup, historyCleanup, mediaCleanup, sourceCleanup,
-            systemRestore, inboundRestore, internalRestore,
-        ).forEach { it.getOrThrow() }
+            systemRestore, inboundRestore, internalRestore, scenarioCleanup,
+        )
+        testResult.exceptionOrNull()?.let { originalFailure ->
+            cleanupResults.mapNotNull { it.exceptionOrNull() }
+                .filterNot { it === originalFailure }
+                .forEach(originalFailure::addSuppressed)
+            throw originalFailure
+        }
+        cleanupResults.forEach { it.getOrThrow() }
     }
 
     @Test
