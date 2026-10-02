@@ -78,19 +78,10 @@ import org.florisboard.lib.kotlin.collectLatestIn
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Global weak reference for the [FlorisImeService] class. This is needed as certain actions (request hide, switch to
- * another input method, getting the editor instance / input connection, etc.) can only be performed by an IME
- * service class and no context-bound managers. This reference is exclusively used by the companion helper methods
- * of [FlorisImeService], which provide a safe and memory-leak-free way of performing certain actions on the Floris
- * input method service instance.
- */
+/** Lets callers resolve the active IME without keeping its service alive. */
 private var FlorisImeServiceReference = WeakReference<FlorisImeService?>(null)
 
-/**
- * Core class responsible for linking together all managers and UI composables to provide an IME service. Sets
- * up the window and context to be lifecycle-aware, so LiveData and Jetpack Compose can be used without issues.
- */
+/** Connects the managers and keyboard UI to the lifecycle-aware Android IME service. */
 class FlorisImeService : LifecycleInputMethodService(), KeyboardImeActions {
     companion object {
         private val InlineSuggestionUiSmallestSize = Size(0, 0)
@@ -107,11 +98,6 @@ class FlorisImeService : LifecycleInputMethodService(), KeyboardImeActions {
 
         fun keyboardActionsOrNull(): KeyboardImeActions? = FlorisImeServiceReference.get()
 
-        fun showUi() {
-            val ims = FlorisImeServiceReference.get() ?: return
-            ims.showUi()
-        }
-
         fun hideUi() {
             val ims = FlorisImeServiceReference.get() ?: return
             ims.hideUi()
@@ -125,11 +111,6 @@ class FlorisImeService : LifecycleInputMethodService(), KeyboardImeActions {
         fun switchToNextInputMethod(): Boolean {
             val ims = FlorisImeServiceReference.get() ?: return false
             return ims.switchToNextInputMethod()
-        }
-
-        fun switchToVoiceInputMethod(): Boolean {
-            val ims = FlorisImeServiceReference.get() ?: return false
-            return ims.switchToVoiceInputMethod()
         }
 
         fun showImePicker(): Boolean {
@@ -159,12 +140,7 @@ class FlorisImeService : LifecycleInputMethodService(), KeyboardImeActions {
         requestHideSelf(0)
     }
 
-    /**
-     * Show the Ime UI
-     *
-     * Note: This function can be replaced with a `requestShowSelf(0)`
-     * call once we've set the minApiLevel to 28 (Android 9)
-     */
+    /** Requests the keyboard UI, using the legacy IME call on Android 26/27. */
     override fun showUi() {
         if (AndroidVersion.ATLEAST_API28_P) {
             requestShowSelf(0)
@@ -175,14 +151,9 @@ class FlorisImeService : LifecycleInputMethodService(), KeyboardImeActions {
         }
     }
 
-
     /**
-     * Switch to previous input method
-     *
-     * Note: This function can be replaced with a `switchToPreviousInputMethod()`
-     * call once we've set the minApiLevel to 28 (Android 9)
-     *
-     * @return true if the switch was successful
+     * Requests the previous IME, using this IME's window token on Android 26/27.
+     * Returns platform-reported success (false if unavailable); tries the picker on exceptions.
      */
     override fun switchToPrevInputMethod(): Boolean {
         val imm = systemServiceOrNull(InputMethodManager::class)
@@ -203,12 +174,8 @@ class FlorisImeService : LifecycleInputMethodService(), KeyboardImeActions {
     }
 
     /**
-     * Switch to next input method
-     *
-     * Note: This function can be replaced with a `switchToNextInputMethod(false)`
-     * call once we've set the minApiLevel to 28 (Android 9)
-     *
-     * @return true if the switch was successful
+     * Requests the next IME, using this IME's window token on Android 26/27.
+     * Returns platform-reported success (false if unavailable); tries the picker on exceptions.
      */
     override fun switchToNextInputMethod(): Boolean {
         val imm = systemServiceOrNull(InputMethodManager::class)
@@ -229,13 +196,8 @@ class FlorisImeService : LifecycleInputMethodService(), KeyboardImeActions {
     }
 
     /**
-     * Switch to next input method
-     *
-     * Note: The inner part of this function can be replaced with a
-     *
-     * `switchInputMethod(el.id, el.getSubtypeAt(i))` call once we've set the minApiLevel to 28 (Android 9)
-     *
-     * @return true if the switch was successful
+     * Requests an enabled voice IME. Android 26/27 select its ID, not its subtype.
+     * Returns true after requesting a switch, not after confirming it.
      */
     override fun switchToVoiceInputMethod(): Boolean {
         val imm = systemServiceOrNull(InputMethodManager::class) ?: return false
