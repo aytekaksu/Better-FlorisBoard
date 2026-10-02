@@ -23,50 +23,21 @@ import dev.patrickgold.florisboard.ime.sheet.isAnyBottomSheetVisible
 import dev.patrickgold.florisboard.ime.text.key.KeyVariation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
-import kotlin.properties.Delegates
 
 /**
- * This class is a helper managing the state of the text input logic which
- * affects the keyboard view in rendering and layouting the keys.
+ * Packed runtime flags and small integers for keyboard rendering and input.
+ * The masks below define the layout; this value is not persisted.
  *
- * The state class can hold flags or small unsigned integers, all added up
- * at max 64-bit though.
- *
- * The structure of this 8-byte state register is as follows: (Lower 4 bytes are pretty experimental rn)
- *
- * <Byte 3> | <Byte 2> | <Byte 1> | <Byte 0> | Description
- * ---------|----------|----------|----------|---------------------------------
- *          |          |          |     1111 | Active [KeyboardMode]
- *          |          |          | 1111     | Active [KeyVariation]
- *          |          |       11 |          | InputShiftState
- *          |          |      1   |          | Is selection active (length > 0)
- *          |          |     1    |          | Is manual selection mode
- *          |          |    1     |          | Is manual selection mode (start)
- *          |          |   1      |          | Is manual selection mode (end)
- *          |          | 1        |          | Is incognito mode
- *          |        1 |          |          | Is quick actions overflow visible
- *          |       1  |          |          | Is quick actions editor visible
- *          |    1     |          |          | Is composing enabled
- *          |   1      |          |          | Is character half-width enabled
- *          |  1       |          |          | Is Kana Kata enabled
- *      111 |          |          |          | Ime Ui Mode
- *     1    |          |          |          | Layout Direction (0=LTR, 1=RTL)
- *
- * <Byte 7> | <Byte 6> | <Byte 5> | <Byte 4> | Description
- * ---------|----------|----------|----------|---------------------------------
- *          |          |          |        1 | Subtype selection dialog visible
- *        1 |          |          |          | Devtools: Show drag&drop helpers
- *
- * The resulting structure is only relevant during a runtime lifespan and
- * thus can easily be changed without worrying about destroying some saved state.
- *
- * @property rawValue The internal register used to store the flags and region ints that
- *  this keyboard state represents.
+ * Reads, writes and field updates use this instance's reentrant monitor.
+ * Snapshots are detached copies; separate property operations are not a transaction.
  */
-open class KeyboardState protected constructor(open var rawValue: ULong) {
+open class KeyboardState protected constructor(
+    @get:Synchronized
+    @set:Synchronized
+    open var rawValue: ULong,
+) {
     companion object {
         const val M_KEYBOARD_MODE: ULong =                  0x0Fu
         const val O_KEYBOARD_MODE: Int =                    0
@@ -100,6 +71,7 @@ open class KeyboardState protected constructor(open var rawValue: ULong) {
         fun new(value: ULong = STATE_ALL_ZERO) = KeyboardState(value)
     }
 
+    @Synchronized
     fun snapshot(): KeyboardState {
         return new(rawValue)
     }
@@ -108,6 +80,7 @@ open class KeyboardState protected constructor(open var rawValue: ULong) {
         return (rawValue and f) != STATE_ALL_ZERO
     }
 
+    @Synchronized
     private fun setFlag(f: ULong, v: Boolean) {
         rawValue = if (v) { rawValue or f } else { rawValue and f.inv() }
     }
@@ -116,6 +89,7 @@ open class KeyboardState protected constructor(open var rawValue: ULong) {
         return ((rawValue shr o) and m).toInt()
     }
 
+    @Synchronized
     private fun setRegion(m: ULong, o: Int, v: Int) {
         rawValue = (rawValue and (m shl o).inv()) or ((v.toULong() and m) shl o)
     }
@@ -214,6 +188,7 @@ internal val KeyboardState.manualSelectionEndpointIsStart: Boolean?
         isManualSelectionModeStart != isManualSelectionModeEnd
     }
 
+/** Publishes detached snapshots. Batches delay publication, not other threads' writes. */
 class ObservableKeyboardState private constructor(
     initValue: ULong,
     private val dispatchFlow: MutableStateFlow<KeyboardState> = MutableStateFlow(KeyboardState.new(initValue)),
@@ -225,44 +200,39 @@ class ObservableKeyboardState private constructor(
         fun new(value: ULong = STATE_ALL_ZERO) = ObservableKeyboardState(value)
     }
 
-    override var rawValue by Delegates.observable(initValue) { _, old, new -> if (old != new) dispatchState() }
-    private val batchEditCount = AtomicInteger(BATCH_ZERO)
+    override var rawValue: ULong
+        @Synchronized get() = super.rawValue
+        @Synchronized set(value) {
+            if (super.rawValue != value) {
+                super.rawValue = value
+                dispatchState()
+            }
+        }
+    private var batchEditCount = BATCH_ZERO
 
-    init {
-        dispatchState()
-    }
-
-    /**
-     * Dispatches the new state to all observers if [batchEditCount] is [BATCH_ZERO] (= no active batch edits).
-     */
+    // Keep publication with the write so an older snapshot cannot replace a newer one.
+    // Synchronous collectors may re-enter, but must not wait for another thread to access this state.
+    @Synchronized
     private fun dispatchState() {
-        if (batchEditCount.get() == BATCH_ZERO) {
+        if (batchEditCount == BATCH_ZERO) {
             dispatchFlow.value = this.snapshot()
         }
     }
 
-    /**
-     * Begins a batch edit. Any modifications done during an active batch edit will not be dispatched to observers
-     * until [endBatchEdit] is called. At any time given there can be multiple active batch edits at once. This
-     * method is thread-safe and can be called from any thread.
-     */
+    /** Delays publication until all nested or overlapping batches end. Callable from any thread. */
+    @Synchronized
     fun beginBatchEdit() {
-        batchEditCount.incrementAndGet()
+        batchEditCount++
     }
 
-    /**
-     * Ends a batch edit. Will dispatch the current state if there are no more other batch edits active. This method is
-     * thread-safe and can be called from any thread.
-     */
+    /** Pairs with one [beginBatchEdit] and publishes when no batches remain. Callable from any thread. */
+    @Synchronized
     fun endBatchEdit() {
-        batchEditCount.decrementAndGet()
+        batchEditCount--
         dispatchState()
     }
 
-    /**
-     * Performs a batch edit by executing the modifier [block]. Any exception that [block] throws will be caught and
-     * re-thrown after correctly ending the batch edit.
-     */
+    /** Does not wrap [block] in a lock; always ends the batch, even if [block] throws. */
     inline fun batchEdit(block: (ObservableKeyboardState) -> Unit) {
         contract {
             callsInPlace(block, InvocationKind.EXACTLY_ONCE)
@@ -270,8 +240,6 @@ class ObservableKeyboardState private constructor(
         beginBatchEdit()
         try {
             block(this)
-        } catch (e: Throwable) {
-            throw e
         } finally {
             endBatchEdit()
         }

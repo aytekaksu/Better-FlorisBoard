@@ -24,6 +24,7 @@ provider transport is covered by
 | Swipe detector | [`SwipeGesture.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/SwipeGesture.kt) |
 | Glide detector | [`GlideTypingGesture.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/GlideTypingGesture.kt) |
 | Semantic key dispatch | [`KeyboardManager.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyboardManager.kt) |
+| Shared packed state, snapshots and publication | [`KeyboardState.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyboardState.kt) |
 | Audio/haptic feedback and service-owned worker jobs | [`InputFeedbackController.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/input/InputFeedbackController.kt) |
 | Localized IME-action labels and Android fallback | [`FlorisImeService.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/FlorisImeService.kt) |
 | Fast state and hit-test tests | [`app/src/test/.../keyboard`](../../../app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/) |
@@ -93,6 +94,11 @@ before handling input. The editor reads the same state and uses a live
 pressed-Shift reader; it never constructs or looks up `KeyboardManager`.
 Shift rechecks remain at the editor's existing content-publication and
 invalid-selection paths.
+Packed keyboard state uses one reentrant monitor for field updates, snapshots
+and publication. Nested or overlapping batches delay publication until all
+batches end. `batchEdit` does not lock its callback and is not a transaction.
+Synchronous observers already hold the monitor: they may re-enter on the same
+thread, but must not block waiting for another thread that needs this state.
 `FlorisApplication` also supplies the editor a lazy composing policy and a live
 subtype getter. NLP still selects the active language provider, while the editor
 reads punctuation rules from its existing keyboard-extension snapshot.
