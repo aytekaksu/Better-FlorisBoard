@@ -23,7 +23,6 @@ import android.content.ClipboardManager as AndroidClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -32,16 +31,19 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.patrickgold.florisboard.app.FlorisAppActivity
+import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardExternalMediaTestSource
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardFileStorage
 import dev.patrickgold.florisboard.ime.clipboard.provider.OwnedClipboardMediaUri
+import dev.patrickgold.florisboard.test.EditorHarnessActivity
 import java.nio.file.Files
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.florisboard.lib.android.setOrClearPrimaryClip
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -285,25 +287,31 @@ class FlorisCopyToClipboardActivityAndroidTest {
     }
 
     @Test
-    fun recreationRetainsOneImportAndARealStopFinishesTheShareActivity() {
+    fun recreationRetainsOneImportAndARealStopFinishesTheShareActivity() = runBlocking {
         val clipboardManager = context.clipboardManager().value
-        runBlocking {
-            withTimeout(AWAIT_MS) {
-                clipboardManager.awaitInitialization()
-            }
+        withTimeout(AWAIT_MS) {
+            clipboardManager.awaitInitialization()
         }
+        val prefs by FlorisPreferenceStore
+        val previousInternalClipboard = prefs.clipboard.useInternalClipboard.get()
+        val previousInboundSync = prefs.clipboard.syncToFloris.get()
         lateinit var platformClipboard: AndroidClipboardManager
-        val previousClip = AtomicReference<ClipData?>()
-        instrumentation.runOnMainSync {
-            platformClipboard =
-                context.getSystemService(Context.CLIPBOARD_SERVICE) as AndroidClipboardManager
-            previousClip.set(runCatching { platformClipboard.primaryClip }.getOrNull())
-            platformClipboard.setPrimaryClip(ClipData.newPlainText("Clipboard test", "before"))
-        }
-        val previousRoots = ClipboardFileStorage.systemRoots(context)
+        var captureEditor: ActivityScenario<EditorHarnessActivity>? = null
+        var restoreEditor: ActivityScenario<EditorHarnessActivity>? = null
+        var previousClip: ClipData? = null
+        var previousRoots = emptySet<OwnedClipboardMediaUri>()
+        var previousClipCaptured = false
         var published: OwnedClipboardMediaUri? = null
         val application = context.applicationContext as Application
         val activityTracker = ActivityTracker()
+        var callbacksRegistered = false
+        var grantAttempted = false
+        var coordinatorStarted = false
+        fun awaitWindowFocus(editor: ActivityScenario<EditorHarnessActivity>) = awaitCondition {
+            var focused = false
+            editor.onActivity { focused = it.window.decorView.hasWindowFocus() }
+            focused
+        }
         val firstShareActivity = AtomicReference<FlorisCopyToClipboardActivity?>()
         val recreationFailure = AtomicReference<Throwable?>()
         val recreationRequested = AtomicBoolean(false)
@@ -319,12 +327,6 @@ class FlorisCopyToClipboardActivityAndroidTest {
             putExtra(SHARE_OPERATION_NESTED_KEY, "hostile")
             putExtra(SHARE_OPERATION_TOKEN_KEY, byteArrayOf(1, 2, 3))
             putExtra(SHARE_OPERATION_FINGERPRINT_KEY, Bundle())
-        }
-        ClipboardExternalMediaTestSource.grantReadAccess(
-            ClipboardExternalMediaTestSource.delayedUri,
-        )
-        instrumentation.runOnMainSync {
-            application.registerActivityLifecycleCallbacks(activityTracker)
         }
         val recreationCoordinator = Thread {
             try {
@@ -358,10 +360,36 @@ class FlorisCopyToClipboardActivityAndroidTest {
             }
         }.apply {
             isDaemon = true
-            start()
         }
 
-        try {
+        val testResult = runCatching {
+            captureEditor = ActivityScenario.launch(EditorHarnessActivity::class.java)
+            awaitWindowFocus(requireNotNull(captureEditor))
+            requireNotNull(captureEditor).onActivity { activity ->
+                assertTrue(activity.window.decorView.hasWindowFocus())
+                platformClipboard =
+                    context.getSystemService(Context.CLIPBOARD_SERVICE) as AndroidClipboardManager
+                previousClip = platformClipboard.primaryClip
+                previousRoots = ClipboardFileStorage.systemRoots(context)
+                ClipboardFileStorage.prepareSystemRoots(context, previousRoots)
+                previousClipCaptured = true
+            }
+            // Share publication is the contract here, not history synchronization.
+            prefs.clipboard.syncToFloris.set(ClipboardSyncBehavior.NO_EVENTS).getOrThrow()
+            prefs.clipboard.useInternalClipboard.set(true).getOrThrow()
+            requireNotNull(captureEditor).onActivity {
+                platformClipboard.setPrimaryClip(ClipData.newPlainText("Clipboard test", "before"))
+            }
+            grantAttempted = true
+            ClipboardExternalMediaTestSource.grantReadAccess(
+                ClipboardExternalMediaTestSource.delayedUri,
+            )
+            instrumentation.runOnMainSync {
+                callbacksRegistered = true
+                application.registerActivityLifecycleCallbacks(activityTracker)
+            }
+            recreationCoordinator.start()
+            coordinatorStarted = true
             ActivityScenario.launch<FlorisCopyToClipboardActivity>(shareIntent).use { scenario ->
                 // ActivityScenario.launch() may wait for an idle app before
                 // returning. The coordinator requests the real recreation as
@@ -405,66 +433,87 @@ class FlorisCopyToClipboardActivityAndroidTest {
                     recreatedActivity in activityTracker.destroyedShareActivities
                 }
             }
-        } finally {
-            runCatching { ClipboardExternalMediaTestSource.releaseBlockingOpen() }
-            recreationCoordinator.interrupt()
-            runCatching { recreationCoordinator.join(POLL_MS * 5) }
-            runCatching {
+        }
+        val sourceCleanup = runCatching { ClipboardExternalMediaTestSource.releaseBlockingOpen() }
+        val coordinatorCleanup = runCatching {
+            if (coordinatorStarted) {
+                recreationCoordinator.interrupt()
+                recreationCoordinator.join(POLL_MS * 5)
+                check(!recreationCoordinator.isAlive) { "The recreation coordinator did not stop." }
+            }
+        }
+        val grantCleanup = runCatching {
+            if (grantAttempted) {
                 ClipboardExternalMediaTestSource.revokeReadAccess(
                     ClipboardExternalMediaTestSource.delayedUri,
                 )
             }
-            restoreSystemClipboardBestEffort(platformClipboard, previousClip.get())
-            published?.let { owned ->
-                runCatching {
+        }
+        val coverCleanup = runCatching {
+            instrumentation.runOnMainSync { activityTracker.currentCoverActivity.get()?.finish() }
+        }
+        val callbackCleanup = runCatching {
+            if (callbacksRegistered) {
+                instrumentation.runOnMainSync {
+                    application.unregisterActivityLifecycleCallbacks(activityTracker)
+                }
+            }
+        }
+        val captureEditorCleanup = runCatching { captureEditor?.close() }
+        val systemRestore = runCatching {
+            if (previousClipCaptured) {
+                // ActivityScenario's share launch clears the earlier editor's task.
+                restoreEditor = ActivityScenario.launch(EditorHarnessActivity::class.java)
+                awaitWindowFocus(requireNotNull(restoreEditor))
+                requireNotNull(restoreEditor).onActivity { activity ->
+                    assertTrue(activity.window.decorView.hasWindowFocus())
+                    ClipboardFileStorage.prepareSystemRoots(context, previousRoots)
+                    platformClipboard.setOrClearPrimaryClip(previousClip)
+                }
+            }
+        }
+        val mediaCleanup = runCatching {
+            if (systemRestore.isSuccess) {
+                published?.let { owned ->
+                    val isUnreferenced = {
+                        clipboardManager.primaryClip?.uri != owned.uri &&
+                            clipboardManager.currentHistory.all.none { it.uri == owned.uri }
+                    }
+                    check(isUnreferenced()) { "The fixture media still has an internal owner." }
                     ClipboardFileStorage.recordSystemRoots(
                         context = context,
-                        ownedUris = previousRoots,
-                        observedBootCount = Int.MAX_VALUE,
+                        ownedUris = (ClipboardFileStorage.systemRoots(context) + previousRoots) - owned,
                     )
-                }
-                runCatching { ClipboardFileStorage.markRetiring(context, listOf(owned)) }
-                runCatching {
-                    ClipboardFileStorage.deleteOwned(
-                        context = context,
-                        ownedUri = owned,
-                        observedBootCount = Int.MAX_VALUE,
-                    )
-                }
-            }
-            runCatching {
-                instrumentation.runOnMainSync {
-                    runCatching { activityTracker.currentCoverActivity.get()?.finish() }
-                    runCatching {
-                        application.unregisterActivityLifecycleCallbacks(activityTracker)
+                    if (ClipboardFileStorage.fileInfo(context, owned) != null) {
+                        ClipboardFileStorage.markRetiring(context, listOf(owned))
+                        assertTrue(
+                            ClipboardFileStorage.deleteOwned(
+                                context = context,
+                                ownedUri = owned,
+                                // Only this fixture's restored-away capability may bypass quarantine.
+                                observedBootCount = Int.MAX_VALUE,
+                                isSafeToDelete = isUnreferenced,
+                            ),
+                        )
                     }
                 }
             }
         }
-    }
-
-    private fun restoreSystemClipboardBestEffort(
-        platformClipboard: AndroidClipboardManager,
-        previousClip: ClipData?,
-    ) {
-        runCatching {
-            instrumentation.runOnMainSync {
-                val restored = previousClip?.let { clip ->
-                    runCatching { platformClipboard.setPrimaryClip(clip) }.isSuccess
-                } ?: false
-                if (!restored) {
-                    runCatching {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                            platformClipboard.clearPrimaryClip()
-                        } else {
-                            platformClipboard.setPrimaryClip(
-                                ClipData.newPlainText("Clipboard test", ""),
-                            )
-                        }
-                    }
-                }
-            }
+        val inboundRestore = runCatching {
+            prefs.clipboard.syncToFloris.set(previousInboundSync).getOrThrow()
         }
+        val internalRestore = runCatching {
+            prefs.clipboard.useInternalClipboard.set(previousInternalClipboard).getOrThrow()
+        }
+        val editorCleanup = runCatching { restoreEditor?.close() }
+        val cleanupFailures = listOf(
+            sourceCleanup, coordinatorCleanup, grantCleanup, coverCleanup, callbackCleanup,
+            captureEditorCleanup, systemRestore, mediaCleanup, inboundRestore, internalRestore, editorCleanup,
+        ).mapNotNull { it.exceptionOrNull() }
+        val failure = testResult.exceptionOrNull() ?: cleanupFailures.firstOrNull()
+        cleanupFailures.filterNot { it === failure }.forEach { failure?.addSuppressed(it) }
+        failure?.let { throw it }
+        Unit
     }
 
     private class ActivityTracker : Application.ActivityLifecycleCallbacks {
