@@ -365,12 +365,15 @@ private fun classicFixture(vararg names: String, comment: ByteArray = byteArrayO
     val output = ByteArrayOutputStream()
     ZipOutputStream(output).use { zip ->
         names.forEach { name ->
-            zip.putNextEntry(ZipEntry(name).apply {
-                method = ZipEntry.STORED
-                size = 0
-                crc = 0
-                setTimeLocal(LocalDateTime.of(2000, 1, 1, 0, 0))
-            })
+            zip.putNextEntry(
+                ZipEntry(name).apply {
+                    method = ZipEntry.STORED
+                    size = 0
+                    crc = 0
+                    // Keep timestamp extras out of the disk-field fixtures.
+                    setTimeLocal(LocalDateTime.of(2000, 1, 1, 0, 0))
+                },
+            )
             zip.closeEntry()
         }
     }
