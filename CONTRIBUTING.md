@@ -59,6 +59,9 @@ the input method lifecycle, or other behavior not represented by JVM tests:
 Do not add `clean` to routine commands. It makes local and CI builds slower
 without improving correctness.
 
+Run one Gradle build at a time per checkout; use separate worktrees for concurrent
+builds. Tasks share output directories, including generated assets across variants.
+
 ## Change requirements
 
 Keep each pull request focused and describe:

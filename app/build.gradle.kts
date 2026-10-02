@@ -48,14 +48,16 @@ plugins {
     alias(libs.plugins.kotest)
 }
 
+abstract class GeneratedAssetsTask : DefaultTask() {
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+}
+
 @CacheableTask
-abstract class GenerateProjectLicenseAsset : DefaultTask() {
+abstract class GenerateProjectLicenseAsset : GeneratedAssetsTask() {
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val licenseFile: RegularFileProperty
-
-    @get:OutputDirectory
-    abstract val outputDirectory: DirectoryProperty
 
     @TaskAction
     fun generate() {
@@ -66,7 +68,7 @@ abstract class GenerateProjectLicenseAsset : DefaultTask() {
 }
 
 @CacheableTask
-abstract class GenerateBuiltInThemeAssets : DefaultTask() {
+abstract class GenerateBuiltInThemeAssets : GeneratedAssetsTask() {
     @get:InputFile
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val baseStylesheet: RegularFileProperty
@@ -74,9 +76,6 @@ abstract class GenerateBuiltInThemeAssets : DefaultTask() {
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val overlaysDirectory: DirectoryProperty
-
-    @get:OutputDirectory
-    abstract val outputDirectory: DirectoryProperty
 
     @TaskAction
     fun generate() {
@@ -138,7 +137,7 @@ abstract class GenerateBuiltInThemeAssets : DefaultTask() {
 }
 
 @CacheableTask
-abstract class GenerateNumericRowAssets : DefaultTask() {
+abstract class GenerateNumericRowAssets : GeneratedAssetsTask() {
     @get:InputFile
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val templateFile: RegularFileProperty
@@ -146,9 +145,6 @@ abstract class GenerateNumericRowAssets : DefaultTask() {
     @get:InputFile
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val zeroDigitsFile: RegularFileProperty
-
-    @get:OutputDirectory
-    abstract val outputDirectory: DirectoryProperty
 
     @TaskAction
     fun generate() {
@@ -227,7 +223,7 @@ private class GeneratedAssetSafety {
 
         private fun checkedOutputRoot(output: File, label: String): Path {
             val root = output.toPath().toAbsolutePath().normalize()
-            // Check the variant root and its task-owned generator/generated/build parents.
+            // Check the output root and its task-owned generator/generated/build parents.
             generateSequence(root) { it.parent }.take(4).forEach { component ->
                 check(!Files.isSymbolicLink(component)) { "Generated $label output path is linked" }
             }
@@ -314,7 +310,7 @@ private object SubtypePresetManifest {
 }
 
 @CacheableTask
-abstract class GenerateLocalizationAssets : DefaultTask() {
+abstract class GenerateLocalizationAssets : GeneratedAssetsTask() {
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val sourceDirectory: DirectoryProperty
@@ -326,9 +322,6 @@ abstract class GenerateLocalizationAssets : DefaultTask() {
     @get:InputFile
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val manifestTemplateFile: RegularFileProperty
-
-    @get:OutputDirectory
-    abstract val outputDirectory: DirectoryProperty
 
     @TaskAction
     fun generate() = render(
@@ -447,7 +440,7 @@ abstract class GenerateLocalizationAssets : DefaultTask() {
 }
 
 @CacheableTask
-abstract class GenerateCharacterLayoutAssets : DefaultTask() {
+abstract class GenerateCharacterLayoutAssets : GeneratedAssetsTask() {
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val sourceDirectory: DirectoryProperty
@@ -459,9 +452,6 @@ abstract class GenerateCharacterLayoutAssets : DefaultTask() {
     @get:InputFile
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val extensionFile: RegularFileProperty
-
-    @get:OutputDirectory
-    abstract val outputDirectory: DirectoryProperty
 
     @TaskAction
     fun generate() = render(
@@ -1239,97 +1229,82 @@ val testCharacterLayoutAssetGenerator by tasks.registering {
     }
 }
 
+val generateProjectLicenseAsset by tasks.registering(GenerateProjectLicenseAsset::class) {
+    licenseFile.set(rootProject.layout.projectDirectory.file("LICENSE"))
+    outputDirectory.set(layout.buildDirectory.dir("generated/projectLicenseAssets/shared"))
+}
+val generateBuiltInThemeAssets by tasks.registering(GenerateBuiltInThemeAssets::class) {
+    baseStylesheet.set(
+        layout.projectDirectory.file(
+            "src/main/assets/ime/theme/org.florisboard.themes/stylesheets/floris_day.json",
+        ),
+    )
+    overlaysDirectory.set(layout.projectDirectory.dir("theme-overlays"))
+    outputDirectory.set(layout.buildDirectory.dir("generated/builtInThemeAssets/shared"))
+}
+val generateNumericRowAssets by tasks.registering(GenerateNumericRowAssets::class) {
+    templateFile.set(
+        layout.projectDirectory.file(
+            "src/main/assets/ime/keyboard/org.florisboard.layouts/layouts/numericRow/bengali.json",
+        ),
+    )
+    zeroDigitsFile.set(layout.projectDirectory.file("numeric-row-zero-digits.json"))
+    outputDirectory.set(layout.buildDirectory.dir("generated/numericRowAssets/shared"))
+}
+val generateLocalizationAssets by tasks.registering(GenerateLocalizationAssets::class) {
+    sourceDirectory.set(layout.projectDirectory.dir("popup-mapping-sources"))
+    fragmentFile.set(layout.projectDirectory.file("popup-mapping-right-punctuation.inc"))
+    manifestTemplateFile.set(layout.projectDirectory.file("subtype-preset-manifest.json.in"))
+    outputDirectory.set(layout.buildDirectory.dir("generated/localizationAssets/shared"))
+}
+val generateCharacterLayoutAssets by tasks.registering(GenerateCharacterLayoutAssets::class) {
+    sourceDirectory.set(layout.projectDirectory.dir("character-layout-sources"))
+    staticDirectory.set(
+        layout.projectDirectory.dir(
+            "src/main/assets/ime/keyboard/org.florisboard.layouts/layouts/characters",
+        ),
+    )
+    extensionFile.set(
+        layout.projectDirectory.file(
+            "src/main/assets/ime/keyboard/org.florisboard.layouts/extension.json",
+        ),
+    )
+    outputDirectory.set(layout.buildDirectory.dir("generated/characterLayoutAssets/shared"))
+}
+
 androidComponents {
     onVariants(selector().all()) { variant ->
         val variantName = variant.name.replaceFirstChar { it.titlecase() }
-        val task = tasks.register<GenerateProjectLicenseAsset>(
-            "generate${variantName}ProjectLicenseAsset",
-        ) {
-            licenseFile.set(rootProject.layout.projectDirectory.file("LICENSE"))
-            outputDirectory.set(layout.buildDirectory.dir("generated/projectLicenseAssets/${variant.name}"))
-        }
-        checkNotNull(variant.sources.assets).addGeneratedSourceDirectory(
-            task,
-            GenerateProjectLicenseAsset::outputDirectory,
-        )
-        val themes = tasks.register<GenerateBuiltInThemeAssets>("generate${variantName}BuiltInThemeAssets") {
-            baseStylesheet.set(
-                layout.projectDirectory.file(
-                    "src/main/assets/ime/theme/org.florisboard.themes/stylesheets/floris_day.json",
-                ),
+        for (generator in listOf(
+            generateProjectLicenseAsset,
+            generateBuiltInThemeAssets,
+            generateNumericRowAssets,
+            generateLocalizationAssets,
+            generateCharacterLayoutAssets,
+        )) {
+            checkNotNull(variant.sources.assets).addGeneratedSourceDirectory(
+                generator,
+                GeneratedAssetsTask::outputDirectory,
             )
-            overlaysDirectory.set(layout.projectDirectory.dir("theme-overlays"))
-            outputDirectory.set(layout.buildDirectory.dir("generated/builtInThemeAssets/${variant.name}"))
         }
-        checkNotNull(variant.sources.assets).addGeneratedSourceDirectory(
-            themes,
-            GenerateBuiltInThemeAssets::outputDirectory,
-        )
-        val numericRows = tasks.register<GenerateNumericRowAssets>("generate${variantName}NumericRowAssets") {
-            templateFile.set(
-                layout.projectDirectory.file(
-                    "src/main/assets/ime/keyboard/org.florisboard.layouts/layouts/numericRow/bengali.json",
-                ),
-            )
-            zeroDigitsFile.set(layout.projectDirectory.file("numeric-row-zero-digits.json"))
-            outputDirectory.set(layout.buildDirectory.dir("generated/numericRowAssets/${variant.name}"))
-        }
-        checkNotNull(variant.sources.assets).addGeneratedSourceDirectory(
-            numericRows,
-            GenerateNumericRowAssets::outputDirectory,
-        )
-        val localization = tasks.register<GenerateLocalizationAssets>(
-            "generate${variantName}LocalizationAssets",
-        ) {
-            sourceDirectory.set(layout.projectDirectory.dir("popup-mapping-sources"))
-            fragmentFile.set(layout.projectDirectory.file("popup-mapping-right-punctuation.inc"))
-            manifestTemplateFile.set(layout.projectDirectory.file("subtype-preset-manifest.json.in"))
-            outputDirectory.set(layout.buildDirectory.dir("generated/localizationAssets/${variant.name}"))
-        }
-        checkNotNull(variant.sources.assets).addGeneratedSourceDirectory(
-            localization,
-            GenerateLocalizationAssets::outputDirectory,
-        )
-        val characterLayouts = tasks.register<GenerateCharacterLayoutAssets>(
-            "generate${variantName}CharacterLayoutAssets",
-        ) {
-            sourceDirectory.set(layout.projectDirectory.dir("character-layout-sources"))
-            staticDirectory.set(
-                layout.projectDirectory.dir(
-                    "src/main/assets/ime/keyboard/org.florisboard.layouts/layouts/characters",
-                ),
-            )
-            extensionFile.set(
-                layout.projectDirectory.file(
-                    "src/main/assets/ime/keyboard/org.florisboard.layouts/extension.json",
-                ),
-            )
-            outputDirectory.set(layout.buildDirectory.dir("generated/characterLayoutAssets/${variant.name}"))
-        }
-        checkNotNull(variant.sources.assets).addGeneratedSourceDirectory(
-            characterLayouts,
-            GenerateCharacterLayoutAssets::outputDirectory,
-        )
         tasks.withType<Test>().matching { it.name == "test${variantName}UnitTest" }.configureEach {
             dependsOn(
-                localization,
-                characterLayouts,
+                generateLocalizationAssets,
+                generateCharacterLayoutAssets,
                 testLocalizationAssetGenerator,
                 testCharacterLayoutAssetGenerator,
             )
-            inputs.dir(localization.flatMap { it.outputDirectory })
-            inputs.dir(characterLayouts.flatMap { it.outputDirectory })
+            inputs.dir(generateLocalizationAssets.flatMap { it.outputDirectory })
+            inputs.dir(generateCharacterLayoutAssets.flatMap { it.outputDirectory })
             systemProperty(
                 "florisboard.localizationAssetRoot",
-                layout.buildDirectory.dir(
-                    "generated/localizationAssets/${variant.name}/ime/keyboard/org.florisboard.localization",
-                ).get().asFile.absolutePath,
+                generateLocalizationAssets.get().outputDirectory.get()
+                    .dir("ime/keyboard/org.florisboard.localization").asFile.absolutePath,
             )
             systemProperty(
                 "florisboard.characterLayoutAssetRoot",
-                layout.buildDirectory.dir(
-                    "generated/characterLayoutAssets/${variant.name}/ime/keyboard/org.florisboard.layouts",
-                ).get().asFile.absolutePath,
+                generateCharacterLayoutAssets.get().outputDirectory.get()
+                    .dir("ime/keyboard/org.florisboard.layouts").asFile.absolutePath,
             )
         }
     }
