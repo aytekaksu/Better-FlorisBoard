@@ -30,7 +30,6 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.engine.coroutines.backgroundScope
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.enum
@@ -41,6 +40,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
@@ -236,64 +237,87 @@ class ImeWindowControllerActionsTest : FunSpec({
         }
     }
 
-    test("resetFixedSize()") {
-        checkAll(Arb.rootInsets(), Arb.enum<ImeWindowMode.Fixed>()) { rootInsets, fixedMode ->
-            val config = ImeWindowConfig(
-                mode = ImeWindowMode.FIXED,
-                fixedMode = fixedMode,
-                fixedProps = mapOf(fixedMode to ImeWindowProps.Fixed(
-                    keyboardHeight = 100.dp,
-                    paddingLeft = 0.dp,
-                    paddingRight = 0.dp,
-                    paddingBottom = 0.dp,
-                )),
-            )
-
+    val customFixed = ImeWindowProps.Fixed(300.dp, 20.dp, 30.dp, 40.dp)
+    val customFloating = ImeWindowProps.Floating(250.dp, 300.dp, 20.dp, 40.dp)
+    val fixedProps = ImeWindowMode.Fixed.entries.associateWith { customFixed }
+    val floatingProps = mapOf(ImeWindowMode.Floating.NORMAL to customFloating)
+    val resetCases = listOf(
+        ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = ImeWindowMode.Fixed.NORMAL) to
+            ImeWindowProps.Fixed(227.5.dp, 0.dp, 0.dp, 0.dp),
+        ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = ImeWindowMode.Fixed.COMPACT) to
+            ImeWindowProps.Fixed(182.dp, 70.dp, 0.dp, 45.5.dp),
+        ImeWindowConfig(ImeWindowMode.FIXED, fixedMode = ImeWindowMode.Fixed.THUMBS) to
+            ImeWindowProps.Fixed(227.5.dp, 0.dp, 0.dp, 0.dp),
+        ImeWindowConfig(ImeWindowMode.FLOATING) to
+            ImeWindowProps.Floating(192.5.dp, 256.75.dp, 20.dp, 40.dp),
+    )
+    for ((selection, expectedProps) in resetCases) {
+        val fixed = selection.mode == ImeWindowMode.FIXED
+        val caseName = if (fixed) "resetFixedSize() for ${selection.fixedMode}" else "resetFloatingSize()"
+        test(caseName) {
+            // A non-default, fully visible size makes the reset itself produce a new spec.
+            val rootInsets = with(Density(3f)) { ImeInsets.Root.of(IntRect(0, 0, 1080, 2400)) }
+            val profile = rootInsets.formFactor.typeGuess
+            val config = selection.copy(fixedProps = fixedProps, floatingProps = floatingProps)
+            val otherConfig = config.copy(mode = ImeWindowMode.FLOATING)
+            val originalConfigs = mapOf(profile to config, ImeFormFactor.Type.DESKTOP to otherConfig)
             val prefs by jetprefDataStoreOf(FlorisPreferenceModel::class)
-            prefs.keyboard.windowConfig.set(mapOf(rootInsets.formFactor.typeGuess to config))
+            prefs.keyboard.windowConfig.set(originalConfigs).getOrThrow()
             val windowController = ImeWindowController(prefs, backgroundScope)
+            windowController.updateRootInsets(rootInsets)
+            val before = windowController.activeWindowSpec.first {
+                it.props == if (fixed) customFixed else customFloating
+            }
 
-            windowController.activeWindowSpec.test {
-                skipItems(1)
-                windowController.updateRootInsets(rootInsets)
-                val specBefore = awaitItem()
-                windowController.actions.resetFixedSize()
-                val specAfter = awaitItem()
-                assertSoftly {
-                    specBefore.props shouldNotBe specAfter
+            windowController.activeWindowSpec.distinctUntilChangedBy { it.props }.test {
+                awaitItem().props shouldBe before.props
+                if (fixed) {
+                    windowController.actions.resetFixedSize()
+                } else {
+                    windowController.actions.resetFloatingSize()
+                }
+                when (val after = awaitItem()) {
+                    is ImeWindowSpec.Fixed -> {
+                        fixed shouldBe true
+                        after.fixedMode shouldBe selection.fixedMode
+                        val expected = expectedProps.shouldBeInstanceOf<ImeWindowProps.Fixed>()
+                        after.props.keyboardHeight shouldBe expectedProps.keyboardHeight.plusOrMinus(tolerance)
+                        after.props.paddingLeft shouldBe expected.paddingLeft.plusOrMinus(tolerance)
+                        after.props.paddingRight shouldBe expected.paddingRight.plusOrMinus(tolerance)
+                        after.props.paddingBottom shouldBe expected.paddingBottom.plusOrMinus(tolerance)
+                    }
+                    is ImeWindowSpec.Floating -> {
+                        fixed shouldBe false
+                        after.floatingMode shouldBe selection.floatingMode
+                        val expected = expectedProps.shouldBeInstanceOf<ImeWindowProps.Floating>()
+                        after.props.keyboardHeight shouldBe expected.keyboardHeight.plusOrMinus(tolerance)
+                        after.props.keyboardWidth shouldBe expected.keyboardWidth.plusOrMinus(tolerance)
+                        // Only dimensions reset; this valid saved position must not move.
+                        after.props.offsetLeft shouldBe customFloating.offsetLeft
+                        after.props.offsetBottom shouldBe customFloating.offsetBottom
+                    }
                 }
             }
-        }
-    }
 
-    test("resetFloatingSize()") {
-        checkAll(Arb.rootInsets(), Arb.enum<ImeWindowMode.Floating>()) { rootInsets, floatingMode ->
-            val config = ImeWindowConfig(
-                mode = ImeWindowMode.FLOATING,
-                floatingMode = floatingMode,
-                floatingProps = mapOf(floatingMode to ImeWindowProps.Floating(
-                    keyboardHeight = 100.dp,
-                    keyboardWidth = 100.dp,
-                    offsetLeft = 40.dp,
-                    offsetBottom = 40.dp,
-                )),
-            )
-
-            val prefs by jetprefDataStoreOf(FlorisPreferenceModel::class)
-            prefs.keyboard.windowConfig.set(mapOf(rootInsets.formFactor.typeGuess to config))
-            val windowController = ImeWindowController(prefs, backgroundScope)
-
-            windowController.activeWindowSpec.test {
-                skipItems(1)
-                windowController.updateRootInsets(rootInsets)
-                val specBefore = awaitItem()
-                windowController.actions.resetFloatingSize()
-                val specAfter = awaitItem()
-                assertSoftly {
-                    specBefore.props shouldNotBe specAfter
-                    // TODO how to test offset not changed?
-                    //  but allow a change if constrains must move the window onscreen
-                }
+            val saved = prefs.keyboard.windowConfig.asFlow().first { it != originalConfigs }
+            saved.keys shouldBe originalConfigs.keys
+            saved[ImeFormFactor.Type.DESKTOP] shouldBe otherConfig
+            val updated = saved.getValue(profile)
+            updated.mode shouldBe selection.mode
+            updated.fixedMode shouldBe selection.fixedMode
+            updated.floatingMode shouldBe selection.floatingMode
+            if (fixed) {
+                updated.fixedProps shouldBe fixedProps.minus(selection.fixedMode)
+                updated.floatingProps shouldBe floatingProps
+            } else {
+                updated.fixedProps shouldBe fixedProps
+                updated.floatingProps.keys shouldBe floatingProps.keys
+                val actual = updated.floatingProps.getValue(selection.floatingMode)
+                val expected = expectedProps.shouldBeInstanceOf<ImeWindowProps.Floating>()
+                actual.keyboardHeight shouldBe expected.keyboardHeight.plusOrMinus(tolerance)
+                actual.keyboardWidth shouldBe expected.keyboardWidth.plusOrMinus(tolerance)
+                actual.offsetLeft shouldBe expected.offsetLeft
+                actual.offsetBottom shouldBe expected.offsetBottom
             }
         }
     }
