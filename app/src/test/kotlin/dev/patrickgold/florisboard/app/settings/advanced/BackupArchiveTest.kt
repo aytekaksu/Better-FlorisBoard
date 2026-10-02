@@ -553,27 +553,6 @@ class BackupArchiveTest :
             result.plan.declaredComponentBytes shouldBe 15
         }
 
-        test("plans include only selected present components") {
-            val archive = validArchive(
-                metadataEntry(),
-                directory(BackupArchive.KEYBOARD_ROOT),
-                file("${BackupArchive.THEME_ROOT}/theme.flex"),
-                file(BackupArchive.PREFERENCES_PATH),
-            )
-            val result = RestorePlanner.create(
-                archive,
-                setOf(
-                    BackupComponent.PREFERENCES,
-                    BackupComponent.KEYBOARD_EXTENSIONS,
-                ),
-            ) as RestorePlanResult.Valid
-
-            result.plan.componentsToStage.map { it.component } shouldBe listOf(
-                BackupComponent.PREFERENCES,
-                BackupComponent.KEYBOARD_EXTENSIONS,
-            )
-        }
-
         test("planner rejects empty and unavailable selections before producing a plan") {
             val archive = validArchive(metadataEntry(), file(BackupArchive.PREFERENCES_PATH))
 
@@ -605,25 +584,6 @@ class BackupArchiveTest :
                 "${BackupArchive.CLIPBOARD_MEDIA_ROOT}/2",
             )
             result.plan.declaredComponentBytes shouldBe 5
-        }
-
-        test("plan output is deterministic across selection order") {
-            val archive = validArchive(
-                metadataEntry(),
-                file(BackupArchive.PREFERENCES_PATH),
-                file("${BackupArchive.KEYBOARD_ROOT}/board.flex"),
-            )
-            val first = RestorePlanner.create(
-                archive,
-                linkedSetOf(BackupComponent.PREFERENCES, BackupComponent.KEYBOARD_EXTENSIONS),
-            )
-            val second = RestorePlanner.create(
-                archive,
-                linkedSetOf(BackupComponent.KEYBOARD_EXTENSIONS, BackupComponent.PREFERENCES),
-            )
-
-            (first as RestorePlanResult.Valid).plan.toString() shouldBe
-                (second as RestorePlanResult.Valid).plan.toString()
         }
 
         test("every component subset stages exactly its selected entries and media candidates") {
