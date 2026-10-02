@@ -54,6 +54,7 @@ import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyType
 import dev.patrickgold.florisboard.ime.text.key.UtilityKeyAction
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
+import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboard
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboardCache
 import dev.patrickgold.florisboard.lib.devtools.LogTopic
 import dev.patrickgold.florisboard.lib.devtools.flogError
@@ -937,7 +938,7 @@ class KeyboardManager(
 
     private inner class ComputingEvaluatorImpl(
         override val version: Int,
-        override val keyboard: Keyboard,
+        override val keyboard: TextKeyboard,
         override val editorInfo: FlorisEditorInfo,
         override val state: KeyboardState,
         override val subtype: Subtype,

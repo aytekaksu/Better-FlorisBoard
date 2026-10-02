@@ -75,14 +75,13 @@ import dev.patrickgold.florisboard.ime.input.InputKeyEventReceiver
 import dev.patrickgold.florisboard.ime.input.InputShiftState
 import dev.patrickgold.florisboard.ime.keyboard.ComputingEvaluator
 import dev.patrickgold.florisboard.ime.keyboard.DefaultComputingEvaluator
-import dev.patrickgold.florisboard.ime.keyboard.Key
 import dev.patrickgold.florisboard.ime.keyboard.KeyData
-import dev.patrickgold.florisboard.ime.keyboard.Keyboard
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.computeImageVector
 import dev.patrickgold.florisboard.ime.keyboard.computeLabel
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
+import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboard
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.ime.window.ImeWindowMode
 import dev.patrickgold.florisboard.keyboardManager
@@ -586,15 +585,12 @@ private fun TextKeyDataPreviewBox(
     val context = LocalContext.current
     val evaluator = remember(context) {
         object : ComputingEvaluator by DefaultComputingEvaluator {
-            override val keyboard = object : Keyboard() {
-                override val mode = KeyboardMode.NUMERIC_ADVANCED
-                override fun getKeyForPos(pointerX: Float, pointerY: Float) = error("not implemented")
-                override fun keys() = error("not implemented")
-                override fun layout(
-                    keyboardWidth: Float, keyboardHeight: Float, desiredKey: Key,
-                    extendTouchBoundariesDownwards: Boolean,
-                ) = error("not implemented")
-            }
+            override val keyboard = TextKeyboard(
+                arrangement = emptyArray(),
+                mode = KeyboardMode.NUMERIC_ADVANCED,
+                extendedPopupMapping = null,
+                extendedPopupMappingDefault = null,
+            )
 
             override fun context() = context
 

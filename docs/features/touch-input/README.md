@@ -32,6 +32,10 @@ provider transport is covered by
 
 ## Data, state, and lifecycle
 
+`TextKey` and `TextKeyboard` directly own computed keys and layouts. Popups,
+sizing, and evaluators use those models; serialized layout entries remain
+separate through `AbstractKeyData` and `KeyData`.
+
 ```text
 MotionEvent → pointer registry → swipe/glide arbitration → key hit test
                     │                        │

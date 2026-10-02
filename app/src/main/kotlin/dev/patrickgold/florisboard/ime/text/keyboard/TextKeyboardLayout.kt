@@ -135,7 +135,7 @@ fun TextKeyboardLayout(
     val configuration = LocalConfiguration.current
     val glideTypingManager by context.glideTypingManager()
 
-    val keyboard = evaluator.keyboard as TextKeyboard
+    val keyboard = evaluator.keyboard
     val glideEnabledInternal by prefs.glide.enabled.collectAsState()
     val glideEnabled = glideEnabledInternal && evaluator.editorInfo.isRichInputEditor &&
         evaluator.state.keyVariation != KeyVariation.PASSWORD
@@ -298,24 +298,16 @@ fun TextKeyboardLayout(
                 }
             },
             isSuitableForBasicPopup = { key ->
-                if (key is TextKey) {
-                    val keyCode = key.computedData.code
-                    val keyType = key.computedData.type
-                    val numeric = keyboard.mode == KeyboardMode.NUMERIC ||
-                        keyboard.mode == KeyboardMode.PHONE || keyboard.mode == KeyboardMode.PHONE2 ||
-                        keyboard.mode == KeyboardMode.NUMERIC_ADVANCED && keyType == KeyType.NUMERIC
-                    keyCode > KeyCode.SPACE && keyCode != KeyCode.CJK_SPACE && !numeric
-                } else {
-                    true
-                }
+                val keyCode = key.computedData.code
+                val keyType = key.computedData.type
+                val numeric = keyboard.mode == KeyboardMode.NUMERIC ||
+                    keyboard.mode == KeyboardMode.PHONE || keyboard.mode == KeyboardMode.PHONE2 ||
+                    keyboard.mode == KeyboardMode.NUMERIC_ADVANCED && keyType == KeyType.NUMERIC
+                keyCode > KeyCode.SPACE && keyCode != KeyCode.CJK_SPACE && !numeric
             },
             isSuitableForExtendedPopup = { key ->
-                if (key is TextKey) {
-                    val keyCode = key.computedData.code
-                    keyCode > KeyCode.SPACE && keyCode != KeyCode.CJK_SPACE || ExceptionsForKeyCodes.contains(keyCode)
-                } else {
-                    true
-                }
+                val keyCode = key.computedData.code
+                keyCode > KeyCode.SPACE && keyCode != KeyCode.CJK_SPACE || ExceptionsForKeyCodes.contains(keyCode)
             },
         )
         popupUiController.evaluator = evaluator

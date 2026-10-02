@@ -304,7 +304,7 @@ class TextKeyboardTouchE2eTest {
                 instrumentation.runOnMainSync {
                     density =
                         requireNotNull(FlorisImeService.currentImeRootViewOrNull()).resources.displayMetrics.density
-                    keyboardHeight = (keyboardManager.activeEvaluator.value.keyboard as TextKeyboard).layoutHeight()
+                    keyboardHeight = keyboardManager.activeEvaluator.value.keyboard.layoutHeight()
                     height = controller.activeWindowInsets.value?.boundsPx?.height ?: 0
                 }
                 val current = height to NlpInlineAutofill.suggestionsChipHeightPx
@@ -325,8 +325,8 @@ class TextKeyboardTouchE2eTest {
             }
             instrumentation.runOnMainSync { keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT }
             waitUntil("height fixture did not load four rows with fixed content scaling") {
-                (keyboardManager.activeEvaluator.value.keyboard as? TextKeyboard)?.rowCount == 4 &&
-                    (keyboardManager.lastCharactersEvaluator.value.keyboard as? TextKeyboard)?.rowCount == 4 &&
+                keyboardManager.activeEvaluator.value.keyboard.rowCount == 4 &&
+                    keyboardManager.lastCharactersEvaluator.value.keyboard.rowCount == 4 &&
                     controller.activeWindowSpec.value.userPreferredOptions.contentScaleMode ==
                     KeyboardContentScaleMode.FIXED
             }
@@ -547,7 +547,7 @@ class TextKeyboardTouchE2eTest {
         var stableLayoutPolls = 0
         waitUntil("harness text keyboard and IME window did not settle") {
             val evaluator = keyboardManager.activeEvaluator.value
-            val candidate = evaluator.keyboard as? TextKeyboard
+            val candidate = evaluator.keyboard
             val requiredCodes = setOf(
                 'n'.code,
                 'v'.code,
@@ -561,14 +561,12 @@ class TextKeyboardTouchE2eTest {
                 ?.value
                 ?.boundsPx
             val requiredKeys = candidate
-                ?.keys()
-                ?.asSequence()
-                ?.filter { it.computedData.code in requiredCodes }
-                ?.toList()
-                .orEmpty()
-            val keyboardHeight = candidate?.layoutHeight() ?: 0f
+                .keys()
+                .asSequence()
+                .filter { it.computedData.code in requiredCodes }
+                .toList()
+            val keyboardHeight = candidate.layoutHeight()
             val layoutSignature = if (
-                candidate != null &&
                 requiredKeys.size == requiredCodes.size &&
                 requiredKeys.all { !it.touchBounds.isEmpty() && !it.visibleBounds.isEmpty() } &&
                 bounds != null &&
@@ -593,7 +591,7 @@ class TextKeyboardTouchE2eTest {
             }
             previousLayoutSignature = layoutSignature
             if (stableLayoutPolls >= REQUIRED_STABLE_LAYOUT_POLLS) {
-                keyboard = candidate!!
+                keyboard = candidate
                 windowBounds = bounds!!
                 true
             } else {
@@ -1096,13 +1094,12 @@ class TextKeyboardTouchE2eTest {
         val keyboardManager by instrumentation.targetContext.keyboardManager()
         instrumentation.runOnMainSync { keyboardManager.activeState.keyboardMode = mode }
         waitUntil("keyboard mode $mode did not settle") {
-            val candidate = keyboardManager.activeEvaluator.value.keyboard as? TextKeyboard
-            val codes = candidate?.keys()?.asSequence()
-                ?.filter { !it.visibleBounds.isEmpty() }
-                ?.map { it.computedData.code }
-                ?.toSet()
-                .orEmpty()
-            if (candidate?.mode == mode && codes.containsAll(requiredCodes)) {
+            val candidate = keyboardManager.activeEvaluator.value.keyboard
+            val codes = candidate.keys().asSequence()
+                .filter { !it.visibleBounds.isEmpty() }
+                .map { it.computedData.code }
+                .toSet()
+            if (candidate.mode == mode && codes.containsAll(requiredCodes)) {
                 keyboard = candidate
                 true
             } else {
@@ -1397,9 +1394,9 @@ class TextKeyboardTouchE2eTest {
         var stablePolls = 0
         var center: PointF? = null
         waitUntil("key code $code did not settle after the keyboard state changed") {
-            val candidate = keyboardManager.activeEvaluator.value.keyboard as? TextKeyboard
+            val candidate = keyboardManager.activeEvaluator.value.keyboard
             val sourceText = String(Character.toChars(code))
-            val key = candidate?.keys()?.asSequence()?.firstOrNull {
+            val key = candidate.keys().asSequence().firstOrNull {
                 !it.visibleBounds.isEmpty() &&
                     (
                         it.computedData.code == code ||
@@ -1410,7 +1407,7 @@ class TextKeyboardTouchE2eTest {
                 ?.activeWindowInsets
                 ?.value
                 ?.boundsPx
-            val signature = if (candidate != null && key != null && bounds != null) {
+            val signature = if (key != null && bounds != null) {
                 "${candidate.mode}:$bounds:${key.visibleBounds}"
             } else {
                 null
@@ -1422,7 +1419,7 @@ class TextKeyboardTouchE2eTest {
             }
             previousSignature = signature
             if (stablePolls >= REQUIRED_STABLE_LAYOUT_POLLS) {
-                keyboard = candidate!!
+                keyboard = candidate
                 windowBounds = bounds!!
                 val origin = keyboardOrigin()
                 center = PointF(

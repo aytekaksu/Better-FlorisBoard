@@ -16,10 +16,13 @@
 
 package dev.patrickgold.florisboard.ime.text.keyboard
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.vector.ImageVector
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.ime.keyboard.AbstractKeyData
 import dev.patrickgold.florisboard.ime.keyboard.ComputingEvaluator
-import dev.patrickgold.florisboard.ime.keyboard.Key
 import dev.patrickgold.florisboard.ime.keyboard.KeyData
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.computeImageVector
@@ -29,9 +32,42 @@ import dev.patrickgold.florisboard.ime.popup.PopupSet
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyType
 import dev.patrickgold.florisboard.ime.text.key.KeyVariation
+import dev.patrickgold.florisboard.lib.FlorisRect
 import dev.patrickgold.florisboard.lib.lowercase
 
-class TextKey(override val data: AbstractKeyData) : Key(data) {
+/** One computed key, including its render state and keyboard-local bounds. */
+class TextKey(val data: AbstractKeyData) {
+    var isEnabled: Boolean by mutableStateOf(true)
+
+    /** Draws the key as pressed. */
+    var isPressed: Boolean by mutableStateOf(false)
+
+    /** False omits the key from layout and drawing, like View.GONE. */
+    var isVisible: Boolean by mutableStateOf(true)
+
+    /** Touch bounds in parent-keyboard coordinates. */
+    val touchBounds: FlorisRect = FlorisRect.empty()
+
+    /** Visible bounds in parent-keyboard coordinates. */
+    val visibleBounds: FlorisRect = FlorisRect.empty()
+
+    /** Computed shrink weight for a crowded row; zero prevents shrinking. */
+    var flayShrink: Float = 0f
+
+    /** Computed grow weight for spare row space; zero opts out of proportional growth. */
+    var flayGrow: Float = 0f
+
+    /**
+     * Requested width relative to the desired key width: 1 is full width; hidden keys use 0.
+     * [compute] owns the three sizing factors; layout uses them to calculate actual bounds.
+     */
+    var flayWidthFactor: Float = 0f
+
+    // Cached rendering values, set by computeLabelsAndDrawables.
+    var label: String? = null
+    var hintedLabel: String? = null
+    var foregroundImageVector: ImageVector? = null
+
     var computedData: KeyData = TextKeyData.UNSPECIFIED
         private set
     val computedPopups = MutablePopupSet()
@@ -39,7 +75,7 @@ class TextKey(override val data: AbstractKeyData) : Key(data) {
     var computedNumberHint: KeyData? = null
 
     fun compute(evaluator: ComputingEvaluator) {
-        val keyboard = evaluator.keyboard as? TextKeyboard ?: return
+        val keyboard = evaluator.keyboard
         val keyboardMode = keyboard.mode
         val computed = data.compute(evaluator)
 

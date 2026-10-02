@@ -29,7 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
-import dev.patrickgold.florisboard.ime.keyboard.Key
+import dev.patrickgold.florisboard.ime.text.keyboard.TextKey
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
@@ -47,7 +47,7 @@ val GlobalStateNumPopupsShowing = MutableStateFlow(0)
 fun PopupBaseBox(
     modifier: Modifier = Modifier,
     attributes: SnyggQueryAttributes,
-    key: Key,
+    key: TextKey,
     shouldIndicateExtendedPopups: Boolean,
 ): Unit = with(LocalDensity.current) {
     DisposableEffect(key) {

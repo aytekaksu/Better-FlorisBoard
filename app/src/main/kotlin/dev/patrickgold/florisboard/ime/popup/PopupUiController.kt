@@ -31,7 +31,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import dev.patrickgold.florisboard.ime.keyboard.ComputingEvaluator
 import dev.patrickgold.florisboard.ime.keyboard.DefaultComputingEvaluator
-import dev.patrickgold.florisboard.ime.keyboard.Key
 import dev.patrickgold.florisboard.ime.keyboard.KeyData
 import dev.patrickgold.florisboard.ime.keyboard.computeImageVector
 import dev.patrickgold.florisboard.ime.keyboard.computeLabel
@@ -46,9 +45,9 @@ import dev.patrickgold.florisboard.lib.toIntOffset
 fun rememberPopupUiController(
     key1: Any?,
     key2: Any?,
-    boundsProvider: (key: Key) -> FlorisRect,
-    isSuitableForBasicPopup: (key: Key) -> Boolean,
-    isSuitableForExtendedPopup: (key: Key) -> Boolean,
+    boundsProvider: (key: TextKey) -> FlorisRect,
+    isSuitableForBasicPopup: (key: TextKey) -> Boolean,
+    isSuitableForExtendedPopup: (key: TextKey) -> Boolean,
 ): PopupUiController {
     return remember(key1, key2) {
         PopupUiController(boundsProvider, isSuitableForBasicPopup, isSuitableForExtendedPopup)
@@ -126,9 +125,9 @@ internal fun popupHitIndex(
 }
 
 class PopupUiController(
-    val boundsProvider: (key: Key) -> FlorisRect,
-    val isSuitableForBasicPopup: (key: Key) -> Boolean,
-    val isSuitableForExtendedPopup: (key: Key) -> Boolean,
+    val boundsProvider: (key: TextKey) -> FlorisRect,
+    val isSuitableForBasicPopup: (key: TextKey) -> Boolean,
+    val isSuitableForExtendedPopup: (key: TextKey) -> Boolean,
 ) {
     private var baseRenderInfo by mutableStateOf<BaseRenderInfo?>(null)
     private var extRenderInfo by mutableStateOf<ExtRenderInfo?>(null)
@@ -141,7 +140,7 @@ class PopupUiController(
     val isShowingExtendedPopup: Boolean
         get() = extRenderInfo != null
 
-    fun isSuitableForPopups(key: Key): Boolean {
+    fun isSuitableForPopups(key: TextKey): Boolean {
         return isSuitableForBasicPopup(key) || isSuitableForExtendedPopup(key)
     }
 
@@ -151,16 +150,13 @@ class PopupUiController(
      *
      * @param key Reference to the key currently controlling the popup.
      */
-    fun show(key: Key) {
+    fun show(key: TextKey) {
         if (!isSuitableForBasicPopup(key)) return
 
         baseRenderInfo = BaseRenderInfo(
             key = key,
             bounds = boundsProvider(key),
-            shouldIndicateExtendedPopups = when (key) {
-                is TextKey -> key.computedPopups.getPopupKeys(keyHintConfiguration).isNotEmpty()
-                else -> false
-            },
+            shouldIndicateExtendedPopups = key.computedPopups.getPopupKeys(keyHintConfiguration).isNotEmpty(),
         )
     }
 
@@ -185,10 +181,10 @@ class PopupUiController(
      *
      * @param key Reference to the key currently controlling the popup.
      */
-    fun extend(key: Key, size: Size) {
+    fun extend(key: TextKey, size: Size) {
         if (!isSuitableForExtendedPopup(key)) return
 
-        val popupKeys = (key as? TextKey)?.computedPopups?.getPopupKeys(keyHintConfiguration) ?: return
+        val popupKeys = key.computedPopups.getPopupKeys(keyHintConfiguration)
         val baseBounds = baseRenderInfo?.bounds ?: boundsProvider(key)
         val keyPopupDiffX = (key.visibleBounds.width - baseBounds.width) / 2.0f
 
@@ -268,7 +264,7 @@ class PopupUiController(
      *
      * @return True if the pointer movement is within the elements bounds, false otherwise.
      */
-    fun propagateMotionEvent(key: Key, xEvent: Float, yEvent: Float): Boolean {
+    fun propagateMotionEvent(key: TextKey, xEvent: Float, yEvent: Float): Boolean {
         val extRenderInfo = extRenderInfo ?: return false
         val baseBounds = extRenderInfo.baseBounds
         activeElementIndex = popupHitIndex(
@@ -285,22 +281,11 @@ class PopupUiController(
         return true
     }
 
-    /**
-     * Gets the [KeyData] of the currently active key. May be either the key of the popup preview
-     * or one of the keys in extended popup, if shown. Returns null if [key] is not a subclass of [TextKey].
-     *
-     * @param key Reference to the key currently controlling the popup.
-     *
-     * @return The [KeyData] object of the currently active key or null.
-     */
-    fun getActiveKeyData(key: Key): KeyData? {
-        return if (key is TextKey) {
-            val extRenderInfo = extRenderInfo ?: return key.computedData
-            val element = getElementOrNull(extRenderInfo.elements, activeElementIndex)
-            element?.data ?: key.computedData
-        } else {
-            null
-        }
+    /** Selected extended-popup choice, or the original key when no choice is active. */
+    fun getActiveKeyData(key: TextKey): KeyData {
+        val extRenderInfo = extRenderInfo ?: return key.computedData
+        val element = getElementOrNull(extRenderInfo.elements, activeElementIndex)
+        return element?.data ?: key.computedData
     }
 
     fun hide() {
@@ -363,7 +348,7 @@ class PopupUiController(
     }
 
     data class BaseRenderInfo(
-        val key: Key,
+        val key: TextKey,
         val bounds: FlorisRect,
         val shouldIndicateExtendedPopups: Boolean,
     )
