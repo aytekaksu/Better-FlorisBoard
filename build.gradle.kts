@@ -219,6 +219,7 @@ val formattedKotlinSources = files(
     ),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyDataPrivacyTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyboardMetadataContractTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/keyboard/ObservableKeyboardStateTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycleTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/composing/ComposerTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/theme/FlorisAssetResolverTest.kt"),
