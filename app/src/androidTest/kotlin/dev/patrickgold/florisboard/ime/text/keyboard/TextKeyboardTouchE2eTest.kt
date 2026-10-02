@@ -71,7 +71,7 @@ import dev.patrickgold.florisboard.ime.window.ImeWindowProps
 import dev.patrickgold.florisboard.ime.window.ImeWindowSpec
 import dev.patrickgold.florisboard.ime.window.KeyboardContentScaleMode
 import dev.patrickgold.florisboard.keyboardManager
-import dev.patrickgold.florisboard.nlpManager
+import dev.patrickgold.florisboard.sharedActionsController
 import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -286,7 +286,7 @@ class TextKeyboardTouchE2eTest {
         val originalSmartbarLayout = prefs.smartbar.layout.get()
         val originalMotionMode = prefs.smartbar.motionMode.get()
         val originalSharedActionsExpanded = prefs.smartbar.sharedActionsExpanded.get()
-        val nlpManager by instrumentation.targetContext.nlpManager()
+        val sharedActions by instrumentation.targetContext.sharedActionsController()
         val originalUiMode = keyboardManager.activeState.value.imeUiMode
         val originalEditorEnabled = controller.editor.state.value.isEnabled
         assertTrue("window editor already has an active gesture", !controller.editor.state.value.isAnyGesture)
@@ -433,7 +433,7 @@ class TextKeyboardTouchE2eTest {
                     prefs.smartbar.motionMode.set(originalMotionMode),
                 )
             }.forEach { it.getOrThrow() }
-            nlpManager.setSharedActionsExpandedByUser(originalSharedActionsExpanded)
+            sharedActions.setExpandedByUser(originalSharedActionsExpanded)
             waitUntil("original shared actions state was not restored") {
                 prefs.smartbar.sharedActionsExpanded.get() == originalSharedActionsExpanded
             }

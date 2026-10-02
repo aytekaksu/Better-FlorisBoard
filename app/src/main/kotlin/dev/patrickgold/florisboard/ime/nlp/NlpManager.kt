@@ -26,6 +26,7 @@ import dev.patrickgold.florisboard.ime.editor.EditorComposingPolicy
 import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSuggestionProvider
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
+import dev.patrickgold.florisboard.ime.smartbar.SharedActionsController
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -47,7 +48,6 @@ import org.florisboard.autocorrect.api.AutocorrectPluginContract
 import org.florisboard.lib.android.AndroidKeyguardManager
 import org.florisboard.lib.android.systemService
 import org.florisboard.lib.kotlin.collectLatestIn
-import java.util.concurrent.atomic.AtomicLong
 import kotlin.properties.Delegates
 
 internal data class ClipboardSuggestionMatch(
@@ -238,49 +238,6 @@ internal class AsyncPreloadCache<K, V>(
     }
 }
 
-internal class AutomaticSmartbarMutations {
-    private val revision = AtomicLong()
-    private val guard = Mutex()
-
-    fun next() = revision.incrementAndGet()
-
-    suspend fun runIfCurrent(expectedRevision: Long, mutate: suspend () -> Unit) =
-        guard.withLock {
-            (expectedRevision == revision.get()).also { if (it) mutate() }
-        }
-}
-
-internal data class SharedActionsAnimationSuppression(
-    val revision: Long,
-    val targetExpanded: Boolean,
-)
-
-internal class SharedActionsAnimationSuppressionTracker {
-    private val mutableSuppression = MutableStateFlow<SharedActionsAnimationSuppression?>(null)
-
-    val suppression = mutableSuppression.asStateFlow()
-
-    fun suppress(revision: Long, targetExpanded: Boolean) {
-        mutableSuppression.value = SharedActionsAnimationSuppression(revision, targetExpanded)
-    }
-
-    fun acknowledge(suppression: SharedActionsAnimationSuppression) =
-        mutableSuppression.compareAndSet(suppression, null)
-
-    fun clear() {
-        mutableSuppression.value = null
-    }
-}
-
-internal fun shouldExpandSmartbarActions(
-    currentEditorContent: () -> EditorContent,
-    candidates: List<*>?,
-    inlineSuggestions: List<*>?,
-): Boolean {
-    val isSelection = currentEditorContent().selection.isSelectionMode
-    return candidates.isNullOrEmpty() && inlineSuggestions.isNullOrEmpty() || isSelection
-}
-
 /** Synchronous suggestion operations needed while dispatching keyboard input. */
 interface KeyboardSuggestionSession {
     fun isSuggestionOn(): Boolean
@@ -298,6 +255,7 @@ class NlpManager internal constructor(
     private val composingPolicy: EditorComposingPolicy,
     private val currentEditorContent: () -> EditorContent,
     private val isIncognitoMode: () -> Boolean,
+    private val sharedActions: SharedActionsController,
 ) : KeyboardSuggestionSession {
     private val prefs by FlorisPreferenceStore
     private val primaryClipFlow by clipboardPrimaryClipFlow
@@ -312,8 +270,6 @@ class NlpManager internal constructor(
 
     private val candidateAssemblyRevision = CandidateRevision()
     private val candidateRequestRevision = CandidateRevision()
-    private val automaticSmartbarMutations = AutomaticSmartbarMutations()
-    private val sharedActionsAnimationSuppression = SharedActionsAnimationSuppressionTracker()
     private val glideTypingWords = AsyncPreloadCache<GlideTypingLexiconKey, List<String>>(scope) { key ->
         val subtype = key.subtype
         preloadProviders(subtype)
@@ -329,8 +285,6 @@ class NlpManager internal constructor(
     private val _activeCandidatesFlow = MutableStateFlow(listOf<SuggestionCandidate>())
     @Volatile private var autoCommitCandidate: SuggestionCandidate? = null
     val activeCandidatesFlow = _activeCandidatesFlow.asStateFlow()
-    internal val sharedActionsAnimationSuppressionState =
-        sharedActionsAnimationSuppression.suppression
     inline var activeCandidates
         get() = activeCandidatesFlow.value
         private set(v) {
@@ -406,7 +360,7 @@ class NlpManager internal constructor(
     override fun suggest(subtype: Subtype, content: EditorContent) {
         val requestEditorGeneration = autocorrectPluginManager.captureEditorGeneration()
         if (content.currentWordText.isNotBlank() && !content.selection.isSelectionMode) {
-            setSharedActionsExpanded(false)
+            sharedActions.collapseForTyping()
         }
         launchLatestSuggestionRequest { revision ->
             val emojiSuggestions = when {
@@ -477,7 +431,7 @@ class NlpManager internal constructor(
                 candidateAssemblyRevision.next {
                     autoCommitCandidate = null
                     activeCandidates = emptyList()
-                    autoExpandCollapseSmartbarActions(
+                    sharedActions.update(
                         emptyList<SuggestionCandidate>(),
                         NlpInlineAutofill.suggestions.value,
                     )
@@ -546,7 +500,7 @@ class NlpManager internal constructor(
             autoCommitCandidate =
                 publishableCandidates.firstOrNull { it.isEligibleForAutoCommit }
             activeCandidates = visibleCandidates
-            autoExpandCollapseSmartbarActions(
+            sharedActions.update(
                 visibleCandidates,
                 NlpInlineAutofill.suggestions.value,
             )
@@ -559,45 +513,6 @@ class NlpManager internal constructor(
             runCatching {
                 !keyguardManager.isDeviceLocked && !keyguardManager.isKeyguardLocked
             }.getOrDefault(false)
-    }
-
-    fun autoExpandCollapseSmartbarActions(
-        candidates: List<*>?,
-        inlineSuggestions: List<*>?,
-    ) {
-        setSharedActionsExpanded(
-            shouldExpandSmartbarActions(currentEditorContent, candidates, inlineSuggestions),
-        )
-    }
-
-    fun setSharedActionsExpandedByUser(isExpanded: Boolean) {
-        val revision = automaticSmartbarMutations.next()
-        scope.launch {
-            automaticSmartbarMutations.runIfCurrent(revision) {
-                sharedActionsAnimationSuppression.clear()
-                prefs.smartbar.sharedActionsExpanded.set(isExpanded)
-            }
-        }
-    }
-
-    internal fun acknowledgeSharedActionsAnimationSuppression(
-        suppression: SharedActionsAnimationSuppression,
-    ) {
-        sharedActionsAnimationSuppression.acknowledge(suppression)
-    }
-
-    private fun setSharedActionsExpanded(isExpanded: Boolean) {
-        if (!prefs.smartbar.enabled.get()) {
-            return
-        }
-        val revision = automaticSmartbarMutations.next()
-        scope.launch {
-            automaticSmartbarMutations.runIfCurrent(revision) {
-                if (prefs.smartbar.sharedActionsExpanded.get() == isExpanded) return@runIfCurrent
-                sharedActionsAnimationSuppression.suppress(revision, isExpanded)
-                prefs.smartbar.sharedActionsExpanded.set(isExpanded)
-            }
-        }
     }
 
     private class ProviderInstanceWrapper(val provider: NlpProvider) {

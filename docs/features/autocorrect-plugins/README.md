@@ -74,6 +74,8 @@ request caps must reflect the current shift state.
 edits still pending in the editor's expected-content queue.
 The app passes `KeyboardManager` a lazy suggestion-session port; NLP still owns
 candidate state and provider lifecycle, and keyboard construction does not start it.
+Shared-action expansion and animation suppression belong to the app's shared
+[Smartbar controller](../smartbar-candidates/README.md), not NLP.
 The app owns one lazy set of built-in Latin and Han provider instances. NLP
 retains their create/preload lifecycle, while an independent composing policy
 reads the same instances for the editor and NLP suggestion-strip decisions.

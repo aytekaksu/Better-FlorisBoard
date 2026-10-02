@@ -48,6 +48,7 @@ import dev.patrickgold.florisboard.ime.nlp.han.HanShapeBasedLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.latin.LatinLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
 import dev.patrickgold.florisboard.ime.nlp.plugin.liveAutocorrectKeyboardTraits
+import dev.patrickgold.florisboard.ime.smartbar.SharedActionsController
 import dev.patrickgold.florisboard.ime.text.gestures.GlideTypingManager
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.theme.ThemeManager
@@ -64,6 +65,7 @@ import dev.patrickgold.florisboard.lib.ext.ExtensionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.florisboard.lib.kotlin.tryOrNull
@@ -251,6 +253,14 @@ class FlorisApplication : Application(), Configuration.Provider {
             currentEditorContent = { editorInstance.value.activeContent },
         )
     }
+    internal val sharedActionsController = lazy {
+        SharedActionsController(
+            prefs = prefs.smartbar,
+            scope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
+            // Read pending expected edits too, without resolving NLP.
+            isSelectionMode = { editorInstance.value.activeContent.selection.isSelectionMode },
+        )
+    }
     val nlpManager: Lazy<NlpManager> = lazy {
         NlpManager(
             context = this,
@@ -261,6 +271,7 @@ class FlorisApplication : Application(), Configuration.Provider {
             // The getter includes pending edits not yet reflected in activeContentFlow.
             currentEditorContent = { editorInstance.value.activeContent },
             isIncognitoMode = { keyboardState.value.isIncognitoMode },
+            sharedActions = sharedActionsController.value,
         )
     }
     val subtypeManager = lazy { SubtypeManager() }
@@ -498,6 +509,7 @@ fun Context.keyboardExtensionRepository() = this.florisApplication().keyboardExt
 fun Context.keyboardManager() = this.florisApplication().keyboardManager
 
 fun Context.nlpManager() = this.florisApplication().nlpManager
+internal fun Context.sharedActionsController() = this.florisApplication().sharedActionsController
 fun Context.autocorrectPluginManager() = this.florisApplication().autocorrectPluginManager
 
 fun Context.subtypeManager() = this.florisApplication().subtypeManager

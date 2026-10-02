@@ -66,6 +66,7 @@ import dev.patrickgold.florisboard.ime.smartbar.quickaction.ToggleOverflowPanelA
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.nlpManager
+import dev.patrickgold.florisboard.sharedActionsController
 import dev.patrickgold.jetpref.datastore.model.collectAsState
 import kotlinx.coroutines.launch
 import org.florisboard.lib.android.AndroidVersion
@@ -142,12 +143,13 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val keyboardManager by context.keyboardManager()
     val nlpManager by context.nlpManager()
+    val sharedActions by context.sharedActionsController()
     val scope = rememberCoroutineScope()
 
     val candidates by nlpManager.activeCandidatesFlow.collectAsState()
     val inlineSuggestions by NlpInlineAutofill.suggestions.collectAsState()
     LaunchedEffect(candidates, inlineSuggestions) {
-        nlpManager.autoExpandCollapseSmartbarActions(candidates, inlineSuggestions)
+        sharedActions.update(candidates, inlineSuggestions)
     }
     val shouldShowInlineSuggestionsUi = AndroidVersion.ATLEAST_API30_R &&
         candidates.isEmpty() && inlineSuggestions.isNotEmpty()
@@ -159,7 +161,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
     val extendedActionsExpanded by prefs.smartbar.extendedActionsExpanded.collectAsState()
 
     val animationSuppression by
-        nlpManager.sharedActionsAnimationSuppressionState.collectAsState()
+        sharedActions.animationSuppression.collectAsState()
     val motionMode by prefs.smartbar.motionMode.collectAsState()
     val motionDuration = motionMode.durationMillis(AnimationDuration)
     val sharedActionsContentMotionDuration =
@@ -203,7 +205,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
                 if (/* was */ sharedActionsExpanded) {
                     keyboardManager.activeState.isActionsOverflowVisible = false
                 }
-                nlpManager.setSharedActionsExpandedByUser(!sharedActionsExpanded)
+                sharedActions.setExpandedByUser(!sharedActionsExpanded)
             },
         ) {
             val transition = updateTransition(sharedActionsExpanded, label = "sharedActionsExpandedToggleBtn")
@@ -395,7 +397,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
     SideEffect {
         animationSuppression
             ?.takeIf { it.targetExpanded == sharedActionsExpanded }
-            ?.let(nlpManager::acknowledgeSharedActionsAnimationSuppression)
+            ?.let(sharedActions::acknowledge)
     }
 
     SnyggRow(
