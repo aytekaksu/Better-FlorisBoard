@@ -21,6 +21,7 @@ import android.graphics.Typeface
 import android.util.TypedValue
 import android.widget.TextView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -526,9 +527,7 @@ private fun EmojiVariationsPopup(
                         SnyggBox(
                             elementName = FlorisImeUi.MediaEmojiKeyPopupElement.elementName,
                             modifier = Modifier
-                                .pointerInput(Unit) {
-                                    detectTapGestures { onEmojiTap(emoji) }
-                                }
+                                .clickable(interactionSource = null, indication = null) { onEmojiTap(emoji) }
                                 .width(EmojiBaseWidth)
                                 .height(emojiKeyHeight),
                         ) {

@@ -16,6 +16,7 @@
 
 package dev.patrickgold.florisboard.ime.text.keyboard
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Instrumentation
@@ -30,6 +31,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
+import android.view.accessibility.AccessibilityNodeInfo
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
@@ -174,6 +176,8 @@ class TextKeyboardTouchE2eTest {
         val previousTone = prefs.emoji.preferredSkinTone.get()
         val previousHistory = prefs.emoji.historyEnabled.get()
         val previousMode = keyboardManager.activeState.imeUiMode
+        val automation = instrumentation.uiAutomation
+        val previousAccessibilityFlags = automation.serviceInfo.flags
         var heldPoint: PointF? = null
         var heldDownTime = 0L
         val testResult = runCatching {
@@ -219,6 +223,36 @@ class TextKeyboardTouchE2eTest {
             tap(lightPoint)
             waitUntil("emoji tap did not reach the editor") { readEditorText().length > "👋".length }
             assertEquals("tap must commit the displayed emoji", "👋👋🏻", readEditorText())
+
+            automation.serviceInfo = automation.serviceInfo.apply {
+                flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+            }
+            val previousWindows = automation.windows.map { it.id }.toSet()
+            heldDownTime = SystemClock.uptimeMillis()
+            heldPoint = lightPoint
+            inject(MotionEvent.ACTION_DOWN, lightPoint.x, lightPoint.y, heldDownTime, 0, waitForFinish = true)
+            waitForPopupEmojiPoint("👋") { it !in previousWindows }
+            assertEquals("opening emoji variations must not insert text", "👋👋🏻", readEditorText())
+            inject(MotionEvent.ACTION_UP, lightPoint.x, lightPoint.y, heldDownTime, 0, waitForFinish = true)
+            heldPoint = null
+            instrumentation.waitForIdleSync()
+            assertEquals("releasing the long press must not insert text", "👋👋🏻", readEditorText())
+
+            val (_, defaultPoint) = waitForPopupEmojiPoint("👋") { it !in previousWindows }
+            heldDownTime = SystemClock.uptimeMillis()
+            heldPoint = defaultPoint
+            inject(MotionEvent.ACTION_DOWN, defaultPoint.x, defaultPoint.y, heldDownTime, 0, waitForFinish = true)
+            inject(MotionEvent.ACTION_CANCEL, defaultPoint.x, defaultPoint.y, heldDownTime, 0, waitForFinish = true)
+            heldPoint = null
+            instrumentation.waitForIdleSync()
+            assertEquals("cancelled popup press must not insert text", "👋👋🏻", readEditorText())
+
+            runBlocking { prefs.emoji.preferredSkinTone.set(EmojiSkinTone.DEFAULT).getOrThrow() }
+            val (popupWindow, popupLightPoint) = waitForPopupEmojiPoint("👋🏻") { it !in previousWindows }
+            tap(popupLightPoint)
+            waitUntil("popup tap did not reach the editor") { readEditorText().length > "👋👋🏻".length }
+            assertEquals("popup tap must commit the displayed emoji", "👋👋🏻👋🏻", readEditorText())
+            waitUntil("selected emoji popup did not close") { automation.windows.none { it.id == popupWindow } }
         }
         val cleanup = listOf(
             runCatching {
@@ -227,6 +261,10 @@ class TextKeyboardTouchE2eTest {
             runCatching { instrumentation.runOnMainSync { keyboardManager.activeState.imeUiMode = previousMode } },
             runCatching { runBlocking { prefs.emoji.preferredSkinTone.set(previousTone).getOrThrow() } },
             runCatching { runBlocking { prefs.emoji.historyEnabled.set(previousHistory).getOrThrow() } },
+            runCatching {
+                automation.serviceInfo = automation.serviceInfo.apply { flags = previousAccessibilityFlags }
+                assertEquals("accessibility flags were not restored", previousAccessibilityFlags, automation.serviceInfo.flags)
+            },
         )
         val failure = testResult.exceptionOrNull() ?: cleanup.firstNotNullOfOrNull { it.exceptionOrNull() }
         if (failure != null) {
@@ -1554,6 +1592,34 @@ class TextKeyboardTouchE2eTest {
             point = find(root)?.apply { offset(screenOrigin[0].toFloat(), screenOrigin[1].toFloat()) }
         }
         return point
+    }
+
+    private fun waitForPopupEmojiPoint(text: String, acceptsWindow: (Int) -> Boolean): Pair<Int, PointF> {
+        val packageName = instrumentation.targetContext.packageName
+        fun find(node: AccessibilityNodeInfo): PointF? {
+            if (node.isVisibleToUser && node.text?.toString() == text) {
+                val bounds = Rect()
+                node.getBoundsInScreen(bounds)
+                if (!bounds.isEmpty) return PointF(bounds.exactCenterX(), bounds.exactCenterY())
+            }
+            for (index in 0 until node.childCount) node.getChild(index)?.let { child ->
+                find(child)?.let { return it }
+            }
+            return null
+        }
+        var previous: Pair<Int, PointF>? = null
+        var stablePolls = 0
+        waitUntil("popup emoji did not become visible and stable in its own window") {
+            val point = instrumentation.uiAutomation.windows.filter { acceptsWindow(it.id) }.mapNotNull { window ->
+                val root = window.root ?: return@mapNotNull null
+                if (root.packageName?.toString() != packageName) return@mapNotNull null
+                find(root)?.let { window.id to it }
+            }.singleOrNull()
+            stablePolls = if (point != null && point == previous) stablePolls + 1 else 0
+            previous = point
+            stablePolls >= REQUIRED_STABLE_LAYOUT_POLLS
+        }
+        return requireNotNull(previous)
     }
 
     private fun inject(
