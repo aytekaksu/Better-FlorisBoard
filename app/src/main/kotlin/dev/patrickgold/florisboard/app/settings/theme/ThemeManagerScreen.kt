@@ -36,7 +36,6 @@ import androidx.compose.ui.platform.LocalContext
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.extensionManager
-import dev.patrickgold.florisboard.ime.theme.ThemeExtensionComponent
 import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.florisboard.lib.ext.ExtensionComponentName
 import dev.patrickgold.florisboard.themeManager
@@ -69,12 +68,8 @@ fun ThemeManagerScreen(action: ThemeManagerScreenAction?) = FlorisScreen {
     val scope = rememberCoroutineScope()
 
     val indexedThemeExtensions by extensionManager.themes.collectAsState()
-    val extGroupedThemes = remember(indexedThemeExtensions) {
-        buildMap<String, List<ThemeExtensionComponent>> {
-            for (ext in indexedThemeExtensions) {
-                put(ext.meta.id, ext.themes)
-            }
-        }.mapValues { (_, configs) -> configs.sortedBy { it.label } }
+    val indexedThemesById = remember(indexedThemeExtensions) {
+        indexedThemeExtensions.associateBy { it.meta.id }
     }
 
     val themeIdPref = when (action) {
@@ -92,8 +87,8 @@ fun ThemeManagerScreen(action: ThemeManagerScreenAction?) = FlorisScreen {
             }
         }
         val grayColor = LocalContentColor.current.copy(alpha = 0.56f)
-        for ((extensionId, configs) in extGroupedThemes) key(extensionId) {
-            val ext = extensionManager.getExtensionById(extensionId)!!
+        for ((extensionId, ext) in indexedThemesById) key(extensionId) {
+            val configs = remember(ext) { ext.themes.sortedBy { it.label } }
             FlorisOutlinedBox(
                 modifier = Modifier.defaultFlorisOutlinedBox(),
                 title = ext.meta.title,
