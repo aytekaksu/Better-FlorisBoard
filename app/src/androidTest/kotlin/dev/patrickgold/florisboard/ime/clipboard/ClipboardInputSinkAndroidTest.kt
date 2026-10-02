@@ -36,7 +36,6 @@ import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.ObservableKeyboardState
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKey
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
-import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboard
 import java.nio.file.Files
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -242,8 +241,7 @@ class ClipboardInputSinkAndroidTest {
             waitUntil("image editor did not reach the keyboard evaluator") {
                 val evaluator = keyboard.activeEvaluator.value
                 val smartbar = keyboard.activeSmartbarEvaluator.value
-                evaluator.keyboard is TextKeyboard &&
-                    evaluator.editorInfo.contentMimeTypes == listOf("image/png") &&
+                evaluator.editorInfo.contentMimeTypes == listOf("image/png") &&
                     smartbar.version == evaluator.version
             }
             val paste = TextKey(TextKeyData.CLIPBOARD_PASTE)

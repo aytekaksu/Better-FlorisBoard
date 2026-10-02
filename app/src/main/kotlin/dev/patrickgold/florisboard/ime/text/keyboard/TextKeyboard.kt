@@ -16,8 +16,6 @@
 
 package dev.patrickgold.florisboard.ime.text.keyboard
 
-import dev.patrickgold.florisboard.ime.keyboard.Key
-import dev.patrickgold.florisboard.ime.keyboard.Keyboard
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.isAutocorrectTraceInput
 import dev.patrickgold.florisboard.ime.keyboard.isPredictiveInput
@@ -32,14 +30,15 @@ import kotlin.math.sqrt
 
 class TextKeyboard(
     val arrangement: Array<Array<TextKey>>,
-    override val mode: KeyboardMode,
+    val mode: KeyboardMode,
     val extendedPopupMapping: PopupMapping?,
     val extendedPopupMappingDefault: PopupMapping?,
-) : Keyboard() {
+) {
     val rowCount: Int
         get() = arrangement.size
 
-    override fun getKeyForPos(pointerX: Float, pointerY: Float): TextKey? {
+    /** First key whose touch bounds contain this point in parent-keyboard coordinates, or null. */
+    fun getKeyForPos(pointerX: Float, pointerY: Float): TextKey? {
         for (key in keys()) {
             if (key.touchBounds.contains(pointerX, pointerY)) {
                 return key
@@ -111,10 +110,10 @@ class TextKeyboard(
         return primaryKey ?: regularKey
     }
 
-    override fun layout(
+    fun layout(
         keyboardWidth: Float,
         keyboardHeight: Float,
-        desiredKey: Key,
+        desiredKey: TextKey,
         extendTouchBoundariesDownwards: Boolean,
     ) {
         if (arrangement.isEmpty()) return
@@ -182,7 +181,7 @@ class TextKeyboard(
         }
     }
 
-    override fun keys(): Iterator<TextKey> {
+    fun keys(): Iterator<TextKey> {
         return TextKeyboardIterator(arrangement)
     }
 

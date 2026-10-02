@@ -55,6 +55,7 @@ import dev.patrickgold.florisboard.ime.editor.ImeOptions
 import dev.patrickgold.florisboard.ime.input.InputShiftState
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.key.KeyType
+import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboard
 import dev.patrickgold.florisboard.ime.window.ImeWindowMode
 import dev.patrickgold.florisboard.lib.FlorisLocale
 import dev.patrickgold.florisboard.lib.compose.vectorResource
@@ -63,7 +64,7 @@ import org.florisboard.lib.compose.icons.ForwardDelete
 interface ComputingEvaluator {
     val version: Int
 
-    val keyboard: Keyboard
+    val keyboard: TextKeyboard
 
     val editorInfo: FlorisEditorInfo
 

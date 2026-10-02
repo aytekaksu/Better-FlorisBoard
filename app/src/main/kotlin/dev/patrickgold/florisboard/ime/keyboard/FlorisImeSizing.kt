@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.ime.smartbar.ExtendedActionsPlacement
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
-import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboard
 import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.jetpref.datastore.model.collectAsState
 
@@ -59,9 +58,9 @@ object FlorisImeSizing {
             KeyboardMode.NUMERIC_ADVANCED,
             KeyboardMode.SYMBOLS,
             KeyboardMode.SYMBOLS2,
-            -> lastCharactersEvaluator.keyboard as TextKeyboard
+            -> lastCharactersEvaluator.keyboard
 
-            else -> evaluator.keyboard as TextKeyboard
+            else -> evaluator.keyboard
         }.rowCount.coerceAtLeast(4)
         return (keyboardRowBaseHeight * rowCount)
     }
@@ -71,7 +70,7 @@ object FlorisImeSizing {
         val context = LocalContext.current
         val keyboardManager by context.keyboardManager()
         val lastCharactersEvaluator by keyboardManager.lastCharactersEvaluator.collectAsState()
-        return remember { derivedStateOf { (lastCharactersEvaluator.keyboard as TextKeyboard).rowCount } }
+        return remember { derivedStateOf { lastCharactersEvaluator.keyboard.rowCount } }
     }
 
     @Composable
