@@ -178,22 +178,52 @@ class ExtensionImportValidationTest :
             "intent://private-action".safeMaintainerWebUrlOrNull() shouldBe null
         }
 
-        test("requires bounded nonblank component fields") {
-            val extension = themeExtension(
-                themes = listOf(
-                    ThemeExtensionComponentImpl(
-                        id = "Floris-Day",
-                        label = " ",
-                        authors = listOf(""),
+        test("rejects malformed component IDs and blank fields") {
+            val fieldErrors = setOf(
+                ExtensionImportValidationError.COMPONENT_ID,
+                ExtensionImportValidationError.COMPONENT_LABEL,
+            )
+            val descriptors = listOf(
+                themeExtension(
+                    themes = listOf(
+                        ThemeExtensionComponentImpl("Floris-Day", " ", listOf("")),
                     ),
-                ),
+                ) to fieldErrors + ExtensionImportValidationError.COMPONENT_AUTHORS,
+                KeyboardExtension(
+                    meta = validMeta(),
+                    composers = listOf(WithRules("invalid id", " ", emptyMap())),
+                ) to fieldErrors,
+                KeyboardExtension(
+                    meta = validMeta(),
+                    currencySets = listOf(
+                        CurrencySet("invalid id", " ", listOf(TextKeyData(code = '$'.code, label = "$"))),
+                    ),
+                ) to fieldErrors,
             )
 
-            val result = extension.validateForImport()
+            descriptors.forEach { (extension, expectedErrors) ->
+                extension.validateForImport().errors shouldBe expectedErrors
+            }
+        }
 
-            result.errors shouldContain ExtensionImportValidationError.COMPONENT_ID
-            result.errors shouldContain ExtensionImportValidationError.COMPONENT_LABEL
-            result.errors shouldContain ExtensionImportValidationError.COMPONENT_AUTHORS
+        test("bounds composer and currency component groups") {
+            val slots = listOf(TextKeyData(code = '$'.code, label = "$"))
+            val limitError = setOf(ExtensionImportValidationError.COMPONENT_LIMIT)
+            for (count in listOf(512, 513)) {
+                val expectedErrors = if (count == 512) emptySet() else limitError
+                listOf(
+                    KeyboardExtension(
+                        meta = validMeta(),
+                        composers = List(count) { WithRules("c$it", "Composer", emptyMap()) },
+                    ),
+                    KeyboardExtension(
+                        meta = validMeta(),
+                        currencySets = List(count) { CurrencySet("c$it", "Currency", slots) },
+                    ),
+                ).forEach { extension ->
+                    extension.validateForImport().errors shouldBe expectedErrors
+                }
+            }
         }
 
         test("accepts bundled language IDs with uppercase locale segments") {
@@ -260,8 +290,11 @@ class ExtensionImportValidationTest :
         }
 
         test("keyboard component uniqueness is scoped by component type") {
+            val slots = listOf(TextKeyData(code = '$'.code, label = "$"))
             val valid = KeyboardExtension(
                 meta = validMeta(),
+                composers = listOf(WithRules("pt-BR", "Composer", emptyMap())),
+                currencySets = listOf(CurrencySet("pt-BR", "Currency", slots)),
                 punctuationRules = listOf(
                     PunctuationRule(
                         id = "pt-BR",
@@ -276,16 +309,24 @@ class ExtensionImportValidationTest :
                     PopupMappingComponent("pt-BR", authors = listOf("maintainer")),
                 ),
             )
-            val duplicate = valid.copy(
-                popupMappings = listOf(
-                    PopupMappingComponent("pt-BR", authors = listOf("maintainer")),
-                    PopupMappingComponent("pt-BR", authors = listOf("maintainer")),
+            val duplicates = listOf(
+                valid.copy(composers = valid.composers + WithRules("pt-BR", "Other composer", emptyMap())),
+                valid.copy(currencySets = valid.currencySets + CurrencySet("pt-BR", "Other currency", slots)),
+                valid.copy(
+                    popupMappings = valid.popupMappings + PopupMappingComponent(
+                        "pt-BR",
+                        label = "Other popup",
+                        authors = listOf("maintainer"),
+                    ),
                 ),
             )
 
             valid.validateForImport().isValid shouldBe true
-            duplicate.validateForImport().errors shouldContain
-                ExtensionImportValidationError.DUPLICATE_COMPONENT_ID
+            duplicates.forEach { extension ->
+                extension.validateForImport().errors shouldBe setOf(
+                    ExtensionImportValidationError.DUPLICATE_COMPONENT_ID,
+                )
+            }
         }
 
         test("bounds composer rule count and aggregate work") {
