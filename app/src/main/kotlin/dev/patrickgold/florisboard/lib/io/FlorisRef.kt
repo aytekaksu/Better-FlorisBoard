@@ -19,31 +19,12 @@ package dev.patrickgold.florisboard.lib.io
 import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
-import dev.patrickgold.jetpref.datastore.model.PreferenceSerializer
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
 import java.io.File
 
 /**
- * A universal resource reference, capable to point to destinations within
- * FlorisBoard's app user interface screens, APK assets, cache and internal
- * storage, external resources provided to FlorisBoard via content URIs, as
- * well as hyperlinks.
- *
- * [android.net.Uri] is used as the underlying implementation for storing the
- * reference and also handles parsing of raw string URIs.
- *
- * The reference is immutable. If a change is required, consider constructing
- * a new reference with the provided builder methods.
- *
- * @property uri The underlying URI, which can be used for external references
- *  to pass along to the system.
+ * Immutable [Uri] reference for app resources, content URIs, and links.
+ * Local paths and sub-reference names are already URI-encoded.
  */
-@Serializable(with = FlorisRef.Serializer::class)
 @JvmInline
 value class FlorisRef private constructor(val uri: Uri) {
     companion object {
@@ -61,14 +42,8 @@ value class FlorisRef private constructor(val uri: Uri) {
         private const val URL_HTTPS_PREFIX = "https://"
         private const val URL_MAILTO_PREFIX = "mailto:"
 
-        /** Points to an app screen. [path] may include encoded route arguments. */
-        fun app(path: String) = local(AUTHORITY_APP_UI, path)
-
         /** Points to a resource in the APK assets directory. */
         fun assets(path: String) = local(AUTHORITY_ASSETS, path)
-
-        /** Points to a resource in the app cache. */
-        fun cache(path: String) = local(AUTHORITY_CACHE, path)
 
         /** Points to a resource in the app's internal storage. */
         fun internal(path: String) = local(AUTHORITY_INTERNAL, path)
@@ -80,164 +55,71 @@ value class FlorisRef private constructor(val uri: Uri) {
             FlorisRef(build())
         }
 
-        /**
-         * Constructs a new reference from given [uri], this can point to any
-         * destination, regardless of within FlorisBoard or not.
-         *
-         * @param uri The destination, denoted by a system URI format.
-         *
-         * @return The newly constructed reference.
-         */
+        /** Wraps any URI unchanged, including app/cache resources and content URIs. */
         fun from(uri: Uri) = FlorisRef(uri)
 
-        /**
-         * Constructs a new reference from given [str], this can point to any
-         * destination, regardless of within FlorisBoard or not.
-         *
-         * @param str An RFC 2396-compliant, encoded URI string.
-         *
-         * @return The newly constructed reference.
-         */
-        fun from(str: String): FlorisRef {
-            // First two entries only kept due to backwards-compatibility reasons.
-            return when {
-                str.startsWith("assets:") -> assets(str.substringAfter(':'))
-                str.startsWith("internal:") -> internal(str.substringAfter(':'))
-                else -> FlorisRef(str.toUri())
-            }
-        }
-
-        /**
-         * Constructs a new reference from given [url], which is a URL.
-         *
-         * @param url An URL pointing to a web page. If the scheme is missing, `https` is assumed.
-         *
-         * @return The newly constructed reference.
-         */
-        fun fromUrl(url: String): FlorisRef {
-            return FlorisRef(when {
+        /** Uses `https://` unless [url] starts with `http://`, `https://`, or `mailto:`. */
+        fun fromUrl(url: String): FlorisRef = FlorisRef(
+            when {
                 url.startsWith(URL_HTTP_PREFIX) ||
                     url.startsWith(URL_HTTPS_PREFIX) ||
                     url.startsWith(URL_MAILTO_PREFIX) -> url.toUri()
+
                 else -> "$URL_HTTPS_PREFIX$url".toUri().normalizeScheme()
-            })
-        }
+            },
+        )
     }
 
-    /**
-     * True if the scheme and authority indicates a reference to an app user interface
-     * component (screen), false otherwise.
-     */
+    /** Whether this is a `florisboard://app-ui` reference. */
     val isAppUi: Boolean
         get() = uri.scheme == SCHEME_FLORIS && uri.authority == AUTHORITY_APP_UI
 
-    /**
-     * True if the scheme and authority indicates a reference to a FlorisBoard APK asset
-     * resource, false otherwise.
-     */
+    /** Whether this is a `florisboard://assets` reference. */
     val isAssets: Boolean
         get() = uri.scheme == SCHEME_FLORIS && uri.authority == AUTHORITY_ASSETS
 
-    /**
-     * True if the scheme indicates a reference to a FlorisBoard cache
-     * resource, false otherwise.
-     */
+    /** Whether this is a `florisboard://cache` reference. */
     val isCache: Boolean
         get() = uri.scheme == SCHEME_FLORIS && uri.authority == AUTHORITY_CACHE
 
-    /**
-     * True if the scheme indicates a reference to a FlorisBoard internal
-     * storage resource, false otherwise.
-     */
+    /** Whether this is a `florisboard://internal` reference. */
     val isInternal: Boolean
         get() = uri.scheme == SCHEME_FLORIS && uri.authority == AUTHORITY_INTERNAL
 
-    /**
-     * Returns the scheme of this URI, or an empty string if no scheme is
-     * specified.
-     */
+    /** URI scheme, or an empty string when absent. */
     val scheme: String
         get() = uri.scheme ?: ""
 
-    /**
-     * Returns the authority of this URI, or an empty string if no authority
-     * is specified.
-     */
+    /** URI authority, or an empty string when absent. */
     val authority: String
         get() = uri.authority ?: ""
 
-    /**
-     * Returns the relative path of this URI, without a leading forward slash.
-     * Works only for assets, cache or internal references.
-     */
+    /** Decoded URI path with one leading slash removed, or an empty string when absent. */
     val relativePath: String
         get() = (uri.path ?: "").removePrefix("/")
 
     /**
-     * Returns the absolute path on the device file storage for this reference,
-     * depending on the [context] and the [scheme].
-     *
-     * @param context The context used to get the absolute path for various directories.
-     *
-     * @return The absolute path of this reference.
+     * Resolves cache/internal refs under the app's directories. App/asset refs keep their relative path;
+     * other refs use their URI path, or an empty string when absent.
      */
-    fun absolutePath(context: Context): String {
-        return when {
-            isAppUi || isAssets -> relativePath
-            isCache -> "${context.cacheDir.absolutePath}/$relativePath"
-            isInternal -> "${context.filesDir.absolutePath}/$relativePath"
-            else -> uri.path ?: ""
-        }
+    fun absolutePath(context: Context): String = when {
+        isAppUi || isAssets -> relativePath
+        isCache -> "${context.cacheDir.absolutePath}/$relativePath"
+        isInternal -> "${context.filesDir.absolutePath}/$relativePath"
+        else -> uri.path ?: ""
     }
 
-    /**
-     * Returns the absolute file on the device file storage for this reference,
-     * depending on the [context] and the [scheme].
-     *
-     * @param context The context used to get the absolute file for various directories.
-     *
-     * @return The absolute file of this reference.
-     */
-    fun absoluteFile(context: Context): File {
-        return File(absolutePath(context))
-    }
+    /** Wraps [absolutePath] in a [File]; app/asset paths remain relative. */
+    fun absoluteFile(context: Context): File = File(absolutePath(context))
 
-    /**
-     * Returns a new reference pointing to a sub directory(file with given [name].
-     *
-     * @param name The name of the sub file/directory.
-     *
-     * @return The newly constructed reference.
-     */
-    fun subRef(name: String) = from(uri.buildUpon().run {
-        appendEncodedPath(name)
-        build()
-    })
+    /** Appends the URI-encoded [name] and returns a new reference. */
+    fun subRef(name: String) = from(
+        uri.buildUpon().run {
+            appendEncodedPath(name)
+            build()
+        },
+    )
 
-    /**
-     * Returns the encoded string representation of this URI.
-     */
-    override fun toString(): String {
-        return uri.toString()
-    }
-
-    object Serializer : PreferenceSerializer<FlorisRef>, KSerializer<FlorisRef> {
-        override val descriptor = PrimitiveSerialDescriptor("FlorisRef", PrimitiveKind.STRING)
-
-        override fun serialize(value: FlorisRef): String {
-            return value.toString()
-        }
-
-        override fun serialize(encoder: Encoder, value: FlorisRef) {
-            encoder.encodeString(value.toString())
-        }
-
-        override fun deserialize(value: String): FlorisRef {
-            return from(value)
-        }
-
-        override fun deserialize(decoder: Decoder): FlorisRef {
-            return from(decoder.decodeString())
-        }
-    }
+    /** Encoded URI string. */
+    override fun toString(): String = uri.toString()
 }

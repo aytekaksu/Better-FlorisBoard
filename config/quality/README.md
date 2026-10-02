@@ -19,10 +19,10 @@ plugins/API/host core, backup archives, extension hardening, shared policies,
 cache janitors and import workspace retirement, and inherited Kotlin core,
 Android library, app platform, app Compose, and archive IO utilities. Both
 checks also cover the keyboard-height owner pair, `FlorisImeSizing` and `ImeWindow`.
-Spotless formats a narrower set of fork-owned code and selected tests; it does
-not cover the Android library package. Expand coverage deliberately to avoid a
-noisy repository-wide diff. Do not relax Detekt thresholds to hide old findings;
-regenerate its baseline only after reviewing each changed finding.
+Spotless formats fork-owned code, selected inherited owners such as `FlorisRef`,
+and tests. It does not cover the Android library package. Expand coverage
+deliberately to avoid a noisy repository-wide diff. Do not hide old Detekt findings
+by relaxing thresholds; regenerate its baseline only after reviewing each finding.
 
 ## Compose naming
 
