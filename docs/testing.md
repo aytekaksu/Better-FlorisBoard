@@ -43,14 +43,6 @@ write tests which merely execute code without proving behavior.
 - Golden/API snapshots are reviewed compatibility contracts, not files to
   regenerate automatically on every change.
 
-## Deterministic editor fixture
-
-The test `InputConnection` models text, selection, composing ranges, batch
-edits, delayed extracted updates, Unicode, key events, and selected failures.
-Use it for editor change plans before reaching for instrumentation. It must
-remain deterministic and must not silently emulate Android behavior it does
-not implement.
-
 ## Device-test policy
 
 Keep PR device coverage small and focused. A fake provider process should prove
