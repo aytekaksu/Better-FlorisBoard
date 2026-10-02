@@ -154,8 +154,8 @@ while the new one resolves.
 The Han language provider serializes refresh, query, and teardown work. It
 publishes only packs whose read-only database opened successfully, unloads
 removed or replaced packs, and never refreshes in response to a keystroke.
-The language-pack settings list renders its observed index snapshot directly,
-without resolving IDs against a separately refreshed index.
+Language-pack lists and theme selectors render their observed index snapshot,
+keeping each package's title and components together during refreshes.
 The locale chooser appends language-pack locales absent from Android's list,
 deduplicating by exact locale tag while keeping system entries first.
 The subtype editor saves unfinished drafts and validates required choices only
