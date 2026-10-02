@@ -25,6 +25,9 @@ import java.io.ByteArrayOutputStream
 import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
+import java.time.LocalDateTime
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 class BackupArchiveZipGateTest :
     FunSpec({
@@ -360,25 +363,32 @@ private data class ZipFixture(
 
 private fun classicFixture(vararg names: String, comment: ByteArray = byteArrayOf()): ZipFixture {
     val output = ByteArrayOutputStream()
-    val central = output.writeEntries(names.toList())
-    val endRecordOffset = output.size()
-    output.writeEndRecord(
-        entries = names.size,
-        centralDirectoryBytes = central.bytes.toLong(),
-        centralDirectoryOffset = central.offset.toLong(),
-        comment = comment,
-    )
+    ZipOutputStream(output).use { zip ->
+        names.forEach { name ->
+            zip.putNextEntry(ZipEntry(name).apply {
+                method = ZipEntry.STORED
+                size = 0
+                crc = 0
+                setTimeLocal(LocalDateTime.of(2000, 1, 1, 0, 0))
+            })
+            zip.closeEntry()
+        }
+    }
+    val bytes = output.toByteArray()
+    val endRecordOffset = bytes.size - END_RECORD_BYTES
+    bytes.putU16(endRecordOffset + END_COMMENT_LENGTH_OFFSET, comment.size)
     return ZipFixture(
-        bytes = output.toByteArray(),
-        centralDirectoryOffset = central.offset,
-        centralDirectoryBytes = central.bytes.toLong(),
+        bytes = bytes + comment,
+        centralDirectoryOffset = bytes.u32(endRecordOffset + END_CENTRAL_OFFSET_OFFSET).toInt(),
+        centralDirectoryBytes = bytes.u32(endRecordOffset + END_CENTRAL_SIZE_OFFSET),
         endRecordOffset = endRecordOffset,
     )
 }
 
 private fun zip64Fixture(vararg names: String): ZipFixture {
+    val classic = classicFixture(*names)
     val output = ByteArrayOutputStream()
-    val central = output.writeEntries(names.toList())
+    output.write(classic.bytes, 0, classic.endRecordOffset)
     val zip64RecordOffset = output.size()
     output.writeU32(ZIP64_END_RECORD_SIGNATURE)
     output.writeU64(ZIP64_END_RECORD_BODY_BYTES)
@@ -388,89 +398,27 @@ private fun zip64Fixture(vararg names: String): ZipFixture {
     output.writeU32(0)
     output.writeU64(names.size.toLong())
     output.writeU64(names.size.toLong())
-    output.writeU64(central.bytes.toLong())
-    output.writeU64(central.offset.toLong())
+    output.writeU64(classic.centralDirectoryBytes)
+    output.writeU64(classic.centralDirectoryOffset.toLong())
     val locatorOffset = output.size()
     output.writeU32(ZIP64_LOCATOR_SIGNATURE)
     output.writeU32(0)
     output.writeU64(zip64RecordOffset.toLong())
     output.writeU32(1)
     val endRecordOffset = output.size()
-    output.writeEndRecord(
-        entries = UINT16_MAX,
-        centralDirectoryBytes = UINT32_MAX,
-        centralDirectoryOffset = UINT32_MAX,
+    output.write(
+        classic.bytes.copyOfRange(classic.endRecordOffset, classic.bytes.size)
+            .patchedU16(END_ENTRIES_ON_DISK_OFFSET, UINT16_MAX)
+            .patchedU16(END_TOTAL_ENTRIES_OFFSET, UINT16_MAX)
+            .patchedU32(END_CENTRAL_SIZE_OFFSET, UINT32_MAX)
+            .patchedU32(END_CENTRAL_OFFSET_OFFSET, UINT32_MAX),
     )
-    return ZipFixture(
+    return classic.copy(
         bytes = output.toByteArray(),
-        centralDirectoryOffset = central.offset,
-        centralDirectoryBytes = central.bytes.toLong(),
         zip64RecordOffset = zip64RecordOffset,
         locatorOffset = locatorOffset,
         endRecordOffset = endRecordOffset,
     )
-}
-
-private data class CentralDirectory(val offset: Int, val bytes: Int)
-
-private fun ByteArrayOutputStream.writeEntries(names: List<String>): CentralDirectory {
-    val localOffsets = names.map { name ->
-        val nameBytes = name.encodeToByteArray()
-        val localOffset = size()
-        writeU32(LOCAL_HEADER_SIGNATURE)
-        writeU16(CLASSIC_VERSION)
-        writeU16(0)
-        writeU16(STORED_METHOD)
-        writeU16(0)
-        writeU16(0)
-        writeU32(0)
-        writeU32(0)
-        writeU32(0)
-        writeU16(nameBytes.size)
-        writeU16(0)
-        write(nameBytes)
-        localOffset
-    }
-    val centralOffset = size()
-    names.forEachIndexed { index, name ->
-        val nameBytes = name.encodeToByteArray()
-        writeU32(CENTRAL_HEADER_SIGNATURE)
-        writeU16(CLASSIC_VERSION)
-        writeU16(CLASSIC_VERSION)
-        writeU16(0)
-        writeU16(STORED_METHOD)
-        writeU16(0)
-        writeU16(0)
-        writeU32(0)
-        writeU32(0)
-        writeU32(0)
-        writeU16(nameBytes.size)
-        writeU16(0)
-        writeU16(0)
-        writeU16(0)
-        writeU16(0)
-        writeU32(0)
-        writeU32(localOffsets[index].toLong())
-        write(nameBytes)
-    }
-    return CentralDirectory(offset = centralOffset, bytes = size() - centralOffset)
-}
-
-private fun ByteArrayOutputStream.writeEndRecord(
-    entries: Int,
-    centralDirectoryBytes: Long,
-    centralDirectoryOffset: Long,
-    comment: ByteArray = byteArrayOf(),
-) {
-    writeU32(END_RECORD_SIGNATURE)
-    writeU16(0)
-    writeU16(0)
-    writeU16(entries)
-    writeU16(entries)
-    writeU32(centralDirectoryBytes)
-    writeU32(centralDirectoryOffset)
-    writeU16(comment.size)
-    write(comment)
 }
 
 private fun ByteArrayOutputStream.writeU16(value: Int) {
@@ -512,16 +460,12 @@ private const val TEST_MAX_NAME_BYTES = 128
 private const val TEST_MAX_EXTRA_BYTES = 128
 private const val TEST_MAX_COMMENT_BYTES = 128
 
-private const val LOCAL_HEADER_SIGNATURE = 0x04034b50L
-private const val CENTRAL_HEADER_SIGNATURE = 0x02014b50L
-private const val END_RECORD_SIGNATURE = 0x06054b50L
 private const val ZIP64_END_RECORD_SIGNATURE = 0x06064b50L
 private const val ZIP64_LOCATOR_SIGNATURE = 0x07064b50L
 
-private const val CLASSIC_VERSION = 20
 private const val ZIP64_VERSION = 45
-private const val STORED_METHOD = 0
 private const val CENTRAL_HEADER_BYTES = 46L
+private const val END_RECORD_BYTES = 22
 private const val CENTRAL_COMPRESSED_SIZE_OFFSET = 20
 private const val CENTRAL_UNCOMPRESSED_SIZE_OFFSET = 24
 private const val ZIP64_END_RECORD_BODY_BYTES = 44L
@@ -534,6 +478,7 @@ private const val END_ENTRIES_ON_DISK_OFFSET = 8
 private const val END_TOTAL_ENTRIES_OFFSET = 10
 private const val END_CENTRAL_SIZE_OFFSET = 12
 private const val END_CENTRAL_OFFSET_OFFSET = 16
+private const val END_COMMENT_LENGTH_OFFSET = 20
 private const val CENTRAL_NAME_LENGTH_OFFSET = 28
 private const val CENTRAL_EXTRA_LENGTH_OFFSET = 30
 private const val CENTRAL_DISK_NUMBER_OFFSET = 34
