@@ -64,6 +64,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -405,7 +406,7 @@ private fun EmojiKey(
     onHistoryAction: () -> Unit,
 ) {
     val inputFeedbackController = LocalInputFeedbackController.current
-    val base = emojiSet.base(withSkinTone = preferredSkinTone)
+    val base by rememberUpdatedState(emojiSet.base(withSkinTone = preferredSkinTone))
     val variations = emojiSet.variations(excluding = base)
     var showVariantsBox by remember { mutableStateOf(false) }
 
@@ -417,9 +418,7 @@ private fun EmojiKey(
                     onPress = {
                         inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
                     },
-                    onTap = {
-                        onEmojiInput(base)
-                    },
+                    onTap = { onEmojiInput(base) },
                     onLongPress = {
                         inputFeedbackController.keyLongPress(TextKeyData.UNSPECIFIED)
                         if (variations.isNotEmpty() || isPinned || isRecent) {

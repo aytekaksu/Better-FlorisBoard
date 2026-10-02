@@ -20,6 +20,9 @@ Variation popups keep every supported choice except the emoji shown on the
 key. Choices wrap after six columns, scroll when taller than four rows, and
 stay within the window. Mixed skin-tone choices remain available.
 
+A key commits its displayed skin tone after a live preference change. The tap
+handler reads the current choice without restarting an active gesture.
+
 The palette's root list uses the glyphs and categories from `en.txt` but drops
 names and keywords as the old generated `root.txt` did. The root asset is no
 longer stored twice. A golden hash test guards the exact original root rows.
@@ -35,3 +38,7 @@ plain-text fallback, and replacement-strategy changes:
 `ANDROID_SERIAL=<serial> ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.patrickgold.florisboard.ime.media.emoji.EmojiTextAndroidTest`.
 Its bundled metadata/font dependency is test-only; the app still uses the
 device's default provider rather than shipping an emoji font.
+
+The real-IME tone and cancelled-press regression is
+`TextKeyboardTouchE2eTest#liveEmojiToneCommitsTheDisplayedChoice`. Run it with
+`ANDROID_SERIAL=<serial> ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.patrickgold.florisboard.ime.text.keyboard.TextKeyboardTouchE2eTest#liveEmojiToneCommitsTheDisplayedChoice`.
