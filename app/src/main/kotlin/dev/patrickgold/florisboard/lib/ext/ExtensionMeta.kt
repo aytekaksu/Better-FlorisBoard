@@ -20,86 +20,38 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonNames
 
-/**
- * Class for an `extension.json` file, which serves as a configuration of an extension
- * package for FlorisBoard (`.flex` archive files).
- *
- * Files which are always read (case sensitive):
- *  - extension.json (this file)
- *
- * Files which are always read (case-insensitive, can have any extension)
- *  - README
- *  - CHANGES / CHANGELOG / HISTORY
- *  - LICENSE / LICENSES
- *
- * Should multiple files exist which match the regex, always the first match will be used.
- */
+/** Metadata in `extension.json` for bundled asset directories and installed `.flex` packages. */
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class ExtensionMeta(
-    /**
-     * The unique identifier of this extension, adhering to
-     * [Java™ package name standards](https://docs.oracle.com/javase/tutorial/java/package/namingpkgs.html)
-     * and this regex: `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$`
-     */
+    /** Package ID; the import validator checks its syntax and length. */
     val id: String,
 
-    /**
-     * The version of this extension.
-     */
     val version: String,
 
-    /**
-     * The title label of the extension. This title will be shown to the user in the Settings UI.
-     *
-     * Recommended limit: 50 characters
-     */
+    /** Settings title. Recommended length: up to 50 characters. */
     val title: String,
 
-    /**
-     * The short description of this extension, will be shown as a summary text in the package list, as
-     * well as the first paragraph of the expanded description.
-     *
-     * Recommended limit: 80 characters
-     */
+    /** Package summary. Recommended length: up to 80 characters. */
     val description: String? = null,
 
-    /**
-     * The keywords for this extension. Useful for searching an extension in the extension store.
-     *
-     * Recommended limit: 30 characters / keyword
-     */
+    /** Package keywords, shown in extension details. Recommended length: up to 30 characters each. */
     val keywords: List<String>? = null,
 
-    /**
-     * A link to the homepage of this extension or author.
-     */
+    /** Extension or author's homepage. */
     val homepage: String? = null,
 
-    /**
-     * A link to this extension's issue tracker.
-     */
+    /** Extension issue tracker. */
     val issueTracker: String? = null,
 
     /**
-     * A list of maintainers who (actively) worked on putting the content together for this extension. Note that
-     * the actual author of each file within the extension (theme, layout, e.g.) may be different and is specified
-     * in the file meta itself.
-     *
-     * Format: `Your Name <email@address.com> (www.maintainer.com)`
-     *  - Name is required
-     *  - Email is optional, if included must be within the `<` and `>` symbols
-     *  - URL is optional, if included must be within the `(` and `)` symbols
-     *
-     * Order of the above fields is important for parsing.
+     * Package maintainers, separate from each component's authors.
+     * Format: `Name <email> (URL)`. Name is required; email and URL are optional, in that order.
      */
     @JsonNames("authors")
     val maintainers: List<ExtensionMaintainer>,
 
-    /**
-     * A valid license identifier, according to the [SPDX license list](https://spdx.org/licenses/).
-     * Use an SPDX license expression if this extension has multiple licenses.
-     */
+    /** [SPDX](https://spdx.org/licenses/) license ID, or an expression for multiple licenses. */
     val license: String,
 ) {
     fun getUpdateJsonPair(): String {

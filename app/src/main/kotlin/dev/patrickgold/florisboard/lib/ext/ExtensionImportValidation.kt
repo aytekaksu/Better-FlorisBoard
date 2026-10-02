@@ -412,16 +412,20 @@ private fun validateKeyboardComponentGroups(
     extension: KeyboardExtension,
     errors: MutableSet<ExtensionImportValidationError>,
 ) {
-    validateSimpleComponentGroup(
-        extension.composers.map { it.id to it.label },
+    validateComponentGroup(
+        extension.composers,
         KeyboardComponentIdRegex,
         errors,
+        id = { it.id },
+        label = { it.label },
     )
     validateComposerRules(extension, errors)
-    validateSimpleComponentGroup(
-        extension.currencySets.map { it.id to it.label },
+    validateComponentGroup(
+        extension.currencySets,
         KeyboardComponentIdRegex,
         errors,
+        id = { it.id },
+        label = { it.label },
     )
     validateCurrencySets(extension, errors)
     validateComponentGroup(
@@ -649,53 +653,46 @@ private fun validateComponentGroup(
     components: List<ExtensionComponent>,
     idRegex: Regex,
     errors: MutableSet<ExtensionImportValidationError>,
+) = validateComponentGroup(
+    components,
+    idRegex,
+    errors,
+    id = ExtensionComponent::id,
+    label = ExtensionComponent::label,
+    authors = ExtensionComponent::authors,
+)
+
+private fun <T> validateComponentGroup(
+    components: List<T>,
+    idRegex: Regex,
+    errors: MutableSet<ExtensionImportValidationError>,
+    id: (T) -> String,
+    label: (T) -> String,
+    authors: ((T) -> List<String>)? = null,
 ) {
     if (components.size > ImportLimits.COMPONENTS) {
         errors += ExtensionImportValidationError.COMPONENT_LIMIT
     }
     if (
-        components.any {
-            it.id.length > ImportLimits.COMPONENT_ID || !idRegex.matches(it.id)
+        components.any { component ->
+            id(component).length > ImportLimits.COMPONENT_ID || !idRegex.matches(id(component))
         }
     ) {
         errors += ExtensionImportValidationError.COMPONENT_ID
     }
-    if (components.any { !it.label.isBoundedSingleLine(ImportLimits.COMPONENT_LABEL) }) {
+    if (components.any { !label(it).isBoundedSingleLine(ImportLimits.COMPONENT_LABEL) }) {
         errors += ExtensionImportValidationError.COMPONENT_LABEL
     }
     if (
-        components.any { component ->
-            component.authors.isEmpty() ||
-                component.authors.size > ImportLimits.AUTHORS ||
-                component.authors.any { !it.isBoundedSingleLine(ImportLimits.AUTHOR) }
+        authors != null && components.any { component ->
+            val names = authors(component)
+            names.isEmpty() || names.size > ImportLimits.AUTHORS ||
+                names.any { !it.isBoundedSingleLine(ImportLimits.AUTHOR) }
         }
     ) {
         errors += ExtensionImportValidationError.COMPONENT_AUTHORS
     }
-    if (components.map(ExtensionComponent::id).distinct().size != components.size) {
-        errors += ExtensionImportValidationError.DUPLICATE_COMPONENT_ID
-    }
-}
-
-private fun validateSimpleComponentGroup(
-    components: List<Pair<String, String>>,
-    idRegex: Regex,
-    errors: MutableSet<ExtensionImportValidationError>,
-) {
-    if (components.size > ImportLimits.COMPONENTS) {
-        errors += ExtensionImportValidationError.COMPONENT_LIMIT
-    }
-    if (
-        components.any { (id) ->
-            id.length > ImportLimits.COMPONENT_ID || !idRegex.matches(id)
-        }
-    ) {
-        errors += ExtensionImportValidationError.COMPONENT_ID
-    }
-    if (components.any { (_, label) -> !label.isBoundedSingleLine(ImportLimits.COMPONENT_LABEL) }) {
-        errors += ExtensionImportValidationError.COMPONENT_LABEL
-    }
-    if (components.map(Pair<String, String>::first).distinct().size != components.size) {
+    if (components.map(id).distinct().size != components.size) {
         errors += ExtensionImportValidationError.DUPLICATE_COMPONENT_ID
     }
 }
