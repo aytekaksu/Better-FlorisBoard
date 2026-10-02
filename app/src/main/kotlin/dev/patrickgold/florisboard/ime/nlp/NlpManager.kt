@@ -26,7 +26,6 @@ import dev.patrickgold.florisboard.ime.editor.EditorComposingPolicy
 import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSuggestionProvider
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
-import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginSuggestionBatch
 import dev.patrickgold.florisboard.lib.util.NetworkUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -371,14 +370,6 @@ class NlpManager internal constructor(
         }
     }
 
-    private suspend fun getSuggestionProvider(subtype: Subtype): SuggestionProvider {
-        return if (prefs.suggestion.autocorrectPluginComponent.get().isNotBlank()) {
-            autocorrectPluginManager
-        } else {
-            getBuiltInSuggestionProvider(subtype)
-        }
-    }
-
     override fun finishAutocorrectSession() {
         autocorrectPluginManager.finishSession()
         clearSuggestions()
@@ -430,45 +421,28 @@ class NlpManager internal constructor(
                 }
                 else -> emptyList()
             }
+            suspend fun builtInSuggestions() = getBuiltInSuggestionProvider(subtype).suggest(
+                subtype = subtype,
+                content = content,
+                maxCandidateCount = 8,
+                allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
+                isPrivateSession = isIncognitoMode(),
+            )
             val suggestions = when {
                 emojiSuggestions.isNotEmpty() && prefs.emoji.suggestionType.get().prefix.isNotEmpty() -> {
                     emptyList()
                 }
+                prefs.suggestion.autocorrectPluginComponent.get().isBlank() -> builtInSuggestions()
                 else -> {
-                    val provider = getSuggestionProvider(subtype)
-                    val externalResult = if (provider === autocorrectPluginManager) {
-                        autocorrectPluginManager.suggestWithStatus(
-                            subtype = subtype,
-                            content = content,
-                            maxCandidateCount = AutocorrectPluginContract.MAX_CANDIDATES,
-                            allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                            isPrivateSession = isIncognitoMode(),
-                            requestEditorGeneration = requestEditorGeneration,
-                        )
-                    } else {
-                        AutocorrectPluginSuggestionBatch(
-                            candidates = provider.suggest(
-                                subtype = subtype,
-                                content = content,
-                                maxCandidateCount = 8,
-                                allowPossiblyOffensive =
-                                    !prefs.suggestion.blockPossiblyOffensive.get(),
-                                isPrivateSession = isIncognitoMode(),
-                            ),
-                            handled = true,
-                        )
-                    }
-                    if (!externalResult.handled) {
-                        getBuiltInSuggestionProvider(subtype).suggest(
-                            subtype = subtype,
-                            content = content,
-                            maxCandidateCount = 8,
-                            allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                            isPrivateSession = isIncognitoMode(),
-                        )
-                    } else {
-                        externalResult.candidates
-                    }
+                    val externalResult = autocorrectPluginManager.suggestWithStatus(
+                        subtype = subtype,
+                        content = content,
+                        maxCandidateCount = AutocorrectPluginContract.MAX_CANDIDATES,
+                        allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
+                        isPrivateSession = isIncognitoMode(),
+                        requestEditorGeneration = requestEditorGeneration,
+                    )
+                    if (externalResult.handled) externalResult.candidates else builtInSuggestions()
                 }
             }
             candidateRequestRevision.publishIfCurrent(revision) {
