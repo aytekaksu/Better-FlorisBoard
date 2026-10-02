@@ -323,10 +323,8 @@ internal fun normalizeArchiveMediaMimeTypes(mimeTypes: List<String>): List<Strin
     }
 
     var totalLength = 0L
-    var hasConcreteImage = false
-    var hasConcreteVideo = false
-    var hasImageWildcard = false
-    var hasVideoWildcard = false
+    var family: String? = null
+    var hasConcreteFamily = false
     val accepted = linkedSetOf<String>()
     for (rawCandidate in mimeTypes) {
         if (rawCandidate.length > MAX_ARCHIVE_MEDIA_MIME_CANDIDATE_LENGTH) return null
@@ -334,55 +332,31 @@ internal fun normalizeArchiveMediaMimeTypes(mimeTypes: List<String>): List<Strin
         if (totalLength > MAX_ARCHIVE_MEDIA_MIME_TOTAL_LENGTH) return null
 
         val candidate = rawCandidate.trim().lowercase()
-        if ('*' in candidate) {
-            when (candidate) {
-                IMAGE_MIME_WILDCARD -> {
-                    hasImageWildcard = true
-                    accepted += candidate
-                }
-                VIDEO_MIME_WILDCARD -> {
-                    hasVideoWildcard = true
-                    accepted += candidate
-                }
-                else -> return null
-            }
-            if ((hasConcreteImage || hasImageWildcard) &&
-                (hasConcreteVideo || hasVideoWildcard)
-            ) {
+        val wildcard = '*' in candidate
+        if (wildcard) {
+            if (candidate != IMAGE_MIME_WILDCARD && candidate != VIDEO_MIME_WILDCARD) {
                 return null
             }
-            continue
-        }
-        if (candidate.length > ClipboardFileStorage.MAX_MEDIA_MIME_TYPE_LENGTH ||
+        } else if (candidate.length > ClipboardFileStorage.MAX_MEDIA_MIME_TYPE_LENGTH ||
             !MIME_TYPE.matches(candidate)
         ) {
             continue
         }
-        when {
-            candidate.startsWith(IMAGE_MIME_PREFIX) -> hasConcreteImage = true
-            candidate.startsWith(VIDEO_MIME_PREFIX) -> hasConcreteVideo = true
+        val candidateFamily = when {
+            candidate.startsWith(IMAGE_MIME_PREFIX) -> IMAGE_MIME_PREFIX
+            candidate.startsWith(VIDEO_MIME_PREFIX) -> VIDEO_MIME_PREFIX
+            else -> null
         }
-        if ((hasConcreteImage || hasImageWildcard) &&
-            (hasConcreteVideo || hasVideoWildcard)
-        ) {
-            return null
+        if (candidateFamily != null) {
+            if (family != null && family != candidateFamily) return null
+            family = candidateFamily
+            if (!wildcard) hasConcreteFamily = true
         }
         accepted += candidate
     }
 
-    val familyPrefix = when {
-        (hasConcreteImage || hasImageWildcard) && !hasConcreteVideo && !hasVideoWildcard ->
-            IMAGE_MIME_PREFIX
-        (hasConcreteVideo || hasVideoWildcard) && !hasConcreteImage && !hasImageWildcard ->
-            VIDEO_MIME_PREFIX
-        else -> return null
-    }
+    val familyPrefix = family ?: return null
     val familyWildcard = "$familyPrefix*"
-    val hasConcreteFamily = when (familyPrefix) {
-        IMAGE_MIME_PREFIX -> hasConcreteImage
-        VIDEO_MIME_PREFIX -> hasConcreteVideo
-        else -> false
-    }
     val canonical = buildList {
         for (candidate in accepted) {
             when {
