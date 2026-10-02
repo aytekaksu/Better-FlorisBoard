@@ -130,7 +130,7 @@ fun UserDictionaryScreen(type: UserDictionaryType, routeEntry: NavBackStackEntry
     )
 
     val exportDictionary = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument(),
+        contract = ActivityResultContracts.CreateDocument("*/*"),
         onResult = { uri ->
             if (uri != null) model.exportTo(uri)
         },
