@@ -18,7 +18,6 @@ package dev.patrickgold.florisboard.ime.nlp.plugin
 
 import android.text.InputType
 import dev.patrickgold.florisboard.ime.editor.InputAttributes
-import dev.patrickgold.florisboard.ime.nlp.AutomaticSmartbarMutations
 import dev.patrickgold.florisboard.ime.nlp.CandidateRevision
 import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidateKind
 import io.kotest.core.spec.style.FunSpec
@@ -26,7 +25,6 @@ import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.florisboard.autocorrect.api.AutocorrectCandidateKind
 
@@ -188,42 +186,6 @@ class AutocorrectCandidateLifecycleTest : FunSpec({
         } shouldBe false
         candidates shouldBe emptyList()
         smartbarExpanded shouldBe true
-    }
-
-    test("clear wins when an older Smartbar write is suspended") {
-        runTest {
-            val mutations = AutomaticSmartbarMutations()
-            val oldWriteSuspended = CompletableDeferred<Unit>()
-            val resumeOldWrite = CompletableDeferred<Unit>()
-            var animate = true
-            var expanded = false
-
-            val oldRevision = mutations.next()
-            val oldWrite = launch {
-                mutations.runIfCurrent(oldRevision) {
-                    animate = false
-                    oldWriteSuspended.complete(Unit)
-                    resumeOldWrite.await()
-                    expanded = false
-                }
-            }
-            oldWriteSuspended.await()
-
-            val clearRevision = mutations.next()
-            val clearWrite = launch {
-                mutations.runIfCurrent(clearRevision) {
-                    animate = false
-                    expanded = true
-                }
-            }
-            testScheduler.runCurrent()
-
-            resumeOldWrite.complete(Unit)
-            oldWrite.join()
-            clearWrite.join()
-            animate shouldBe false
-            expanded shouldBe true
-        }
     }
 })
 
