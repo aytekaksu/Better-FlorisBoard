@@ -22,17 +22,22 @@ import android.app.Instrumentation
 import android.content.Intent
 import android.content.res.Resources
 import android.graphics.PointF
+import android.graphics.Rect
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
+import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.TextView
 import androidx.compose.ui.unit.IntRect
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.emoji2.text.EmojiCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.findViewTreeLifecycleOwner
@@ -51,6 +56,8 @@ import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.core.SubtypeJsonConfig
 import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
+import dev.patrickgold.florisboard.ime.media.emoji.EmojiSkinTone
+import dev.patrickgold.florisboard.ime.media.emoji.FlorisEmojiCompat
 import dev.patrickgold.florisboard.ime.nlp.NlpInlineAutofill
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarMotionMode
@@ -157,6 +164,74 @@ class TextKeyboardTouchE2eTest {
                     prefs.keyboard.windowConfig.get()[formFactor] == original
             }
             runBlocking { prefs.keyboard.windowConfig.set(originalStored).getOrThrow() }
+        }
+    }
+
+    @Test
+    fun liveEmojiToneCommitsTheDisplayedChoice() {
+        val prefs by FlorisPreferenceStore
+        val keyboardManager by instrumentation.targetContext.keyboardManager()
+        val previousTone = prefs.emoji.preferredSkinTone.get()
+        val previousHistory = prefs.emoji.historyEnabled.get()
+        val previousMode = keyboardManager.activeState.imeUiMode
+        var heldPoint: PointF? = null
+        var heldDownTime = 0L
+        val testResult = runCatching {
+            waitUntil("emoji font did not reach a stable loading state") {
+                !EmojiCompat.isConfigured() || when (EmojiCompat.get().loadState) {
+                    EmojiCompat.LOAD_STATE_SUCCEEDED -> FlorisEmojiCompat.instanceFlow.value === EmojiCompat.get()
+                    EmojiCompat.LOAD_STATE_FAILED -> true
+                    else -> false
+                }
+            }
+            val loadedFont = FlorisEmojiCompat.instanceFlow.value
+            runBlocking {
+                prefs.emoji.historyEnabled.set(false).getOrThrow()
+                prefs.emoji.preferredSkinTone.set(EmojiSkinTone.DEFAULT).getOrThrow()
+            }
+            instrumentation.runOnMainSync { keyboardManager.activeState.imeUiMode = ImeUiMode.MEDIA }
+            val smiley = waitForEmojiPoint("😀")
+            val rowEnd = listOf("😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃")
+                .mapNotNull(::visibleEmojiPoint).filter { abs(it.y - smiley.y) < 1f }.maxBy { it.x }
+            // Reach People/Body through the real pager, staying inside the visible grid row.
+            val swipeTime = SystemClock.uptimeMillis()
+            val startX = rowEnd.x
+            val endX = smiley.x
+            inject(MotionEvent.ACTION_DOWN, startX, smiley.y, swipeTime, 0, waitForFinish = true)
+            repeat(6) { index ->
+                val x = startX + (endX - startX) * (index + 1) / 6
+                inject(MotionEvent.ACTION_MOVE, x, smiley.y, swipeTime, 0, waitForFinish = true)
+            }
+            inject(MotionEvent.ACTION_UP, endX, smiley.y, swipeTime, 0, waitForFinish = true)
+            tap(waitForEmojiPoint("👋"))
+            waitForText("👋") // Start the key's lazy gesture handler before changing its preference.
+
+            runBlocking { prefs.emoji.preferredSkinTone.set(EmojiSkinTone.LIGHT_SKIN_TONE).getOrThrow() }
+            val lightPoint = waitForEmojiPoint("👋🏻")
+            assertTrue("emoji font changed during the gesture fixture", loadedFont === FlorisEmojiCompat.instanceFlow.value)
+            heldDownTime = SystemClock.uptimeMillis()
+            heldPoint = lightPoint
+            inject(MotionEvent.ACTION_DOWN, lightPoint.x, lightPoint.y, heldDownTime, 0, waitForFinish = true)
+            inject(MotionEvent.ACTION_CANCEL, lightPoint.x, lightPoint.y, heldDownTime, 0, waitForFinish = true)
+            heldPoint = null
+            instrumentation.waitForIdleSync()
+            assertEquals("cancelled emoji press must not insert text", "👋", readEditorText())
+            tap(lightPoint)
+            waitUntil("emoji tap did not reach the editor") { readEditorText().length > "👋".length }
+            assertEquals("tap must commit the displayed emoji", "👋👋🏻", readEditorText())
+        }
+        val cleanup = listOf(
+            runCatching {
+                heldPoint?.let { inject(MotionEvent.ACTION_CANCEL, it.x, it.y, heldDownTime, 0, waitForFinish = true) }
+            },
+            runCatching { instrumentation.runOnMainSync { keyboardManager.activeState.imeUiMode = previousMode } },
+            runCatching { runBlocking { prefs.emoji.preferredSkinTone.set(previousTone).getOrThrow() } },
+            runCatching { runBlocking { prefs.emoji.historyEnabled.set(previousHistory).getOrThrow() } },
+        )
+        val failure = testResult.exceptionOrNull() ?: cleanup.firstNotNullOfOrNull { it.exceptionOrNull() }
+        if (failure != null) {
+            cleanup.mapNotNull { it.exceptionOrNull() }.filter { it !== failure }.forEach(failure::addSuppressed)
+            throw failure
         }
     }
 
@@ -1441,6 +1516,44 @@ class TextKeyboardTouchE2eTest {
             waitForFinish = true,
         )
         instrumentation.waitForIdleSync()
+    }
+
+    private fun waitForEmojiPoint(text: String): PointF {
+        var previous: PointF? = null
+        var stablePolls = 0
+        waitUntil("emoji glyph did not become visible and stable") {
+            val point = visibleEmojiPoint(text)
+            stablePolls = if (point != null && point == previous) stablePolls + 1 else 0
+            previous = point
+            stablePolls >= REQUIRED_STABLE_LAYOUT_POLLS
+        }
+        return requireNotNull(previous)
+    }
+
+    private fun visibleEmojiPoint(text: String): PointF? {
+        var point: PointF? = null
+        instrumentation.runOnMainSync {
+            val root = FlorisImeService.currentImeRootViewOrNull() ?: return@runOnMainSync
+            val rootBounds = Rect()
+            if (!root.getGlobalVisibleRect(rootBounds)) return@runOnMainSync
+            fun find(view: View): PointF? {
+                if (view is TextView && view.isShown && view.text.toString() == text) {
+                    val bounds = Rect()
+                    if (view.getGlobalVisibleRect(bounds) && !bounds.isEmpty &&
+                        rootBounds.contains(bounds.centerX(), bounds.centerY())
+                    ) return PointF(bounds.exactCenterX(), bounds.exactCenterY())
+                }
+                if (view is ViewGroup) {
+                    for (index in 0 until view.childCount) find(view.getChildAt(index))?.let { return it }
+                }
+                return null
+            }
+            // Global visible rectangles use root coordinates; injected events use the screen.
+            val screenOrigin = IntArray(2)
+            root.rootView.getLocationOnScreen(screenOrigin)
+            point = find(root)?.apply { offset(screenOrigin[0].toFloat(), screenOrigin[1].toFloat()) }
+        }
+        return point
     }
 
     private fun inject(
