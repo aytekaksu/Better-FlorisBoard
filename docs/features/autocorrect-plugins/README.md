@@ -31,7 +31,6 @@ The wire format and provider responsibilities are documented in the
 | Built-in suggestion fallback and candidate lifecycle | [`NlpManager.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpManager.kt) |
 | Tap trace capture | [`TextKeyboardLayout.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardLayout.kt) |
 | Gesture trace and fallback | [`GlideTypingManager.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/GlideTypingManager.kt) |
-| Deterministic editor fixture | [`DeterministicInputConnection.kt`](../../../app/src/test/kotlin/dev/patrickgold/florisboard/test/editor/DeterministicInputConnection.kt) |
 
 The Android manager remains the public facade. The host core decides discovery,
 binding and session lifecycle, request identity, reply admission, and circuit

@@ -28,7 +28,6 @@ provider transport is covered by
 | Localized IME-action labels and Android fallback | [`FlorisImeService.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/FlorisImeService.kt) |
 | Fast state and hit-test tests | [`app/src/test/.../keyboard`](../../../app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/) |
 | Popup position tests | [`PopupUiControllerGeometryTest.kt`](../../../app/src/test/kotlin/dev/patrickgold/florisboard/ime/popup/PopupUiControllerGeometryTest.kt) |
-| Deterministic editor fixture | [`DeterministicInputConnection.kt`](../../../app/src/test/kotlin/dev/patrickgold/florisboard/test/editor/DeterministicInputConnection.kt) |
 | Real MotionEvent scenarios | [`TextKeyboardTouchE2eTest.kt`](../../../app/src/androidTest/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardTouchE2eTest.kt) |
 
 ## Data, state, and lifecycle
