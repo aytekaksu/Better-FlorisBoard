@@ -80,8 +80,9 @@ text of their own; concrete keys still provide their display and input text.
 Build-time generators expand `@autoKeys("letters")` character rows (with optional
 padding), digit-script numeric rows from Bengali, theme stylesheets from the
 static day base and Material You/night/borderless overlays, subtype presets, and
-shared punctuation popups. Exceptional character and numeric layouts and the
-Han/Bengali presets stay literal. Generation preserves layout IDs and popups,
+shared punctuation popups. Each generator runs once for all requested app variants.
+Exceptional character and numeric layouts and the Han/Bengali presets stay literal.
+Generation preserves layout IDs and popups,
 theme manifest paths, preset order, and Unicode code points in JSON; missing or
 malformed input fails before packaging. Theme selectors replace whole rules, while
 `@defines` merge by name. Replacing asset trees rejects links in task-owned

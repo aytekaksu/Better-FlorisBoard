@@ -122,7 +122,7 @@ class KeyboardMetadataContractTest :
                 .map { File(it, "ime/keyboard/org.florisboard.layouts") }.first { it.isDirectory }
             val generatedRoot = File(
                 requireNotNull(System.getProperty("florisboard.characterLayoutAssetRoot")) {
-                    "Character layout unit tests need their variant's generated asset root"
+                    "Character layout unit tests need the generated asset root"
                 },
             )
             generatedRoot.isDirectory shouldBe true
@@ -189,7 +189,7 @@ class KeyboardMetadataContractTest :
                 .resolve("ime/keyboard/org.florisboard.localization")
             val generatedRoot = File(
                 requireNotNull(System.getProperty("florisboard.localizationAssetRoot")) {
-                    "Localization unit tests need their variant's generated asset root"
+                    "Localization unit tests need the generated asset root"
                 },
             )
             generatedRoot.isDirectory shouldBe true
