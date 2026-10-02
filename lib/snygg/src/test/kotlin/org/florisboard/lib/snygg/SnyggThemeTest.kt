@@ -27,11 +27,11 @@ class SnyggThemeTest {
     val lightScheme = dynamicColorScheme(
         primary = Color.Yellow,
         isDark = false,
-    )
+    ).copy(surfaceDim = Color.Cyan, surfaceBright = Color.Magenta)
     val darkScheme = dynamicColorScheme(
         primary = Color.Yellow,
         isDark = true,
-    )
+    ).copy(surfaceDim = Color.Red, surfaceBright = Color.Green)
 
     private fun SnyggTheme.helperQuery(
         elementName: String,
@@ -60,8 +60,10 @@ class SnyggThemeTest {
                 "--shape" to size(12.dp)
             }
             "keyboard" {
-                background = rgbaColor(255, 255, 255)
+                background = dynamicLightColor("surfaceDim")
                 foreground = `var`("--primary")
+                borderColor = dynamicDarkColor("surfaceBright")
+                shadowColor = dynamicLightColor("SurfaceDim")
                 shape = `var`("--shape")
             }
             "key" {
@@ -77,9 +79,15 @@ class SnyggThemeTest {
             }
             "key"(selector = SnyggSelector.DISABLED) {
                 shadowElevation = size(2.dp)
+                shadowColor = dynamicDarkColor("unknown-role")
             }
         }
         val theme = SnyggTheme.compileFrom(stylesheet)
+
+        val keyboard = theme.helperQuery("keyboard")
+        assertEquals(Color.Cyan, assertIs<SnyggStaticColorValue>(keyboard.background).color)
+        assertEquals(Color.Green, assertIs<SnyggStaticColorValue>(keyboard.borderColor).color)
+        assertEquals(lightScheme.primary, assertIs<SnyggStaticColorValue>(keyboard.shadowColor).color)
 
         val key = theme.helperQuery("key")
         val keyBackground = assertIs<SnyggStaticColorValue>(key.background)
@@ -109,6 +117,7 @@ class SnyggThemeTest {
         assertEquals(keyBorderColor, keyDisabled.borderColor)
         val keyDisabledShadowElevation = assertIs<SnyggDpSizeValue>(keyDisabled.shadowElevation)
         assertEquals(2.dp, keyDisabledShadowElevation.dp)
+        assertEquals(darkScheme.primary, assertIs<SnyggStaticColorValue>(keyDisabled.shadowColor).color)
     }
 
     @Test
