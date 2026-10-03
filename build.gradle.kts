@@ -102,6 +102,8 @@ val sharedQualityKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpComposingPolicyTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderCapabilityTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/editor/AutoCorrectionRevertTest.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/smartbar/SharedActionsController.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/smartbar/SharedActionsControllerTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/smartbar/InlineSuggestionsUiTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickActionPresentationTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardCache.kt"),
