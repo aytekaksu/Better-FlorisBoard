@@ -19,10 +19,7 @@ package dev.patrickgold.florisboard.ime.nlp
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-/**
- * Serializes a provider's create/destroy boundary and changes state only after the operation
- * succeeds. A failed create remains retryable; a failed destroy remains eligible for cleanup.
- */
+/** Creates a provider once, serializing attempts and allowing retry after failure. */
 internal class NlpProviderLifecycle {
     private val guard = Mutex()
     private var isAlive = false
@@ -31,13 +28,6 @@ internal class NlpProviderLifecycle {
         if (!isAlive) {
             create()
             isAlive = true
-        }
-    }
-
-    suspend fun destroyIfNecessary(destroy: suspend () -> Unit) = guard.withLock {
-        if (isAlive) {
-            destroy()
-            isAlive = false
         }
     }
 }
