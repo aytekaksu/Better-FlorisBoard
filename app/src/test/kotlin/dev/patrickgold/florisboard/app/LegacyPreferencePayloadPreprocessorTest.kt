@@ -28,10 +28,12 @@ import dev.patrickgold.florisboard.ime.window.ImeWindowConfigByType
 import dev.patrickgold.florisboard.ime.window.ImeWindowConstraints
 import dev.patrickgold.florisboard.ime.window.ImeWindowMode
 import dev.patrickgold.florisboard.ime.window.ImeWindowProps
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import kotlinx.serialization.json.Json
 
 class LegacyPreferencePayloadPreprocessorTest :
     FunSpec({
@@ -416,23 +418,17 @@ class LegacyPreferencePayloadPreprocessorTest :
             val type = ImeFormFactor.Type.PHONE_PORTRAIT
             val disabled = encodedPreferences("""b;keyboard__one_handed_mode_enabled;false""")
 
-            val compact = migratedConfig(
-                payload = disabled,
-                base = mapOf(
-                    type to ImeWindowConfig.Default.copy(fixedMode = ImeWindowMode.Fixed.COMPACT),
-                ),
-                sourceVersionCode = 105,
-            )
-            compact.getValue(type).fixedMode shouldBe ImeWindowMode.Fixed.NORMAL
-
-            val thumbs = migratedConfig(
-                payload = disabled,
-                base = mapOf(
-                    type to ImeWindowConfig.Default.copy(fixedMode = ImeWindowMode.Fixed.THUMBS),
-                ),
-                sourceVersionCode = 105,
-            )
-            thumbs.getValue(type).fixedMode shouldBe ImeWindowMode.Fixed.THUMBS
+            mapOf(
+                ImeWindowMode.Fixed.COMPACT to ImeWindowMode.Fixed.NORMAL,
+                ImeWindowMode.Fixed.THUMBS to ImeWindowMode.Fixed.THUMBS,
+            ).forEach { (currentMode, expectedMode) ->
+                val config = migratedConfig(
+                    payload = disabled,
+                    base = mapOf(type to ImeWindowConfig.Default.copy(fixedMode = currentMode)),
+                    sourceVersionCode = 105,
+                )
+                withClue(currentMode) { config.getValue(type).fixedMode shouldBe expectedMode }
+            }
         }
 
         test("preprocessing is byte-idempotent and generated string data decodes") {
@@ -468,16 +464,7 @@ private fun decodeWindowConfig(payload: String): ImeWindowConfigByType {
     val entry = payload.lineSequence()
         .last { line -> line.substringAfter(';').substringBefore(';') == "keyboard__window_config" }
     val encodedValue = entry.substringAfter(';').substringAfter(';')
-    return ImeWindowConfig.ByTypeSerializer.deserialize(decodeJetPrefString(encodedValue))
-}
-
-private fun decodeJetPrefString(rawValue: String): String {
-    val value = rawValue.trim()
-    return value.substring(1, value.lastIndex)
-        .replace("\\\"", "\"")
-        .replace("\\n", "\n")
-        .replace("\\r", "\r")
-        .replace("\\\\", "\\")
+    return ImeWindowConfig.ByTypeSerializer.deserialize(Json.decodeFromString<String>(encodedValue))
 }
 
 private fun fixedConstraints(type: ImeFormFactor.Type, mode: ImeWindowMode.Fixed): ImeWindowConstraints.Fixed =

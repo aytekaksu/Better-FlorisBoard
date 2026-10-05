@@ -21,6 +21,7 @@ import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickAction
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionArrangement
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainAll
@@ -358,35 +359,21 @@ class LegacySmartbarPreferencePayloadTest :
                 layout = SmartbarLayout.SUGGESTIONS_ACTIONS_EXTENDED,
                 actionArrangement = baseArrangement,
             )
-            val enabledOnly = LegacyPreferencePayloadPreprocessor.process(
-                payload = rawPreferences(
-                    """b;smartbar__secondary_actions_enabled;true""",
-                ),
-                baseSmartbar = base,
-                sourceVersionCode = 70,
-            )
-            migratedLayout(enabledOnly) shouldBe SmartbarLayout.SUGGESTIONS_ACTIONS_EXTENDED
-            migratedArrangement(enabledOnly) shouldBe baseArrangement
-
-            val scalarOnly = LegacyPreferencePayloadPreprocessor.process(
-                payload = rawPreferences(
-                    """b;smartbar__action_row_expanded;true""",
-                ),
-                baseSmartbar = base,
-                sourceVersionCode = 69,
-            )
-            migratedLayout(scalarOnly) shouldBe base.layout
-            migratedArrangement(scalarOnly) shouldBe baseArrangement
-
-            val expandedOnly = LegacyPreferencePayloadPreprocessor.process(
-                payload = rawPreferences(
-                    """b;smartbar__secondary_actions_expanded;false""",
-                ),
-                baseSmartbar = base,
-                sourceVersionCode = 70,
-            )
-            migratedLayout(expandedOnly) shouldBe SmartbarLayout.SUGGESTIONS_ACTIONS_SHARED
-            migratedArrangement(expandedOnly) shouldBe baseArrangement
+            listOf(
+                Triple("b;smartbar__secondary_actions_enabled;true", 70, base.layout),
+                Triple("b;smartbar__action_row_expanded;true", 69, base.layout),
+                Triple("b;smartbar__secondary_actions_expanded;false", 70, SmartbarLayout.SUGGESTIONS_ACTIONS_SHARED),
+            ).forEach { (line, versionCode, expectedLayout) ->
+                val processed = LegacyPreferencePayloadPreprocessor.process(
+                    payload = rawPreferences(line),
+                    baseSmartbar = base,
+                    sourceVersionCode = versionCode,
+                )
+                withClue(line.substringBeforeLast(';')) {
+                    migratedLayout(processed) shouldBe expectedLayout
+                    migratedArrangement(processed) shouldBe baseArrangement
+                }
+            }
         }
 
         test("generated actions discard user payloads and are byte-idempotent") {

@@ -48,14 +48,11 @@ class FlorisPreferenceMigrationTest :
     FunSpec({
         test("minimum supported lowercase preferences preserve behavior") {
             runTest {
-                val fixture = PreferenceFixture()
-                fixture.load(
-                    encodedPreferences(
-                        """b;advanced__force_private_mode;true""",
-                        """s;advanced__settings_theme;"dark"""",
-                        """s;gestures__swipe_up;"shift"""",
-                        """s;theme__mode;"always_night"""",
-                    ),
+                val fixture = loadedPreferences(
+                    """b;advanced__force_private_mode;true""",
+                    """s;advanced__settings_theme;"dark"""",
+                    """s;gestures__swipe_up;"shift"""",
+                    """s;theme__mode;"always_night"""",
                 )
 
                 fixture.prefs.suggestion.incognitoMode.get() shouldBe IncognitoMode.FORCE_ON
@@ -74,8 +71,7 @@ class FlorisPreferenceMigrationTest :
         test("every retained lowercase enum selector loads a real enum value") {
             runTest {
                 legacyLowercaseEnums.forEach { (key, value) ->
-                    val fixture = PreferenceFixture()
-                    fixture.load(encodedPreferences("""s;$key;"$value""""))
+                    val fixture = loadedPreferences("""s;$key;"$value"""")
                     val migratedValue = fixture.prefs.declaredPreferenceEntries
                         .entries
                         .single { it.key.key == key }
@@ -93,13 +89,10 @@ class FlorisPreferenceMigrationTest :
 
         test("retired spell checker preferences do not survive import") {
             runTest {
-                val fixture = PreferenceFixture()
-                fixture.load(
-                    encodedPreferences(
-                        """s;spelling__language_mode;"use_keyboard_subtypes"""",
-                        """b;devtools__show_spelling_overlay;true""",
-                        """b;correction__auto_capitalization;false""",
-                    ),
+                val fixture = loadedPreferences(
+                    """s;spelling__language_mode;"use_keyboard_subtypes"""",
+                    """b;devtools__show_spelling_overlay;true""",
+                    """b;correction__auto_capitalization;false""",
                 )
 
                 fixture.prefs.correction.autoCapitalization.get() shouldBe false
@@ -109,8 +102,7 @@ class FlorisPreferenceMigrationTest :
 
         test("disabled legacy private mode does not override the current default") {
             runTest {
-                val fixture = PreferenceFixture()
-                fixture.load(encodedPreferences("""b;advanced__force_private_mode;false"""))
+                val fixture = loadedPreferences("""b;advanced__force_private_mode;false""")
 
                 fixture.prefs.suggestion.incognitoMode.getOrNull() shouldBe null
                 fixture.prefs.suggestion.incognitoMode.get() shouldBe IncognitoMode.DYNAMIC_ON_OFF
@@ -120,13 +112,10 @@ class FlorisPreferenceMigrationTest :
 
         test("legacy input feedback booleans retain their meaning") {
             runTest {
-                val fixture = PreferenceFixture()
-                fixture.load(
-                    encodedPreferences(
-                        """b;input_feedback__audio_ignore_system_settings;true""",
-                        """b;input_feedback__haptic_ignore_system_settings;false""",
-                        """b;input_feedback__haptic_use_vibrator;false""",
-                    ),
+                val fixture = loadedPreferences(
+                    """b;input_feedback__audio_ignore_system_settings;true""",
+                    """b;input_feedback__haptic_ignore_system_settings;false""",
+                    """b;input_feedback__haptic_use_vibrator;false""",
                 )
 
                 fixture.prefs.inputFeedback.audioActivationMode.get() shouldBe
@@ -145,12 +134,9 @@ class FlorisPreferenceMigrationTest :
 
         test("legacy media and space-bar preferences retain their meaning") {
             runTest {
-                val fixture = PreferenceFixture()
-                fixture.load(
-                    encodedPreferences(
-                        """s;media__emoji_preferred_skin_tone;"medium_dark_skin_tone"""",
-                        """b;keyboard__space_bar_language_display_enabled;false""",
-                    ),
+                val fixture = loadedPreferences(
+                    """s;media__emoji_preferred_skin_tone;"medium_dark_skin_tone"""",
+                    """b;keyboard__space_bar_language_display_enabled;false""",
                 )
 
                 fixture.prefs.emoji.preferredSkinTone.get() shouldBe EmojiSkinTone.MEDIUM_DARK_SKIN_TONE
@@ -164,8 +150,7 @@ class FlorisPreferenceMigrationTest :
 
         test("legacy Material You choices preserve explicit accent behavior") {
             runTest {
-                val fixedFixture = PreferenceFixture()
-                fixedFixture.load(encodedPreferences("""b;advanced__use_material_you;false"""))
+                val fixedFixture = loadedPreferences("""b;advanced__use_material_you;false""")
                 fixedFixture.prefs.other.accentColor.get() shouldBe DEFAULT_GREEN
 
                 val dynamicFixture = PreferenceFixture()
@@ -180,8 +165,7 @@ class FlorisPreferenceMigrationTest :
 
         test("empty legacy emoji history stays empty") {
             runTest {
-                val fixture = PreferenceFixture()
-                fixture.load(encodedPreferences("""s;media__emoji_recently_used;"  ; ;  """"))
+                val fixture = loadedPreferences("""s;media__emoji_recently_used;"  ; ;  """")
 
                 val migrated = fixture.prefs.emoji.historyData.get()
                 migrated.recent.size shouldBe 0
@@ -190,8 +174,7 @@ class FlorisPreferenceMigrationTest :
 
         test("legacy emoji history trims and drops blank entries") {
             runTest {
-                val fixture = PreferenceFixture()
-                fixture.load(encodedPreferences("""s;media__emoji_recently_used;" alpha ; ; beta """"))
+                val fixture = loadedPreferences("""s;media__emoji_recently_used;" alpha ; ; beta """")
 
                 val migrated = fixture.prefs.emoji.historyData.get()
                 migrated.recent.size shouldBe 2
@@ -201,12 +184,9 @@ class FlorisPreferenceMigrationTest :
 
         test("legacy clipboard sync booleans retain their meaning") {
             runTest {
-                val fixture = PreferenceFixture()
-                fixture.load(
-                    encodedPreferences(
-                        """b;clipboard__sync_to_floris;false""",
-                        """b;clipboard__sync_to_system;true""",
-                    ),
+                val fixture = loadedPreferences(
+                    """b;clipboard__sync_to_floris;false""",
+                    """b;clipboard__sync_to_system;true""",
                 )
 
                 fixture.prefs.clipboard.syncToFloris.get() shouldBe ClipboardSyncBehavior.NO_EVENTS
@@ -216,14 +196,11 @@ class FlorisPreferenceMigrationTest :
 
         test("legacy Smartbar names retain their one-to-one settings") {
             runTest {
-                val betaFixture = PreferenceFixture()
-                betaFixture.load(
-                    encodedPreferences(
-                        """b;smartbar__primary_row_flip_toggles;true""",
-                        """b;smartbar__action_row_expanded;true""",
-                        """b;smartbar__secondary_row_expanded;true""",
-                        """s;smartbar__secondary_row_placement;"below_primary"""",
-                    ),
+                val betaFixture = loadedPreferences(
+                    """b;smartbar__primary_row_flip_toggles;true""",
+                    """b;smartbar__action_row_expanded;true""",
+                    """b;smartbar__secondary_row_expanded;true""",
+                    """s;smartbar__secondary_row_placement;"below_primary"""",
                 )
 
                 betaFixture.prefs.smartbar.flipToggles.get() shouldBe true
@@ -232,13 +209,10 @@ class FlorisPreferenceMigrationTest :
                 betaFixture.prefs.smartbar.extendedActionsPlacement.get() shouldBe
                     ExtendedActionsPlacement.BELOW_CANDIDATES
 
-                val releaseFixture = PreferenceFixture()
-                releaseFixture.load(
-                    encodedPreferences(
-                        """b;smartbar__primary_actions_expanded;true""",
-                        """b;smartbar__secondary_actions_expanded;true""",
-                        """s;smartbar__secondary_actions_placement;"OVERLAY_APP_UI"""",
-                    ),
+                val releaseFixture = loadedPreferences(
+                    """b;smartbar__primary_actions_expanded;true""",
+                    """b;smartbar__secondary_actions_expanded;true""",
+                    """s;smartbar__secondary_actions_placement;"OVERLAY_APP_UI"""",
                 )
 
                 releaseFixture.prefs.smartbar.sharedActionsExpanded.get() shouldBe true
@@ -284,16 +258,13 @@ class FlorisPreferenceMigrationTest :
                     "s;advanced__incognito_mode;\"force_off\"" to "s;suggestion__incognito_mode;\"FORCE_OFF\"",
                 )
                 for ((legacy, expected) in cases) {
-                    val fixture = PreferenceFixture()
-                    fixture.load(encodedPreferences(legacy))
+                    val fixture = loadedPreferences(legacy)
                     withClue(legacy.substringBeforeLast(';')) { fixture.exportRaw().trim() shouldBe expected }
                 }
                 for (key in listOf("keyboard__key_spacing_horizontal", "keyboard__key_spacing_vertical")) {
-                    val oldFloat = PreferenceFixture()
-                    oldFloat.load(encodedPreferences("f;$key;1.5"))
+                    val oldFloat = loadedPreferences("f;$key;1.5")
                     oldFloat.exportedKeys() shouldBe emptySet()
-                    val currentInt = PreferenceFixture()
-                    currentInt.load(encodedPreferences("i;$key;95"))
+                    val currentInt = loadedPreferences("i;$key;95")
                     currentInt.exportRaw().trim() shouldBe "i;$key;95"
                 }
             }
@@ -301,15 +272,12 @@ class FlorisPreferenceMigrationTest :
 
         test("malformed legacy values are dropped") {
             runTest {
-                val fixture = PreferenceFixture()
-                fixture.load(
-                    encodedPreferences(
-                        """s;smartbar__secondary_row_placement;"somewhere_else"""",
-                        """b;input_feedback__audio_ignore_system_settings;not-a-boolean""",
-                        """i;input_feedback__haptic_ignore_system_settings;1""",
-                        """i;clipboard__sync_to_floris;1""",
-                        """s;theme__editor_display_colors_as;"unknown"""",
-                    ),
+                val fixture = loadedPreferences(
+                    """s;smartbar__secondary_row_placement;"somewhere_else"""",
+                    """b;input_feedback__audio_ignore_system_settings;not-a-boolean""",
+                    """i;input_feedback__haptic_ignore_system_settings;1""",
+                    """i;clipboard__sync_to_floris;1""",
+                    """s;theme__editor_display_colors_as;"unknown"""",
                 )
 
                 fixture.prefs.smartbar.extendedActionsPlacement.getOrNull() shouldBe null
@@ -323,12 +291,9 @@ class FlorisPreferenceMigrationTest :
 
         test("malformed legacy Smartbar data is dropped without aborting valid siblings") {
             runTest {
-                val fixture = PreferenceFixture()
-                fixture.load(
-                    encodedPreferences(
-                        """s;smartbar__action_arrangement;"not-json"""",
-                        """b;correction__auto_capitalization;false""",
-                    ),
+                val fixture = loadedPreferences(
+                    """s;smartbar__action_arrangement;"not-json"""",
+                    """b;correction__auto_capitalization;false""",
                 )
 
                 fixture.prefs.smartbar.actionArrangement.getOrNull() shouldBe null
@@ -339,17 +304,14 @@ class FlorisPreferenceMigrationTest :
 
         test("Smartbar arrangement migration retains actions and adds required controls") {
             runTest {
-                val fixture = PreferenceFixture()
                 val original = QuickActionArrangement(
                     stickyAction = QuickAction.InsertKey(TextKeyData.COMPACT_LAYOUT_TO_RIGHT),
                     dynamicActions = emptyList(),
                     hiddenActions = emptyList(),
                 )
                 val rawValue = QuickActionJsonConfig.encodeToString(original)
-                fixture.load(
-                    encodedPreferences(
-                        "s;smartbar__action_arrangement;${Json.encodeToString(rawValue)}",
-                    ),
+                val fixture = loadedPreferences(
+                    "s;smartbar__action_arrangement;${Json.encodeToString(rawValue)}",
                 )
 
                 val migrated = fixture.prefs.smartbar.actionArrangement.get()
@@ -368,13 +330,10 @@ class FlorisPreferenceMigrationTest :
 
         test("migrated output loads without applying migrations again") {
             runTest {
-                val first = PreferenceFixture()
-                first.load(
-                    encodedPreferences(
-                        """s;advanced__incognito_mode;"force_off"""",
-                        """s;theme__editor_display_colors_as;"rgba"""",
-                        """b;suggestion__clipboard_content_enabled;false""",
-                    ),
+                val first = loadedPreferences(
+                    """s;advanced__incognito_mode;"force_off"""",
+                    """s;theme__editor_display_colors_as;"rgba"""",
+                    """b;suggestion__clipboard_content_enabled;false""",
                 )
 
                 val second = PreferenceFixture()
@@ -389,14 +348,16 @@ class FlorisPreferenceMigrationTest :
 
         test("legacy HEX8 color display remains HEX") {
             runTest {
-                val fixture = PreferenceFixture()
-                fixture.load(encodedPreferences("""s;theme__editor_display_colors_as;"hex8""""))
+                val fixture = loadedPreferences("""s;theme__editor_display_colors_as;"hex8"""")
 
                 fixture.prefs.theme.editorColorRepresentation.get() shouldBe ColorRepresentation.HEX
                 fixture.exportedKeys() shouldBe setOf("theme__editor_color_representation")
             }
         }
     })
+
+private suspend fun loadedPreferences(vararg lines: String): PreferenceFixture =
+    PreferenceFixture().apply { load(encodedPreferences(*lines)) }
 
 private class PreferenceFixture {
     private val dataStore = jetprefDataStoreOf(FlorisPreferenceModel::class)
