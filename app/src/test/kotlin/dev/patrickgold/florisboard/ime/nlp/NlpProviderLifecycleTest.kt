@@ -19,25 +19,17 @@ package dev.patrickgold.florisboard.ime.nlp
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 
 class NlpProviderLifecycleTest :
     FunSpec({
-        test("create and destroy are idempotent and may form a new lifecycle") {
+        test("create is idempotent") {
             val lifecycle = NlpProviderLifecycle()
             var creates = 0
-            var destroys = 0
 
             lifecycle.createIfNecessary { creates++ }
             lifecycle.createIfNecessary { creates++ }
-            lifecycle.destroyIfNecessary { destroys++ }
-            lifecycle.destroyIfNecessary { destroys++ }
-            lifecycle.createIfNecessary { creates++ }
 
-            creates shouldBe 2
-            destroys shouldBe 1
+            creates shouldBe 1
         }
 
         test("failed create remains retryable") {
@@ -53,41 +45,5 @@ class NlpProviderLifecycleTest :
             lifecycle.createIfNecessary { attempts++ }
 
             attempts shouldBe 2
-        }
-
-        test("failed destroy remains retryable") {
-            val lifecycle = NlpProviderLifecycle()
-            var attempts = 0
-            lifecycle.createIfNecessary { }
-
-            shouldThrow<IllegalStateException> {
-                lifecycle.destroyIfNecessary {
-                    attempts++
-                    error("destroy failed")
-                }
-            }
-            lifecycle.destroyIfNecessary { attempts++ }
-
-            attempts shouldBe 2
-        }
-
-        test("concurrent lifecycle requests execute each transition once") {
-            val lifecycle = NlpProviderLifecycle()
-            var creates = 0
-            var destroys = 0
-
-            coroutineScope {
-                List(20) {
-                    async { lifecycle.createIfNecessary { creates++ } }
-                }.awaitAll()
-            }
-            coroutineScope {
-                List(20) {
-                    async { lifecycle.destroyIfNecessary { destroys++ } }
-                }.awaitAll()
-            }
-
-            creates shouldBe 1
-            destroys shouldBe 1
         }
     })

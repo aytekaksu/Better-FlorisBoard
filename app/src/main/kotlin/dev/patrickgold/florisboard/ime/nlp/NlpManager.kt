@@ -285,11 +285,6 @@ class NlpManager internal constructor(
     private val _activeCandidatesFlow = MutableStateFlow(listOf<SuggestionCandidate>())
     @Volatile private var autoCommitCandidate: SuggestionCandidate? = null
     val activeCandidatesFlow = _activeCandidatesFlow.asStateFlow()
-    inline var activeCandidates
-        get() = activeCandidatesFlow.value
-        private set(v) {
-            _activeCandidatesFlow.value = v
-        }
 
     init {
         primaryClipFlow.collectLatestIn(scope) {
@@ -340,9 +335,9 @@ class NlpManager internal constructor(
     private suspend fun preloadProviders(subtype: Subtype) {
         emojiSuggestionProvider.preload(subtype)
         providerLifecycleGate.withLock {
-            providers[subtype.nlpProviders.suggestion]?.let { provider ->
-                provider.createIfNecessary()
-                provider.preload(subtype)
+            providers[subtype.nlpProviders.suggestion]?.let { instance ->
+                instance.createIfNecessary()
+                instance.provider.preload(subtype)
             }
         }
     }
@@ -430,7 +425,7 @@ class NlpManager internal constructor(
                 internalSuggestions = emptyList()
                 candidateAssemblyRevision.next {
                     autoCommitCandidate = null
-                    activeCandidates = emptyList()
+                    _activeCandidatesFlow.value = emptyList()
                     sharedActions.update(
                         emptyList<SuggestionCandidate>(),
                         NlpInlineAutofill.suggestions.value,
@@ -499,7 +494,7 @@ class NlpManager internal constructor(
                 publishableCandidates.filter(SuggestionCandidate::isVisible)
             autoCommitCandidate =
                 publishableCandidates.firstOrNull { it.isEligibleForAutoCommit }
-            activeCandidates = visibleCandidates
+            _activeCandidatesFlow.value = visibleCandidates
             sharedActions.update(
                 visibleCandidates,
                 NlpInlineAutofill.suggestions.value,
@@ -520,10 +515,6 @@ class NlpManager internal constructor(
 
         suspend fun createIfNecessary() {
             lifecycle.createIfNecessary(provider::create)
-        }
-
-        suspend fun preload(subtype: Subtype) {
-            provider.preload(subtype)
         }
     }
 
