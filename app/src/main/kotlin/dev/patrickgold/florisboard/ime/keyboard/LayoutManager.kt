@@ -22,7 +22,6 @@ import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.keyboardExtensionRepository
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.popup.PopupMapping
-import dev.patrickgold.florisboard.ime.popup.PopupMappingComponent
 import dev.patrickgold.florisboard.ime.text.key.KeyType
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKey
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
@@ -56,12 +55,6 @@ data class CachedLayout(
     val name: ExtensionComponentName,
     val meta: LayoutArrangementComponent,
     val arrangement: LayoutArrangement,
-)
-
-private data class CachedPopupMapping(
-    val name: ExtensionComponentName,
-    val meta: PopupMappingComponent,
-    val mapping: PopupMapping,
 )
 
 private class GenerationCache<K, V> {
@@ -110,7 +103,7 @@ class LayoutManager(context: Context) {
     private val keyboardExtensionRepository by context.keyboardExtensionRepository()
 
     private val layoutCache = GenerationCache<LTN, CachedLayout>()
-    private val popupMappingCache = GenerationCache<ExtensionComponentName, CachedPopupMapping>()
+    private val popupMappingCache = GenerationCache<ExtensionComponentName, PopupMapping>()
     private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     val debugLayoutComputationResultFlow = MutableStateFlow<DebugLayoutComputationResult?>(null)
@@ -161,8 +154,7 @@ class LayoutManager(context: Context) {
             async {
                 runCatching {
                     val jsonStr = ZipUtils.readFileFromArchive(appContext, sourceRef, path).getOrThrow()
-                    val mapping = DefaultJsonConfig.decodeFromString<PopupMapping>(jsonStr)
-                    CachedPopupMapping(name, meta, mapping)
+                    DefaultJsonConfig.decodeFromString<PopupMapping>(jsonStr)
                 }
             }
         }
@@ -289,10 +281,10 @@ class LayoutManager(context: Context) {
             mode = keyboardMode,
             extendedPopupMapping = extendedPopups.await().onFailure {
                 flogWarning(LogTopic.LAYOUT_MANAGER) { "Popup mapping failed: subtype (${it.javaClass.simpleName})" }
-            }.getOrNull()?.mapping,
+            }.getOrNull(),
             extendedPopupMappingDefault = extendedPopupsDefault.await().onFailure {
                 flogWarning(LogTopic.LAYOUT_MANAGER) { "Popup mapping failed: default (${it.javaClass.simpleName})" }
-            }.getOrNull()?.mapping
+            }.getOrNull()
         )
     }
 
