@@ -43,46 +43,20 @@ class ClipboardRestorePayloadTest :
             val root = testRoot.workspace("valid-shared")
             root.writeIndex(
                 ItemType.TEXT,
-                """
-                    [
-                      {
-                        "id": 91,
-                        "type": "TEXT",
-                        "text": "private text",
-                        "uri": null,
-                        "creationTimestampMs": 10,
-                        "isPinned": true,
-                        "mimeTypes": ["text/plain"]
-                      }
-                    ]
-                """.trimIndent(),
+                indexJson(itemJson(ItemType.TEXT, id = 91, text = "private text", timestamp = 10, isPinned = true)),
             )
             root.writeIndex(
                 ItemType.IMAGE,
-                """
-                    [
-                      {
-                        "id": 92,
-                        "type": "IMAGE",
-                        "text": null,
-                        "uri": "$IMAGE_42",
-                        "creationTimestampMs": 11,
-                        "isPinned": false,
-                        "mimeTypes": ["image/png"],
-                        "isSensitive": true,
-                        "isRemoteDevice": true
-                      },
-                      {
-                        "id": 93,
-                        "type": "IMAGE",
-                        "text": "optional caption",
-                        "uri": "$IMAGE_42",
-                        "creationTimestampMs": 12,
-                        "isPinned": false,
-                        "mimeTypes": ["image/webp"]
-                      }
-                    ]
-                """.trimIndent(),
+                indexJson(
+                    itemJson(
+                        ItemType.IMAGE, id = 92, uri = IMAGE_42, timestamp = 11,
+                        isSensitive = true, isRemoteDevice = true,
+                    ),
+                    itemJson(
+                        ItemType.IMAGE, id = 93, text = "optional caption", uri = IMAGE_42,
+                        timestamp = 12, mimeTypes = """["image/webp"]""",
+                    ),
+                ),
             )
             root.writeMedia(42, byteArrayOf(1, 2, 3))
 
@@ -385,17 +359,7 @@ class ClipboardRestorePayloadTest :
             root.writeIndex(
                 ItemType.TEXT,
                 (1..3).joinToString(prefix = "[", postfix = "]") { id ->
-                    """
-                        {
-                          "id": $id,
-                          "type": "TEXT",
-                          "text": "value",
-                          "uri": null,
-                          "creationTimestampMs": $id,
-                          "isPinned": false,
-                          "mimeTypes": ["text/plain"]
-                        }
-                    """.trimIndent()
+                    itemJson(ItemType.TEXT, id = id.toLong(), text = "value")
                 },
             )
             val activeChecks = AtomicInteger()
@@ -500,29 +464,10 @@ class ClipboardRestorePayloadTest :
             val compatibleRoot = testRoot.workspace("shared-display-name")
             compatibleRoot.writeIndex(
                 ItemType.IMAGE,
-                """
-                    [
-                      {
-                        "id": 1,
-                        "type": "IMAGE",
-                        "text": null,
-                        "uri": "$IMAGE_42",
-                        "creationTimestampMs": 1,
-                        "isPinned": false,
-                        "mimeTypes": ["image/png"]
-                      },
-                      {
-                        "id": 2,
-                        "type": "IMAGE",
-                        "text": null,
-                        "uri": "$IMAGE_42",
-                        "creationTimestampMs": 2,
-                        "isPinned": false,
-                        "mimeTypes": ["image/png"],
-                        "displayName": "gallery.png"
-                      }
-                    ]
-                """.trimIndent(),
+                indexJson(
+                    itemJson(ItemType.IMAGE, uri = IMAGE_42),
+                    itemJson(ItemType.IMAGE, id = 2, uri = IMAGE_42, displayNameJson = "\"gallery.png\""),
+                ),
             )
             compatibleRoot.writeMedia(42, byteArrayOf(1))
             (compatibleRoot.prepare(ItemType.IMAGE) as ClipboardRestorePayloadResult.Valid)
@@ -531,30 +476,10 @@ class ClipboardRestorePayloadTest :
             val conflictingRoot = testRoot.workspace("conflicting-display-name")
             conflictingRoot.writeIndex(
                 ItemType.IMAGE,
-                """
-                    [
-                      {
-                        "id": 1,
-                        "type": "IMAGE",
-                        "text": null,
-                        "uri": "$IMAGE_42",
-                        "creationTimestampMs": 1,
-                        "isPinned": false,
-                        "mimeTypes": ["image/png"],
-                        "displayName": "first.png"
-                      },
-                      {
-                        "id": 2,
-                        "type": "IMAGE",
-                        "text": null,
-                        "uri": "$IMAGE_42",
-                        "creationTimestampMs": 2,
-                        "isPinned": false,
-                        "mimeTypes": ["image/png"],
-                        "displayName": "second.png"
-                      }
-                    ]
-                """.trimIndent(),
+                indexJson(
+                    itemJson(ItemType.IMAGE, uri = IMAGE_42, displayNameJson = "\"first.png\""),
+                    itemJson(ItemType.IMAGE, id = 2, uri = IMAGE_42, displayNameJson = "\"second.png\""),
+                ),
             )
             conflictingRoot.writeMedia(42, byteArrayOf(1))
             conflictingRoot.prepare(ItemType.IMAGE) shouldBe
@@ -582,37 +507,11 @@ class ClipboardRestorePayloadTest :
             val root = testRoot.workspace("timestamp-clamping")
             root.writeIndex(
                 ItemType.TEXT,
-                """
-                    [
-                      {
-                        "id": 1,
-                        "type": "TEXT",
-                        "text": "past clock",
-                        "uri": null,
-                        "creationTimestampMs": -1,
-                        "isPinned": false,
-                        "mimeTypes": ["text/plain"]
-                      },
-                      {
-                        "id": 2,
-                        "type": "TEXT",
-                        "text": "future clock",
-                        "uri": null,
-                        "creationTimestampMs": ${Long.MAX_VALUE},
-                        "isPinned": false,
-                        "mimeTypes": ["text/plain"]
-                      },
-                      {
-                        "id": 3,
-                        "type": "TEXT",
-                        "text": "local clock",
-                        "uri": null,
-                        "creationTimestampMs": 900,
-                        "isPinned": false,
-                        "mimeTypes": ["text/plain"]
-                      }
-                    ]
-                """.trimIndent(),
+                indexJson(
+                    itemJson(ItemType.TEXT, text = "past clock", timestamp = -1),
+                    itemJson(ItemType.TEXT, id = 2, text = "future clock", timestamp = Long.MAX_VALUE),
+                    itemJson(ItemType.TEXT, id = 3, text = "local clock", timestamp = 900),
+                ),
             )
 
             val result = ClipboardRestorePayload.prepare(
@@ -817,28 +716,10 @@ class ClipboardRestorePayloadTest :
             val root = testRoot.workspace("shared-mime-union")
             root.writeIndex(
                 ItemType.IMAGE,
-                """
-                    [
-                      {
-                        "id": 1,
-                        "type": "IMAGE",
-                        "text": null,
-                        "uri": "$IMAGE_42",
-                        "creationTimestampMs": 1,
-                        "isPinned": false,
-                        "mimeTypes": $firstMimeTypes
-                      },
-                      {
-                        "id": 2,
-                        "type": "IMAGE",
-                        "text": null,
-                        "uri": "$IMAGE_42",
-                        "creationTimestampMs": 2,
-                        "isPinned": false,
-                        "mimeTypes": $secondMimeTypes
-                      }
-                    ]
-                """.trimIndent(),
+                indexJson(
+                    itemJson(ItemType.IMAGE, uri = IMAGE_42, mimeTypes = firstMimeTypes),
+                    itemJson(ItemType.IMAGE, id = 2, uri = IMAGE_42, mimeTypes = secondMimeTypes),
+                ),
             )
             root.writeMedia(42, byteArrayOf(1))
 
@@ -1187,23 +1068,9 @@ private fun textItemJson(
     uri: String? = null,
     mimeTypes: String = """["text/plain"]""",
     displayNameJson: String? = null,
-): String {
-    val displayNameField = displayNameJson?.let { """,
-            "displayName": $it""" }.orEmpty()
-    return """
-        [
-          {
-            "id": 7,
-            "type": "TEXT",
-            "text": ${text?.let { "\"$it\"" } ?: "null"},
-            "uri": ${uri?.let { "\"$it\"" } ?: "null"},
-            "creationTimestampMs": $timestamp,
-            "isPinned": false,
-            "mimeTypes": $mimeTypes$displayNameField
-          }
-        ]
-    """.trimIndent()
-}
+): String = indexJson(
+    itemJson(ItemType.TEXT, text, uri, mimeTypes, id = 7, timestamp = timestamp, displayNameJson = displayNameJson),
+)
 
 private fun imageItemJson(
     uri: String,
@@ -1225,23 +1092,9 @@ private fun mediaItemsJson(
     count: Int,
     text: String? = null,
 ): String {
-    val mimeType = when (type) {
-        ItemType.IMAGE -> "image/png"
-        ItemType.VIDEO -> "video/mp4"
-        ItemType.TEXT -> error("Text items do not reference media.")
-    }
+    check(type != ItemType.TEXT) { "Text items do not reference media." }
     return (1..count).joinToString(prefix = "[", postfix = "]") { id ->
-        """
-            {
-              "id": $id,
-              "type": "$type",
-              "text": ${text?.let { "\"$it\"" } ?: "null"},
-              "uri": "$uri",
-              "creationTimestampMs": 2,
-              "isPinned": false,
-              "mimeTypes": ["$mimeType"]
-            }
-        """.trimIndent()
+        itemJson(type, text = text, uri = uri, id = id.toLong(), timestamp = 2)
     }
 }
 
@@ -1251,20 +1104,44 @@ private fun mediaItemJson(
     mimeTypes: String,
     text: String? = null,
     displayNameJson: String? = null,
+): String = indexJson(
+    itemJson(type, text, uri, mimeTypes, id = 8, timestamp = 2, displayNameJson = displayNameJson),
+)
+
+private fun indexJson(vararg items: String): String =
+    items.joinToString(prefix = "[", postfix = "]")
+
+// Raw fields are intentional: malformed cases must not use the production serializer.
+private fun itemJson(
+    type: ItemType,
+    text: String? = null,
+    uri: String? = null,
+    mimeTypes: String = when (type) {
+        ItemType.TEXT -> """["text/plain"]"""
+        ItemType.IMAGE -> """["image/png"]"""
+        ItemType.VIDEO -> """["video/mp4"]"""
+    },
+    id: Long = 1,
+    timestamp: Long = id,
+    isPinned: Boolean = false,
+    isSensitive: Boolean? = null,
+    isRemoteDevice: Boolean? = null,
+    displayNameJson: String? = null,
 ): String {
-    val displayNameField = displayNameJson?.let { """,
-            "displayName": $it""" }.orEmpty()
+    val optionalFields = listOfNotNull(
+        isSensitive?.let { "\"isSensitive\": $it" },
+        isRemoteDevice?.let { "\"isRemoteDevice\": $it" },
+        displayNameJson?.let { "\"displayName\": $it" },
+    ).joinToString(separator = "") { ", $it" }
     return """
-        [
-          {
-            "id": 8,
-            "type": "$type",
-            "text": ${text?.let { "\"$it\"" } ?: "null"},
-            "uri": "$uri",
-            "creationTimestampMs": 2,
-            "isPinned": false,
-            "mimeTypes": $mimeTypes$displayNameField
-          }
-        ]
+        {
+          "id": $id,
+          "type": "$type",
+          "text": ${text?.let { "\"$it\"" } ?: "null"},
+          "uri": ${uri?.let { "\"$it\"" } ?: "null"},
+          "creationTimestampMs": $timestamp,
+          "isPinned": $isPinned,
+          "mimeTypes": $mimeTypes$optionalFields
+        }
     """.trimIndent()
 }

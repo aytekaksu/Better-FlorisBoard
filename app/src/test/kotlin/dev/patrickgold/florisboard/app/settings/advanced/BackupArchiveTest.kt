@@ -85,8 +85,11 @@ class BackupArchiveTest :
             }
         }
 
-        test("metadata accepts bounded provenance and rejects unsafe display fields") {
-            listOf(
+        test("metadata preserves the historical boundary and rejects unsafe provenance") {
+            val invalidMetadata = listOf<DecodedArchiveFile<BackupArchive.Metadata>>(
+                DecodedArchiveFile.Absent,
+                DecodedArchiveFile.Invalid,
+            ) + listOf(
                 metadata(packageName = ""),
                 metadata(packageName = "keyboard"),
                 metadata(packageName = ".dev.example"),
@@ -94,6 +97,7 @@ class BackupArchiveTest :
                 metadata(packageName = "dev.example."),
                 metadata(packageName = "dev.example/foreign"),
                 metadata(packageName = "a.${"b".repeat(254)}"),
+                metadata(versionCode = 63),
                 metadata(versionCode = BackupArchive.MIN_SUPPORTED_VERSION_CODE - 1),
                 metadata(versionName = "a".repeat(129)),
                 metadata(versionName = "release\u202Eevil"),
@@ -102,10 +106,11 @@ class BackupArchiveTest :
                 metadata(versionName = "release${String(Character.toChars(0xE0001))}evil"),
                 metadata(versionName = "release\uD800evil"),
                 metadata(timestamp = -1),
-            ).forEach { invalidMetadata ->
+            ).map { DecodedArchiveFile.Parsed(it) }
+            invalidMetadata.forEach { decodedMetadata ->
                 inspect(
                     entries = listOf(metadataEntry(), file(BackupArchive.PREFERENCES_PATH)),
-                    descriptor = legacyDescriptor(invalidMetadata),
+                    descriptor = ArchiveDescriptor(metadata = decodedMetadata),
                 ) shouldBe ArchiveValidation.Invalid(ArchiveFailure.INVALID_METADATA)
             }
 
@@ -113,7 +118,7 @@ class BackupArchiveTest :
                 metadataEntry(),
                 file(BackupArchive.PREFERENCES_PATH),
                 metadata = metadata(versionName = ""),
-            ).metadata.versionName shouldBe ""
+            ).metadata shouldBe metadata(versionName = "")
         }
 
         test("an explicit empty extension root is present while an absent root is unavailable") {
@@ -294,26 +299,6 @@ class BackupArchiveTest :
                 inspect(entries, descriptor) shouldBe
                     ArchiveValidation.Invalid(ArchiveFailure.INVALID_MANIFEST)
             }
-        }
-
-        test("metadata keeps the historical validity boundary") {
-            listOf(
-                DecodedArchiveFile.Absent,
-                DecodedArchiveFile.Invalid,
-                DecodedArchiveFile.Parsed(metadata(packageName = "")),
-                DecodedArchiveFile.Parsed(metadata(versionCode = 63)),
-            ).forEach { decodedMetadata ->
-                inspect(
-                    entries = listOf(metadataEntry(), file(BackupArchive.PREFERENCES_PATH)),
-                    descriptor = ArchiveDescriptor(metadata = decodedMetadata),
-                ) shouldBe ArchiveValidation.Invalid(ArchiveFailure.INVALID_METADATA)
-            }
-
-            validArchive(
-                metadataEntry(),
-                file(BackupArchive.PREFERENCES_PATH),
-                metadata = metadata(versionName = ""),
-            ).metadata shouldBe metadata(versionName = "")
         }
 
         test("unsafe paths reject the whole archive") {
