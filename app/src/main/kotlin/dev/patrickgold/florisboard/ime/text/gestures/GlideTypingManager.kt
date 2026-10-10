@@ -21,9 +21,9 @@ import android.os.SystemClock
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.autocorrectPluginManager
 import dev.patrickgold.florisboard.editorInstance
+import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.editor.EditorRange
-import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.keyboard.KeyData
 import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.keyboard.isWordInput
@@ -57,10 +57,7 @@ import org.florisboard.autocorrect.api.AutocorrectInputTrace
 import org.florisboard.autocorrect.api.AutocorrectPluginContract
 import java.text.Normalizer
 
-/**
- * Handles the [GlideTypingClassifier]. Basically responsible for linking [GlideTypingGesture.Detector]
- * with [GlideTypingClassifier].
- */
+/** Coordinates glide classification, provider fallback, previews, and commits. */
 class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
     companion object {
         private const val MAX_SUGGESTION_COUNT = 8
@@ -78,10 +75,13 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
     private val glideTypingClassifier = StatisticalGlideTypingClassifier(context)
     private var activeDetector: GlideTypingGesture.Detector? = null
     private val gesturePoints = mutableListOf<GlideTypingGesture.Detector.Position>()
+
     @Volatile private var layoutRevision: LayoutRevision? = null
     private var previewJob: Job? = null
     private var completionJob: Job? = null
+
     @Volatile private var pendingGlide: PendingGlide? = null
+
     @Volatile private var previewGeneration = 0L
     private var publishedPreviewGeneration: Long? = null
     private var lastTime = SystemClock.uptimeMillis()
@@ -105,7 +105,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
         )
         keyboardManager.inputEventDispatcher.deferInputEvents(
             onLaterInputQueued = { pendingGlide?.cancelProviderAttempt() },
-            start = start@ { onResolved ->
+            start = start@{ onResolved ->
                 if (subtypeManager.activeSubtype != revision.subtype) {
                     onResolved()
                     return@start
@@ -178,11 +178,13 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
                 if (pendingGlide !== pending) return@launch
                 when {
                     !result.handled -> completeWithBuiltInClassifier(pending)
+
                     result.candidates.isEmpty() -> withContext(Dispatchers.Main) {
                         if (pendingGlide === pending && pending.isStillCurrent()) {
                             clearSuggestionsUnlessPreviewActive()
                         }
                     }
+
                     else -> {
                         val primaryCandidate = result.candidates.first()
                         val committed = withContext(Dispatchers.Main) {
@@ -199,7 +201,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
                                                 committedText = committedText,
                                                 postCommitContent = editorInstance.activeContent,
                                                 isCandidateAvailable =
-                                                    autocorrectPluginManager::canCommitCandidate,
+                                                autocorrectPluginManager::canCommitCandidate,
                                             ),
                                         )
                                     }
@@ -351,10 +353,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
     /**
      * Change the layout of the internal gesture classifier
      */
-    internal fun setLayout(
-        keys: List<TextKey>,
-        inputLayout: AutocorrectInputLayoutSnapshot,
-    ): Boolean {
+    internal fun setLayout(keys: List<TextKey>, inputLayout: AutocorrectInputLayoutSnapshot): Boolean {
         val subtype = subtypeManager.activeSubtype
         val classifierKeys = ArrayList<GlideTypingKey>(keys.size)
         for (key in keys) {
@@ -422,14 +421,14 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
     ): List<String>? {
         if (expectedRevision == null) return null
         if (
-            requireCurrentLayout && expectedRevision != layoutRevision ||
+            (requireCurrentLayout && expectedRevision != layoutRevision) ||
             !autocorrectPluginManager.isCurrentEditorGeneration(expectedEditorGeneration)
         ) {
             return null
         }
         return classifierMutex.withLock {
             if (
-                requireCurrentLayout && expectedRevision != layoutRevision ||
+                (requireCurrentLayout && expectedRevision != layoutRevision) ||
                 !autocorrectPluginManager.isCurrentEditorGeneration(expectedEditorGeneration) ||
                 expectedRevision.classifierKeys.isEmpty()
             ) {
@@ -474,11 +473,9 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
         return current.text == text && current.selection == selection
     }
 
-    private fun PendingGlide.isStillCurrent(): Boolean {
-        return subtypeManager.activeSubtype == revision.subtype &&
-            autocorrectPluginManager.isCurrentEditorGeneration(editorGeneration) &&
-            content.isStillActive()
-    }
+    private fun PendingGlide.isStillCurrent(): Boolean = subtypeManager.activeSubtype == revision.subtype &&
+        autocorrectPluginManager.isCurrentEditorGeneration(editorGeneration) &&
+        content.isStillActive()
 
     private class PendingGlide(
         val points: List<GlideTypingGesture.Detector.Position>,
@@ -551,10 +548,7 @@ internal fun rebaseGlideAlternatives(
     }
 }
 
-internal fun glideAlternativeReplacement(
-    committedText: String,
-    content: EditorContent,
-): SuggestionReplacement? {
+internal fun glideAlternativeReplacement(committedText: String, content: EditorContent): SuggestionReplacement? {
     if (
         committedText.isEmpty() ||
         content.offset < 0 ||
@@ -612,12 +606,8 @@ private class RebasedGlideProvider(
         delegate.notifySuggestionReverted(subtype, original)
     }
 
-    override suspend fun removeSuggestion(
-        subtype: Subtype,
-        candidate: SuggestionCandidate,
-    ): Boolean {
-        return delegate.removeSuggestion(subtype, original)
-    }
+    override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean =
+        delegate.removeSuggestion(subtype, original)
 }
 
 internal fun TextKey.glideTypingOutput(subtype: Subtype): String? {

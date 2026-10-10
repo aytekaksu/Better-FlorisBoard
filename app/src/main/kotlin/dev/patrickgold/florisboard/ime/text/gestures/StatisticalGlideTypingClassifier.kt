@@ -42,7 +42,7 @@ import kotlin.math.sqrt
  *
  * Check out Étienne Desticourt's excellent write up at https://github.com/AnySoftKeyboard/AnySoftKeyboard/pull/1870
  */
-class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier {
+class StatisticalGlideTypingClassifier(context: Context) {
     private val nlpManager by context.nlpManager()
 
     private val gesture = Gesture()
@@ -103,30 +103,27 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         private const val PRUNER_CACHE_SIZE = 5
         private const val MAX_WORD_TOKENIZATIONS = 32
 
-        private fun geometryWord(word: String): String {
-            return Normalizer.normalize(word, Normalizer.Form.NFC)
+        private fun geometryWord(word: String): String = Normalizer.normalize(word, Normalizer.Form.NFC)
+
+        private fun isGeometryIgnorable(codePoint: Int): Boolean = when (Character.getType(codePoint)) {
+            Character.NON_SPACING_MARK.toInt(),
+            Character.COMBINING_SPACING_MARK.toInt(),
+            Character.ENCLOSING_MARK.toInt(),
+            Character.FORMAT.toInt(),
+            Character.CONNECTOR_PUNCTUATION.toInt(),
+            Character.DASH_PUNCTUATION.toInt(),
+            Character.START_PUNCTUATION.toInt(),
+            Character.END_PUNCTUATION.toInt(),
+            Character.INITIAL_QUOTE_PUNCTUATION.toInt(),
+            Character.FINAL_QUOTE_PUNCTUATION.toInt(),
+            Character.OTHER_PUNCTUATION.toInt(),
+            -> true
+
+            else -> false
         }
 
-        private fun isGeometryIgnorable(codePoint: Int): Boolean {
-            return when (Character.getType(codePoint)) {
-                Character.NON_SPACING_MARK.toInt(),
-                Character.COMBINING_SPACING_MARK.toInt(),
-                Character.ENCLOSING_MARK.toInt(),
-                Character.FORMAT.toInt(),
-                Character.CONNECTOR_PUNCTUATION.toInt(),
-                Character.DASH_PUNCTUATION.toInt(),
-                Character.START_PUNCTUATION.toInt(),
-                Character.END_PUNCTUATION.toInt(),
-                Character.INITIAL_QUOTE_PUNCTUATION.toInt(),
-                Character.FINAL_QUOTE_PUNCTUATION.toInt(),
-                Character.OTHER_PUNCTUATION.toInt() -> true
-                else -> false
-            }
-        }
-
-        internal fun buildKeyIndex(keys: List<GlideTypingKey>, subtype: Subtype): KeyIndex {
-            return KeyIndex.build(keys, subtype)
-        }
+        internal fun buildKeyIndex(keys: List<GlideTypingKey>, subtype: Subtype): KeyIndex =
+            KeyIndex.build(keys, subtype)
     }
 
     internal class KeyIndex private constructor(
@@ -236,11 +233,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                 val directOutputs = directTokens.mapTo(hashSetOf(), OutputToken::text)
                 val localeAliasClaims = linkedMapOf<String, GlideTypingKey?>()
                 val fallbackAliasClaims = linkedMapOf<String, GlideTypingKey?>()
-                fun claim(
-                    claims: MutableMap<String, GlideTypingKey?>,
-                    alias: String,
-                    key: GlideTypingKey,
-                ) {
+                fun claim(claims: MutableMap<String, GlideTypingKey?>, alias: String, key: GlideTypingKey) {
                     if (alias.isEmpty() || alias in directOutputs || alias == key.output) return
                     if (!claims.containsKey(alias)) {
                         claims[alias] = key
@@ -292,7 +285,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         }
     }
 
-    override fun addGesturePoint(position: GlideTypingGesture.Detector.Position) {
+    fun addGesturePoint(position: GlideTypingGesture.Detector.Position) {
         if (!gesture.isEmpty) {
             val dx = gesture.getLastX() - position.x
             val dy = gesture.getLastY() - position.y
@@ -305,7 +298,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         }
     }
 
-    override suspend fun setLayout(keys: List<GlideTypingKey>, subtype: Subtype) {
+    suspend fun setLayout(keys: List<GlideTypingKey>, subtype: Subtype) {
         val wordData = nlpManager.getGlideTypingWordData(subtype)
         val wordsChanged =
             wordDataSubtype != subtype || wordDataRevision != wordData.revision
@@ -339,12 +332,11 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
 
     private val lruSuggestionCache = LruCache<Pair<Gesture, Int>, List<String>>(SUGGESTION_CACHE_SIZE)
 
-    override suspend fun getSuggestions(maxSuggestionCount: Int): List<String> {
-        return lruSuggestionCache.get(gesture to maxSuggestionCount)
+    suspend fun getSuggestions(maxSuggestionCount: Int): List<String> =
+        lruSuggestionCache.get(gesture to maxSuggestionCount)
             ?: unCachedGetSuggestions(maxSuggestionCount).also { suggestions ->
                 lruSuggestionCache.put(gesture.clone() to maxSuggestionCount, suggestions)
             }
-    }
 
     private suspend fun unCachedGetSuggestions(maxSuggestionCount: Int): List<String> {
         val candidates = arrayListOf<String>()
@@ -385,15 +377,11 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         return candidates
     }
 
-    override fun clear() {
+    fun clear() {
         gesture.clear()
     }
 
-    private data class PrunerCacheKey(
-        val subtype: Subtype,
-        val wordDataRevision: Long,
-        val keys: List<GlideTypingKey>,
-    )
+    private data class PrunerCacheKey(val subtype: Subtype, val wordDataRevision: Long, val keys: List<GlideTypingKey>)
 
     private fun calcLocationDistance(gesture1: Gesture, gesture2: Gesture): Float {
         var totalDistance = 0.0f
@@ -456,10 +444,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
          * @param keys The keys on the keyboard.
          * @return A list of likely words.
          */
-        fun pruneByExtremities(
-            userGesture: Gesture,
-            keys: Iterable<GlideTypingKey>,
-        ): ArrayList<String> {
+        fun pruneByExtremities(userGesture: Gesture, keys: Iterable<GlideTypingKey>): ArrayList<String> {
             val remainingWords = linkedSetOf<String>()
             val startX = userGesture.getFirstX()
             val startY = userGesture.getFirstY()
@@ -511,14 +496,10 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         private val cachedIdealLengths = ConcurrentHashMap<String, List<Float>>()
 
         companion object {
-            private fun getFirstKeyLastKeys(
-                word: String,
-                keyIndex: KeyIndex,
-            ): Set<Pair<Int, Int>> {
-                return keyIndex.tokenize(word).mapTo(linkedSetOf()) { keys ->
+            private fun getFirstKeyLastKeys(word: String, keyIndex: KeyIndex): Set<Pair<Int, Int>> =
+                keyIndex.tokenize(word).mapTo(linkedSetOf()) { keys ->
                     keys.first().id to keys.last().id
                 }
-            }
 
             /**
              * Finds a chosen number of keys closest to a given point on the keyboard.
@@ -529,13 +510,10 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
              * @param keys The keys of the keyboard.
              * @return A list of the n closest keys.
              */
-            private fun findNClosestKeys(
-                x: Float, y: Float, n: Int, keys: Iterable<GlideTypingKey>
-            ): Iterable<Int> {
-                return keys.sortedBy { key ->
+            private fun findNClosestKeys(x: Float, y: Float, n: Int, keys: Iterable<GlideTypingKey>): Iterable<Int> =
+                keys.sortedBy { key ->
                     Gesture.distance(key.centerX, key.centerY, x, y)
                 }.take(n).map(GlideTypingKey::id)
-            }
         }
     }
 
@@ -548,11 +526,8 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             // TODO: Find out optimal max size
             private const val MAX_SIZE = 500
 
-            internal fun generateIdealGestures(
-                word: String,
-                keyIndex: KeyIndex,
-            ): List<Gesture> {
-                return keyIndex.tokenize(word).flatMap { wordKeys ->
+            internal fun generateIdealGestures(word: String, keyIndex: KeyIndex): List<Gesture> =
+                keyIndex.tokenize(word).flatMap { wordKeys ->
                     val idealGesture = Gesture()
                     val idealGestureWithLoops = Gesture()
                     var previousKey: GlideTypingKey? = null
@@ -586,12 +561,8 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                     }
                     if (hasLoops) listOf(idealGesture, idealGestureWithLoops) else listOf(idealGesture)
                 }
-            }
 
-            fun distance(x1: Float, y1: Float, x2: Float, y2: Float): Float {
-                return sqrt((x1 - x2).pow(2) + (y1 - y2).pow(2))
-            }
-
+            fun distance(x1: Float, y1: Float, x2: Float, y2: Float): Float = sqrt((x1 - x2).pow(2) + (y1 - y2).pow(2))
         }
 
         val isEmpty: Boolean
@@ -719,9 +690,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         fun getX(i: Int): Float = xs.getOrElse(i) { 0f }
         fun getY(i: Int): Float = ys.getOrElse(i) { 0f }
 
-        fun clone(): Gesture {
-            return Gesture(xs.clone(), ys.clone(), size)
-        }
+        fun clone(): Gesture = Gesture(xs.clone(), ys.clone(), size)
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true

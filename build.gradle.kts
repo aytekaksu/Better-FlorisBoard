@@ -196,6 +196,9 @@ val formattedKotlinSources = files(
     file("app/src/main/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummary.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/dictionary/UserDictionary.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycle.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/GlideTypingKey.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/GlideTypingManager.kt"),
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/StatisticalGlideTypingClassifier.kt"),
     file(
         "app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/" +
             "AutocorrectPerformanceSection.kt",
