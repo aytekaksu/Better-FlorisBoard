@@ -7,6 +7,8 @@ Queries, edits, and document import/export run off Main. Only the newest locale
 query may update the screen. An accepted edit or document operation continues
 if the route closes; a closed route cannot show a late result. Duplicate
 submissions are ignored while an operation is active.
+When a document provider returns no output stream, the error omits the
+destination URI.
 
 The existing combined-list format is unchanged: the first line is a header,
 then each `;`-separated row carries word, frequency, optional locale, and
