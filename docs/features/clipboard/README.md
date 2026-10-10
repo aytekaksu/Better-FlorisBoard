@@ -29,6 +29,8 @@ provider work. A timeout or cancellation terminates only that worker; the next
 import starts a clean process instead of retaining a blocked app worker. There
 is no direct-process fallback. A hostile provider may retain its own blocked
 thread, but it cannot pin FlorisBoard's clipboard actor or future imports.
+The importer keeps a finished stage until the caller claims it or cancels it.
+Another import can replace cancelled work only after its producer has exited.
 
 After unlock, startup cleanup removes abandoned provider and share-preview
 partial files before the clipboard actor or share UI can use their directories.

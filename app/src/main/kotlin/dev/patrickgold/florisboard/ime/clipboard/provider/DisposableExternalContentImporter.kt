@@ -138,7 +138,6 @@ internal class DisposableExternalContentImporter(
             try {
                 future.run()
             } finally {
-                activeTask.compareAndSet(task, null)
                 task.markReleased()
             }
         }
@@ -188,9 +187,15 @@ internal class DisposableExternalContentImporter(
         val previous = activeTask.get()
         return when {
             previous == null -> activeTask.compareAndSet(null, task)
+
             !previous.isAbandoned() -> false
+
             !previous.awaitReleaseBefore(task.deadlineElapsedRealtimeMs) -> false
-            else -> admit(task)
+
+            else -> {
+                activeTask.compareAndSet(previous, null)
+                admit(task)
+            }
         }
     }
 
