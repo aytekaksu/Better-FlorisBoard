@@ -208,7 +208,8 @@ class ThemeEditorScreenAndroidTest {
                 val stages = context.cacheDir.toPath().resolve("extension-editor-${workspace.uuid}")
                 stageDirectory = Files.createDirectories(stages)
                 val sentinelBytes = byteArrayOf(2, 4)
-                stageSentinel = Files.write(stages.resolve("unrelated.marker"), sentinelBytes, CREATE_NEW)
+                val sentinel = Files.write(stages.resolve("unrelated.marker"), sentinelBytes, CREATE_NEW)
+                stageSentinel = sentinel
                 val imagesDirectory = Files.createDirectories(workspace.extDir.toPath().resolve("images"))
                 val keptAsset = Files.write(imagesDirectory.resolve("keep.svg"), sentinelBytes, CREATE_NEW)
                 val destination = imagesDirectory.resolve("installed.svg")
@@ -222,7 +223,7 @@ class ThemeEditorScreenAndroidTest {
                     composeRule.waitUntil(20_000L) {
                         composeRule.onAllNodesWithText(importFile).fetchSemanticsNodes().size == 1
                     }
-                    val generated = editorStages(stages)
+                    val generated = editorStages(stages, sentinel)
                     check(generated.size == 1) { "EDITOR_STAGE_COUNT" }
                     val staged = generated.single()
                     check(
@@ -277,12 +278,12 @@ class ThemeEditorScreenAndroidTest {
                     composeRule.runOnIdle { assertEquals(version, workspace.version) }
                     check(
                         Files.readAllBytes(keptAsset).contentEquals(sentinelBytes) &&
-                            Files.readAllBytes(checkNotNull(stageSentinel)).contentEquals(sentinelBytes) &&
+                            Files.readAllBytes(sentinel).contentEquals(sentinelBytes) &&
                             Files.readAllBytes(destination).contentEquals(ClipboardExternalMediaTestSource.svgBytes),
                     ) {
                         "EDITOR_UNRELATED_ASSET_CHANGED"
                     }
-                    check(editorStages(stages).isEmpty()) { "EDITOR_STAGE_RETAINED" }
+                    check(editorStages(stages, sentinel).isEmpty()) { "EDITOR_STAGE_RETAINED" }
                 }
             }
         } catch (failure: Throwable) {
@@ -300,13 +301,12 @@ class ThemeEditorScreenAndroidTest {
         }
     }
 
-    private fun editorStages(directory: Path): List<Path> = Files.newDirectoryStream(directory).use { children ->
-        children.asSequence().filter {
-            val name = it.fileName.toString()
-            name.startsWith(".clipboard-provider-") && name.endsWith(".partial") &&
-                Files.isRegularFile(it, LinkOption.NOFOLLOW_LINKS)
-        }.take(2).toList()
-    }
+    private fun editorStages(directory: Path, sentinel: Path): List<Path> =
+        Files.newDirectoryStream(directory).use { children ->
+            children.asSequence().filter {
+                it != sentinel && Files.isRegularFile(it, LinkOption.NOFOLLOW_LINKS)
+            }.take(2).toList()
+        }
 
     private fun awaitEditorCondition(condition: () -> Boolean) {
         check(Looper.myLooper() != Looper.getMainLooper()) { "EDITOR_FILE_POLL_ON_MAIN" }
