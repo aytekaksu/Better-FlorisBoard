@@ -170,6 +170,7 @@ Editor open/save/close I/O, stylesheet reads/parsing, and asset-list reloads run
 off Main. Saving builds a bounded archive; preview close waits for the keyboard
 to release assets before workspace deletion. Editor-selected fonts and images
 cross the disposable provider boundary before entering that workspace.
+After Save, one restore-aware effect closes the route and schedules workspace cleanup.
 Copying a local theme keeps its Material You palette, contrast, and color specification,
 along with its stylesheet, and chooses an unused component ID.
 
