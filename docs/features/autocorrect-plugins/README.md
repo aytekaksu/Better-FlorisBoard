@@ -28,7 +28,8 @@ The wire format and provider responsibilities are documented in the
 | App settings renderer | [`AutocorrectPluginUiApp.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginUiApp.kt) |
 | Keyboard renderer | [`AutocorrectPluginUiKeyboard.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginUiKeyboard.kt) |
 | Provider selection and app settings surface | [`AutocorrectPluginScreen.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/app/settings/typing/AutocorrectPluginScreen.kt) |
-| Built-in suggestion fallback and candidate lifecycle | [`NlpManager.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpManager.kt) |
+| Provider requests, built-in fallback, and request freshness | [`NlpManager.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpManager.kt) |
+| Candidate assembly, clipboard suggestions, and visible/auto-commit publication | [`SmartbarCandidateController.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/smartbar/SmartbarCandidateController.kt) |
 | Tap trace capture | [`TextKeyboardLayout.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardLayout.kt) |
 | Gesture trace and fallback | [`GlideTypingManager.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/GlideTypingManager.kt) |
 
@@ -72,8 +73,10 @@ request caps must reflect the current shift state.
 
 `NlpManager` reads editor content through an app-supplied live reader, including
 edits still pending in the editor's expected-content queue.
-The app passes `KeyboardManager` a lazy suggestion-session port; NLP still owns
-candidate state and provider lifecycle, and keyboard construction does not start it.
+The app passes `KeyboardManager` a lazy suggestion-session port and a live
+candidate-owner auto-commit reader. NLP keeps provider requests and lifecycle;
+the candidate owner keeps assembly and publication. Keyboard construction does
+not start either lazy owner.
 Shared-action expansion and animation suppression belong to the app's shared
 [Smartbar controller](../smartbar-candidates/README.md), not NLP.
 The app owns one lazy set of built-in Latin and Han provider instances. NLP

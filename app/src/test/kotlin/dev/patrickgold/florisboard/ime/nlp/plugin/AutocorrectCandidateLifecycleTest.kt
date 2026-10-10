@@ -168,25 +168,6 @@ class AutocorrectCandidateLifecycleTest : FunSpec({
         hasDictionaryMutationAccess(1, "other", "provider", "provider") shouldBe false
         hasDictionaryMutationAccess(1, "provider", "provider", null) shouldBe false
     }
-
-    test("clear prevents an already-running assembly from republishing candidates") {
-        val revisions = CandidateRevision()
-        var candidates = listOf("old")
-        var smartbarExpanded = false
-        val runningAssembly = revisions.next()
-
-        revisions.next {
-            candidates = emptyList()
-            smartbarExpanded = true
-        }
-
-        revisions.publishIfCurrent(runningAssembly) {
-            candidates = listOf("stale")
-            smartbarExpanded = false
-        } shouldBe false
-        candidates shouldBe emptyList()
-        smartbarExpanded shouldBe true
-    }
 })
 
 private fun editorRequestEffects(

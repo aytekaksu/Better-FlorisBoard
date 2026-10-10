@@ -41,7 +41,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.UnfoldLess
 import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -65,7 +64,7 @@ import dev.patrickgold.florisboard.ime.smartbar.quickaction.QuickActionsRow
 import dev.patrickgold.florisboard.ime.smartbar.quickaction.ToggleOverflowPanelAction
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.keyboardManager
-import dev.patrickgold.florisboard.nlpManager
+import dev.patrickgold.florisboard.smartbarCandidateController
 import dev.patrickgold.florisboard.sharedActionsController
 import dev.patrickgold.jetpref.datastore.model.collectAsState
 import kotlinx.coroutines.launch
@@ -142,15 +141,12 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
     val prefs by FlorisPreferenceStore
     val context = LocalContext.current
     val keyboardManager by context.keyboardManager()
-    val nlpManager by context.nlpManager()
+    val candidateController by context.smartbarCandidateController()
     val sharedActions by context.sharedActionsController()
     val scope = rememberCoroutineScope()
 
-    val candidates by nlpManager.activeCandidatesFlow.collectAsState()
+    val candidates by candidateController.activeCandidatesFlow.collectAsState()
     val inlineSuggestions by NlpInlineAutofill.suggestions.collectAsState()
-    LaunchedEffect(candidates, inlineSuggestions) {
-        sharedActions.update(candidates, inlineSuggestions)
-    }
     val shouldShowInlineSuggestionsUi = AndroidVersion.ATLEAST_API30_R &&
         candidates.isEmpty() && inlineSuggestions.isNotEmpty()
 

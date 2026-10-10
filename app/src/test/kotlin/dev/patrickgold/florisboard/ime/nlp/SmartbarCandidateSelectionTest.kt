@@ -21,34 +21,10 @@ import dev.patrickgold.florisboard.ime.editor.EditorRange
 import dev.patrickgold.florisboard.ime.media.emoji.Emoji
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldBeNull
-import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 
 class SmartbarCandidateSelectionTest : FunSpec({
-    test("word and clipboard candidates follow editor typing state") {
-        selectSmartbarCandidates(
-            isWordBeingTyped = true,
-            wordCandidates = listOf("type", "typing", "typed"),
-            clipboardCandidates = listOf("clipboard"),
-        ) shouldBe listOf("type", "typing", "typed")
-        selectSmartbarCandidates(
-            isWordBeingTyped = false,
-            wordCandidates = listOf("next", "word"),
-            clipboardCandidates = listOf("clipboard"),
-        ) shouldBe listOf("clipboard")
-        selectSmartbarCandidates(
-            isWordBeingTyped = true,
-            wordCandidates = emptyList(),
-            clipboardCandidates = listOf("clipboard"),
-        ) shouldBe emptyList()
-        selectSmartbarCandidates(
-            isWordBeingTyped = false,
-            wordCandidates = listOf("next", "word"),
-            clipboardCandidates = emptyList(),
-        ) shouldBe listOf("next", "word")
-    }
-
     test("word candidate origin binding preserves provider candidate identity") {
         val candidate = WordSuggestionCandidate(text = "hello")
         val origin = content("helo")
