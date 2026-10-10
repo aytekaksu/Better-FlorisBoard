@@ -49,26 +49,12 @@ class AutocorrectPluginUiTest {
     @Suppress("DEPRECATION")
     fun documentMimeTypesKeepValidV5OrderAndBoundRawInput() {
         val types = (0 until 8).map { "application/x-$it" }
-        val encoded = pluginUiResultBundle(
-            1L,
-            true,
-            AutocorrectPluginUi(
-                appRootPageId = "root",
-                keyboardRootPageId = null,
-                pages = listOf(
-                    AutocorrectPluginUiPage(
-                        id = "root",
-                        title = "Root",
-                        items = listOf(
-                            AutocorrectPluginUiItem(
-                                id = "document",
-                                kind = AutocorrectPluginUiItemKind.DOCUMENT_IMPORT,
-                                title = "Document",
-                                documentMimeTypes = types,
-                            ),
-                        ),
-                    ),
-                ),
+        val encoded = singleItemReply(
+            AutocorrectPluginUiItem(
+                id = "document",
+                kind = AutocorrectPluginUiItemKind.DOCUMENT_IMPORT,
+                title = "Document",
+                documentMimeTypes = types,
             ),
         )
         assertEquals(types, decodedDocumentMimeTypes(encoded))
@@ -88,9 +74,12 @@ class AutocorrectPluginUiTest {
         val reply = Bundle().apply {
             putLong("requestId", 1L)
             putBoolean("successful", true)
-            putBundle("ui", Bundle().apply {
-                putStringArrayList("pages", arrayListOf("not-a-page"))
-            })
+            putBundle(
+                "ui",
+                Bundle().apply {
+                    putStringArrayList("pages", arrayListOf("not-a-page"))
+                },
+            )
         }
 
         assertThrows(IllegalArgumentException::class.java) {
@@ -117,26 +106,12 @@ class AutocorrectPluginUiTest {
     @Test
     @Suppress("DEPRECATION")
     fun wrongTypedDocumentMimeTypesCannotWidenThePicker() {
-        val reply = pluginUiResultBundle(
-            1L,
-            true,
-            AutocorrectPluginUi(
-                appRootPageId = "root",
-                keyboardRootPageId = null,
-                pages = listOf(
-                    AutocorrectPluginUiPage(
-                        id = "root",
-                        title = "Root",
-                        items = listOf(
-                            AutocorrectPluginUiItem(
-                                id = "document",
-                                kind = AutocorrectPluginUiItemKind.DOCUMENT_IMPORT,
-                                title = "Document",
-                                documentMimeTypes = listOf("application/json"),
-                            ),
-                        ),
-                    ),
-                ),
+        val reply = singleItemReply(
+            AutocorrectPluginUiItem(
+                id = "document",
+                kind = AutocorrectPluginUiItemKind.DOCUMENT_IMPORT,
+                title = "Document",
+                documentMimeTypes = listOf("application/json"),
             ),
         )
         val item = reply.getBundle("ui")!!
@@ -152,30 +127,24 @@ class AutocorrectPluginUiTest {
         .ui!!.pages.single().items.single().documentMimeTypes
 
     private fun roundTrip(kind: AutocorrectPluginUiItemKind, target: String): String? {
-        val ui = AutocorrectPluginUi(
-            appRootPageId = "root",
-            keyboardRootPageId = null,
-            pages = listOf(
-                AutocorrectPluginUiPage(
-                    id = "root",
-                    title = "Root",
-                    items = listOf(
-                        AutocorrectPluginUiItem(
-                            id = "target",
-                            kind = kind,
-                            title = "Target",
-                            target = target,
-                        ),
-                    ),
-                ),
+        val reply = singleItemReply(
+            AutocorrectPluginUiItem(
+                id = "target",
+                kind = kind,
+                title = "Target",
+                target = target,
             ),
         )
-        return pluginUiResultFromBundle(pluginUiResultBundle(1L, true, ui))
-            .ui
-            ?.pages
-            ?.single()
-            ?.items
-            ?.single()
-            ?.target
+        return pluginUiResultFromBundle(reply).ui?.pages?.single()?.items?.single()?.target
     }
+
+    private fun singleItemReply(item: AutocorrectPluginUiItem) = pluginUiResultBundle(
+        1L,
+        true,
+        AutocorrectPluginUi(
+            appRootPageId = "root",
+            keyboardRootPageId = null,
+            pages = listOf(AutocorrectPluginUiPage(id = "root", title = "Root", items = listOf(item))),
+        ),
+    )
 }

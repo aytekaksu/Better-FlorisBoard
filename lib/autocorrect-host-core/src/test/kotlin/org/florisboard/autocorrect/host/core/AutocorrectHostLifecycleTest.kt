@@ -83,13 +83,7 @@ class AutocorrectHostLifecycleTest :
         test("discovery failure closes an unbound waiting session") {
             val host = HostTestHarness()
             host.dispatch(HostEvent.SelectProvider(ProviderA))
-            val discovery = host.dispatch(
-                HostEvent.OpenSession(
-                    DefaultSessionConfiguration,
-                    host.state.editorGeneration,
-                    T0,
-                ),
-            ).singleEffect<HostEffect.DiscoverProviders>()
+            val discovery = host.openSession().singleEffect<HostEffect.DiscoverProviders>()
             host.state.session?.phase shouldBe SessionPhase.AWAITING_BINDING
 
             val effects = host.dispatch(HostEvent.ProviderDiscoveryFailed(discovery.revision))
@@ -106,23 +100,11 @@ class AutocorrectHostLifecycleTest :
             val host = HostTestHarness()
             host.discover(setOf(ProviderB))
 
-            host.dispatch(
-                HostEvent.OpenSession(
-                    DefaultSessionConfiguration,
-                    host.state.editorGeneration,
-                    T0,
-                ),
-            ).singleEffect<HostEffect.FallbackRequired>().reason shouldBe
+            host.openSession().singleEffect<HostEffect.FallbackRequired>().reason shouldBe
                 FallbackReason.NO_PROVIDER_SELECTED
 
             host.dispatch(HostEvent.SelectProvider(ProviderA))
-            val unavailable = host.dispatch(
-                HostEvent.OpenSession(
-                    DefaultSessionConfiguration,
-                    host.state.editorGeneration,
-                    T0,
-                ),
-            )
+            val unavailable = host.openSession()
             unavailable.singleEffect<HostEffect.FallbackRequired>().reason shouldBe
                 FallbackReason.PROVIDER_UNAVAILABLE
             host.state.session shouldBe null
@@ -141,13 +123,7 @@ class AutocorrectHostLifecycleTest :
             secondaryLanguages += "fr-FR"
             host.state.session?.configuration?.secondaryLanguageTags shouldContainExactly
                 listOf("de-DE")
-            host.dispatch(
-                HostEvent.OpenSession(
-                    configuration.copy(secondaryLanguageTags = listOf("de-DE")),
-                    host.state.editorGeneration,
-                    T0,
-                ),
-            ) shouldBe emptyList()
+            host.openSession(configuration.copy(secondaryLanguageTags = listOf("de-DE"))) shouldBe emptyList()
             host.state.session shouldBe originalSession
         }
 
@@ -164,13 +140,7 @@ class AutocorrectHostLifecycleTest :
             host.startActiveSession(configuration = oldConfiguration)
             val oldSessionId = host.state.session!!.sessionId
 
-            val effects = host.dispatch(
-                HostEvent.OpenSession(
-                    newConfiguration,
-                    host.state.editorGeneration,
-                    T0,
-                ),
-            )
+            val effects = host.openSession(newConfiguration)
 
             assertSoftly {
                 val finish = effects.filterIsInstance<HostEffect.FinishSession>().single()
@@ -189,12 +159,8 @@ class AutocorrectHostLifecycleTest :
             host.startActiveSession()
             val oldSessionId = host.state.session!!.sessionId
 
-            val effects = host.dispatch(
-                HostEvent.OpenSession(
-                    DefaultSessionConfiguration.copy(allowPersonalizedLearning = false),
-                    host.state.editorGeneration,
-                    T0,
-                ),
+            val effects = host.openSession(
+                DefaultSessionConfiguration.copy(allowPersonalizedLearning = false),
             )
 
             effects.singleEffect<HostEffect.FinishSession>().lease.sessionId shouldBe oldSessionId
@@ -308,9 +274,7 @@ class AutocorrectHostLifecycleTest :
             val oldStart = host.queueSessionStart(host.awaitSessionBinding())
 
             val privateConfiguration = DefaultSessionConfiguration.copy(allowPersonalizedLearning = false)
-            val effects = host.dispatch(
-                HostEvent.OpenSession(privateConfiguration, host.state.editorGeneration, T0),
-            )
+            val effects = host.openSession(privateConfiguration)
             effects.filterIsInstance<HostEffect.FinishSession>() shouldBe emptyList()
             val newStart = effects.singleEffect<HostEffect.StartSession>().lease
             newStart.sessionId shouldBe host.state.session?.sessionId
@@ -328,12 +292,8 @@ class AutocorrectHostLifecycleTest :
             val oldStart = host.queueSessionStart(host.awaitSessionBinding())
             host.dispatch(HostEvent.SessionStartSending(oldStart))
 
-            val effects = host.dispatch(
-                HostEvent.OpenSession(
-                    DefaultSessionConfiguration.copy(allowPersonalizedLearning = false),
-                    host.state.editorGeneration,
-                    T0,
-                ),
+            val effects = host.openSession(
+                DefaultSessionConfiguration.copy(allowPersonalizedLearning = false),
             )
             val finish = effects.singleEffect<HostEffect.FinishSession>().lease
             val newStart = effects.singleEffect<HostEffect.StartSession>().lease
@@ -457,13 +417,7 @@ class AutocorrectHostLifecycleTest :
                 ) shouldBe true
             host.state.pendingFinishes shouldBe emptyMap()
 
-            val openEffects = host.dispatch(
-                HostEvent.OpenSession(
-                    DefaultSessionConfiguration,
-                    host.state.editorGeneration,
-                    T0,
-                ),
-            )
+            val openEffects = host.openSession()
             val newBinding = openEffects.singleEffect<HostEffect.Bind>().lease
             newBinding.providerId shouldBe ProviderB
             newBinding.epoch.value shouldBe oldBinding.epoch.value + 1L
@@ -483,13 +437,7 @@ class AutocorrectHostLifecycleTest :
             val host = HostTestHarness()
             host.startActiveSession(ProviderA)
             host.dispatch(HostEvent.SelectProvider(ProviderB))
-            val newBinding = host.dispatch(
-                HostEvent.OpenSession(
-                    DefaultSessionConfiguration,
-                    host.state.editorGeneration,
-                    T0,
-                ),
-            ).singleEffect<HostEffect.Bind>().lease
+            val newBinding = host.openSession().singleEffect<HostEffect.Bind>().lease
 
             val invalidateEffects = host.dispatch(HostEvent.InvalidateEditor)
             assertSoftly {

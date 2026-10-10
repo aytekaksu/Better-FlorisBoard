@@ -64,15 +64,12 @@ class AutocorrectHostFailureRecoveryTest :
             val old = host.issue()
             val current = host.issue()
 
-            host.dispatch(
-                HostEvent.RequestReply(old, RequestOutcome.Failure(ProviderFailureKind.MALFORMED_REPLY), T0),
-            ).singleEffect<HostEffect.RejectReply>().reason shouldBe ReplyRejectionReason.SUPERSEDED
+            host.replyFailure(old, ProviderFailureKind.MALFORMED_REPLY)
+                .singleEffect<HostEffect.RejectReply>().reason shouldBe ReplyRejectionReason.SUPERSEDED
             host.state.pendingRequest?.lease shouldBe current
             host.state.healthOf(ProviderA) shouldBe ProviderHealth()
 
-            val failure = host.dispatch(
-                HostEvent.RequestReply(current, RequestOutcome.Failure(ProviderFailureKind.MALFORMED_REPLY), T0),
-            )
+            val failure = host.replyFailure(current, ProviderFailureKind.MALFORMED_REPLY)
             assertSoftly {
                 host.state.pendingRequest shouldBe null
                 host.state.retiredRequests.last().reason shouldBe RetiredRequestReason.FAILED
@@ -280,25 +277,17 @@ class AutocorrectHostFailureRecoveryTest :
 
             repeat(2) { index ->
                 val request = host.issue(MonotonicMillis(T0.value + index))
-                val effects = host.dispatch(
-                    HostEvent.RequestReply(
-                        request,
-                        RequestOutcome.Failure(ProviderFailureKind.TIMEOUT),
-                        MonotonicMillis(T0.value + index),
-                    ),
+                val effects = host.replyFailure(
+                    request,
+                    ProviderFailureKind.TIMEOUT,
+                    MonotonicMillis(T0.value + index),
                 )
                 effects.filterIsInstance<HostEffect.ScheduleCircuitRecovery>() shouldBe emptyList()
                 host.state.healthOf(ProviderA).circuit shouldBe CircuitState.Closed
             }
 
             val third = host.issue(MonotonicMillis(T0.value + 2))
-            val effects = host.dispatch(
-                HostEvent.RequestReply(
-                    third,
-                    RequestOutcome.Failure(ProviderFailureKind.TIMEOUT),
-                    MonotonicMillis(T0.value + 2),
-                ),
-            )
+            val effects = host.replyFailure(third, ProviderFailureKind.TIMEOUT, MonotonicMillis(T0.value + 2))
             val open = host.state.healthOf(ProviderA).circuit.shouldBeInstanceOf<CircuitState.Open>()
 
             assertSoftly {
@@ -314,13 +303,7 @@ class AutocorrectHostFailureRecoveryTest :
             )
             host.startActiveSession()
             val first = host.issue(T0)
-            host.dispatch(
-                HostEvent.RequestReply(
-                    first,
-                    RequestOutcome.Failure(ProviderFailureKind.TIMEOUT),
-                    T0,
-                ),
-            )
+            host.replyFailure(first, ProviderFailureKind.TIMEOUT)
 
             host.dispatch(
                 HostEvent.IssueRequest(host.state.editorGeneration, MonotonicMillis(1_099)),
@@ -360,13 +343,7 @@ class AutocorrectHostFailureRecoveryTest :
             )
             host.startActiveSession()
             val failed = host.issue(T0)
-            host.dispatch(
-                HostEvent.RequestReply(
-                    failed,
-                    RequestOutcome.Failure(ProviderFailureKind.TIMEOUT),
-                    T0,
-                ),
-            )
+            host.replyFailure(failed, ProviderFailureKind.TIMEOUT)
 
             val effects = host.dispatch(
                 HostEvent.IssueRequest(host.state.editorGeneration, MonotonicMillis(1_100)),
@@ -385,25 +362,13 @@ class AutocorrectHostFailureRecoveryTest :
             )
             host.startActiveSession()
             val first = host.issue(T0)
-            host.dispatch(
-                HostEvent.RequestReply(
-                    first,
-                    RequestOutcome.Failure(ProviderFailureKind.TIMEOUT),
-                    T0,
-                ),
-            )
+            host.replyFailure(first, ProviderFailureKind.TIMEOUT)
             host.dispatch(
                 HostEvent.CircuitCooldownElapsed(ProviderA, MonotonicMillis(1_100)),
             )
             val probe = host.issue(MonotonicMillis(1_100))
 
-            host.dispatch(
-                HostEvent.RequestReply(
-                    probe,
-                    RequestOutcome.Failure(ProviderFailureKind.PROVIDER_ERROR),
-                    MonotonicMillis(1_120),
-                ),
-            )
+            host.replyFailure(probe, ProviderFailureKind.PROVIDER_ERROR, MonotonicMillis(1_120))
             val reopened = host.state.healthOf(ProviderA).circuit
                 .shouldBeInstanceOf<CircuitState.Open>()
             reopened.retryAt shouldBe MonotonicMillis(1_220)

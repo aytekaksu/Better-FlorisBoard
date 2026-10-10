@@ -186,6 +186,7 @@ val qualityKotlinSources = files(
 
 val formattedKotlinSources = files(
     autocorrectHostCoreKotlinSources,
+    file("lib/autocorrect-api/src/test/kotlin/org/florisboard/autocorrect/api/AutocorrectPluginUiTest.kt"),
     sharedQualityKotlinSources,
     inheritedAppComposeSources,
     imeHeightKotlinSources,

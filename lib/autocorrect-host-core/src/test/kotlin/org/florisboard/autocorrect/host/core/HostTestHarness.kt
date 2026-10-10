@@ -49,6 +49,12 @@ internal class HostTestHarness(policy: CircuitPolicy = CircuitPolicy()) {
         return dispatch(HostEvent.ProvidersDiscovered(revision, providers))
     }
 
+    fun openSession(
+        configuration: SessionConfiguration = DefaultSessionConfiguration,
+        editorGeneration: EditorGeneration = state.editorGeneration,
+        at: MonotonicMillis = T0,
+    ): List<HostEffect> = dispatch(HostEvent.OpenSession(configuration, editorGeneration, at))
+
     fun awaitSessionBinding(
         providerId: ProviderId = ProviderA,
         configuration: SessionConfiguration = DefaultSessionConfiguration,
@@ -81,6 +87,9 @@ internal class HostTestHarness(policy: CircuitPolicy = CircuitPolicy()) {
     fun issue(at: MonotonicMillis = T0): RequestLease = dispatch(HostEvent.IssueRequest(state.editorGeneration, at))
         .singleEffect<HostEffect.RequestSuggestions>()
         .lease
+
+    fun replyFailure(lease: RequestLease, kind: ProviderFailureKind, at: MonotonicMillis = T0): List<HostEffect> =
+        dispatch(HostEvent.RequestReply(lease, RequestOutcome.Failure(kind), at))
 }
 
 internal inline fun <reified T : HostEffect> List<HostEffect>.singleEffect(): T = filterIsInstance<T>().single()
