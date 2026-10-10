@@ -90,8 +90,9 @@ which set and clear events cross the boundary. Startup and periodic maintenance
 also observe and converge missed callbacks when Android permits an exact read.
 
 Device lock hides history, and sensitive items use content-free previews.
-`NlpManager` uses the app's live incognito reader before publishing clipboard
-suggestions. `KeyboardManager` rejects them at commit while incognito is on or
+`SmartbarCandidateController` builds suggestions from the current clip and
+rechecks live incognito and both device locks before publishing.
+`KeyboardManager` rejects them at commit while incognito is on or
 the device is locked. Opening the clipboard panel and selecting an item remains
 an explicit user action in incognito mode. Clipboard text, URIs, provider paths,
 editor metadata, and exception messages must never enter logs or diagnostics.

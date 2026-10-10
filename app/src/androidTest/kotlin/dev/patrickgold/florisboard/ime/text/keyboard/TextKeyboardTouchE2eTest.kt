@@ -32,6 +32,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
@@ -45,7 +46,9 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.patrickgold.florisboard.FlorisApplication
 import dev.patrickgold.florisboard.FlorisImeService
+import dev.patrickgold.florisboard.PreferenceStoreInitializationState
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.autocorrectPluginManager
@@ -61,6 +64,11 @@ import dev.patrickgold.florisboard.ime.keyboard.KeyboardMode
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSkinTone
 import dev.patrickgold.florisboard.ime.media.emoji.FlorisEmojiCompat
 import dev.patrickgold.florisboard.ime.nlp.NlpInlineAutofill
+import dev.patrickgold.florisboard.ime.nlp.SuggestionCandidate
+import dev.patrickgold.florisboard.ime.nlp.SuggestionReplacement
+import dev.patrickgold.florisboard.ime.nlp.SuggestionSeparatorBehavior
+import dev.patrickgold.florisboard.ime.nlp.WordSuggestionCandidate
+import dev.patrickgold.florisboard.ime.smartbar.CandidatesDisplayMode
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarMotionMode
 import dev.patrickgold.florisboard.ime.text.gestures.SwipeAction
@@ -71,8 +79,11 @@ import dev.patrickgold.florisboard.ime.window.ImeWindowProps
 import dev.patrickgold.florisboard.ime.window.ImeWindowSpec
 import dev.patrickgold.florisboard.ime.window.KeyboardContentScaleMode
 import dev.patrickgold.florisboard.keyboardManager
+import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.sharedActionsController
+import dev.patrickgold.florisboard.smartbarCandidateController
 import dev.patrickgold.florisboard.subtypeManager
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -910,6 +921,176 @@ class TextKeyboardTouchE2eTest {
             durationMs = repeatObservationDuration(),
             context = "after changing layouts while n was held",
         )
+    }
+
+    @Test
+    fun appCandidateOwnerFeedsTheVisibleRowAndHiddenSeparatorCommit() {
+        val context = instrumentation.targetContext
+        val application = context.applicationContext as FlorisApplication
+        runBlocking {
+            assertEquals(
+                PreferenceStoreInitializationState.READY,
+                withTimeout(20_000L) {
+                    application.preferenceStoreInitializationState.first {
+                        it != PreferenceStoreInitializationState.LOADING
+                    }
+                },
+            )
+        }
+        val nlp by context.nlpManager()
+        val candidates by context.smartbarCandidateController()
+        val editorInstance by context.editorInstance()
+        val keyboardManager by context.keyboardManager()
+        val sharedActions by context.sharedActionsController()
+        val prefs by FlorisPreferenceStore
+        val originalSuggestions = prefs.suggestion.enabled.get()
+        val originalPlugin = prefs.suggestion.autocorrectPluginComponent.get()
+        val originalEmoji = prefs.emoji.suggestionEnabled.get()
+        val originalClipboard = prefs.clipboard.suggestionEnabled.get()
+        val originalDisplayMode = prefs.suggestion.displayMode.get()
+        val originalSmartbar = prefs.smartbar.enabled.get()
+        val originalLayout = prefs.smartbar.layout.get()
+        val originalMotion = prefs.smartbar.motionMode.get()
+        val originalExpanded = prefs.smartbar.sharedActionsExpanded.get()
+        var originalFlags = false to false
+        instrumentation.runOnMainSync {
+            originalFlags = keyboardManager.activeState.let { it.isComposingEnabled to it.isIncognitoMode }
+        }
+        val automation = instrumentation.uiAutomation
+        val originalAccessibilityFlags = automation.serviceInfo.flags
+        val labels = setOf("chosen", "first", "second")
+
+        fun candidatePoints(): Map<String, PointF> = buildMap {
+            fun visit(node: AccessibilityNodeInfo) {
+                val text = node.text?.toString()
+                if (node.isVisibleToUser && text != null && text in labels) {
+                    val bounds = Rect()
+                    node.getBoundsInScreen(bounds)
+                    if (!bounds.isEmpty) put(text, PointF(bounds.exactCenterX(), bounds.exactCenterY()))
+                }
+                for (index in 0 until node.childCount) node.getChild(index)?.let(::visit)
+            }
+            automation.windows.filter { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }.forEach { window ->
+                window.root?.takeIf { it.packageName?.toString() == context.packageName }?.let(::visit)
+            }
+        }
+
+        fun publishForDraft() {
+            setEditorText("draft")
+            waitUntil("the IME did not acknowledge the synthetic draft") {
+                val content = editorInstance.activeContentFlow.value
+                content.text == "draft" && content.selection == EditorRange.cursor(5)
+            }
+            val origin = editorInstance.activeContent
+            val requestedReplacement = SuggestionReplacement(EditorRange(0, 5), "draft", EditorRange.cursor(5))
+            fun candidate(text: String, visible: Boolean, autoCommit: Boolean) =
+                object : SuggestionCandidate by WordSuggestionCandidate(
+                    text,
+                    isEligibleForAutoCommit = autoCommit,
+                    originContent = origin,
+                ) {
+                    override val isVisible = visible
+                    override val replacement = requestedReplacement
+                    override val separatorBehavior = SuggestionSeparatorBehavior.INSERT
+                }
+            nlp.suggestDirectly(
+                listOf(
+                    candidate("chosen", visible = false, autoCommit = true),
+                    candidate("first", visible = true, autoCommit = false),
+                    candidate("second", visible = true, autoCommit = true),
+                ),
+            )
+            waitUntil("the app owner did not publish the visible candidates") {
+                candidates.activeCandidatesFlow.value.map { it.text.toString() } == listOf("first", "second")
+            }
+            assertEquals("chosen", candidates.autoCommitCandidate?.text?.toString())
+        }
+
+        val testResult = runCatching {
+            runBlocking {
+                prefs.suggestion.autocorrectPluginComponent.set("").getOrThrow()
+                prefs.suggestion.enabled.set(true).getOrThrow()
+                prefs.emoji.suggestionEnabled.set(false).getOrThrow()
+                prefs.clipboard.suggestionEnabled.set(false).getOrThrow()
+                prefs.suggestion.displayMode.set(CandidatesDisplayMode.CLASSIC).getOrThrow()
+                prefs.smartbar.enabled.set(true).getOrThrow()
+                prefs.smartbar.layout.set(SmartbarLayout.SUGGESTIONS_ONLY).getOrThrow()
+                prefs.smartbar.motionMode.set(SmartbarMotionMode.OFF).getOrThrow()
+            }
+            instrumentation.runOnMainSync {
+                keyboardManager.activeState.isComposingEnabled = true
+                keyboardManager.activeState.isIncognitoMode = false
+            }
+            automation.serviceInfo = automation.serviceInfo.apply {
+                flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+            }
+            publishForDraft()
+            var previousPoints: Map<String, PointF>? = null
+            var stablePolls = 0
+            waitUntil("the production Smartbar row did not render both visible choices") {
+                val points = candidatePoints()
+                stablePolls = if (points.keys == setOf("first", "second") && points == previousPoints) stablePolls + 1 else 0
+                previousPoints = points
+                stablePolls >= REQUIRED_STABLE_LAYOUT_POLLS
+            }
+            assertTrue("the hidden choice leaked into the row", "chosen" !in candidatePoints())
+            tap(awaitStableKeyCenter(KeyCode.SPACE))
+            waitForText("chosen ")
+            waitUntil("the editor did not acknowledge the hidden separator commit") {
+                val content = editorInstance.activeContentFlow.value
+                content.text == "chosen " && content.selection == EditorRange.cursor(7)
+            }
+
+            publishForDraft()
+            var firstPoint: PointF? = null
+            waitUntil("the republished visible choice did not reach the row") {
+                firstPoint = candidatePoints()["first"]
+                firstPoint != null
+            }
+            tap(requireNotNull(firstPoint))
+            waitForText("first")
+            waitUntil("the editor did not acknowledge the visible candidate tap") {
+                editorInstance.activeContentFlow.value.text == "first"
+            }
+
+            publishForDraft()
+            nlp.clearSuggestions()
+            assertTrue(candidates.activeCandidatesFlow.value.isEmpty())
+            assertNull(candidates.autoCommitCandidate)
+        }
+        val restores = listOf<() -> Unit>(
+            { nlp.clearSuggestions() },
+            { automation.serviceInfo = automation.serviceInfo.apply { flags = originalAccessibilityFlags } },
+            { runBlocking { prefs.suggestion.enabled.set(originalSuggestions).getOrThrow() } },
+            { runBlocking { prefs.suggestion.autocorrectPluginComponent.set(originalPlugin).getOrThrow() } },
+            { runBlocking { prefs.emoji.suggestionEnabled.set(originalEmoji).getOrThrow() } },
+            { runBlocking { prefs.clipboard.suggestionEnabled.set(originalClipboard).getOrThrow() } },
+            { runBlocking { prefs.suggestion.displayMode.set(originalDisplayMode).getOrThrow() } },
+            { runBlocking { prefs.smartbar.enabled.set(originalSmartbar).getOrThrow() } },
+            { runBlocking { prefs.smartbar.layout.set(originalLayout).getOrThrow() } },
+            { runBlocking { prefs.smartbar.motionMode.set(originalMotion).getOrThrow() } },
+            {
+                instrumentation.runOnMainSync {
+                    keyboardManager.activeState.isComposingEnabled = originalFlags.first
+                    keyboardManager.activeState.isIncognitoMode = originalFlags.second
+                }
+            },
+            {
+                nlp.clearSuggestions()
+                runBlocking { candidates.refresh() }
+                sharedActions.setExpandedByUser(originalExpanded)
+                waitUntil("original shared actions state was not restored") {
+                    prefs.smartbar.sharedActionsExpanded.get() == originalExpanded
+                }
+            },
+            { assertEquals(originalAccessibilityFlags, automation.serviceInfo.flags) },
+        )
+        val cleanup = restores.map { runCatching { it() } }
+        val failure = testResult.exceptionOrNull() ?: cleanup.firstNotNullOfOrNull { it.exceptionOrNull() }
+        if (failure != null) {
+            cleanup.mapNotNull { it.exceptionOrNull() }.filter { it !== failure }.forEach(failure::addSuppressed)
+            throw failure
+        }
     }
 
     @Test

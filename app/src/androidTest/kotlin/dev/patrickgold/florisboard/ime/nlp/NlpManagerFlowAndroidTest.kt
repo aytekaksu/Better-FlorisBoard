@@ -23,13 +23,16 @@ import dev.patrickgold.florisboard.FlorisApplication
 import dev.patrickgold.florisboard.PreferenceStoreInitializationState
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.clipboardManager
+import dev.patrickgold.florisboard.editorInstance
 import dev.patrickgold.florisboard.ime.clipboard.ClipboardSyncBehavior
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.core.SubtypeJsonConfig
-import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.nlp.han.HanShapeBasedLanguageProvider
+import dev.patrickgold.florisboard.keyboardManager
 import dev.patrickgold.florisboard.nlpManager
+import dev.patrickgold.florisboard.sharedActionsController
+import dev.patrickgold.florisboard.smartbarCandidateController
 import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -134,8 +137,14 @@ class NlpManagerFlowAndroidTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val clipboard by context.clipboardManager()
         val nlp by context.nlpManager()
+        val candidates by context.smartbarCandidateController()
+        val editor by context.editorInstance()
+        val keyboard by context.keyboardManager()
+        val sharedActions by context.sharedActionsController()
         val prefs by FlorisPreferenceStore
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
         runBlocking { withTimeout(10_000L) { clipboard.awaitInitialization() } }
+        assertTrue("clipboard fixture requires an idle editor", editor.activeContent.text.isBlank())
 
         val originalClip = clipboard.primaryClip
         val originalInternalClipboard = prefs.clipboard.useInternalClipboard.get()
@@ -143,6 +152,11 @@ class NlpManagerFlowAndroidTest {
         val originalSyncToSystem = prefs.clipboard.syncToSystem.get()
         val originalSuggestionEnabled = prefs.clipboard.suggestionEnabled.get()
         val originalSuggestionTimeout = prefs.clipboard.suggestionTimeout.get()
+        val originalWordSuggestions = prefs.suggestion.enabled.get()
+        val originalPluginComponent = prefs.suggestion.autocorrectPluginComponent.get()
+        val originalExpanded = prefs.smartbar.sharedActionsExpanded.get()
+        var originalIncognito = false
+        instrumentation.runOnMainSync { originalIncognito = keyboard.activeState.isIncognitoMode }
 
         fun waitUntil(message: String, condition: () -> Boolean) {
             val deadline = SystemClock.uptimeMillis() + 10_000L
@@ -160,6 +174,8 @@ class NlpManagerFlowAndroidTest {
                 { prefs.clipboard.syncToSystem.set(originalSyncToSystem).getOrThrow() },
                 { prefs.clipboard.suggestionEnabled.set(originalSuggestionEnabled).getOrThrow() },
                 { prefs.clipboard.suggestionTimeout.set(originalSuggestionTimeout).getOrThrow() },
+                { prefs.suggestion.enabled.set(originalWordSuggestions).getOrThrow() },
+                { prefs.suggestion.autocorrectPluginComponent.set(originalPluginComponent).getOrThrow() },
             )
             restores.mapNotNull { runCatching { it() }.exceptionOrNull() }
                 .firstOrNull()?.let { throw it }
@@ -173,32 +189,41 @@ class NlpManagerFlowAndroidTest {
                 prefs.clipboard.useInternalClipboard.set(true).getOrThrow()
                 prefs.clipboard.suggestionEnabled.set(true).getOrThrow()
                 prefs.clipboard.suggestionTimeout.set(60).getOrThrow()
+                prefs.suggestion.autocorrectPluginComponent.set("").getOrThrow()
+                prefs.suggestion.enabled.set(true).getOrThrow()
             }
-            val provider = nlp.ClipboardSuggestionProvider(context)
-            fun suggestedText(): String? = runBlocking {
-                (provider.suggest(
-                    subtype = Subtype.DEFAULT,
-                    content = EditorContent.Unspecified,
-                    maxCandidateCount = 1,
-                    allowPossiblyOffensive = true,
-                    isPrivateSession = false,
-                ).singleOrNull() as? ClipboardSuggestionCandidate)?.sourceClipboardItem?.text
-            }
+            instrumentation.runOnMainSync { keyboard.activeState.isIncognitoMode = false }
+            nlp.clearSuggestions()
+            fun suggestedText(): String? =
+                candidates.activeCandidatesFlow.value.filterIsInstance<ClipboardSuggestionCandidate>()
+                    .singleOrNull()?.sourceClipboardItem?.text
 
             for (text in listOf("nlp-flow-first", "nlp-flow-second")) {
                 clipboard.updatePrimaryClip(ClipboardItem.text(text))
                 waitUntil("test clip did not become primary") { clipboard.primaryClip?.text == text }
+                waitUntil("current clip did not reach the app candidate owner") { suggestedText() == text }
                 assertEquals(text, suggestedText())
             }
             clipboard.updatePrimaryClip(null)
             waitUntil("test clip was not cleared") { clipboard.primaryClip == null }
+            waitUntil("null clip did not reach the app candidate owner") { suggestedText() == null }
             assertEquals(null, suggestedText())
         } finally {
             try {
                 clipboard.updatePrimaryClip(originalClip)
                 waitUntil("original clip was not restored") { clipboard.primaryClip == originalClip }
             } finally {
-                restorePreferences()
+                try {
+                    restorePreferences()
+                } finally {
+                    instrumentation.runOnMainSync { keyboard.activeState.isIncognitoMode = originalIncognito }
+                    nlp.clearSuggestions()
+                    runBlocking { candidates.refresh() }
+                    sharedActions.setExpandedByUser(originalExpanded)
+                    waitUntil("original shared actions state was not restored") {
+                        prefs.smartbar.sharedActionsExpanded.get() == originalExpanded
+                    }
+                }
             }
         }
     }

@@ -110,6 +110,7 @@ class KeyboardManager(
     val activeState: ObservableKeyboardState,
     dispatcher: InputEventDispatcher,
     suggestionSession: Lazy<KeyboardSuggestionSession>,
+    private val currentAutoCommitCandidate: () -> SuggestionCandidate?,
     private val imeActions: () -> KeyboardImeActions?,
 ) : InputKeyEventReceiver {
     private val prefs by FlorisPreferenceStore
@@ -380,7 +381,7 @@ class KeyboardManager(
     }.getOrDefault(true)
 
     private fun commitAutoCorrectionCandidate(): Pair<SuggestionCandidate?, EditorEditResult> {
-        val candidate = suggestions.getAutoCommitCandidate()
+        val candidate = currentAutoCommitCandidate()
         val result = candidate?.let {
             commitCandidateResult(it, AutocorrectAcceptanceKind.AUTO_CORRECTION)
         } ?: EditorEditResult.NOT_APPLICABLE

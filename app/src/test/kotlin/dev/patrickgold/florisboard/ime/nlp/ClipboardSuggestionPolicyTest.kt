@@ -17,6 +17,9 @@
 package dev.patrickgold.florisboard.ime.nlp
 
 import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
+import dev.patrickgold.florisboard.ime.smartbar.ClipboardSuggestionMatch
+import dev.patrickgold.florisboard.ime.smartbar.buildClipboardSuggestionItems
+import dev.patrickgold.florisboard.ime.smartbar.findClipboardSuggestionMatches
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize

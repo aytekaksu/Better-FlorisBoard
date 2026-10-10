@@ -19,92 +19,25 @@ package dev.patrickgold.florisboard.ime.nlp
 import android.content.Context
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.autocorrectPluginManager
-import dev.patrickgold.florisboard.ime.clipboard.provider.ClipboardItem
-import dev.patrickgold.florisboard.ime.clipboard.provider.ItemType
 import dev.patrickgold.florisboard.ime.core.Subtype
 import dev.patrickgold.florisboard.ime.editor.EditorComposingPolicy
 import dev.patrickgold.florisboard.ime.editor.EditorContent
 import dev.patrickgold.florisboard.ime.media.emoji.EmojiSuggestionProvider
-import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
-import dev.patrickgold.florisboard.ime.smartbar.SharedActionsController
-import dev.patrickgold.florisboard.lib.util.NetworkUtils
+import dev.patrickgold.florisboard.ime.smartbar.SmartbarCandidateController
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.florisboard.autocorrect.api.AutocorrectPluginContract
-import org.florisboard.lib.android.AndroidKeyguardManager
-import org.florisboard.lib.android.systemService
 import org.florisboard.lib.kotlin.collectLatestIn
-import kotlin.properties.Delegates
-
-internal data class ClipboardSuggestionMatch(
-    val value: String,
-    val range: IntRange,
-) {
-    override fun toString() = "ClipboardSuggestionMatch(value=<redacted>)"
-}
-
-internal fun findClipboardSuggestionMatches(
-    text: CharSequence,
-    maxMatches: Int,
-): List<ClipboardSuggestionMatch> {
-    val limit = maxMatches.coerceIn(0, MAX_CLIPBOARD_SUGGESTION_CANDIDATES)
-    if (limit == 0) return emptyList()
-
-    val boundedText = text.take(MAX_CLIPBOARD_SUGGESTION_SCAN_CHARS).toString()
-    val matches = sequence {
-        yieldAll(NetworkUtils.getEmailAddresses(boundedText, MAX_CLIPBOARD_SUGGESTION_RAW_MATCHES))
-        yieldAll(NetworkUtils.getUrls(boundedText, MAX_CLIPBOARD_SUGGESTION_RAW_MATCHES))
-        yieldAll(NetworkUtils.getPhoneNumbers(boundedText, MAX_CLIPBOARD_SUGGESTION_RAW_MATCHES))
-    }
-    val previousMatches = mutableListOf<MatchGroup>()
-    return buildList(limit) {
-        for (match in matches) {
-            val isUnique = previousMatches.none { previous ->
-                previous.value == match.value ||
-                    previous.range.first <= match.range.last &&
-                    match.range.first <= previous.range.last
-            }
-            previousMatches += match
-            if (match.value == boundedText || !isUnique) continue
-            add(ClipboardSuggestionMatch(match.value, match.range))
-            if (size == limit) break
-        }
-    }
-}
-
-internal fun buildClipboardSuggestionItems(
-    source: ClipboardItem,
-    maxCandidateCount: Int,
-): List<ClipboardItem> {
-    val limit = maxCandidateCount.coerceIn(0, MAX_CLIPBOARD_SUGGESTION_CANDIDATES)
-    if (limit == 0) return emptyList()
-    return buildList(limit) {
-        add(source)
-        if (source.isSensitive || source.type != ItemType.TEXT || size == limit) {
-            return@buildList
-        }
-        findClipboardSuggestionMatches(
-            text = source.stringRepresentation(),
-            maxMatches = limit - size,
-        ).forEach { match ->
-            add(source.copy(text = match.value.removeSurrounding("(", ")")))
-        }
-    }
-}
 
 internal class CandidateRevision {
     private var current = 0L
@@ -243,32 +176,26 @@ interface KeyboardSuggestionSession {
     fun isSuggestionOn(): Boolean
     fun suggest(subtype: Subtype, content: EditorContent)
     fun clearSuggestions()
-    fun getAutoCommitCandidate(): SuggestionCandidate?
     fun finishAutocorrectSession()
 }
 
 class NlpManager internal constructor(
     context: Context,
-    clipboardPrimaryClipFlow: Lazy<StateFlow<ClipboardItem?>>,
     private val activeSubtypeFlow: StateFlow<Subtype>,
     builtInProviders: Map<String, SuggestionProvider>,
     private val composingPolicy: EditorComposingPolicy,
     private val currentEditorContent: () -> EditorContent,
     private val isIncognitoMode: () -> Boolean,
-    private val sharedActions: SharedActionsController,
+    private val candidates: SmartbarCandidateController,
+    private val scope: CoroutineScope,
 ) : KeyboardSuggestionSession {
     private val prefs by FlorisPreferenceStore
-    private val primaryClipFlow by clipboardPrimaryClipFlow
     private val autocorrectPluginManager by context.autocorrectPluginManager()
-    private val keyguardManager = context.systemService(AndroidKeyguardManager::class)
 
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    private val clipboardSuggestionProvider = ClipboardSuggestionProvider(context)
     private val emojiSuggestionProvider = EmojiSuggestionProvider(context)
     private val providers = builtInProviders.mapValues { (_, provider) -> ProviderInstanceWrapper(provider) }
     private val providerLifecycleGate = Mutex()
 
-    private val candidateAssemblyRevision = CandidateRevision()
     private val candidateRequestRevision = CandidateRevision()
     private val glideTypingWords = AsyncPreloadCache<GlideTypingLexiconKey, List<String>>(scope) { key ->
         val subtype = key.subtype
@@ -276,20 +203,9 @@ class NlpManager internal constructor(
         getBuiltInSuggestionProvider(subtype).glideTypingWordsOrEmpty(subtype).toList()
     }
     private val suggestionJobGuard = Any()
-    private val internalSuggestionsGuard = Any()
     private var suggestionJob: Job? = null
-    private var internalSuggestions by Delegates.observable(listOf<SuggestionCandidate>()) { _, _, _ ->
-        scope.launch { assembleCandidates() }
-    }
-
-    private val _activeCandidatesFlow = MutableStateFlow(listOf<SuggestionCandidate>())
-    @Volatile private var autoCommitCandidate: SuggestionCandidate? = null
-    val activeCandidatesFlow = _activeCandidatesFlow.asStateFlow()
 
     init {
-        primaryClipFlow.collectLatestIn(scope) {
-            assembleCandidates()
-        }
         prefs.suggestion.enabled.asFlow().collectLatestIn(scope) {
             autocorrectPluginManager.finishSession()
             clearSuggestions()
@@ -297,12 +213,6 @@ class NlpManager internal constructor(
         prefs.suggestion.autocorrectPluginComponent.asFlow().collectLatestIn(scope) {
             autocorrectPluginManager.onSelectedProviderChanged()
             clearSuggestions()
-        }
-        prefs.clipboard.suggestionEnabled.asFlow().collectLatestIn(scope) {
-            assembleCandidates()
-        }
-        prefs.emoji.suggestionEnabled.asFlow().collectLatestIn(scope) {
-            assembleCandidates()
         }
         activeSubtypeFlow.collectLatestIn(scope) { subtype ->
             preload(subtype)
@@ -354,9 +264,7 @@ class NlpManager internal constructor(
 
     override fun suggest(subtype: Subtype, content: EditorContent) {
         val requestEditorGeneration = autocorrectPluginManager.captureEditorGeneration()
-        if (content.currentWordText.isNotBlank() && !content.selection.isSelectionMode) {
-            sharedActions.collapseForTyping()
-        }
+        candidates.onTyping(content)
         launchLatestSuggestionRequest { revision ->
             val emojiSuggestions = when {
                 prefs.emoji.suggestionEnabled.get() -> {
@@ -395,8 +303,8 @@ class NlpManager internal constructor(
                 }
             }
             candidateRequestRevision.publishIfCurrent(revision) {
-                synchronized(internalSuggestionsGuard) {
-                    internalSuggestions = buildList {
+                candidates.replaceCandidates {
+                    buildList {
                         emojiSuggestions.forEach { add(it.bindOriginContent(content)) }
                         suggestions.forEach { add(it.bindOriginContent(content)) }
                     }
@@ -410,9 +318,7 @@ class NlpManager internal constructor(
             suggestionJob?.cancel()
             suggestionJob = null
             candidateRequestRevision.next()
-            synchronized(internalSuggestionsGuard) {
-                internalSuggestions = suggestions
-            }
+            candidates.replaceCandidates(suggestions)
         }
     }
 
@@ -421,22 +327,8 @@ class NlpManager internal constructor(
             suggestionJob?.cancel()
             suggestionJob = null
             candidateRequestRevision.next()
-            synchronized(internalSuggestionsGuard) {
-                internalSuggestions = emptyList()
-                candidateAssemblyRevision.next {
-                    autoCommitCandidate = null
-                    _activeCandidatesFlow.value = emptyList()
-                    sharedActions.update(
-                        emptyList<SuggestionCandidate>(),
-                        NlpInlineAutofill.suggestions.value,
-                    )
-                }
-            }
+            candidates.clearCandidates()
         }
-    }
-
-    override fun getAutoCommitCandidate(): SuggestionCandidate? {
-        return autoCommitCandidate
     }
 
     suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
@@ -444,7 +336,7 @@ class NlpManager internal constructor(
             if (removed) {
                 // Need to re-trigger the suggestions algorithm
                 if (candidate is ClipboardSuggestionCandidate) {
-                    assembleCandidates()
+                    candidates.refresh()
                 } else {
                     suggest(activeSubtypeFlow.value, currentEditorContent())
                 }
@@ -458,58 +350,6 @@ class NlpManager internal constructor(
     internal suspend fun getGlideTypingWordFrequency(subtype: Subtype, word: String) =
         getBuiltInSuggestionProvider(subtype).glideTypingWordFrequencyOrZero(subtype, word)
 
-    private suspend fun assembleCandidates() {
-        val revision = candidateAssemblyRevision.next()
-        val candidates = when {
-            isSuggestionOn() -> {
-                val content = currentEditorContent()
-                val wordCandidates = synchronized(internalSuggestionsGuard) {
-                    internalSuggestions
-                }
-                val clipboardCandidates = clipboardSuggestionProvider.suggest(
-                    subtype = Subtype.DEFAULT,
-                    content = content,
-                    maxCandidateCount = 8,
-                    allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                    isPrivateSession = isIncognitoMode(),
-                )
-                val isWordBeingTyped = content.currentWordText.isNotBlank() ||
-                    wordCandidates.any {
-                        it.isExternalAutocorrect() && it.kind != SuggestionCandidateKind.NEXT_WORD
-                    }
-                selectSmartbarCandidates(isWordBeingTyped, wordCandidates, clipboardCandidates)
-            }
-            else -> emptyList()
-        }
-        candidateAssemblyRevision.publishIfCurrent(revision) {
-            val publishableCandidates = if (canUseClipboardSuggestions(
-                    isIncognitoMode(),
-                )
-            ) {
-                candidates
-            } else {
-                candidates.filterNot { it is ClipboardSuggestionCandidate }
-            }
-            val visibleCandidates =
-                publishableCandidates.filter(SuggestionCandidate::isVisible)
-            autoCommitCandidate =
-                publishableCandidates.firstOrNull { it.isEligibleForAutoCommit }
-            _activeCandidatesFlow.value = visibleCandidates
-            sharedActions.update(
-                visibleCandidates,
-                NlpInlineAutofill.suggestions.value,
-            )
-        }
-    }
-
-    private fun canUseClipboardSuggestions(isPrivateSession: Boolean): Boolean {
-        return prefs.clipboard.suggestionEnabled.get() &&
-            !isPrivateSession &&
-            runCatching {
-                !keyguardManager.isDeviceLocked && !keyguardManager.isKeyguardLocked
-            }.getOrDefault(false)
-    }
-
     private class ProviderInstanceWrapper(val provider: NlpProvider) {
         private val lifecycle = NlpProviderLifecycle()
 
@@ -517,83 +357,4 @@ class NlpManager internal constructor(
             lifecycle.createIfNecessary(provider::create)
         }
     }
-
-    inner class ClipboardSuggestionProvider internal constructor(private val context: Context) : SuggestionProvider {
-        @Volatile
-        private var suppressedClipboardCopy: ClipboardItem? = null
-
-        override val providerId = "org.florisboard.nlp.providers.clipboard"
-
-        override suspend fun suggest(
-            subtype: Subtype,
-            content: EditorContent,
-            maxCandidateCount: Int,
-            allowPossiblyOffensive: Boolean,
-            isPrivateSession: Boolean,
-        ): List<SuggestionCandidate> {
-            if (maxCandidateCount <= 0 || !canUseClipboardSuggestions(isPrivateSession)) {
-                return emptyList()
-            }
-
-            val currentItem = validateClipboardItem(primaryClipFlow.value, suppressedClipboardCopy, content.text)
-                ?: return emptyList()
-            val now = System.currentTimeMillis()
-            if ((now - currentItem.creationTimestampMs) >= prefs.clipboard.suggestionTimeout.get() * 1_000L) {
-                return emptyList()
-            }
-
-            return buildClipboardSuggestionItems(currentItem, maxCandidateCount).map { item ->
-                clipboardSuggestionCandidate(item, currentItem)
-            }
-        }
-
-        override suspend fun notifySuggestionAccepted(subtype: Subtype, candidate: SuggestionCandidate) {
-            if (candidate is ClipboardSuggestionCandidate) {
-                suppressedClipboardCopy = candidate.sourceClipboardItem
-            }
-        }
-
-        override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
-            if (candidate is ClipboardSuggestionCandidate) {
-                suppressedClipboardCopy = candidate.sourceClipboardItem
-                return true
-            }
-            return false
-        }
-
-        private fun clipboardSuggestionCandidate(
-            item: ClipboardItem,
-            source: ClipboardItem,
-        ) = ClipboardSuggestionCandidate(
-            clipboardItem = item,
-            sourceProvider = this,
-            context = context,
-            sourceClipboardItem = source,
-        )
-
-        private fun validateClipboardItem(
-            currentItem: ClipboardItem?,
-            suppressedCopy: ClipboardItem?,
-            contentText: String,
-        ) =
-            currentItem?.takeIf {
-                // Check if already used
-                isNewClipboardSuggestionCopy(it, suppressedCopy)
-                    // Check if content is empty
-                    && contentText.isBlank()
-                    // Check if clipboard content has any valid characters
-                    && !currentItem.text.isNullOrBlank()
-            }
-    }
 }
-
-private fun SuggestionCandidate.isExternalAutocorrect(): Boolean {
-    return sourceProvider?.providerId == AutocorrectPluginManager.ProviderId
-}
-
-internal fun <T> selectSmartbarCandidates(
-    isWordBeingTyped: Boolean,
-    wordCandidates: List<T>,
-    clipboardCandidates: List<T>,
-): List<T> =
-    if (isWordBeingTyped) wordCandidates else clipboardCandidates.ifEmpty { wordCandidates }

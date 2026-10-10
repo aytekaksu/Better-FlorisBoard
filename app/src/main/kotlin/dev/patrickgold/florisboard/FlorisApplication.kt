@@ -42,6 +42,7 @@ import dev.patrickgold.florisboard.ime.keyboard.KeyboardManager
 import dev.patrickgold.florisboard.ime.keyboard.ObservableKeyboardState
 import dev.patrickgold.florisboard.ime.media.emoji.FlorisEmojiCompat
 import dev.patrickgold.florisboard.ime.nlp.NlpComposingPolicy
+import dev.patrickgold.florisboard.ime.nlp.NlpInlineAutofill
 import dev.patrickgold.florisboard.ime.nlp.NlpManager
 import dev.patrickgold.florisboard.ime.nlp.SuggestionProvider
 import dev.patrickgold.florisboard.ime.nlp.han.HanShapeBasedLanguageProvider
@@ -49,6 +50,7 @@ import dev.patrickgold.florisboard.ime.nlp.latin.LatinLanguageProvider
 import dev.patrickgold.florisboard.ime.nlp.plugin.AutocorrectPluginManager
 import dev.patrickgold.florisboard.ime.nlp.plugin.liveAutocorrectKeyboardTraits
 import dev.patrickgold.florisboard.ime.smartbar.SharedActionsController
+import dev.patrickgold.florisboard.ime.smartbar.SmartbarCandidateController
 import dev.patrickgold.florisboard.ime.text.gestures.GlideTypingManager
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.theme.ThemeManager
@@ -242,6 +244,7 @@ class FlorisApplication : Application(), Configuration.Provider {
             keyboardState.value,
             inputEventDispatcher.value,
             nlpManager,
+            { smartbarCandidateController.value.autoCommitCandidate },
             { FlorisImeService.keyboardActionsOrNull() },
         )
     }
@@ -261,17 +264,33 @@ class FlorisApplication : Application(), Configuration.Provider {
             isSelectionMode = { editorInstance.value.activeContent.selection.isSelectionMode },
         )
     }
+    private val suggestionScope by lazy {
+        CoroutineScope(Dispatchers.Default + SupervisorJob())
+    }
+    internal val smartbarCandidateController = lazy {
+        SmartbarCandidateController(
+            context = this,
+            prefs = prefs,
+            clipboardPrimaryClipFlow = lazy { clipboardManager.value.primaryClipFlow },
+            inlineSuggestionsFlow = NlpInlineAutofill.suggestions,
+            scope = suggestionScope,
+            isSuggestionOn = { editorComposingPolicy.value.isSuggestionOn() },
+            currentEditorContent = { editorInstance.value.activeContent },
+            isIncognitoMode = { keyboardState.value.isIncognitoMode },
+            sharedActions = sharedActionsController.value,
+        )
+    }
     val nlpManager: Lazy<NlpManager> = lazy {
         NlpManager(
             context = this,
-            clipboardPrimaryClipFlow = lazy { clipboardManager.value.primaryClipFlow },
             activeSubtypeFlow = subtypeManager.value.activeSubtypeFlow,
             builtInProviders = builtInSuggestionProviders.value,
             composingPolicy = editorComposingPolicy.value,
             // The getter includes pending edits not yet reflected in activeContentFlow.
             currentEditorContent = { editorInstance.value.activeContent },
             isIncognitoMode = { keyboardState.value.isIncognitoMode },
-            sharedActions = sharedActionsController.value,
+            candidates = smartbarCandidateController.value,
+            scope = suggestionScope,
         )
     }
     val subtypeManager = lazy { SubtypeManager() }
@@ -510,6 +529,7 @@ fun Context.keyboardManager() = this.florisApplication().keyboardManager
 
 fun Context.nlpManager() = this.florisApplication().nlpManager
 internal fun Context.sharedActionsController() = this.florisApplication().sharedActionsController
+internal fun Context.smartbarCandidateController() = this.florisApplication().smartbarCandidateController
 fun Context.autocorrectPluginManager() = this.florisApplication().autocorrectPluginManager
 
 fun Context.subtypeManager() = this.florisApplication().subtypeManager
