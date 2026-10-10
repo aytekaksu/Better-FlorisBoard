@@ -18,7 +18,13 @@ The profile-capture test is compiled separately against an unminified,
 non-debuggable `.profile` app variant; the startup benchmarks still measure the
 minified `.bench` variant. Run profile capture only on a dedicated API 33+ device
 with an explicit ADB serial. The gate checks source profile rules against code
-defined in the profile and minified beta APKs; it does not measure startup speed.
+defined in the profile and minified beta APKs. Exact-owner all-method selectors
+also have a reviewed class/method/flag digest checked against AGP's actual
+pre-R8 expansion; a dependency update cannot silently broaden their coverage.
+Keep the profile's `wildcard-coverage-v1` header. Change its counts/hash only
+after comparing a new literal control with the compact profile's expansion,
+packaged profiles, API-routed metadata and mappings. Do not auto-refresh it
+from the output being checked. The gate does not measure startup speed.
 The startup benchmark selects the IME once per test, before its per-iteration
 setup, so cold launches are not disrupted by repeatedly selecting the service.
 Before replacing `app/src/main/baseline-prof.txt`, keep older rules that still

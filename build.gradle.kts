@@ -4,6 +4,7 @@
  * Modified in Better FlorisBoard: license header standardized.
  */
 
+import com.android.build.gradle.internal.tasks.ExpandArtProfileWildcardsTask
 import com.diffplug.gradle.spotless.SpotlessExtension
 import dev.detekt.gradle.Detekt
 import dev.detekt.gradle.DetektCreateBaselineTask
@@ -876,7 +877,7 @@ val testBaselineProfileVerifier by tasks.registering(Exec::class) {
 
 val verifyBaselineProfile by tasks.registering(Exec::class) {
     group = "verification"
-    description = "Checks source profile rules against the profile and minified beta APKs."
+    description = "Checks literal APK rules and reviewed wildcard coverage in AGP's pre-R8 expansion."
     dependsOn(":app:assembleProfile", ":app:assembleBeta", testBaselineProfileVerifier)
 
     val profileApk = layout.projectDirectory.file("app/build/outputs/apk/profile/app-profile.apk")
@@ -922,6 +923,13 @@ tasks.register("qualityGate") {
  * the gate current when another Android or pure Kotlin module is added.
  */
 gradle.projectsEvaluated {
+    val profileExpansion = project(":app").tasks.named<ExpandArtProfileWildcardsTask>("expandBetaArtProfileWildcards")
+    val expandedProfile = profileExpansion.flatMap { it.expandedArtProfile }
+    verifyBaselineProfile.configure {
+        dependsOn(profileExpansion)
+        inputs.file(expandedProfile)
+        doFirst { args("--expanded-profile", expandedProfile.get().asFile.absolutePath) }
+    }
     ciUnitTest.configure {
         dependsOn(
             subprojects.flatMap { project ->
