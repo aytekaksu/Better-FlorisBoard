@@ -11,11 +11,10 @@ passed=0
 
 expect_pass() {
   local name="$1"
-  local author="$2"
-  local reviews="$3"
+  local reviews="$2"
 
   if ! printf '%s' "$reviews" |
-    MAINTAINER_LOGIN="$maintainer" PR_AUTHOR="$author" PR_HEAD_SHA="$head" \
+    MAINTAINER_LOGIN="$maintainer" PR_HEAD_SHA="$head" \
       bash "$approval_checker"; then
     echo "Expected pass: $name" >&2
     exit 1
@@ -25,11 +24,10 @@ expect_pass() {
 
 expect_fail() {
   local name="$1"
-  local author="$2"
-  local reviews="$3"
+  local reviews="$2"
 
   if printf '%s' "$reviews" |
-    MAINTAINER_LOGIN="$maintainer" PR_AUTHOR="$author" PR_HEAD_SHA="$head" \
+    MAINTAINER_LOGIN="$maintainer" PR_HEAD_SHA="$head" \
       bash "$approval_checker" \
       >/dev/null 2>&1; then
     echo "Expected failure: $name" >&2
@@ -56,49 +54,31 @@ expect_ci_result() {
   passed=$((passed + 1))
 }
 
-expect_owner_stream_pass() {
-  if ! jq -nc '[range(0; 50000) | {}]' |
-    MAINTAINER_LOGIN="$maintainer" PR_AUTHOR="$maintainer" PR_HEAD_SHA="$head" \
-      bash "$approval_checker" >/dev/null; then
-    echo "Expected owner shortcut to drain its input stream" >&2
-    exit 1
-  fi
-  passed=$((passed + 1))
-}
-
-expect_pass "maintainer PR needs no review" "$maintainer" "not JSON"
-expect_owner_stream_pass
 expect_pass \
   "current maintainer approval" \
-  "external-contributor" \
   '[[{"id":1,"user":{"login":"aytekaksu"},"state":"APPROVED","commit_id":"current-head"}]]'
 expect_pass \
   "later approval supersedes changes request" \
-  "external-contributor" \
   '[[
     {"id":1,"user":{"login":"aytekaksu"},"state":"CHANGES_REQUESTED","commit_id":"current-head"},
     {"id":2,"user":{"login":"aytekaksu"},"state":"APPROVED","commit_id":"current-head"}
   ]]'
 
-expect_fail "missing approval" "external-contributor" '[[]]'
+expect_fail "missing approval" '[[]]'
 expect_fail \
   "another reviewer cannot approve" \
-  "external-contributor" \
   '[[{"id":1,"user":{"login":"someone-else"},"state":"APPROVED","commit_id":"current-head"}]]'
 expect_fail \
   "stale approval" \
-  "external-contributor" \
   '[[{"id":1,"user":{"login":"aytekaksu"},"state":"APPROVED","commit_id":"old-head"}]]'
 expect_fail \
   "later changes request supersedes approval" \
-  "external-contributor" \
   '[[
     {"id":1,"user":{"login":"aytekaksu"},"state":"APPROVED","commit_id":"current-head"},
     {"id":2,"user":{"login":"aytekaksu"},"state":"CHANGES_REQUESTED","commit_id":"current-head"}
   ]]'
 expect_fail \
   "dismissed approval" \
-  "external-contributor" \
   '[[{"id":1,"user":{"login":"aytekaksu"},"state":"DISMISSED","commit_id":"current-head"}]]'
 
 expect_ci_result "checks not started" 2 '[{"check_runs":[]}]'
