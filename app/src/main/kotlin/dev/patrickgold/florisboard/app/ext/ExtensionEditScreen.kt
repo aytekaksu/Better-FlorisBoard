@@ -313,8 +313,10 @@ private suspend fun openThemeEditorWorkspace(
         resource = workspace,
         initialize = { ownedWorkspace ->
             runInterruptible(Dispatchers.IO) {
-                ownedWorkspace.mkdirs()
-                container.add(ownedWorkspace)
+                synchronized(container) {
+                    container.add(ownedWorkspace)
+                    ownedWorkspace.mkdirs()
+                }
             }
             if (extractArchive) {
                 ownedWorkspace.originalArchiveFingerprint =

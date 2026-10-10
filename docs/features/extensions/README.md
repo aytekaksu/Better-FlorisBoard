@@ -181,6 +181,10 @@ manager and property picker share one listing path. Renames and deletes run off
 Main under the workspace close guard; unsafe names, links, or collisions leave
 files alone.
 
+Only the registered workspace owner may use its files. Closing or replacing it
+rejects stale operations and cannot delete a live replacement. Failed deletion
+still allows cleanup retries; creation, file operations, and close share one guard.
+
 The theme shape editor displays corners from the current property value. Changing
 shape type resets the preview and chips to the new type's value, and a corner edit
 updates that value before the property can be saved.
