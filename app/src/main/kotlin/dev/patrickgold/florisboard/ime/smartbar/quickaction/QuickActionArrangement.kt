@@ -47,9 +47,11 @@ data class QuickActionArrangement(
     val dynamicActions: List<QuickAction>,
     val hiddenActions: List<QuickAction>,
 ) {
-    operator fun contains(action: QuickAction): Boolean {
-        return stickyAction == action || dynamicActions.contains(action) || hiddenActions.contains(action)
-    }
+    internal fun overflowActions(shownDynamicActionsCount: Int): List<QuickAction> =
+        dynamicActions.drop(shownDynamicActionsCount.coerceAtLeast(0))
+
+    operator fun contains(action: QuickAction): Boolean =
+        stickyAction == action || dynamicActions.contains(action) || hiddenActions.contains(action)
 
     fun distinct(): QuickActionArrangement {
         val distinctSet = mutableSetOf<QuickAction>()
@@ -116,23 +118,18 @@ data class QuickActionArrangement(
     }
 
     object Serializer : PreferenceSerializer<QuickActionArrangement> {
-        override fun serialize(value: QuickActionArrangement): String {
-            return QuickActionJsonConfig.encodeToString(value)
-        }
+        override fun serialize(value: QuickActionArrangement): String = QuickActionJsonConfig.encodeToString(value)
 
-        override fun deserialize(value: String): QuickActionArrangement {
-            return QuickActionJsonConfig.decodeFromString<QuickActionArrangement>(value).distinct()
-        }
+        override fun deserialize(value: String): QuickActionArrangement =
+            QuickActionJsonConfig.decodeFromString<QuickActionArrangement>(value).distinct()
     }
 }
 
-private fun QuickAction.normalized(): QuickAction {
-    return if (
-        this is QuickAction.InsertKey &&
-        data.code == KeyCode.AUTOCORRECT_PLUGIN_UI
-    ) {
-        QuickAction.InsertKey(TextKeyData.TOGGLE_AUTOCORRECT)
-    } else {
-        this
-    }
+private fun QuickAction.normalized(): QuickAction = if (
+    this is QuickAction.InsertKey &&
+    data.code == KeyCode.AUTOCORRECT_PLUGIN_UI
+) {
+    QuickAction.InsertKey(TextKeyData.TOGGLE_AUTOCORRECT)
+} else {
+    this
 }

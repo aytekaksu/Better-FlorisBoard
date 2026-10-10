@@ -1,4 +1,8 @@
-# Quick Actions editor
+# Quick Actions
+
+Overflow uses `QuickActionArrangement` to show the dynamic actions that did not
+fit in the toolbar, in saved order. Sticky and hidden actions stay out; empty
+lists and stale toolbar counts are safe.
 
 The editor reads the latest pending action order when it opens. A header or
 outside-tap close waits for the preference write on an I/O dispatcher before
@@ -17,5 +21,5 @@ replacement invalidates an already-open draft; a failed restore only does so
 if rollback failed. The editor then reloads the current order instead of
 overwriting it. Logs contain only a failure class, never actions.
 
-Run the queue and drag-state tests with `./gradlew :app:testDebugUnitTest`.
-Run `./gradlew qualityGate` before merging a persistence change.
+Run arrangement, queue and drag-state tests with `./gradlew :app:testDebugUnitTest`.
+Run `./gradlew qualityGate` before merging a quick-action change.
