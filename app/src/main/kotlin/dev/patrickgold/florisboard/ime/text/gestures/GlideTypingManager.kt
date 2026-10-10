@@ -77,12 +77,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
     private var lastTime = SystemClock.uptimeMillis()
 
     override fun onGlideComplete(data: GlideTypingGesture.Detector.PointerData) {
-        val completedGeneration = previewGeneration
-        previewJob?.cancel()
-        previewJob = null
-        gesturePoints.clear()
-        ++previewGeneration
-        clearPublishedPreview(completedGeneration)
+        cancelActiveGesture()
         val points = data.positions.toList()
         val revision = layoutRevision
         if (revision == null || subtypeManager.activeSubtype != revision.subtype) {
