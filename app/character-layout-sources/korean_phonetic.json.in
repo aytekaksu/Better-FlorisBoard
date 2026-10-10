@@ -12,10 +12,7 @@
       "lower": { "code": 12624, "label": "ㅐ" },
       "upper": { "code": 12626, "label": "ㅒ" }
     },
-    { "$": "auto_text_key", "code": 12636, "label": "ㅜ"},
-    { "$": "auto_text_key", "code": 12643, "label": "ㅣ"},
-    { "$": "auto_text_key", "code": 12631, "label": "ㅗ"},
-    { "$": "auto_text_key", "code": 12621, "label": "ㅍ"}
+    @autoKeys("ㅜㅣㅗㅍ", width=6)
   ],
   [
     { "$": "auto_text_key", "code": 12623, "label": "ㅏ"},
@@ -41,10 +38,7 @@
     { "$": "auto_text_key", "code": 12635, "label": "ㅛ"}
   ],
   [
-    { "$": "auto_text_key", "code": 12629, "label": "ㅕ"},
-    { "$": "auto_text_key", "code": 12640, "label": "ㅠ"},
-    { "$": "auto_text_key", "code": 12618, "label": "ㅊ"},
-    { "$": "auto_text_key", "code": 12627, "label": "ㅓ"},
+    @autoKeys("ㅕㅠㅊㅓ", width=6),
     { "$": "case_selector",
       "lower": { "code": 12610, "label": "ㅂ" },
       "upper": { "code": 12611, "label": "ㅃ" }
