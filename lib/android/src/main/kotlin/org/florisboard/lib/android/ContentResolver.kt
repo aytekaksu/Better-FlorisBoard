@@ -40,8 +40,7 @@ inline fun ContentResolver.write(uri: Uri, block: (OutputStream) -> Unit) {
     contract {
         callsInPlace(block, InvocationKind.EXACTLY_ONCE)
     }
-    val outputStream = this.openOutputStream(uri, "wt")
-        ?: error("Cannot open input stream for given uri '$uri'")
+    val outputStream = this.openOutputStream(uri, "wt") ?: error("Unable to write selected content.")
     outputStream.use(block)
 }
 
