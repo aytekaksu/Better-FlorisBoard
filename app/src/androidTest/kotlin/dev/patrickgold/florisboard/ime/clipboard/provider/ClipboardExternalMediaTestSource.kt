@@ -68,19 +68,15 @@ internal object ClipboardExternalMediaTestSource {
         }
     }
 
-    fun awaitBlockingOpen(timeoutMs: Long): Boolean =
-        awaitStatus(timeoutMs, KEY_BLOCKING_ENTERED)
+    fun awaitBlockingOpen(timeoutMs: Long): Boolean = awaitStatus(timeoutMs, KEY_BLOCKING_ENTERED)
 
-    fun awaitPrefixWritten(timeoutMs: Long): Boolean =
-        awaitStatus(timeoutMs, KEY_PREFIX_WRITTEN)
+    fun awaitPrefixWritten(timeoutMs: Long): Boolean = awaitStatus(timeoutMs, KEY_PREFIX_WRITTEN)
 
-    fun awaitPrefixCompleted(timeoutMs: Long): Boolean =
-        awaitStatus(timeoutMs, KEY_PREFIX_COMPLETED)
+    fun awaitPrefixCompleted(timeoutMs: Long): Boolean = awaitStatus(timeoutMs, KEY_PREFIX_COMPLETED)
 
     fun delayedOpenIsActive(): Boolean = status().getBoolean(KEY_DELAYED_ACTIVE)
 
-    fun awaitCancellation(timeoutMs: Long): Boolean =
-        awaitStatus(timeoutMs, KEY_CANCELLATION_OBSERVED)
+    fun awaitCancellation(timeoutMs: Long): Boolean = awaitStatus(timeoutMs, KEY_CANCELLATION_OBSERVED)
 
     fun releaseBlockingOpen() {
         call(METHOD_RELEASE)
@@ -102,9 +98,8 @@ internal object ClipboardExternalMediaTestSource {
         )
     }
 
-    fun externalProcessCanAcquireImportWorker(): Boolean =
-        call(METHOD_PROBE_TARGET_IMPORT_WORKER)
-            .getBoolean(KEY_IMPORT_WORKER_ACQUIRED)
+    fun externalProcessCanAcquireImportWorker(): Boolean = call(METHOD_PROBE_TARGET_IMPORT_WORKER)
+        .getBoolean(KEY_IMPORT_WORKER_ACQUIRED)
 
     fun probeTargetMedia(uri: Uri): TargetMediaProbe {
         val result = call(METHOD_PROBE_TARGET_MEDIA, uri.toString())
@@ -121,19 +116,13 @@ internal object ClipboardExternalMediaTestSource {
         )
     }
 
-    fun probeColdTargetTypeBeforeGrant(uri: Uri): String? =
-        probeColdTargetType(COLD_TYPE_BEFORE_URI, uri)
+    fun probeColdTargetTypeBeforeGrant(uri: Uri): String? = probeColdTargetType(COLD_TYPE_BEFORE_URI, uri)
 
-    fun probeColdTargetTypeWhileGranted(uri: Uri): String? =
-        probeColdTargetType(COLD_TYPE_GRANTED_URI, uri)
+    fun probeColdTargetTypeWhileGranted(uri: Uri): String? = probeColdTargetType(COLD_TYPE_GRANTED_URI, uri)
 
-    fun probeColdTargetTypeAfterRevoke(uri: Uri): String? =
-        probeColdTargetType(COLD_TYPE_REVOKED_URI, uri)
+    fun probeColdTargetTypeAfterRevoke(uri: Uri): String? = probeColdTargetType(COLD_TYPE_REVOKED_URI, uri)
 
-    private fun awaitStatus(
-        timeoutMs: Long,
-        key: String,
-    ): Boolean {
+    private fun awaitStatus(timeoutMs: Long, key: String): Boolean {
         val deadline = SystemClock.elapsedRealtime() + timeoutMs
         do {
             if (status().getBoolean(key)) return true
@@ -144,16 +133,9 @@ internal object ClipboardExternalMediaTestSource {
 
     private fun status(): Bundle = call(METHOD_STATUS)
 
-    private fun call(
-        method: String,
-        arg: String? = null,
-    ): Bundle = call(CONTROL_URI, method, arg)
+    private fun call(method: String, arg: String? = null): Bundle = call(CONTROL_URI, method, arg)
 
-    private fun call(
-        controlUri: Uri,
-        method: String,
-        arg: String? = null,
-    ): Bundle {
+    private fun call(controlUri: Uri, method: String, arg: String? = null): Bundle {
         val resolver = InstrumentationRegistry.getInstrumentation().context.contentResolver
         return checkNotNull(resolver.call(controlUri, method, arg, null)) {
             "Clipboard test provider control was unavailable."
@@ -164,17 +146,16 @@ internal object ClipboardExternalMediaTestSource {
         call(controlUri, METHOD_PROBE_COLD_TARGET_TYPE, uri.toString())
             .getString(KEY_COLD_TYPE_VALUE)
 
-    private fun urisOrAll(requestedUris: Array<out Uri>): Collection<Uri> =
-        if (requestedUris.isEmpty()) {
-            sourceUris()
-        } else {
-            requestedUris.asList().also { uris ->
-                val currentUris = sourceUris()
-                require(uris.all(currentUris::contains)) {
-                    "Only fixture-owned URIs may be granted."
-                }
+    private fun urisOrAll(requestedUris: Array<out Uri>): Collection<Uri> = if (requestedUris.isEmpty()) {
+        sourceUris()
+    } else {
+        requestedUris.asList().also { uris ->
+            val currentUris = sourceUris()
+            require(uris.all(currentUris::contains)) {
+                "Only fixture-owned URIs may be granted."
             }
         }
+    }
 
     private fun sourceUri(path: String): Uri {
         val generation = fixtureGeneration
@@ -243,6 +224,7 @@ internal object ClipboardExternalMediaTestSource {
         Uri.parse("content://dev.patrickgold.florisboard.test.clipboard-type-granted")
     private val COLD_TYPE_REVOKED_URI =
         Uri.parse("content://dev.patrickgold.florisboard.test.clipboard-type-revoked")
+
     @Volatile
     private var fixtureGeneration = 0L
 }
@@ -273,16 +255,4 @@ internal data class TargetMediaProbe(
                 !openVisible &&
                 !typedOpenVisible &&
                 !typedOpenReadable
-
-    val everythingVisible: Boolean
-        get() =
-            queryVisible &&
-                typeVisible &&
-                streamTypesVisible &&
-                openVisible &&
-                typedOpenVisible &&
-                typedOpenReadable &&
-                typedMismatchRejected &&
-                typedOptionsRejected &&
-                typedCancellationObserved
 }

@@ -15,10 +15,6 @@ import android.provider.OpenableColumns
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.patrickgold.florisboard.BuildConfig
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -29,6 +25,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class ClipboardExternalMediaImporterAndroidTest {
@@ -54,18 +54,8 @@ class ClipboardExternalMediaImporterAndroidTest {
     fun timeoutReplacesTheBlockedWorkerAndRecoversBeforeTheProviderReturns() {
         val directoryName = "clipboard-importer-timeout-test"
         val recoveryDirectoryName = "$directoryName-recovery"
-        val importer = ClipboardExternalMediaImporter(
-            context = context,
-            timeoutMs = IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = directoryName,
-        )
-        val recoveryImporter = ClipboardExternalMediaImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = recoveryDirectoryName,
-        )
+        val importer = newImporter(directoryName, timeoutMs = IMPORT_TIMEOUT_MS)
+        val recoveryImporter = newImporter(recoveryDirectoryName)
         var recovered: StagedClipboardMedia? = null
 
         try {
@@ -102,22 +92,12 @@ class ClipboardExternalMediaImporterAndroidTest {
     @Test
     fun closeAbandonsActiveWorkAndAFreshImporterRecoversBeforeProviderRelease() {
         val directoryName = "clipboard-importer-close-test"
-        val importer = ClipboardExternalMediaImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = directoryName,
-        )
+        val importer = newImporter(directoryName)
         val caller = Executors.newSingleThreadExecutor()
         val import = caller.submit<StagedClipboardMedia?> {
             importer.stage(ClipboardExternalMediaTestSource.cancellationAwareUri)
         }
-        val replacement = ClipboardExternalMediaImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = "$directoryName-replacement",
-        )
+        val replacement = newImporter("$directoryName-replacement")
         var recovered: StagedClipboardMedia? = null
 
         try {
@@ -168,12 +148,7 @@ class ClipboardExternalMediaImporterAndroidTest {
     @Test
     fun cancellationReturnsWhileBlockingMimeTypeLookupRemainsIsolated() {
         val directoryName = "clipboard-importer-cancel-mime-test"
-        val importer = ClipboardExternalMediaImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = directoryName,
-        )
+        val importer = newImporter(directoryName)
         val cancellationSignal = CancellationSignal()
         val caller = Executors.newSingleThreadExecutor()
         val import = caller.submit<StagedClipboardMedia?> {
@@ -220,12 +195,7 @@ class ClipboardExternalMediaImporterAndroidTest {
     @Test
     fun mimeLookupRunsInsideTheWorkerOnEverySupportedApi() {
         val directoryName = "clipboard-importer-legacy-mime-test"
-        val importer = ClipboardExternalMediaImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = directoryName,
-        )
+        val importer = newImporter(directoryName)
         var first: StagedClipboardMedia? = null
         var second: StagedClipboardMedia? = null
 
@@ -255,12 +225,7 @@ class ClipboardExternalMediaImporterAndroidTest {
     @Test
     fun cancellationStopsCooperativeDisplayNameLookupBeforeOpen() {
         val directoryName = "clipboard-importer-cancel-name-test"
-        val importer = ClipboardExternalMediaImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = directoryName,
-        )
+        val importer = newImporter(directoryName)
         val cancellationSignal = CancellationSignal()
         val caller = Executors.newSingleThreadExecutor()
         val import = caller.submit<StagedClipboardMedia?> {
@@ -297,12 +262,7 @@ class ClipboardExternalMediaImporterAndroidTest {
     @Test
     fun exactGrantIsRequiredInsideTheRemoteWorker() {
         val directoryName = "clipboard-importer-grant-test"
-        val importer = ClipboardExternalMediaImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = directoryName,
-        )
+        val importer = newImporter(directoryName)
         var staged: StagedClipboardMedia? = null
 
         try {
@@ -343,12 +303,7 @@ class ClipboardExternalMediaImporterAndroidTest {
     @Test
     fun sharedImporterRejectsTheFirstByteBeyondItsConfiguredLimit() {
         val directoryName = "external-content-limit-test"
-        val importer = DisposableExternalContentImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = directoryName,
-        )
+        val importer = newImporter(directoryName)
 
         try {
             assertNull(
@@ -368,12 +323,7 @@ class ClipboardExternalMediaImporterAndroidTest {
     @Test
     fun sharedImporterCanAdmitEmptyExtensionsWithoutChangingClipboardDefaults() {
         val directoryName = "external-content-empty-test"
-        val importer = DisposableExternalContentImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = directoryName,
-        )
+        val importer = newImporter(directoryName)
         var staged: StagedExternalContent? = null
 
         try {
@@ -396,12 +346,7 @@ class ClipboardExternalMediaImporterAndroidTest {
     @Test
     fun sharedImporterRejectsAmbiguousAndAppOwnedUrisBeforeProviderAccess() {
         val directoryName = "external-content-uri-test"
-        val importer = DisposableExternalContentImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = directoryName,
-        )
+        val importer = newImporter(directoryName)
         val rejectedSources = listOf(
             Uri.parse("file:///private/source.flex"),
             Uri.parse("CONTENT://external.example/source.flex"),
@@ -498,18 +443,8 @@ class ClipboardExternalMediaImporterAndroidTest {
     @Test
     fun sharedStagingDirectoryIsCleanedOnlyBeforeItsFirstLiveStage() {
         val directoryName = "external-content-shared-directory-test"
-        val firstImporter = DisposableExternalContentImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = directoryName,
-        )
-        val secondImporter = DisposableExternalContentImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = directoryName,
-        )
+        val firstImporter = newImporter(directoryName)
+        val secondImporter = newImporter(directoryName)
         val caller = Executors.newSingleThreadExecutor()
         val import = caller.submit<StagedExternalContent?> {
             firstImporter.stage(ClipboardExternalMediaTestSource.prefixThenBlockUri)
@@ -549,24 +484,9 @@ class ClipboardExternalMediaImporterAndroidTest {
         val claimedDirectory = "clipboard-importer-claimed-test"
         val hostileDirectory = "clipboard-importer-partial-stream-test"
         val recoveredDirectory = "clipboard-importer-recovered-test"
-        val claimedImporter = ClipboardExternalMediaImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = claimedDirectory,
-        )
-        val hostileImporter = ClipboardExternalMediaImporter(
-            context = context,
-            timeoutMs = PARTIAL_STREAM_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = hostileDirectory,
-        )
-        val recoveredImporter = ClipboardExternalMediaImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = recoveredDirectory,
-        )
+        val claimedImporter = newImporter(claimedDirectory)
+        val hostileImporter = newImporter(hostileDirectory, timeoutMs = PARTIAL_STREAM_TIMEOUT_MS)
+        val recoveredImporter = newImporter(recoveredDirectory)
         val sentinelBeforeDeath =
             Files.createTempFile(context.cacheDir.toPath(), "clipboard-import-sentinel-", ".tmp")
         var sentinelAfterDeath: Path? = null
@@ -635,18 +555,8 @@ class ClipboardExternalMediaImporterAndroidTest {
         expectedDisplayNameQueries: Int,
     ) {
         val recoveryDirectoryName = "$directoryName-recovery"
-        val importer = ClipboardExternalMediaImporter(
-            context = context,
-            timeoutMs = IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = directoryName,
-        )
-        val recoveryImporter = ClipboardExternalMediaImporter(
-            context = context,
-            timeoutMs = LONG_IMPORT_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = recoveryDirectoryName,
-        )
+        val importer = newImporter(directoryName, timeoutMs = IMPORT_TIMEOUT_MS)
+        val recoveryImporter = newImporter(recoveryDirectoryName)
         var recovered: StagedClipboardMedia? = null
 
         try {
@@ -695,12 +605,7 @@ class ClipboardExternalMediaImporterAndroidTest {
 
     private fun warmImportWorker() {
         val directoryName = "clipboard-importer-warmup-test"
-        val importer = ClipboardExternalMediaImporter(
-            context = context,
-            timeoutMs = WARMUP_TIMEOUT_MS,
-            stageCapacity = { MAX_TEST_BYTES },
-            stagingDirectory = directoryName,
-        )
+        val importer = newImporter(directoryName, timeoutMs = WARMUP_TIMEOUT_MS)
         var staged: StagedClipboardMedia? = null
         try {
             staged = importer.stage(ClipboardExternalMediaTestSource.healthyUri)
@@ -711,6 +616,14 @@ class ClipboardExternalMediaImporterAndroidTest {
             awaitCondition(WARMUP_TIMEOUT_MS) { partialFiles(directoryName).isEmpty() }
         }
     }
+
+    private fun newImporter(directoryName: String, timeoutMs: Long = LONG_IMPORT_TIMEOUT_MS) =
+        DisposableExternalContentImporter(
+            context = context,
+            timeoutMs = timeoutMs,
+            stageCapacity = { MAX_TEST_BYTES },
+            stagingDirectory = directoryName,
+        )
 
     private fun assertFreshRemoteWorkerWasUsed() {
         val callers = ClipboardExternalMediaTestSource.callerProcesses()
@@ -723,10 +636,7 @@ class ClipboardExternalMediaImporterAndroidTest {
         assertNotEquals(callers.blockingPid, callers.healthyPid)
     }
 
-    private fun awaitCondition(
-        timeoutMs: Long = AWAIT_MS,
-        condition: () -> Boolean,
-    ) {
+    private fun awaitCondition(timeoutMs: Long = AWAIT_MS, condition: () -> Boolean) {
         val deadline = SystemClock.elapsedRealtime() + timeoutMs
         while (!condition()) {
             if (SystemClock.elapsedRealtime() >= deadline) {
