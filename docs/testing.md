@@ -21,9 +21,12 @@ with an explicit ADB serial. The gate checks source profile rules against code
 defined in the profile and minified beta APKs; it does not measure startup speed.
 The startup benchmark selects the IME once per test, before its per-iteration
 setup, so cold launches are not disrupted by repeatedly selecting the service.
-Review generated rules and the packaged beta profile before replacing
-`app/src/main/baseline-prof.txt`. Building the test APK alone does not refresh
-that checked-in file.
+Before replacing `app/src/main/baseline-prof.txt`, keep older rules that still
+refer to live code but were missed by the new capture. Remove dependency
+duplicates only when their class and method flags survive beta's actual
+wildcard expansion. Compare the full and reduced profiles' packaged contents,
+API-routed profile metadata, and mappings in both profile and minified beta
+builds. Building the test APK alone does not refresh the checked-in file.
 The platform-neutral host core additionally enforces minimum coverage of 85%
 for lines and 65% for branches. These are regression floors, not a reason to
 write tests which merely execute code without proving behavior.
