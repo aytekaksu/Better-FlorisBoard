@@ -188,6 +188,8 @@ still allows cleanup retries; creation, file operations, and close share one gua
 The theme shape editor displays corners from the current property value. Changing
 shape type resets the preview and chips to the new type's value, and a corner edit
 updates that value before the property can be saved.
+Sizes use dp or sp. Percentages are supported for corner shapes, not bare sizes
+or size variables.
 Padding chips also read the current draft; resetting its type cannot leave old
 sizes visible. One-side and all-side edits update the draft before Apply.
 Adding a theme property with an existing name leaves the current value and
