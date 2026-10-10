@@ -234,6 +234,9 @@ val formattedKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/NlpProviderLifecycleTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/text/composing/ComposerTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/theme/FlorisAssetResolverTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/window/ImeWindowControllerEditorMoveTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/window/ImeWindowControllerEditorResizeTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/window/Matchers.kt"),
     file(
         "app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/" +
             "AutocorrectPluginBindingTest.kt",

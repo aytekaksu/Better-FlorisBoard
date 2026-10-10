@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
+import dev.patrickgold.florisboard.plusOrMinus
 import dev.patrickgold.florisboard.shouldBeGreaterThanOrEqualTo
 import dev.patrickgold.florisboard.shouldBeLessThanOrEqualTo
 import io.kotest.assertions.withClue
@@ -70,4 +71,27 @@ fun ImeWindowProps.Floating.shouldBeConstrainedTo(constraints: ImeWindowConstrai
         offsetBottom.shouldBeGreaterThanOrEqualTo(0.dp)
         offsetBottom.shouldBeLessThanOrEqualTo(rootBounds.height - keyboardHeight, tolerance)
     }
+}
+
+internal enum class ExpectedDpChange {
+    SAME,
+    NOT_LESS,
+    NOT_GREATER,
+}
+
+internal fun Dp.shouldMatch(before: Dp, change: ExpectedDpChange, tolerance: Dp, property: String) =
+    withClue(property) {
+        when (change) {
+            ExpectedDpChange.SAME -> this shouldBe before.plusOrMinus(tolerance)
+            ExpectedDpChange.NOT_LESS -> shouldBeGreaterThanOrEqualTo(before, tolerance)
+            ExpectedDpChange.NOT_GREATER -> shouldBeLessThanOrEqualTo(before, tolerance)
+        }
+    }
+
+// Compare the original offset: negating it can change signed-zero ordering.
+internal fun Dp.shouldFollow(before: Dp, offset: Dp, tolerance: Dp, property: String, inverse: Boolean = false) {
+    val negativeChange = if (inverse) ExpectedDpChange.NOT_LESS else ExpectedDpChange.NOT_GREATER
+    val positiveChange = if (inverse) ExpectedDpChange.NOT_GREATER else ExpectedDpChange.NOT_LESS
+    if (offset <= 0.dp) shouldMatch(before, negativeChange, tolerance, property)
+    if (offset >= 0.dp) shouldMatch(before, positiveChange, tolerance, property)
 }
