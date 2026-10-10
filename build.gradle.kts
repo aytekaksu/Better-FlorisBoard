@@ -223,6 +223,7 @@ val formattedKotlinSources = files(
             "TextKeyboardInteractionPolicy.kt",
     ),
     file("lib/snygg/src/main/kotlin/org/florisboard/lib/snygg/SnyggTheme.kt"),
+    file("lib/snygg/src/test/kotlin/org/florisboard/lib/snygg/SnyggThemeTest.kt"),
     file("app/src/androidTest/kotlin/org/florisboard/lib/kotlin/CurlyFormatAndroidTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummaryTest.kt"),
     backupArchiveKotlinSources,
