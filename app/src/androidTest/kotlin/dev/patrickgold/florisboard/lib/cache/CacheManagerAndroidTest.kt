@@ -22,6 +22,8 @@ import android.os.Process
 import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.patrickgold.florisboard.app.ext.EditorAssetMutationResult
+import dev.patrickgold.florisboard.app.ext.EditorAssetStore
 import dev.patrickgold.florisboard.app.ext.ThemeEditorAction
 import dev.patrickgold.florisboard.app.ext.addThemeComponent
 import dev.patrickgold.florisboard.app.ext.newEmptyThemeComponentEditor
@@ -48,6 +50,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.Closeable
 import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermission
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -303,15 +307,78 @@ class CacheManagerAndroidTest {
     @Test
     fun editorCloseIsIdempotentAndUnregistersItsWorkspace() {
         val cacheManager = CacheManager(context)
+        for (closeFirst in listOf(true, false)) {
+            val editor = cacheManager.themeEditor.new()
+            assertSame(editor, cacheManager.themeEditor.getWorkspaceByUuid(editor.uuid))
+            if (closeFirst) {
+                editor.close()
+                editor.close()
+                assertTrue(editor.isClosed())
+                assertNull(cacheManager.themeEditor.getWorkspaceByUuid(editor.uuid))
+            }
+
+            val replacement = cacheManager.themeEditor.new(editor.uuid)
+            try {
+                val images = replacement.extDir.resolve("images")
+                assertTrue(images.mkdir())
+                val marker = images.resolve("marker.png")
+                marker.writeText("replacement")
+                val store = EditorAssetStore(replacement.dir.toPath())
+                val asset = store.list().images.single()
+
+                assertNull(editor.withOpenFileOperation { store.delete(asset) })
+                assertEquals("replacement", marker.readText())
+                editor.close()
+                assertSame(replacement, cacheManager.themeEditor.getWorkspaceByUuid(editor.uuid))
+                assertEquals("replacement", marker.readText())
+                assertEquals(
+                    EditorAssetMutationResult.SUCCESS,
+                    replacement.withOpenFileOperation { store.delete(asset) },
+                )
+                assertFalse(marker.exists())
+            } finally {
+                replacement.close()
+                editor.close()
+            }
+        }
+    }
+
+    @Test
+    fun failedWorkspaceCloseRejectsFileWorkButCanRetryDeletion() {
+        val cacheManager = CacheManager(context)
         val editor = cacheManager.themeEditor.new()
-
-        assertSame(editor, cacheManager.themeEditor.getWorkspaceByUuid(editor.uuid))
-
-        editor.close()
-        editor.close()
-
-        assertTrue(editor.isClosed())
-        assertNull(cacheManager.themeEditor.getWorkspaceByUuid(editor.uuid))
+        val path = editor.dir.toPath()
+        val permissions = Files.getPosixFilePermissions(path)
+        val images = editor.extDir.resolve("images")
+        assertTrue(images.mkdir())
+        val marker = images.resolve("marker.png")
+        marker.writeText("test")
+        try {
+            Files.setPosixFilePermissions(
+                path,
+                permissions - setOf(
+                    PosixFilePermission.OWNER_EXECUTE,
+                    PosixFilePermission.GROUP_EXECUTE,
+                    PosixFilePermission.OTHERS_EXECUTE,
+                ),
+            )
+            try {
+                assertThrows(IOException::class.java) { editor.close() }
+                assertFalse(editor.isClosed())
+                assertNull(cacheManager.themeEditor.getWorkspaceByUuid(editor.uuid))
+            } finally {
+                if (editor.dir.exists()) Files.setPosixFilePermissions(path, permissions)
+            }
+            val store = EditorAssetStore(editor.dir.toPath())
+            val asset = store.list().images.single()
+            assertNull(editor.withOpenFileOperation { store.delete(asset) })
+            assertEquals("test", marker.readText())
+            editor.close()
+            assertTrue(editor.isClosed())
+        } finally {
+            if (editor.dir.exists()) Files.setPosixFilePermissions(path, permissions)
+            editor.close()
+        }
     }
 
     @Test

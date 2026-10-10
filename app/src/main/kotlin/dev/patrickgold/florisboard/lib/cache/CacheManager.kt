@@ -337,9 +337,9 @@ class CacheManager(context: Context) {
         fun getWorkspaceByUuid(uuid: String): T? = workspaces[uuid]
     }
 
-    abstract inner class Workspace(val uuid: String) : Closeable {
-        abstract val dir: FsDir
-        private val closeGuard = Any()
+    abstract inner class Workspace(val uuid: String, private val container: WorkspacesContainer<*>) : Closeable {
+        val dir: FsDir = container.dir.subDir(uuid)
+        private var cleanupComplete = false
 
         open fun mkdirs() {
             createWorkspaceDirectory(dir)
@@ -349,33 +349,35 @@ class CacheManager(context: Context) {
 
         fun isClosed() = !dir.exists()
 
-        /** Keep a short, synchronous file operation from racing workspace removal. Call off Main. */
-        internal fun <R> withOpenFileOperation(block: () -> R): R? = synchronized(closeGuard) {
-            if (dir.exists()) block() else null
+        /** Only the current owner may use its files; serialize with creation and close. Call off Main. */
+        internal fun <R> withOpenFileOperation(block: () -> R): R? = synchronized(container) {
+            if (!cleanupComplete && container.getWorkspaceByUuid(uuid) === this && dir.exists()) block() else null
         }
 
         override fun close() {
-            synchronized(closeGuard) {
+            synchronized(container) {
+                if (cleanupComplete) return
                 try {
-                    repeat(2) {
+                    val registered = container.getWorkspaceByUuid(uuid)
+                    if (registered == null || registered === this) {
+                        repeat(2) {
+                            if (dir.exists()) {
+                                dir.deleteRecursively()
+                            }
+                        }
                         if (dir.exists()) {
-                            dir.deleteRecursively()
+                            throw IOException("Unable to delete private workspace.")
                         }
                     }
-                    if (dir.exists()) {
-                        throw IOException("Unable to delete private workspace.")
-                    }
+                    cleanupComplete = true
                 } finally {
-                    unregister()
+                    container.remove(this)
                 }
             }
         }
-
-        protected abstract fun unregister()
     }
 
-    inner class ImporterWorkspace(uuid: String) : Workspace(uuid) {
-        override val dir: FsDir = importer.dir.subDir(uuid)
+    inner class ImporterWorkspace(uuid: String) : Workspace(uuid, importer) {
         private val retirement = ImportWorkspaceRetirement(
             workspaceCleanupScope,
             onTerminalFailure = { error ->
@@ -401,15 +403,9 @@ class CacheManager(context: Context) {
             createWorkspaceDirectory(inputDir)
             createWorkspaceDirectory(outputDir)
         }
-
-        override fun unregister() {
-            importer.remove(this)
-        }
     }
 
-    inner class ThemeEditorWorkspace(uuid: String) : Workspace(uuid) {
-        override val dir: FsDir = themeEditor.dir.subDir(uuid)
-
+    inner class ThemeEditorWorkspace(uuid: String) : Workspace(uuid, themeEditor) {
         val extDir: FsDir = dir.subDir("ext")
         val saverDir: FsDir = dir.subDir("saver")
         val previewMaterialization = ThemeMaterialization(extDir) { }
@@ -439,15 +435,9 @@ class CacheManager(context: Context) {
         inline fun <R> update(block: ThemeExtensionEditor.() -> R): R {
             return editor.block().also { version++ }
         }
-
-        override fun unregister() {
-            themeEditor.remove(this)
-        }
     }
 
-    inner class BackupAndRestoreWorkspace(uuid: String) : Workspace(uuid) {
-        override val dir: FsDir = backupAndRestore.dir.subDir(uuid)
-
+    inner class BackupAndRestoreWorkspace(uuid: String) : Workspace(uuid, backupAndRestore) {
         val inputDir: FsDir = dir.subDir(InputDirName)
         val outputDir: FsDir = dir.subDir(OutputDirName)
 
@@ -455,7 +445,6 @@ class CacheManager(context: Context) {
         internal lateinit var metadata: BackupArchive.Metadata
         var restoreWarningId: Int? = null
         private val restoreSessionGuard = Any()
-        private val restoreCloseGuard = Any()
         private var restoreLifecycleClosed = false
         private var currentRestoreSession: BackupArchiveSession? = null
 
@@ -509,7 +498,7 @@ class CacheManager(context: Context) {
         }
 
         override fun close() {
-            synchronized(restoreCloseGuard) {
+            synchronized(backupAndRestore) {
                 val sessionToClose = synchronized(restoreSessionGuard) {
                     if (restoreLifecycleClosed) {
                         null
@@ -524,10 +513,6 @@ class CacheManager(context: Context) {
                     super.close()
                 }
             }
-        }
-
-        override fun unregister() {
-            backupAndRestore.remove(this)
         }
     }
 
