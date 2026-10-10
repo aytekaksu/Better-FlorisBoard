@@ -1144,7 +1144,8 @@ private fun CreateThemeScreen(
                                 } ?: return@launch
                                 val componentEditor = component.let { c ->
                                     ThemeExtensionComponentEditor(
-                                        componentId, c.label, c.authors, c.isNightTheme, stylesheetPath = "",
+                                        componentId, c.label, c.authors, c.isNightTheme,
+                                        c.materialYouFlags, stylesheetPath = "",
                                     ).also { it.stylesheetEditor = c.stylesheetEditor }
                                 }
                                 if (componentEditor.stylesheetEditor != null) {
