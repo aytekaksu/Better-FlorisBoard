@@ -1,0 +1,22 @@
+[
+    [
+
+      { "$": "auto_text_key", "code":  1094, "label": "ц" },
+      { "$": "auto_text_key", "code": 1108 , "label": "є" },
+
+    @autoKeys("ертйуюі", width=6),
+      { "$": "auto_text_key", "code":  1031, "label": "ї" },
+      { "$": "auto_text_key", "code": 1086 , "label": "о" },
+      { "$": "auto_text_key", "code": 1025 , "label": "ё" },
+      { "$": "auto_text_key", "code": 1087 , "label": "п" }
+    ],
+    [
+    @autoKeys("яасдфґ"),
+      { "$": "auto_text_key", "code": 1067 , "label": "ы" },
+    @autoKeys("гжклшщ", width=6)
+    ],
+    [
+
+    @autoKeys("зхчвбнмиь", width=6)
+    ]
+  ]
