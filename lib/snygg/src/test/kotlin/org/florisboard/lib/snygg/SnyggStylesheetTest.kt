@@ -162,6 +162,21 @@ class SnyggStylesheetTest {
         }
 
         @Test
+        fun `bare percentage sizes remain unsupported in properties and variables`() {
+            listOf(
+                "\"@defines\": {\"--size\": \"50%\"}",
+                "\"element\": {\"shadow-elevation\": \"50%\"}",
+            ).forEach { rule ->
+                val json = """{$SCHEMA_LINE,$rule}"""
+                assertThrows<SnyggInvalidValueException> { SnyggStylesheet.fromJson(json).getOrThrow() }
+                val lenient = SnyggStylesheet.fromJson(json, SnyggJsonConfiguration.of(ignoreInvalidValues = true))
+                    .getOrThrow()
+                assertEquals(1, lenient.rules.size)
+                assertEquals(emptyMap(), assertIs<SnyggSinglePropertySet>(lenient.rules.values.single()).properties)
+            }
+        }
+
+        @Test
         fun `basic serialization`() {
             val stylesheet = SnyggStylesheet(
                 schema = "https://schemas.florisboard.org/snygg/v2/stylesheet",

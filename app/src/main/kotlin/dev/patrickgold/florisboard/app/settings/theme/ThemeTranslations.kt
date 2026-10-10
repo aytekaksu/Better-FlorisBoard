@@ -30,7 +30,6 @@ import org.florisboard.lib.snygg.value.SnyggInheritValue
 import org.florisboard.lib.snygg.value.SnyggNoValue
 import org.florisboard.lib.snygg.value.SnyggContentScaleValue
 import org.florisboard.lib.snygg.value.SnyggPaddingValue
-import org.florisboard.lib.snygg.value.SnyggPercentageSizeValue
 import org.florisboard.lib.snygg.value.SnyggRectangleShapeValue
 import org.florisboard.lib.snygg.value.SnyggRoundedCornerDpShapeValue
 import org.florisboard.lib.snygg.value.SnyggRoundedCornerPercentShapeValue
@@ -178,7 +177,6 @@ private val PropertyValueEncoderNameMap = mapOf(
     SnyggRoundedCornerPercentShapeValue to R.string.snygg__property_value__rounded_corner_shape_percent,
     SnyggDpSizeValue to R.string.snygg__property_value__dp_size,
     SnyggSpSizeValue to R.string.snygg__property_value__sp_size,
-    SnyggPercentageSizeValue to R.string.snygg__property_value__percentage_size,
     SnyggContentScaleValue to R.string.snygg__property_value__content_scale,
     SnyggTextAlignValue to R.string.snygg__property_value__text_align,
     SnyggTextDecorationLineValue to R.string.snygg__property_value__text_decoration_line,

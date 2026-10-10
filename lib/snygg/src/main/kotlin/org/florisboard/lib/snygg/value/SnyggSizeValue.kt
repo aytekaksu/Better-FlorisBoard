@@ -52,21 +52,3 @@ data class SnyggSpSizeValue(val sp: TextUnit) : SnyggSizeValue {
 
     override fun encoder() = Companion
 }
-
-data class SnyggPercentageSizeValue(val percentage: Float) : SnyggSizeValue {
-    companion object : SnyggValueEncoder {
-        override val spec = SnyggValueSpec {
-            percentageFloat(id = Size)
-        }
-
-        override fun defaultValue() = SnyggPercentageSizeValue(0f)
-
-        override fun serialize(v: SnyggValue) = encodeValue<SnyggPercentageSizeValue>(v) {
-            snyggIdToValueMapOf(Size to percentage * 100.0f)
-        }
-
-        override fun deserialize(v: String) = decodeValue(v) { SnyggPercentageSizeValue(getFloat(Size) / 100.0f) }
-    }
-
-    override fun encoder() = Companion
-}

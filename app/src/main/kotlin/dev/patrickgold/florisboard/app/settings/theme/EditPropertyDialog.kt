@@ -104,7 +104,6 @@ import org.florisboard.lib.snygg.value.SnyggDynamicLightColorValue
 import org.florisboard.lib.snygg.value.SnyggEnumLikeValueEncoder
 import org.florisboard.lib.snygg.value.SnyggPaddingValue
 import org.florisboard.lib.snygg.value.SnyggPercentShapeValue
-import org.florisboard.lib.snygg.value.SnyggPercentageSizeValue
 import org.florisboard.lib.snygg.value.SnyggRoundedCornerDpShapeValue
 import org.florisboard.lib.snygg.value.SnyggRoundedCornerPercentShapeValue
 import org.florisboard.lib.snygg.value.SnyggShapeValue
@@ -494,7 +493,6 @@ private fun PropertyValueEditor(
                         ?: SnyggDpSizeValue.defaultValue().dp).value.toStringWithoutDotZero()
                     is SnyggSpSizeValue -> (value.sp.takeUnless { it.isUnspecified }
                         ?: SnyggSpSizeValue.defaultValue().sp).value.toStringWithoutDotZero()
-                    is SnyggPercentageSizeValue -> value.percentage.toString()
                 })
             }
             Row(modifier, verticalAlignment = Alignment.CenterVertically) {
@@ -507,13 +505,11 @@ private fun PropertyValueEditor(
                         onValueChange(when (value) {
                             is SnyggDpSizeValue -> SnyggDpSizeValue(size?.dp ?: Dp.Unspecified)
                             is SnyggSpSizeValue -> SnyggSpSizeValue(size?.sp ?: TextUnit.Unspecified)
-                            is SnyggPercentageSizeValue -> SnyggPercentageSizeValue(size ?: 0f)
                         })
                     },
                     isError = when (value) {
                         is SnyggDpSizeValue -> value.dp.isUnspecified || value.dp.value < 0f
                         is SnyggSpSizeValue -> value.sp.isUnspecified || value.sp.value < 1f
-                        is SnyggPercentageSizeValue -> value.percentage < 0f || value.percentage > 1f
                     },
                 )
                 Text(
@@ -521,7 +517,6 @@ private fun PropertyValueEditor(
                     text = when (value) {
                         is SnyggDpSizeValue -> "dp"
                         is SnyggSpSizeValue -> "sp"
-                        is SnyggPercentageSizeValue -> "%"
                     },
                     fontFamily = FontFamily.Monospace,
                 )

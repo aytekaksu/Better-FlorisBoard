@@ -233,8 +233,5 @@ class SnyggValueSpecBuilder {
 
     fun percentageInt(id: String) = int(id, unit = "%", numberPattern = """100|[1-9]?[0-9]""".toRegex())
 
-    fun percentageFloat(id: String) =
-        float(id, unit = "%", numberPattern = """100(?:[.]0*)?|[1-9]?[0-9](?:[.][0-9]*)?""".toRegex())
-
     fun nothing() = SnyggNothingValueSpec
 }

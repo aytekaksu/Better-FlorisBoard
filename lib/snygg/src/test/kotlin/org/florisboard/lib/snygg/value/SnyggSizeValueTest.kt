@@ -17,10 +17,6 @@ class SnyggSizeValueTest {
         "4.0sp"     to SnyggSpSizeValue(4.sp),
         "12.0sp"    to SnyggSpSizeValue(12.sp),
         "12.5sp"    to SnyggSpSizeValue(12.5.sp),
-        "4.0%"      to SnyggPercentageSizeValue(0.04f),
-        "12.0%"     to SnyggPercentageSizeValue(0.12f),
-        "12.5%"     to SnyggPercentageSizeValue(0.125f),
-        "100.0%"    to SnyggPercentageSizeValue(1.0f),
     )
 
     private val invalidPairs = listOf(
@@ -30,11 +26,6 @@ class SnyggSizeValueTest {
         "-4.0sp"    to SnyggSpSizeValue((-4).sp),
         "-12.0sp"   to SnyggSpSizeValue((-12).sp),
         "-12.5sp"   to SnyggSpSizeValue((-12.5).sp),
-        "-4.0%"     to SnyggPercentageSizeValue(-4.0f),
-        "-12.0%"    to SnyggPercentageSizeValue(-12.0f),
-        "-12.5%"    to SnyggPercentageSizeValue(-12.5f),
-        "-100.0%"   to SnyggPercentageSizeValue(-100.0f),
-        "101.0%"    to SnyggPercentageSizeValue(1.01f),
     )
 
     private val validIllFormattedInput = listOf(
@@ -53,10 +44,8 @@ class SnyggSizeValueTest {
 
     @Test
     fun `check class of default value`() {
-        assertIs<SnyggPercentageSizeValue>(SnyggPercentageSizeValue.defaultValue())
         assertIs<SnyggSpSizeValue>(SnyggSpSizeValue.defaultValue())
         assertIs<SnyggDpSizeValue>(SnyggDpSizeValue.defaultValue())
-        assertEquals(SnyggPercentageSizeValue(0f), SnyggPercentageSizeValue.defaultValue())
         assertEquals(SnyggSpSizeValue(24.sp), SnyggSpSizeValue.defaultValue())
         assertEquals(SnyggDpSizeValue(0.dp), SnyggDpSizeValue.defaultValue())
     }
@@ -68,9 +57,6 @@ class SnyggSizeValueTest {
             SnyggDpSizeValue(12.5.dp) to "12.5dp",
             SnyggSpSizeValue(24.sp) to "24sp",
             SnyggSpSizeValue(12.5.sp) to "12.5sp",
-            SnyggPercentageSizeValue(0f) to "0%",
-            SnyggPercentageSizeValue(0.125f) to "12.5%",
-            SnyggPercentageSizeValue(1f) to "100%",
         )
         assertAll(pairs.map { (value, expected) -> {
             assertEquals(expected, value.encoder().serialize(value).getOrThrow())
@@ -88,20 +74,16 @@ class SnyggSizeValueTest {
     fun `check if value is type when deserializing`() {
         val sp = "-4.0sp"
         val dp = "-4.0dp"
-        val percent = "-4.0%"
         assertEquals(null, SnyggSpSizeValue.deserialize(sp).getOrNull())
         assertEquals(null, SnyggDpSizeValue.deserialize(dp).getOrNull())
-        assertEquals(null, SnyggPercentageSizeValue.deserialize(percent).getOrNull())
     }
 
     @Test
     fun `check if value is type when serializing`() {
         val sp = SnyggDefinedVarValue("shenanigans")
         val dp = SnyggDefinedVarValue("shenanigans")
-        val percent = SnyggDefinedVarValue("shenanigans")
         assertEquals(null, SnyggSpSizeValue.serialize(sp).getOrNull())
         assertEquals(null, SnyggDpSizeValue.serialize(dp).getOrNull())
-        assertEquals(null, SnyggPercentageSizeValue.serialize(percent).getOrNull())
     }
 
     @Test
