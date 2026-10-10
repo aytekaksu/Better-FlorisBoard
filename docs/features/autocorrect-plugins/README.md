@@ -94,6 +94,8 @@ and content readers; final content is still captured when the session closes.
 The host binds but never starts a provider service. Session starts, admitted
 callbacks, and finish work stay in wire order. Binding demand ends only after
 typing, UI/document leases, and pending finish acknowledgements have ended.
+Each retired bind attempt releases Android's connection tracking, even when
+binding returns false or throws a permission error.
 
 ## State and concurrency rules
 

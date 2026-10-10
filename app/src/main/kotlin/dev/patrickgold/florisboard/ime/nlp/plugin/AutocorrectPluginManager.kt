@@ -373,7 +373,6 @@ class AutocorrectPluginManager internal constructor(
     internal fun hostStateSnapshot() = hostState
 
     @Volatile private var remote: Messenger? = null
-    @Volatile private var bound = false
     private val activeSessionId: Long? get() = hostState.session?.sessionId?.value
     private val activeSession: AutocorrectSession?
         get() = hostState.session?.let { it.configuration.toAutocorrectSession(it.sessionId) }
@@ -402,6 +401,7 @@ class AutocorrectPluginManager internal constructor(
     private val activePluginUiPickerLeaseIds = mutableSetOf<Long>()
     private var pluginUiLifecycleRevision = 0L
     private val pendingPluginUiDocumentJobs = mutableSetOf<Job>()
+    // Android tracks failed bind attempts too; release each retired connection.
     private var serviceConnection: ServiceConnection? = null
     private data class HostCommand(
         val effect: HostEffect,
@@ -1712,7 +1712,6 @@ class AutocorrectPluginManager internal constructor(
         synchronized(this) {
             if (bindingLease != lease) return
             remote = null
-            bound = false
             serviceConnection = connection
             replyMessenger = Messenger(ReplyHandler(descriptor.id, descriptor.uid, lease.epoch.value))
         }
@@ -1735,16 +1734,12 @@ class AutocorrectPluginManager internal constructor(
             if (serviceConnection !== connection) false
             else if (bindingLease != lease) {
                 serviceConnection = null
-                bound = false
                 remote = null
                 true
-            } else {
-                bound = didBind
-                false
-            }
+            } else false
         }
         if (stale) {
-            if (didBind) runCatching { appContext.unbindService(connection) }
+            runCatching { appContext.unbindService(connection) }
             return
         }
         if (!didBind) {
@@ -1812,14 +1807,11 @@ class AutocorrectPluginManager internal constructor(
 
     private fun unbindForLease(lease: BindingLease) {
         val connection: ServiceConnection
-        val wasBound: Boolean
         synchronized(this) {
             val current = serviceConnection as? LeaseServiceConnection ?: return
             if (current.lease != lease) return
             connection = current
-            wasBound = bound
             serviceConnection = null
-            bound = false
             remote = null
             boostedCodePoints = emptySet()
             invalidatePluginUiDocuments()
@@ -1830,7 +1822,7 @@ class AutocorrectPluginManager internal constructor(
             if (uiClientCount > 0 && bindingLease == null) _pluginUiLoading.value = false
             failPending()
         }
-        if (wasBound) runCatching { appContext.unbindService(connection) }
+        runCatching { appContext.unbindService(connection) }
         recordBinding(
             state = AutocorrectPluginDiagnosticState.DISCONNECTED,
             bindingEpoch = lease.epoch.value,

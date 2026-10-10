@@ -236,6 +236,10 @@ val formattedKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/theme/FlorisAssetResolverTest.kt"),
     file(
         "app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/" +
+            "AutocorrectPluginBindingTest.kt",
+    ),
+    file(
+        "app/src/test/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/" +
             "AutocorrectPluginDiagnosticsTest.kt",
     ),
     file(
