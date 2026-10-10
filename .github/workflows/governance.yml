@@ -119,7 +119,6 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "repos/$GITHUB_REPOSITORY/pulls/$pr_number/reviews?per_page=100" |
             MAINTAINER_LOGIN="$MAINTAINER_LOGIN" \
-              PR_AUTHOR="$pr_author" \
               PR_HEAD_SHA="$pr_head_sha" \
               bash .github/scripts/require-maintainer-approval.sh; then
             :
