@@ -61,14 +61,14 @@ import dev.patrickgold.florisboard.lib.ext.SafeRelativePath
 import dev.patrickgold.jetpref.datastore.ui.Preference
 import dev.patrickgold.jetpref.material.ui.JetPrefAlertDialog
 import dev.patrickgold.jetpref.material.ui.JetPrefTextField
-import java.io.File
-import java.nio.file.FileAlreadyExistsException
-import java.nio.file.Files
-import java.nio.file.LinkOption
-import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -81,53 +81,78 @@ import org.florisboard.lib.compose.FlorisIconButton
 import org.florisboard.lib.compose.stringRes
 import org.florisboard.lib.kotlin.io.subDir
 import org.florisboard.lib.kotlin.mimeTypeFilterOf
+import java.io.File
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.util.concurrent.atomic.AtomicReference
 
-private const val EditorAssetImportTimeoutMs = 30_000L
-private const val EditorAssetImportStorageHeadroom = 128L * 1_024L * 1_024L
+private const val EDITOR_ASSET_IMPORT_TIMEOUT_MS = 30_000L
+private const val EDITOR_ASSET_IMPORT_STORAGE_HEADROOM = 128L * 1_024L * 1_024L
 
-private class PendingEditorAsset(
-    val staged: StagedExternalContent,
-    val suggestedName: String,
-) {
+private class PendingEditorAsset(val staged: StagedExternalContent, val suggestedName: String) {
     override fun toString() = "PendingEditorAsset(staged=true)"
 }
 
 private class PendingEditorAssetOwner : RememberObserver {
     private val guard = Any()
+    private val disposalScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var staged: StagedExternalContent? = null
+    private var retirement: Job? = null
+    private var closed = false
 
-    fun takeOwnership(next: StagedExternalContent) {
-        val previous = synchronized(guard) {
-            staged.also { staged = next }
+    fun takeOwnership(next: StagedExternalContent): Boolean = synchronized(guard) {
+        if (closed || retirement?.isCompleted == false || (staged != null && staged !== next)) {
+            return@synchronized false
         }
-        if (previous !== next) previous?.close()
+        staged = next
+        true
     }
 
-    fun detach(owned: StagedExternalContent) {
-        synchronized(guard) {
-            if (staged === owned) staged = null
-        }
+    fun detach(owned: StagedExternalContent): Boolean = synchronized(guard) {
+        if (closed || staged !== owned) return@synchronized false
+        staged = null
+        true
     }
 
     fun close(owned: StagedExternalContent) {
-        val toClose = synchronized(guard) {
-            owned.takeIf { staged === it }?.also { staged = null }
+        synchronized(guard) {
+            if (staged === owned) retireCurrent()
         }
-        toClose?.close()
     }
 
-    fun closeCurrent() {
-        val toClose = synchronized(guard) {
-            staged.also { staged = null }
+    fun closeCurrent(): Job? = synchronized(guard) { retireCurrent() }
+
+    // The guard keeps one stage and one retirement; the next import joins this job.
+    private fun retireCurrent(): Job? {
+        val owned = staged ?: return retirement
+        check(retirement?.isCompleted != false)
+        val job = disposalScope.launch(start = CoroutineStart.LAZY) { owned.close() }
+        staged = null
+        retirement = job
+        job.start()
+        return job
+    }
+
+    private fun release() {
+        synchronized(guard) {
+            if (closed) return
+            closed = true
+            val finalRetirement = retireCurrent()
+            if (finalRetirement == null) {
+                disposalScope.cancel()
+            } else {
+                // No new work can enter after release; cancel only after physical cleanup ends.
+                finalRetirement.invokeOnCompletion { disposalScope.cancel() }
+            }
         }
-        toClose?.close()
     }
 
     override fun onRemembered() = Unit
 
-    override fun onForgotten() = closeCurrent()
+    override fun onForgotten() = release()
 
-    override fun onAbandoned() = closeCurrent()
+    override fun onAbandoned() = release()
 
     override fun toString() = "PendingEditorAssetOwner(hasStage=${synchronized(guard) { staged != null }})"
 }
@@ -139,7 +164,7 @@ private enum class EditorAssetInstallResult {
     FAILURE,
 }
 
-val MIME_TYPES = mapOf(
+private val editorAssetMimeTypes = mapOf(
     FONTS to mimeTypeFilterOf(
         // Source: https://www.alienfactory.co.uk/articles/mime-types-for-web-fonts-in-bedsheet#mimeTypes
         "font/*",
@@ -165,7 +190,7 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
     val externalContentImporter = remember(context, workspace.uuid) {
         DisposableExternalContentImporter(
             context = context,
-            timeoutMs = EditorAssetImportTimeoutMs,
+            timeoutMs = EDITOR_ASSET_IMPORT_TIMEOUT_MS,
             stageCapacity = { CacheManager.MaxImportSourceSize },
             stagingDirectory = "extension-editor-${workspace.uuid}",
         )
@@ -204,11 +229,12 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
                     return@rememberLauncherForActivityResult
                 }
                 isImportingFile = true
-                pendingAssetOwner.closeCurrent()
+                val priorRetirement = pendingAssetOwner.closeCurrent()
                 currentImportResult = null
                 importScope.launch {
                     val pendingStage = AtomicReference<StagedExternalContent?>()
                     try {
+                        priorRetirement?.join()
                         val stagedResult = try {
                             Result.success(
                                 runInterruptible(Dispatchers.IO) {
@@ -216,7 +242,7 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
                                         CacheManager.MaxImportSourceSize,
                                         (
                                             context.cacheDir.conservativeUsableSpace() -
-                                                EditorAssetImportStorageHeadroom
+                                                EDITOR_ASSET_IMPORT_STORAGE_HEADROOM
                                             ).coerceAtLeast(0L),
                                     )
                                     check(maximumBytes > 0L) {
@@ -233,7 +259,7 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
                                     }
                                     pendingStage.set(staged)
                                     check(
-                                        MIME_TYPES.getValue(destination)
+                                        editorAssetMimeTypes.getValue(destination)
                                             .matches(staged.sourceMimeType),
                                     ) {
                                         "Unsupported selected file type."
@@ -255,14 +281,19 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
                         withContext(NonCancellable) {
                             callerContext.ensureActive()
                             stagedResult.getOrNull()?.let { pending ->
-                                pendingAssetOwner.takeOwnership(pending.staged)
+                                if (!pendingAssetOwner.takeOwnership(pending.staged)) return@withContext
                                 check(pendingStage.compareAndSet(pending.staged, null))
                             }
                             currentImportResult = stagedResult
                         }
                     } finally {
-                        pendingStage.getAndSet(null)?.close()
-                        isImportingFile = false
+                        try {
+                            pendingStage.getAndSet(null)?.let { unhanded ->
+                                withContext(NonCancellable + Dispatchers.IO) { unhanded.close() }
+                            }
+                        } finally {
+                            isImportingFile = false
+                        }
                     }
                 }
             },
@@ -332,8 +363,11 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
                                 callerContext.ensureActive()
                                 val outcome = withContext(Dispatchers.IO) {
                                     workspace.withOpenFileOperation {
-                                        if (newName == null) assetStore.delete(file)
-                                        else assetStore.rename(file, newName)
+                                        if (newName == null) {
+                                            assetStore.delete(file)
+                                        } else {
+                                            assetStore.rename(file, newName)
+                                        }
                                     } ?: EditorAssetMutationResult.FAILURE
                                 }
                                 if (outcome == EditorAssetMutationResult.SUCCESS) workspace.update { }
@@ -343,19 +377,28 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
                             when {
                                 newName == null -> {
                                     context.showShortToast(
-                                        if (result == EditorAssetMutationResult.SUCCESS) "Successfully deleted"
-                                        else "Failed to delete",
+                                        if (result == EditorAssetMutationResult.SUCCESS) {
+                                            "Successfully deleted"
+                                        } else {
+                                            "Failed to delete"
+                                        },
                                     )
                                     dialogFile = null
                                 }
+
                                 result == EditorAssetMutationResult.INVALID_NAME ->
                                     context.showLongToast("Invalid file name!")
+
                                 result == EditorAssetMutationResult.ALREADY_EXISTS ->
                                     context.showShortToast("Filename already exists.")
+
                                 else -> {
                                     context.showShortToast(
-                                        if (result == EditorAssetMutationResult.SUCCESS) "Successfully renamed"
-                                        else "Failed to rename the file.",
+                                        if (result == EditorAssetMutationResult.SUCCESS) {
+                                            "Successfully renamed"
+                                        } else {
+                                            "Failed to rename the file."
+                                        },
                                     )
                                     dialogFile = null
                                 }
@@ -434,29 +477,46 @@ fun ExtensionEditFilesScreen(workspace: CacheManager.ThemeEditorWorkspace) = Flo
                             val callerContext = currentCoroutineContext()
                             val installResult = withContext(NonCancellable) {
                                 callerContext.ensureActive()
-                                val committedResult = withContext(Dispatchers.IO) {
-                                    installStagedEditorAsset(
-                                        destinationDirectory = workspace.extDir.subDir(dest),
-                                        requestedFileName = fileNameInput.trim(),
-                                        staged = result.staged,
-                                    )
+                                if (!pendingAssetOwner.detach(result.staged)) {
+                                    return@withContext EditorAssetInstallResult.FAILURE
                                 }
-                                if (committedResult == EditorAssetInstallResult.SUCCESS) {
-                                    workspace.update { }
-                                    pendingAssetOwner.detach(result.staged)
-                                    currentImportDest = null
-                                    currentImportResult = null
+                                var installed = false
+                                try {
+                                    val requestedFileName = fileNameInput.trim()
+                                    val committedResult = withContext(Dispatchers.IO) {
+                                        (
+                                            workspace.withOpenFileOperation {
+                                                installStagedEditorAsset(
+                                                    destinationDirectory = workspace.extDir.subDir(dest),
+                                                    requestedFileName = requestedFileName,
+                                                    staged = result.staged,
+                                                )
+                                            } ?: EditorAssetInstallResult.FAILURE
+                                            ).also { installed = it == EditorAssetInstallResult.SUCCESS }
+                                    }
+                                    if (installed) {
+                                        workspace.update { }
+                                        currentImportDest = null
+                                        currentImportResult = null
+                                    }
+                                    committedResult
+                                } finally {
+                                    if (installed || !pendingAssetOwner.takeOwnership(result.staged)) {
+                                        withContext(Dispatchers.IO) { result.staged.close() }
+                                    }
                                 }
-                                committedResult
                             }
                             when (installResult) {
                                 EditorAssetInstallResult.SUCCESS -> Unit
+
                                 EditorAssetInstallResult.INVALID_NAME -> {
                                     context.showShortToast("Invalid file name")
                                 }
+
                                 EditorAssetInstallResult.ALREADY_EXISTS -> {
                                     context.showShortToast("File already exists")
                                 }
+
                                 EditorAssetInstallResult.FAILURE -> {
                                     context.showShortToast("Failed to add file")
                                 }
