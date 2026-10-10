@@ -1,0 +1,77 @@
+[
+  [
+    @kanaKeys("ぬふあうえおやゆよわほへー", "ヌフアウエオヤユヨワホヘー", "ﾇﾌｱｳｴｵﾔﾕﾖﾜﾎﾍｰ", width=6)
+  ],
+  [
+    { "$": "kana_selector",
+      "hira": { "code": 12383, "label": "た" },
+      "kata": { "$": "char_width_selector",
+        "full": { "code": 12479, "label": "タ" },
+        "half": { "code": 65408, "label": "ﾀ" }
+      }
+    },
+    { "$": "kana_selector",
+      "hira": { "code": 12390, "label": "て" },
+      "kata": { "$": "char_width_selector",
+        "full": { "code": 12486, "label": "テ" },
+        "half": { "code": 65411, "label": "ﾃ" }
+      }
+    },
+    { "$": "kana_selector",
+      "hira": { "code": 12356, "label": "い" },
+      "kata": { "$": "char_width_selector",
+           "full": { "code": 12452, "label": "イ" },
+           "half": { "code": 65394, "label": "ｲ" }
+       }
+    },
+    @kanaKeys("すかんなにらせ", "スカンナニラセ", "ｽｶﾝﾅﾆﾗｾ", width=6),
+    { "$": "kana_selector",
+      "hira": { "code": 12441, "label": "゛" },
+      "kata": { "$": "char_width_selector",
+        "full": { "code": 12441, "label": "゛" },
+        "half": { "code": 65438, "label": "ﾞ" }
+      }
+    },
+    { "$": "kana_selector",
+      "hira": { "code": 12442, "label": "゜" },
+      "kata": { "$": "char_width_selector",
+        "full": { "code": 12442, "label": "゜" },
+        "half": { "code": 65439, "label": "ﾟ" }
+      }
+    }
+  ],
+  [
+    { "$": "kana_selector",
+      "hira": { "code": 12385, "label": "ち" },
+      "kata": { "$": "char_width_selector",
+        "full": { "code": 12481, "label": "チ" },
+        "half": { "code": 65409, "label": "ﾁ" }
+      }
+    },
+    { "$": "kana_selector",
+      "hira": { "code": 12392, "label": "と" },
+      "kata": { "$": "char_width_selector",
+        "full": { "code": 12488, "label": "ト" },
+        "half": { "code": 65412, "label": "ﾄ" }
+      }
+    },
+    { "$": "kana_selector",
+      "hira": { "code": 12375, "label": "し" },
+      "kata": { "$": "char_width_selector",
+        "full": { "code": 12471, "label": "シ" },
+        "half": { "code": 65410, "label": "ｼ" }
+      }
+    },
+    @kanaKeys("はきくまのりれけむ", "ハキクマノリレケム", "ﾊｷｸﾏﾉﾘﾚｹﾑ", width=6)
+  ],
+  [
+    { "$": "kana_selector",
+      "hira": { "code": 12388, "label": "つ" },
+      "kata": { "$": "char_width_selector",
+           "full": { "code": 12484, "label": "ツ" },
+           "half": { "code": 65410, "label": "ﾂ" }
+       }
+    },
+    @kanaKeys("さそひこみもねるめろ", "サソヒコミモネルメロ", "ｻｿﾋｺﾐﾓﾈﾙﾒﾛ", width=6)
+  ]
+]

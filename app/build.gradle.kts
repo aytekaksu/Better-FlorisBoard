@@ -466,6 +466,8 @@ abstract class GenerateCharacterLayoutAssets : GeneratedAssetsTask() {
         private val MARKER = Regex("""^    @autoKeys\("([^"]+)"(?:, width=([4-7]))?\)(,?)$""")
         private const val CASE_ROW = """("(?:[^"\\]|\\["\\])+")"""
         private val CASE_MARKER = Regex("""^    @caseKeys\($CASE_ROW, $CASE_ROW(?:, width=([4-7]))?\)(,?)$""")
+        private val KANA_MARKER =
+            Regex("""^    @kanaKeys\($CASE_ROW, $CASE_ROW, $CASE_ROW(?:, width=([4-7]))?\)(,?)$""")
         private val FILE_NAME = Regex("[a-z0-9_]+\\.json")
         private val SOURCE_NAME = Regex("[a-z0-9_]+")
 
@@ -543,12 +545,17 @@ abstract class GenerateCharacterLayoutAssets : GeneratedAssetsTask() {
             val text = template.removeSuffix("\n").split('\n').joinToString("\n") { line ->
                 val marker = MARKER.matchEntire(line)
                 val caseMarker = CASE_MARKER.matchEntire(line)
+                val kanaMarker = KANA_MARKER.matchEntire(line)
                 if (caseMarker != null) {
                     count++
-                    expandCaseKeys(caseMarker, name)
+                    expandSelectorKeys(caseMarker, name, kana = false)
+                } else if (kanaMarker != null) {
+                    count++
+                    expandSelectorKeys(kanaMarker, name, kana = true)
                 } else if (marker == null) {
                     check("@autoKeys" !in line) { "$name contains malformed @autoKeys marker" }
                     check("@caseKeys" !in line) { "$name contains malformed @caseKeys marker" }
+                    check("@kanaKeys" !in line) { "$name contains malformed @kanaKeys marker" }
                     line
                 } else {
                     count++
@@ -574,28 +581,41 @@ abstract class GenerateCharacterLayoutAssets : GeneratedAssetsTask() {
             return text
         }
 
-        private fun expandCaseKeys(marker: MatchResult, name: String): String {
-            val keys = (1..2).map {
+        private fun expandSelectorKeys(marker: MatchResult, name: String, kana: Boolean): String {
+            val branchCount = if (kana) 3 else 2
+            val markerName = if (kana) "@kanaKeys" else "@caseKeys"
+            val keys = (1..branchCount).map {
                 (JsonSlurper().parseText(marker.groupValues[it]) as String).codePoints().toArray()
             }
             check(
-                keys[0].size in 3..32 && keys[1].size == keys[0].size &&
-                    keys.all { row -> row.all { !Character.isISOControl(it) && it !in 0xD800..0xDFFF } },
-            ) { "$name contains invalid @caseKeys characters" }
-            val width = marker.groupValues[3].toIntOrNull() ?: 5
-            val trailingComma = marker.groupValues[4].isNotEmpty()
+                keys[0].size in 3..32 && keys.all { row ->
+                    row.size == keys[0].size && row.all { !Character.isISOControl(it) && it !in 0xD800..0xDFFF }
+                },
+            ) { "$name contains invalid $markerName characters" }
+            val width = marker.groupValues[branchCount + 1].toIntOrNull() ?: 5
+            val trailingComma = marker.groupValues[branchCount + 2].isNotEmpty()
             return keys[0].indices.joinToString("\n") { index ->
                 val branches = keys.map { row ->
                     val code = row[index].toString()
-                    check(code.length < width) { "$name has a @caseKeys code wider than $width" }
+                    check(code.length < width) { "$name has a $markerName code wider than $width" }
                     val label = String(Character.toChars(row[index])).replace("\\", "\\\\").replace("\"", "\\\"")
                     "{ \"code\":${code.padStart(width)}, \"label\": \"$label\" }"
                 }
                 val comma = if (index < keys[0].lastIndex || trailingComma) "," else ""
-                "    { \"$\": \"case_selector\",\n" +
-                    "      \"lower\": ${branches[0]},\n" +
-                    "      \"upper\": ${branches[1]}\n" +
-                    "    }$comma"
+                if (kana) {
+                    "    { \"$\": \"kana_selector\",\n" +
+                        "      \"hira\": ${branches[0]},\n" +
+                        "      \"kata\": { \"$\": \"char_width_selector\",\n" +
+                        "        \"full\": ${branches[1]},\n" +
+                        "        \"half\": ${branches[2]}\n" +
+                        "      }\n" +
+                        "    }$comma"
+                } else {
+                    "    { \"$\": \"case_selector\",\n" +
+                        "      \"lower\": ${branches[0]},\n" +
+                        "      \"upper\": ${branches[1]}\n" +
+                        "    }$comma"
+                }
             }
         }
 
@@ -1138,7 +1158,9 @@ val testCharacterLayoutAssetGenerator by tasks.registering {
         )
 
         val paired = "[\n  [\n    @caseKeys(\"a\\\"𑣀\", \"B\\\\𑣂\", width=7),\n" +
-            "    {\"code\":0}\n  ],\n  [\n    @caseKeys(\"abc\", \"XYZ\")\n  ]\n]\n"
+            "    {\"code\":0}\n  ],\n  [\n    @caseKeys(\"abc\", \"XYZ\")\n  ],\n" +
+            "  [\n    @kanaKeys(\"abc\", \"XYZ\", \"𑣀𑣂𑣃\", width=7),\n    {\"code\":0}\n  ],\n" +
+            "  [\n    @kanaKeys(\"abc\", \"XYZ\", \"DEF\")\n  ]\n]\n"
         val pairedOutput = exercise(listOf("paired"), mapOf("paired.json.in" to paired))
         check(
             pairedOutput.resolve("paired.json").readText() ==
@@ -1172,6 +1194,53 @@ val testCharacterLayoutAssetGenerator by tasks.registering {
                       "lower": { "code":   99, "label": "c" },
                       "upper": { "code":   90, "label": "Z" }
                     }
+                  ],
+                  [
+                    { "${'$'}": "kana_selector",
+                      "hira": { "code":     97, "label": "a" },
+                      "kata": { "${'$'}": "char_width_selector",
+                        "full": { "code":     88, "label": "X" },
+                        "half": { "code":  71872, "label": "𑣀" }
+                      }
+                    },
+                    { "${'$'}": "kana_selector",
+                      "hira": { "code":     98, "label": "b" },
+                      "kata": { "${'$'}": "char_width_selector",
+                        "full": { "code":     89, "label": "Y" },
+                        "half": { "code":  71874, "label": "𑣂" }
+                      }
+                    },
+                    { "${'$'}": "kana_selector",
+                      "hira": { "code":     99, "label": "c" },
+                      "kata": { "${'$'}": "char_width_selector",
+                        "full": { "code":     90, "label": "Z" },
+                        "half": { "code":  71875, "label": "𑣃" }
+                      }
+                    },
+                    {"code":0}
+                  ],
+                  [
+                    { "${'$'}": "kana_selector",
+                      "hira": { "code":   97, "label": "a" },
+                      "kata": { "${'$'}": "char_width_selector",
+                        "full": { "code":   88, "label": "X" },
+                        "half": { "code":   68, "label": "D" }
+                      }
+                    },
+                    { "${'$'}": "kana_selector",
+                      "hira": { "code":   98, "label": "b" },
+                      "kata": { "${'$'}": "char_width_selector",
+                        "full": { "code":   89, "label": "Y" },
+                        "half": { "code":   69, "label": "E" }
+                      }
+                    },
+                    { "${'$'}": "kana_selector",
+                      "hira": { "code":   99, "label": "c" },
+                      "kata": { "${'$'}": "char_width_selector",
+                        "full": { "code":   90, "label": "Z" },
+                        "half": { "code":   70, "label": "F" }
+                      }
+                    }
                   ]
                 ]
                 """.trimIndent() + "\n",
@@ -1187,6 +1256,21 @@ val testCharacterLayoutAssetGenerator by tasks.registering {
             exercise(
                 listOf("paired"),
                 mapOf("paired.json.in" to "[\n  [\n    @caseKeys($row)\n  ]\n]\n"),
+                failure = failure,
+            )
+        }
+
+        for ((row, failure) in listOf(
+            "\"abc\", \"XYZ\", \"DE\"" to "invalid @kanaKeys characters",
+            "\"abc\", \"XYZ\", \"D\u0085F\"" to "invalid @kanaKeys characters",
+            "\"abc\", \"XYZ\"" to "malformed @kanaKeys marker",
+            "\"abc\", \"XYZ\", \"D\\nF\"" to "malformed @kanaKeys marker",
+            "\"abc\", \"XYZ\", \"DEF\", width=8" to "malformed @kanaKeys marker",
+            "\"abc\", \"XYZ\", \"D𑣀F\", width=4" to "code wider than",
+        )) {
+            exercise(
+                listOf("kana"),
+                mapOf("kana.json.in" to "[\n  [\n    @kanaKeys($row)\n  ]\n]\n"),
                 failure = failure,
             )
         }

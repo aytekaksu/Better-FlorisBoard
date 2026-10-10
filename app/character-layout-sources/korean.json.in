@@ -1,0 +1,20 @@
+[
+  [
+    @caseKeys("ㅂㅈㄷㄱㅅ", "ㅃㅉㄸㄲㅆ", width=6),
+    @autoKeys("ㅛㅕㅑ", width=6),
+    { "$": "case_selector",
+      "lower": { "code": 12624, "label": "ㅐ" },
+      "upper": { "code": 12626, "label": "ㅒ" }
+    },
+    { "$": "case_selector",
+      "lower": { "code": 12628, "label": "ㅔ" },
+      "upper": { "code": 12630, "label": "ㅖ" }
+    }
+  ],
+  [
+    @autoKeys("ㅁㄴㅇㄹㅎㅗㅓㅏㅣ", width=6)
+  ],
+  [
+    @autoKeys("ㅋㅌㅊㅍㅠㅜㅡ", width=6)
+  ]
+]

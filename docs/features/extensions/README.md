@@ -78,8 +78,10 @@ visible symbol; metadata tests cover built-in slots. Layout selectors have no
 text of their own; concrete keys still provide their display and input text.
 
 Build-time generators expand `@autoKeys("letters")` character rows and explicit
-paired `@caseKeys("lower", "upper")` rows, both with optional padding. Paired rows
-keep their shift alternatives without Unicode case folding. The generators also expand
+paired `@caseKeys("lower", "upper")` rows, and `@kanaKeys("hira", "full", "half")`
+rows, all with optional padding. Selector rows keep explicit alternatives without
+Unicode case, kana, or width conversion. Unusual code/label pairs stay literal.
+The generators also expand
 digit-script numeric rows from Bengali, theme stylesheets from the
 static day base and Material You/night/borderless overlays, subtype presets, and
 shared punctuation popups. Each generator runs once for all requested app variants.
