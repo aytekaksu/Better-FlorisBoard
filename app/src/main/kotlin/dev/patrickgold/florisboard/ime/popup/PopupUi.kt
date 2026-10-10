@@ -86,7 +86,7 @@ fun PopupExtBox(
     elemHeight: Dp,
     activeElementIndex: Int,
 ): Unit = with(LocalDensity.current) {
-    SnyggColumn(FlorisImeUi.KeyPopupBox.elementName, attributes, modifier = modifier) {
+    SnyggColumn(elementName = FlorisImeUi.KeyPopupBox.elementName, attributes = attributes, modifier = modifier) {
         for (row in elements.asReversed()) {
             SnyggRow(
                 modifier = Modifier

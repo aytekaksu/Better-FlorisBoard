@@ -2,134 +2,13 @@
 <issues format="6" by="lint 9.0.0" type="baseline" client="gradle" dependencies="true" name="AGP (9.0.0)" variant="all" version="9.0.0">
 
     <issue
-        id="ModifierFactoryExtensionFunction"
-        message="Modifier factory functions should be extensions on Modifier"
-        errorLine1="internal fun pluginUiItemModifier("
-        errorLine2="             ~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginUiPresentation.kt"
-            line="61"
-            column="14"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/org/florisboard/lib/compose/FlorisButtons.kt"
-            line="183"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggBox.kt"
-            line="63"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggButton.kt"
-            line="65"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggColumn.kt"
-            line="55"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggIcon.kt"
-            line="57"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggIcon.kt"
-            line="95"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggIconButton.kt"
-            line="61"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggRow.kt"
-            line="56"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggSpacer.kt"
-            line="52"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggText.kt"
-            line="65"
-            column="5"/>
-    </issue>
-
-    <issue
         id="StringFormatInvalid"
         message="Incorrect formatting string `ext__validation__hint_value_above_50_percent`; missing conversion character in &apos;`% s`&apos;?"
         errorLine1="    &lt;string name=&quot;ext__validation__hint_value_above_50_percent&quot;>Qualquer valor acima de 50% se comportará como se você definisse 50%, considere diminuir o tamanho da porcentagem&lt;/string>"
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt-rBR/strings.xml"
-            line="654"
+            line="593"
             column="5"/>
     </issue>
 
@@ -140,7 +19,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt-rBR/strings.xml"
-            line="654"
+            line="593"
             column="5"/>
     </issue>
 
@@ -151,7 +30,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-ca/strings.xml"
-            line="689"
+            line="626"
             column="5"/>
     </issue>
 
@@ -162,7 +41,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-ca/strings.xml"
-            line="689"
+            line="626"
             column="5"/>
     </issue>
 
@@ -173,7 +52,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt/strings.xml"
-            line="786"
+            line="723"
             column="5"/>
     </issue>
 
@@ -184,7 +63,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt/strings.xml"
-            line="786"
+            line="723"
             column="5"/>
     </issue>
 
@@ -195,7 +74,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-es/strings.xml"
-            line="788"
+            line="725"
             column="5"/>
     </issue>
 
@@ -206,7 +85,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-es/strings.xml"
-            line="788"
+            line="725"
             column="5"/>
     </issue>
 
@@ -217,7 +96,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-it/strings.xml"
-            line="823"
+            line="742"
             column="5"/>
     </issue>
 
@@ -228,7 +107,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-it/strings.xml"
-            line="827"
+            line="746"
             column="5"/>
     </issue>
 
@@ -239,7 +118,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-it/strings.xml"
-            line="831"
+            line="750"
             column="5"/>
     </issue>
 
@@ -250,7 +129,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-pt-rBR/strings.xml"
-            line="840"
+            line="759"
             column="5"/>
     </issue>
 
@@ -261,7 +140,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-pt-rBR/strings.xml"
-            line="844"
+            line="763"
             column="5"/>
     </issue>
 
@@ -272,7 +151,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-pt-rBR/strings.xml"
-            line="848"
+            line="767"
             column="5"/>
     </issue>
 
@@ -283,7 +162,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-pt-rBR/strings.xml"
-            line="852"
+            line="771"
             column="5"/>
     </issue>
 
@@ -294,7 +173,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-pt-rBR/strings.xml"
-            line="856"
+            line="775"
             column="5"/>
     </issue>
 
@@ -305,7 +184,18 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-ca/strings.xml"
-            line="907"
+            line="821"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;ca&quot; (Catalan) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__seconds__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-ca/strings.xml"
+            line="825"
             column="5"/>
     </issue>
 
@@ -316,29 +206,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-fr/strings.xml"
-            line="909"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="MissingQuantity"
-        message="For locale &quot;ca&quot; (Catalan) the following quantity should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;unit__seconds__written&quot;>"
-        errorLine2="    ^">
-        <location
-            file="src/main/res/values-ca/strings.xml"
-            line="911"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
-        errorLine1="    &lt;plurals name=&quot;unit__seconds__written&quot;>"
-        errorLine2="    ^">
-        <location
-            file="src/main/res/values-fr/strings.xml"
-            line="913"
+            line="826"
             column="5"/>
     </issue>
 
@@ -349,7 +217,29 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-ca/strings.xml"
-            line="915"
+            line="829"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
+        errorLine1="    &lt;plurals name=&quot;unit__seconds__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="830"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;ca&quot; (Catalan) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;unit__characters__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-ca/strings.xml"
+            line="833"
             column="5"/>
     </issue>
 
@@ -360,29 +250,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-fr/strings.xml"
-            line="917"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="MissingQuantity"
-        message="For locale &quot;ca&quot; (Catalan) the following quantity should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;unit__characters__written&quot;>"
-        errorLine2="    ^">
-        <location
-            file="src/main/res/values-ca/strings.xml"
-            line="919"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
-        errorLine1="    &lt;plurals name=&quot;unit__characters__written&quot;>"
-        errorLine2="    ^">
-        <location
-            file="src/main/res/values-fr/strings.xml"
-            line="921"
+            line="834"
             column="5"/>
     </issue>
 
@@ -393,7 +261,18 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-ca/strings.xml"
-            line="923"
+            line="837"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
+        errorLine1="    &lt;plurals name=&quot;unit__characters__written&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="838"
             column="5"/>
     </issue>
 
@@ -404,7 +283,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-fr/strings.xml"
-            line="925"
+            line="842"
             column="5"/>
     </issue>
 
@@ -415,7 +294,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-pt/strings.xml"
-            line="1013"
+            line="927"
             column="5"/>
     </issue>
 
@@ -426,7 +305,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-es/strings.xml"
-            line="1015"
+            line="929"
             column="5"/>
     </issue>
 
@@ -437,7 +316,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-pt/strings.xml"
-            line="1017"
+            line="931"
             column="5"/>
     </issue>
 
@@ -448,7 +327,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-es/strings.xml"
-            line="1019"
+            line="933"
             column="5"/>
     </issue>
 
@@ -459,7 +338,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-pt/strings.xml"
-            line="1021"
+            line="935"
             column="5"/>
     </issue>
 
@@ -470,7 +349,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-es/strings.xml"
-            line="1023"
+            line="937"
             column="5"/>
     </issue>
 
@@ -481,7 +360,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-pt/strings.xml"
-            line="1025"
+            line="939"
             column="5"/>
     </issue>
 
@@ -492,7 +371,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-es/strings.xml"
-            line="1027"
+            line="941"
             column="5"/>
     </issue>
 
@@ -503,7 +382,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-pt/strings.xml"
-            line="1029"
+            line="943"
             column="5"/>
     </issue>
 
@@ -514,7 +393,7 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-es/strings.xml"
-            line="1031"
+            line="945"
             column="5"/>
     </issue>
 
@@ -525,7 +404,7 @@
         errorLine2="                                                                                                                                     ~~~~~~~~">
         <location
             file="src/main/res/values-de/strings.xml"
-            line="334"
+            line="302"
             column="134"/>
     </issue>
 
@@ -536,7 +415,7 @@
         errorLine2="                                                         ~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt/strings.xml"
-            line="544"
+            line="501"
             column="58"/>
     </issue>
 
@@ -547,7 +426,7 @@
         errorLine2="                                                                                                   ~~~~~~~~~">
         <location
             file="src/main/res/values-tr/strings.xml"
-            line="552"
+            line="509"
             column="100"/>
     </issue>
 
@@ -558,7 +437,7 @@
         errorLine2="                                                                                                                              ~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-tr/strings.xml"
-            line="614"
+            line="568"
             column="127"/>
     </issue>
 
@@ -569,7 +448,7 @@
         errorLine2="                                                                               ~~~~~~">
         <location
             file="src/main/res/values-pt/strings.xml"
-            line="950"
+            line="870"
             column="80"/>
     </issue>
 
@@ -580,7 +459,7 @@
         errorLine2="                                                                                          ~~~~~~~~">
         <location
             file="src/main/res/values-es/strings.xml"
-            line="975"
+            line="893"
             column="91"/>
     </issue>
 
@@ -591,7 +470,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt-rBR/strings.xml"
-            line="841"
+            line="760"
             column="9"/>
     </issue>
 
@@ -602,7 +481,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt-rBR/strings.xml"
-            line="845"
+            line="764"
             column="9"/>
     </issue>
 
@@ -613,7 +492,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt-rBR/strings.xml"
-            line="849"
+            line="768"
             column="9"/>
     </issue>
 
@@ -624,7 +503,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt-rBR/strings.xml"
-            line="853"
+            line="772"
             column="9"/>
     </issue>
 
@@ -635,7 +514,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt-rBR/strings.xml"
-            line="857"
+            line="776"
             column="9"/>
     </issue>
 
@@ -646,7 +525,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-uk/strings.xml"
-            line="868"
+            line="783"
             column="9"/>
     </issue>
 
@@ -657,7 +536,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-uk/strings.xml"
-            line="874"
+            line="789"
             column="9"/>
     </issue>
 
@@ -668,7 +547,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-uk/strings.xml"
-            line="880"
+            line="795"
             column="9"/>
     </issue>
 
@@ -679,7 +558,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-uk/strings.xml"
-            line="886"
+            line="801"
             column="9"/>
     </issue>
 
@@ -690,7 +569,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-uk/strings.xml"
-            line="892"
+            line="807"
             column="9"/>
     </issue>
 
@@ -701,7 +580,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-fr/strings.xml"
-            line="910"
+            line="827"
             column="9"/>
     </issue>
 
@@ -712,7 +591,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-fr/strings.xml"
-            line="914"
+            line="831"
             column="9"/>
     </issue>
 
@@ -723,7 +602,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-fr/strings.xml"
-            line="918"
+            line="835"
             column="9"/>
     </issue>
 
@@ -734,7 +613,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-fr/strings.xml"
-            line="922"
+            line="839"
             column="9"/>
     </issue>
 
@@ -745,7 +624,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-fr/strings.xml"
-            line="926"
+            line="843"
             column="9"/>
     </issue>
 
@@ -756,7 +635,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-lv-rLV/strings.xml"
-            line="973"
+            line="886"
             column="9"/>
     </issue>
 
@@ -767,7 +646,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-lv-rLV/strings.xml"
-            line="974"
+            line="887"
             column="9"/>
     </issue>
 
@@ -778,7 +657,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-lv-rLV/strings.xml"
-            line="978"
+            line="891"
             column="9"/>
     </issue>
 
@@ -789,7 +668,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-lv-rLV/strings.xml"
-            line="979"
+            line="892"
             column="9"/>
     </issue>
 
@@ -800,7 +679,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-lv-rLV/strings.xml"
-            line="983"
+            line="896"
             column="9"/>
     </issue>
 
@@ -811,7 +690,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-lv-rLV/strings.xml"
-            line="984"
+            line="897"
             column="9"/>
     </issue>
 
@@ -822,7 +701,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-lv-rLV/strings.xml"
-            line="988"
+            line="901"
             column="9"/>
     </issue>
 
@@ -833,7 +712,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-lv-rLV/strings.xml"
-            line="989"
+            line="902"
             column="9"/>
     </issue>
 
@@ -844,7 +723,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-lv-rLV/strings.xml"
-            line="993"
+            line="906"
             column="9"/>
     </issue>
 
@@ -855,7 +734,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-lv-rLV/strings.xml"
-            line="994"
+            line="907"
             column="9"/>
     </issue>
 
@@ -866,7 +745,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt/strings.xml"
-            line="1014"
+            line="928"
             column="9"/>
     </issue>
 
@@ -877,7 +756,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt/strings.xml"
-            line="1018"
+            line="932"
             column="9"/>
     </issue>
 
@@ -888,18 +767,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt/strings.xml"
-            line="1022"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="ImpliedQuantity"
-        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
-        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} caractere&lt;/item>"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values-pt/strings.xml"
-            line="1026"
+            line="936"
             column="9"/>
     </issue>
 
@@ -910,7 +778,18 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-ru/strings.xml"
-            line="1028"
+            line="939"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ImpliedQuantity"
+        message="The quantity `&apos;one&apos;` matches more than one specific number in this locale (0, 1), but the message did not include a formatting argument (such as `%d`). This is usually an internationalization error. See full issue explanation for more."
+        errorLine1="        &lt;item quantity=&quot;one&quot;>{v} caractere&lt;/item>"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="940"
             column="9"/>
     </issue>
 
@@ -921,7 +800,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt/strings.xml"
-            line="1030"
+            line="944"
             column="9"/>
     </issue>
 
@@ -932,7 +811,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-ru/strings.xml"
-            line="1034"
+            line="945"
             column="9"/>
     </issue>
 
@@ -943,7 +822,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-ru/strings.xml"
-            line="1040"
+            line="951"
             column="9"/>
     </issue>
 
@@ -954,7 +833,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-ru/strings.xml"
-            line="1046"
+            line="957"
             column="9"/>
     </issue>
 
@@ -965,7 +844,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-ru/strings.xml"
-            line="1052"
+            line="963"
             column="9"/>
     </issue>
 
@@ -976,11 +855,11 @@
         errorLine2="    ^">
         <location
             file="src/main/res/values-ckb/strings.xml"
-            line="452"
+            line="406"
             column="5"/>
         <location
             file="src/main/res/values/strings.xml"
-            line="700"
+            line="660"
             column="5"
             message="Conflicting number of arguments (1) here"/>
     </issue>
@@ -992,7 +871,7 @@
         errorLine2="                        ~~~~~~~~~~~~">
         <location
             file="src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/plugin/AutocorrectPluginManager.kt"
-            line="2319"
+            line="2153"
             column="25"/>
     </issue>
 
@@ -1003,7 +882,7 @@
         errorLine2="                        ~~~~~~~~~~~~~~~">
         <location
             file="src/main/kotlin/org/florisboard/autocorrect/api/AutocorrectPluginService.kt"
-            line="278"
+            line="271"
             column="25"/>
     </issue>
 
@@ -1014,7 +893,7 @@
         errorLine2="                                                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt-rBR/strings.xml"
-            line="45"
+            line="28"
             column="98"/>
     </issue>
 
@@ -1025,7 +904,7 @@
         errorLine2="                                                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-pt/strings.xml"
-            line="46"
+            line="29"
             column="98"/>
     </issue>
 
@@ -1036,7 +915,7 @@
         errorLine2="                                                                  ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-bs/strings.xml"
-            line="53"
+            line="34"
             column="67"/>
     </issue>
 
@@ -1047,7 +926,7 @@
         errorLine2="                                                                      ~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-fa/strings.xml"
-            line="132"
+            line="105"
             column="71"/>
     </issue>
 
@@ -1058,7 +937,7 @@
         errorLine2="                                                                                                                                                                                                              ^">
         <location
             file="src/main/res/values-ckb/strings.xml"
-            line="452"
+            line="406"
             column="207"/>
     </issue>
 
@@ -1069,7 +948,7 @@
         errorLine2="                                                                            ~~~~~~~">
         <location
             file="src/main/res/values-zh-rCN/strings.xml"
-            line="521"
+            line="484"
             column="77"/>
     </issue>
 

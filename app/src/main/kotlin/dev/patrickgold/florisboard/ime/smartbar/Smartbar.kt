@@ -90,21 +90,21 @@ fun Smartbar() {
     ) {
         when (extendedActionsPlacement) {
             ExtendedActionsPlacement.ABOVE_CANDIDATES -> {
-                SnyggColumn(FlorisImeUi.Smartbar.elementName) {
+                SnyggColumn(elementName = FlorisImeUi.Smartbar.elementName) {
                     SmartbarSecondaryRow()
                     SmartbarMainRow()
                 }
             }
 
             ExtendedActionsPlacement.BELOW_CANDIDATES -> {
-                SnyggColumn(FlorisImeUi.Smartbar.elementName) {
+                SnyggColumn(elementName = FlorisImeUi.Smartbar.elementName) {
                     SmartbarMainRow()
                     SmartbarSecondaryRow()
                 }
             }
 
             ExtendedActionsPlacement.OVERLAY_APP_UI -> {
-                SnyggBox(FlorisImeUi.Smartbar.elementName,
+                SnyggBox(elementName = FlorisImeUi.Smartbar.elementName,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(FlorisImeSizing.smartbarHeight),
@@ -329,7 +329,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
             }
             // Expanded icon
             SnyggIcon(
-                iconElementName,
+                elementName = iconElementName,
                 modifier = Modifier
                     .alpha(alpha)
                     .rotate(rotation)
@@ -338,7 +338,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
             )
             // Not expanded icon
             SnyggIcon(
-                iconElementName,
+                elementName = iconElementName,
                 modifier = Modifier
                     .alpha(1f - alpha)
                     .rotate(rotation - 180f)

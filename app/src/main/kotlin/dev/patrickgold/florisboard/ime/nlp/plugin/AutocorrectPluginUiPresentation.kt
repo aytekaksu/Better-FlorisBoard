@@ -44,25 +44,25 @@ internal fun PluginListItem(
             { Icon(icon, contentDescription = null) }
         },
         trailingContent = trailing,
-        modifier = pluginUiItemModifier(item, onClick, onToggle),
+        modifier = Modifier.pluginUiItemModifier(item, onClick, onToggle),
     )
 }
 
-internal fun pluginUiItemModifier(
+internal fun Modifier.pluginUiItemModifier(
     item: AutocorrectPluginUiItem,
     onClick: (() -> Unit)?,
     onToggle: ((Boolean) -> Unit)?,
 ): Modifier = when {
-    onToggle != null -> Modifier.toggleable(
+    onToggle != null -> toggleable(
         value = item.value.toBoolean(),
         enabled = item.enabled,
         role = Role.Switch,
         onValueChange = onToggle,
     )
 
-    onClick != null -> Modifier.clickable(enabled = item.enabled, onClick = onClick)
+    onClick != null -> clickable(enabled = item.enabled, onClick = onClick)
 
-    else -> Modifier
+    else -> this
 }
 
 internal fun AutocorrectPluginUiIcon.imageVector(): ImageVector? = when (this) {

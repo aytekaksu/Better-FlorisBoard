@@ -433,7 +433,7 @@ private fun AppPluginListItem(
             { Icon(icon, contentDescription = null) }
         },
         trailing = trailing,
-        modifier = pluginUiItemModifier(item, onClick, onToggle),
+        modifier = Modifier.pluginUiItemModifier(item, onClick, onToggle),
     )
 }
 

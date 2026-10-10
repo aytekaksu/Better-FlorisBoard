@@ -34,10 +34,10 @@ import org.florisboard.lib.snygg.value.SnyggAssetResolver
  */
 @Composable
 fun SnyggBox(
+    modifier: Modifier = Modifier,
     elementName: String? = null,
     attributes: SnyggQueryAttributes = emptyMap(),
     selector: SnyggSelector? = null,
-    modifier: Modifier = Modifier,
     clickAndSemanticsModifier: Modifier = Modifier,
     contentAlignment: Alignment = Alignment.TopStart,
     propagateMinConstraints: Boolean = false,

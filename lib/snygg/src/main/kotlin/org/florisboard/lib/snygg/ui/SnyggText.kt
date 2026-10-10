@@ -24,11 +24,11 @@ import org.florisboard.lib.snygg.SnyggSelector
  */
 @Composable
 fun SnyggText(
+    text: String,
+    modifier: Modifier = Modifier,
     elementName: String? = null,
     attributes: SnyggQueryAttributes = emptyMap(),
     selector: SnyggSelector? = null,
-    modifier: Modifier = Modifier,
-    text: String,
     textAlign: TextAlign? = null,
     maxLines: Int? = null,
     overflow: TextOverflow? = null,
