@@ -1,0 +1,24 @@
+[
+  [
+    @autoKeys("цья", width=6),
+    { "$": "case_selector",
+      "lower": { "code":   44, "label": ",", "popup": {
+        "relevant": [
+          { "code":   46, "label": "." }
+        ]
+      } },
+      "upper": { "code":   46, "label": ".", "popup": {
+        "relevant": [
+          { "code":   44, "label": "," }
+        ]
+      } }
+    },
+    @autoKeys("звкдчшщ", width=6)
+  ],
+  [
+    @autoKeys("уиеоалнтсрй")
+  ],
+  [
+    @autoKeys("эхыюбмпг")
+  ]
+]
