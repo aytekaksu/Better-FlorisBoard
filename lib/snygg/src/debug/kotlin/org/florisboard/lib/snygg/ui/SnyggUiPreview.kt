@@ -81,23 +81,23 @@ private val galleryStylesheet = SnyggStylesheet.v2 {
 @Composable
 private fun SnyggComponentGalleryPreview() {
     ProvideSnyggTheme(rememberSnyggTheme(galleryStylesheet)) {
-        SnyggColumn("gallery") {
-            SnyggBox("card") {
+        SnyggColumn(elementName = "gallery") {
+            SnyggBox(elementName = "card") {
                 SnyggText(
                     elementName = "text",
                     attributes = mapOf("tone" to "accent"),
                     text = "Styled Snygg components",
                 )
             }
-            SnyggRow("row", verticalAlignment = Alignment.CenterVertically) {
-                SnyggIcon("icon", imageVector = Icons.Default.Search)
+            SnyggRow(elementName = "row", verticalAlignment = Alignment.CenterVertically) {
+                SnyggIcon(elementName = "icon", imageVector = Icons.Default.Search)
                 SnyggSpacer(
-                    "divider",
+                    elementName = "divider",
                     modifier = Modifier
                         .width(1.dp)
                         .height(24.dp),
                 )
-                SnyggIconButton("action", onClick = {}) {
+                SnyggIconButton(elementName = "action", onClick = {}) {
                     SnyggIcon(imageVector = Icons.Default.Search)
                 }
                 SnyggRow(

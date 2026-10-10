@@ -29,10 +29,10 @@ import org.florisboard.lib.snygg.value.SnyggStaticColorValue
  */
 @Composable
 fun SnyggIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     elementName: String? = null,
     attributes: SnyggQueryAttributes = emptyMap(),
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     enabled: Boolean = true,
     interactionSource: MutableInteractionSource? = null,

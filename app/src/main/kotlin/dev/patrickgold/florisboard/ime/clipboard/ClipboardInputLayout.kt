@@ -394,7 +394,7 @@ fun ClipboardInputLayout(
 
     @Composable
     fun HeaderRow() {
-        SnyggRow(FlorisImeUi.ClipboardHeader.elementName,
+        SnyggRow(elementName = FlorisImeUi.ClipboardHeader.elementName,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(FlorisImeSizing.smartbarHeight),
@@ -557,7 +557,7 @@ fun ClipboardInputLayout(
 
     @Composable
     fun HistoryMainView() {
-        SnyggBox(FlorisImeUi.ClipboardContent.elementName,
+        SnyggBox(elementName = FlorisImeUi.ClipboardContent.elementName,
             modifier = Modifier.fillMaxSize(),
         ) {
             val historyAlpha by animateFloatAsState(targetValue = if (isPopupSurfaceActive()) 0.12f else 1f)
@@ -663,7 +663,7 @@ fun ClipboardInputLayout(
                         )
                     }
                 }
-                SnyggBox(FlorisImeUi.ClipboardGrid.elementName,
+                SnyggBox(elementName = FlorisImeUi.ClipboardGrid.elementName,
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
@@ -711,7 +711,7 @@ fun ClipboardInputLayout(
                             item = popupItem!!,
                             contentScrollInsteadOfClip = true,
                         )
-                        SnyggBox(FlorisImeUi.ClipboardItemTimestamp.elementName) {
+                        SnyggBox(elementName = FlorisImeUi.ClipboardItemTimestamp.elementName) {
                             val formatter = LocalLocalizedDateTimeFormatter.current
                             SnyggText(
                                 modifier = Modifier.fillMaxWidth(),
@@ -720,7 +720,7 @@ fun ClipboardInputLayout(
                         }
                     }
                     SnyggColumn(modifier = Modifier.weight(0.5f)) {
-                        SnyggColumn(FlorisImeUi.ClipboardItemActions.elementName) {
+                        SnyggColumn(elementName = FlorisImeUi.ClipboardItemActions.elementName) {
                             PopupAction(
                                 icon = Icons.Outlined.PushPin,
                                 text = stringRes(if (popupItem!!.isPinned) {
@@ -783,7 +783,7 @@ fun ClipboardInputLayout(
                                 }
                             ),
                         )
-                        SnyggRow(FlorisImeUi.ClipboardClearAllDialogButtons.elementName) {
+                        SnyggRow(elementName = FlorisImeUi.ClipboardClearAllDialogButtons.elementName) {
                             Spacer(modifier = Modifier.weight(1f))
                             SnyggButton(
                                 elementName = FlorisImeUi.ClipboardClearAllDialogButton.elementName,
@@ -818,7 +818,7 @@ fun ClipboardInputLayout(
 
     @Composable
     fun HistoryEmptyView() {
-        SnyggColumn(FlorisImeUi.ClipboardContent.elementName,
+        SnyggColumn(elementName = FlorisImeUi.ClipboardContent.elementName,
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -833,7 +833,7 @@ fun ClipboardInputLayout(
 
     @Composable
     fun HistoryDisabledView() {
-        SnyggColumn(FlorisImeUi.ClipboardContent.elementName,
+        SnyggColumn(elementName = FlorisImeUi.ClipboardContent.elementName,
             modifier = Modifier.fillMaxSize(),
         ) {
             SnyggText(
@@ -845,7 +845,7 @@ fun ClipboardInputLayout(
                 elementName = FlorisImeUi.ClipboardHistoryDisabledMessage.elementName,
                 text = stringRes(R.string.clipboard__disabled__message),
             )
-            SnyggButton(FlorisImeUi.ClipboardHistoryDisabledButton.elementName,
+            SnyggButton(elementName = FlorisImeUi.ClipboardHistoryDisabledButton.elementName,
                 onClick = { scope.launch { prefs.clipboard.historyEnabled.set(true) } },
                 modifier = Modifier.align(Alignment.End),
             ) {
@@ -858,7 +858,7 @@ fun ClipboardInputLayout(
 
     @Composable
     fun HistoryLockedView() {
-        SnyggColumn(FlorisImeUi.ClipboardContent.elementName,
+        SnyggColumn(elementName = FlorisImeUi.ClipboardContent.elementName,
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -900,7 +900,7 @@ private fun ClipCategoryTitle(
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    SnyggText(FlorisImeUi.ClipboardSubheader.elementName,
+    SnyggText(elementName = FlorisImeUi.ClipboardSubheader.elementName,
         modifier = modifier.fillMaxWidth(),
         text = text.uppercase(LocalResourcesLocale.current),
     )
@@ -965,14 +965,14 @@ private fun PopupAction(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    SnyggRow(FlorisImeUi.ClipboardItemAction.elementName,
+    SnyggRow(elementName = FlorisImeUi.ClipboardItemAction.elementName,
         modifier = modifier.rippleClickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SnyggIcon(FlorisImeUi.ClipboardItemActionIcon.elementName,
+        SnyggIcon(elementName = FlorisImeUi.ClipboardItemActionIcon.elementName,
             imageVector = icon,
         )
-        SnyggText(FlorisImeUi.ClipboardItemActionText.elementName,
+        SnyggText(elementName = FlorisImeUi.ClipboardItemActionText.elementName,
             modifier = Modifier.weight(1f),
             text = text,
         )

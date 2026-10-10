@@ -21,11 +21,11 @@ import org.florisboard.lib.snygg.SnyggSelector
  */
 @Composable
 fun SnyggIcon(
+    imageVector: ImageVector,
+    modifier: Modifier = Modifier,
     elementName: String? = null,
     attributes: SnyggQueryAttributes = emptyMap(),
     selector: SnyggSelector? = null,
-    modifier: Modifier = Modifier,
-    imageVector: ImageVector,
     contentDescription: String? = null,
 ) {
     ProvideSnyggStyle(elementName, attributes, selector) { style ->
@@ -45,11 +45,11 @@ fun SnyggIcon(
  */
 @Composable
 fun SnyggIcon(
+    painter: Painter,
+    modifier: Modifier = Modifier,
     elementName: String? = null,
     attributes: SnyggQueryAttributes = emptyMap(),
     selector: SnyggSelector? = null,
-    modifier: Modifier = Modifier,
-    painter: Painter,
     contentDescription: String? = null,
 ) {
     ProvideSnyggStyle(elementName, attributes, selector) { style ->

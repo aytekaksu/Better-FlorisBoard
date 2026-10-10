@@ -17,10 +17,10 @@ import org.florisboard.lib.snygg.SnyggSelector
  */
 @Composable
 fun SnyggSpacer(
+    modifier: Modifier = Modifier,
     elementName: String? = null,
     attributes: SnyggQueryAttributes = emptyMap(),
     selector: SnyggSelector? = null,
-    modifier: Modifier = Modifier,
 ) {
     ProvideSnyggStyle(elementName, attributes, selector) { style ->
         Spacer(
