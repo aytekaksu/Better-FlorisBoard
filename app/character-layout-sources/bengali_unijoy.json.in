@@ -1,0 +1,15 @@
+[
+  [
+    @caseKeys("ঙযডপটচজহগড়", "ংয়ঢফঠছঝঞঘঢ়")
+  ],
+  [
+    @caseKeys("ৃুিা্বকতদ", "ঃূীঅঁভখথধ")
+  ],
+  [
+    { "$": "case_selector",
+      "lower": { "$": "multi_text_key", "codePoints": [2509, 2480], "label": "্র" },
+      "upper": { "$": "multi_text_key", "codePoints": [2509, 2479], "label": "্য" }
+    },
+    @caseKeys("োেরনসম", "ৌৈলণষশ")
+  ]
+]
