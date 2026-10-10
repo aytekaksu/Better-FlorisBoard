@@ -464,6 +464,8 @@ abstract class GenerateCharacterLayoutAssets : GeneratedAssetsTask() {
     companion object {
         private const val ASSET_PATH = "ime/keyboard/org.florisboard.layouts/layouts/characters"
         private val MARKER = Regex("""^    @autoKeys\("([^"]+)"(?:, width=([4-7]))?\)(,?)$""")
+        private const val CASE_ROW = """("(?:[^"\\]|\\["\\])+")"""
+        private val CASE_MARKER = Regex("""^    @caseKeys\($CASE_ROW, $CASE_ROW(?:, width=([4-7]))?\)(,?)$""")
         private val FILE_NAME = Regex("[a-z0-9_]+\\.json")
         private val SOURCE_NAME = Regex("[a-z0-9_]+")
 
@@ -540,8 +542,13 @@ abstract class GenerateCharacterLayoutAssets : GeneratedAssetsTask() {
             var count = 0
             val text = template.removeSuffix("\n").split('\n').joinToString("\n") { line ->
                 val marker = MARKER.matchEntire(line)
-                if (marker == null) {
+                val caseMarker = CASE_MARKER.matchEntire(line)
+                if (caseMarker != null) {
+                    count++
+                    expandCaseKeys(caseMarker, name)
+                } else if (marker == null) {
                     check("@autoKeys" !in line) { "$name contains malformed @autoKeys marker" }
+                    check("@caseKeys" !in line) { "$name contains malformed @caseKeys marker" }
                     line
                 } else {
                     count++
@@ -562,9 +569,34 @@ abstract class GenerateCharacterLayoutAssets : GeneratedAssetsTask() {
                     }.joinToString("\n")
                 }
             } + "\n"
-            check(count > 0) { "$name contains no @autoKeys markers" }
+            check(count > 0) { "$name contains no key markers" }
             validateLayout(text, name)
             return text
+        }
+
+        private fun expandCaseKeys(marker: MatchResult, name: String): String {
+            val keys = (1..2).map {
+                (JsonSlurper().parseText(marker.groupValues[it]) as String).codePoints().toArray()
+            }
+            check(
+                keys[0].size in 3..32 && keys[1].size == keys[0].size &&
+                    keys.all { row -> row.all { !Character.isISOControl(it) && it !in 0xD800..0xDFFF } },
+            ) { "$name contains invalid @caseKeys characters" }
+            val width = marker.groupValues[3].toIntOrNull() ?: 5
+            val trailingComma = marker.groupValues[4].isNotEmpty()
+            return keys[0].indices.joinToString("\n") { index ->
+                val branches = keys.map { row ->
+                    val code = row[index].toString()
+                    check(code.length < width) { "$name has a @caseKeys code wider than $width" }
+                    val label = String(Character.toChars(row[index])).replace("\\", "\\\\").replace("\"", "\\\"")
+                    "{ \"code\":${code.padStart(width)}, \"label\": \"$label\" }"
+                }
+                val comma = if (index < keys[0].lastIndex || trailingComma) "," else ""
+                "    { \"$\": \"case_selector\",\n" +
+                    "      \"lower\": ${branches[0]},\n" +
+                    "      \"upper\": ${branches[1]}\n" +
+                    "    }$comma"
+            }
         }
 
         private fun validateLayout(text: String, name: String) {
@@ -1105,6 +1137,60 @@ val testCharacterLayoutAssetGenerator by tasks.registering {
                 "    {\"code\":0}\n  ]\n]\n",
         )
 
+        val paired = "[\n  [\n    @caseKeys(\"a\\\"𑣀\", \"B\\\\𑣂\", width=7),\n" +
+            "    {\"code\":0}\n  ],\n  [\n    @caseKeys(\"abc\", \"XYZ\")\n  ]\n]\n"
+        val pairedOutput = exercise(listOf("paired"), mapOf("paired.json.in" to paired))
+        check(
+            pairedOutput.resolve("paired.json").readText() ==
+                """
+                [
+                  [
+                    { "${'$'}": "case_selector",
+                      "lower": { "code":     97, "label": "a" },
+                      "upper": { "code":     66, "label": "B" }
+                    },
+                    { "${'$'}": "case_selector",
+                      "lower": { "code":     34, "label": "\"" },
+                      "upper": { "code":     92, "label": "\\" }
+                    },
+                    { "${'$'}": "case_selector",
+                      "lower": { "code":  71872, "label": "𑣀" },
+                      "upper": { "code":  71874, "label": "𑣂" }
+                    },
+                    {"code":0}
+                  ],
+                  [
+                    { "${'$'}": "case_selector",
+                      "lower": { "code":   97, "label": "a" },
+                      "upper": { "code":   88, "label": "X" }
+                    },
+                    { "${'$'}": "case_selector",
+                      "lower": { "code":   98, "label": "b" },
+                      "upper": { "code":   89, "label": "Y" }
+                    },
+                    { "${'$'}": "case_selector",
+                      "lower": { "code":   99, "label": "c" },
+                      "upper": { "code":   90, "label": "Z" }
+                    }
+                  ]
+                ]
+                """.trimIndent() + "\n",
+        )
+        for ((row, failure) in listOf(
+            "\"ab\", \"XY\"" to "invalid @caseKeys characters",
+            "\"abc\", \"XY\"" to "invalid @caseKeys characters",
+            "\"abc\", \"X\u0085Z\"" to "invalid @caseKeys characters",
+            "\"abc\", \"X\\nZ\"" to "malformed @caseKeys marker",
+            "\"abc\", \"XYZ\", width=8" to "malformed @caseKeys marker",
+            "\"a𑣀c\", \"XYZ\", width=4" to "code wider than",
+        )) {
+            exercise(
+                listOf("paired"),
+                mapOf("paired.json.in" to "[\n  [\n    @caseKeys($row)\n  ]\n]\n"),
+                failure = failure,
+            )
+        }
+
         exercise(listOf("ascii"), emptyMap(), failure = "missing=[ascii.json]")
         exercise(
             listOf("ascii"),
@@ -1140,7 +1226,7 @@ val testCharacterLayoutAssetGenerator by tasks.registering {
         exercise(
             listOf("ascii"),
             mapOf("ascii.json.in" to ascii.replace("@autoKeys", "@autoKey")),
-            failure = "contains no @autoKeys markers",
+            failure = "contains no key markers",
         )
         exercise(
             listOf("ascii"),

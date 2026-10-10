@@ -77,8 +77,10 @@ distinct labels, modifiers, and subtype choices. Currency keys output their
 visible symbol; metadata tests cover built-in slots. Layout selectors have no
 text of their own; concrete keys still provide their display and input text.
 
-Build-time generators expand `@autoKeys("letters")` character rows (with optional
-padding), digit-script numeric rows from Bengali, theme stylesheets from the
+Build-time generators expand `@autoKeys("letters")` character rows and explicit
+paired `@caseKeys("lower", "upper")` rows, both with optional padding. Paired rows
+keep their shift alternatives without Unicode case folding. The generators also expand
+digit-script numeric rows from Bengali, theme stylesheets from the
 static day base and Material You/night/borderless overlays, subtype presets, and
 shared punctuation popups. Each generator runs once for all requested app variants.
 Exceptional character and numeric layouts and the Han/Bengali presets stay literal.
