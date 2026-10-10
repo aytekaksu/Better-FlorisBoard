@@ -568,7 +568,6 @@ private fun EditScreen(
                         archiveSaved = true
                     }
                 }
-                popEditorRouteAndScheduleCleanup()
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {

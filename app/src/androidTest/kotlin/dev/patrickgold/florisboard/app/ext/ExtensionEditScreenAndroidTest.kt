@@ -23,6 +23,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -101,6 +102,7 @@ class ExtensionEditScreenAndroidTest {
         val staging = Files.createTempDirectory(context.cacheDir.toPath(), "theme-copy-").toFile()
         val previousWorkspaces = cache.themeEditor.dir.list()?.toSet().orEmpty()
         var workspace: CacheManager.ThemeEditorWorkspace? = null
+        lateinit var navigation: NavHostController
         var showUi by mutableStateOf(true)
         var primaryFailure: Throwable? = null
 
@@ -119,6 +121,7 @@ class ExtensionEditScreenAndroidTest {
             composeRule.setContent {
                 if (showUi) {
                     val navController = rememberNavController()
+                    navigation = navController
                     ProvideLocalizedResources(context, R.string.app_name) {
                         MaterialTheme {
                             CompositionLocalProvider(LocalNavController provides navController) {
@@ -160,9 +163,23 @@ class ExtensionEditScreenAndroidTest {
             assertEquals(stylesheet, File(opened.extDir, "custom/source.json").readText())
             assertEquals(stylesheet, File(opened.extDir, "stylesheets/source_2.json").readText())
 
+            composeRule.runOnIdle {
+                assertTrue(
+                    "The real editor route needs a previous destination",
+                    navigation.previousBackStackEntry != null,
+                )
+            }
             composeRule.onNodeWithText(context.getString(R.string.action__save)).performClick()
             composeRule.waitUntil(20_000L) { opened.archiveSaved }
-            composeRule.waitUntil(20_000L) { opened.isClosed() }
+            try {
+                composeRule.waitUntil(20_000L) { opened.isClosed() }
+            } catch (failure: Throwable) {
+                val routeState = composeRule.runOnIdle {
+                    "current=${navigation.currentBackStackEntry?.lifecycle?.currentState}, " +
+                        "hasPrevious=${navigation.previousBackStackEntry != null}"
+                }
+                throw AssertionError("Saved editor workspace did not close: $routeState", failure)
+            }
             val savedRef = checkNotNull(extension.sourceRef)
             val saved = ExtensionJsonConfig.decodeFromString(
                 ThemeExtension.serializer(),
