@@ -219,6 +219,7 @@ val formattedKotlinSources = files(
     backupArchiveKotlinSources,
     extensionHardeningKotlinSources,
     file("app/src/main/kotlin/dev/patrickgold/florisboard/app/ext/ExtensionEditFilesScreen.kt"),
+    file("app/src/androidTest/kotlin/dev/patrickgold/florisboard/app/ext/ExtensionEditScreenAndroidTest.kt"),
     file("app/src/androidTest/kotlin/dev/patrickgold/florisboard/app/settings/theme/ThemeEditorScreenAndroidTest.kt"),
     file(
         "app/src/test/kotlin/dev/patrickgold/florisboard/app/settings/localization/" +

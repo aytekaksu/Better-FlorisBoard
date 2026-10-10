@@ -170,6 +170,8 @@ Editor open/save/close I/O, stylesheet reads/parsing, and asset-list reloads run
 off Main. Saving builds a bounded archive; preview close waits for the keyboard
 to release assets before workspace deletion. Editor-selected fonts and images
 cross the disposable provider boundary before entering that workspace.
+Copying a local theme keeps its Material You palette, contrast, and color specification,
+along with its stylesheet, and chooses an unused component ID.
 
 Canceling an asset import or leaving the file manager retires its temporary
 file off Main. The next import waits for that cleanup; invalid names keep the
@@ -222,6 +224,7 @@ focused device tests:
 ```shell
 ./gradlew :app:connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=\
+dev.patrickgold.florisboard.app.ext.ExtensionEditScreenAndroidTest,\
 dev.patrickgold.florisboard.app.settings.theme.ThemeEditorScreenAndroidTest,\
 dev.patrickgold.florisboard.lib.cache.CacheManagerAndroidTest,\
 dev.patrickgold.florisboard.lib.ext.ExtensionIndexAndroidTest,\
