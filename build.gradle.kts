@@ -222,6 +222,8 @@ val formattedKotlinSources = files(
     file("app/src/test/kotlin/dev/patrickgold/florisboard/app/devtools/DevtoolsPrivacySummaryTest.kt"),
     backupArchiveKotlinSources,
     extensionHardeningKotlinSources,
+    file("app/src/main/kotlin/dev/patrickgold/florisboard/app/ext/ExtensionEditFilesScreen.kt"),
+    file("app/src/androidTest/kotlin/dev/patrickgold/florisboard/app/settings/theme/ThemeEditorScreenAndroidTest.kt"),
     file(
         "app/src/test/kotlin/dev/patrickgold/florisboard/app/settings/localization/" +
             "SelectLocaleScreenTest.kt",

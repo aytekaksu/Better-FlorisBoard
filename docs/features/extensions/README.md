@@ -167,6 +167,10 @@ off Main. Saving builds a bounded archive; preview close waits for the keyboard
 to release assets before workspace deletion. Editor-selected fonts and images
 cross the disposable provider boundary before entering that workspace.
 
+Canceling an asset import or leaving the file manager retires its temporary
+file off Main. The next import waits for that cleanup; invalid names keep the
+same staged file for retry. Installation holds the workspace close guard.
+
 Stylesheet and asset-list loads show loading states and discard stale or
 cancelled results; invalid stylesheets allow lenient or empty retry. The file
 manager and property picker share one listing path. Renames and deletes run off
