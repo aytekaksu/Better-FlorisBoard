@@ -645,33 +645,39 @@ abstract class GenerateCharacterLayoutAssets : GeneratedAssetsTask() {
 
 @CacheableTask
 abstract class GenerateEmojiLocaleAssets : GeneratedAssetsTask() {
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val englishFile: RegularFileProperty
-
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val sourceDirectory: DirectoryProperty
 
     @TaskAction
-    fun generate() = render(englishFile.get().asFile, sourceDirectory.get().asFile, outputDirectory.get().asFile)
+    fun generate() = render(sourceDirectory.get().asFile, outputDirectory.get().asFile)
 
     companion object {
         private const val ASSET_PATH = "ime/media/emoji"
-        private val LOCALES = setOf("de", "es", "fr", "it", "pt")
+        private val LOCALES = setOf("de", "en", "es", "fr", "it", "pt")
         private val TONE_HEADER = Regex("""^@toneKeywords\((\[.*\])\)$""")
+        private val VARIANTS_HEADER = Regex("""^\t@toneVariants\((\[.*\])\)$""")
 
-        fun render(english: File, sources: File, output: File) {
+        fun render(sources: File, output: File) {
             val target = GeneratedAssetSafety.clearTarget(output, ASSET_PATH, "emoji locale")
-            val glyphs = englishGroups(readSource(english))
             check(Files.isDirectory(sources.toPath(), LinkOption.NOFOLLOW_LINKS)) {
                 "Emoji locale source directory is missing or linked"
             }
             val files = sources.listFiles()?.sortedBy(File::getName) ?: error("Cannot list emoji locale sources")
             check(files.map(File::getName).toSet() == LOCALES.map { "$it.txt.in" }.toSet()) {
-                "Emoji locale sources must contain exactly the five bundled locales"
+                "Emoji locale sources must contain exactly the six bundled locales"
             }
-            val rendered = files.associate { it.name.removeSuffix(".in") to expand(readSource(it), glyphs) }
+            val texts = files.associate { it.name.removeSuffix(".in") to readSource(it) }
+            val englishSource = texts.getValue("en.txt")
+            check(!englishSource.removeSuffix("\n").substringAfterLast('\n').isBlank()) {
+                "English emoji source must not end with a blank row"
+            }
+            // Keep the historical root stream, including its final blank row.
+            val english = expand(englishSource, emptyMap(), isEnglish = true) + "\n"
+            val glyphs = englishGroups(english)
+            val rendered = texts.mapValues { (name, text) ->
+                if (name == "en.txt") english else expand(text, glyphs)
+            }
             try {
                 check(target.mkdirs()) { "Unable to create generated emoji locale directory" }
                 for ((name, text) in rendered) target.resolve(name).writeText(text, Charsets.UTF_8)
@@ -724,7 +730,11 @@ abstract class GenerateEmojiLocaleAssets : GeneratedAssetsTask() {
             return groups
         }
 
-        private fun expand(text: String, glyphs: Map<Pair<String, String>, List<String>>): String {
+        private fun expand(
+            text: String,
+            glyphs: Map<Pair<String, String>, List<String>>,
+            isEnglish: Boolean = false,
+        ): String {
             var tones: List<String>? = null
             var category: String? = null
             var base: List<String>? = null
@@ -750,13 +760,34 @@ abstract class GenerateEmojiLocaleAssets : GeneratedAssetsTask() {
                             tones = values.map { it as String }
                         }
 
-                        line == "\t@toneVariants" -> {
+                        line == "\t@toneVariants" || line.startsWith("\t@toneVariants(") -> {
                             val tokens = checkNotNull(tones) { "Tone variants need a keyword header" }
                             val fields = checkNotNull(base) { "Tone variants need a valid base row" }
                             check(fields.size == 3 && category != null && !hasVariation) {
                                 "Tone variants must replace a whole valid group"
                             }
-                            val variations = glyphs[category!! to fields[0].trim()]
+                            val variations = if (isEnglish) {
+                                val marker = VARIANTS_HEADER.matchEntire(line)
+                                    ?: error("English tone variants need an explicit glyph list")
+                                val values = try {
+                                    JsonSlurper().parseText(marker.groupValues[1]) as? List<*>
+                                } catch (cause: Exception) {
+                                    throw IllegalStateException("Explicit emoji glyph list is malformed JSON", cause)
+                                } ?: error("Explicit emoji glyph list must be an array")
+                                check(
+                                    values.isNotEmpty() && values.all { value ->
+                                        value is String && value.isNotBlank() && value == value.trim() &&
+                                            value.none { it == ';' || it == '|' } &&
+                                            value.codePoints().toArray().none {
+                                                Character.isISOControl(it) || it in 0xD800..0xDFFF
+                                            }
+                                    },
+                                ) { "Explicit emoji glyph list needs non-empty scalar strings" }
+                                values.map { it as String }
+                            } else {
+                                check(line == "\t@toneVariants") { "Only English may declare explicit emoji glyphs" }
+                                glyphs[category!! to fields[0].trim()]
+                            }
                             check(!variations.isNullOrEmpty()) { "Tone variants have no English glyph group" }
                             val keywords = fields[2].split('|').map { it.trim() }
                             for (glyph in variations) {
@@ -1565,24 +1596,26 @@ val testEmojiLocaleAssetGenerator by tasks.registering {
     description = "Exercises emoji tone-keyword expansion and invalid-source rejection."
 
     doLast {
-        val english = "[people_body]\n👐;Unused;unused\n\t👐🏻;Unused;unused;annotation\n\t👐🏿;Unused;unused\n" +
-            "🤝;Unused;unused\n\t🫱🏻‍🫲🏿;Unused;unused\n\t🫱🏻‍🫲🏻;Unused;unused\n"
+        val englishVariants = "\t@toneVariants([\"🫱🏻‍🫲🏿\",\"🫱🏻‍🫲🏻\"])"
+        val english = "@toneKeywords([\"Light\",\"Medium-light\",\"Medium\",\"Medium-dark\",\"Dark\"])\n" +
+            "[people_body]\n👐;Unused;unused\n\t👐🏻;Unused;unused;annotation\n\t👐🏿;Unused;unused\n" +
+            "🤝;Unused;unused\n$englishVariants\n"
         val template = "@toneKeywords([\"Light\",\"Medium-light\",\"Medium\",\"Medium-dark\",\"Dark\"])\n" +
             "# fixture\n[people_body]\n👐;Hands;Zulu|alpha\n\t@toneVariants\n" +
             "🤝;Handshake;pair|alpha\n\t@toneVariants\n🌡️;Literal;warm|temperature\n" +
             "\t🌡️;literal;warm;broken\n"
-        val names = listOf("de", "es", "fr", "it", "pt")
+        val names = listOf("de", "en", "es", "fr", "it", "pt")
         var caseNumber = 0
         fun exercise(failure: String? = null, prepare: (File) -> Unit = {}): File {
             val root = temporaryDir.resolve("case-${caseNumber++}")
             GeneratedAssetSafety.removeTreeNoFollow(root.toPath())
             val sources = root.resolve("sources").apply { mkdirs() }
             names.forEach { sources.resolve("$it.txt.in").writeText(template, Charsets.UTF_8) }
-            root.resolve("en.txt").writeText(english, Charsets.UTF_8)
+            sources.resolve("en.txt.in").writeText(english, Charsets.UTF_8)
             val output = root.resolve("output")
             prepare(root)
             val error = runCatching {
-                GenerateEmojiLocaleAssets.render(root.resolve("en.txt"), sources, output)
+                GenerateEmojiLocaleAssets.render(sources, output)
             }.exceptionOrNull()
             if (failure == null) {
                 check(error == null) { "Emoji locale generator unexpectedly failed: ${error?.message}" }
@@ -1597,6 +1630,11 @@ val testEmojiLocaleAssetGenerator by tasks.registering {
 
         val generated = exercise()
         check(generated.listFiles().orEmpty().map(File::getName).sorted() == names.map { "$it.txt" })
+        check(
+            generated.resolve("en.txt").readText() ==
+                "[people_body]\n👐;Unused;unused\n\t👐🏻;Unused;unused;annotation\n\t👐🏿;Unused;unused\n" +
+                "🤝;Unused;unused\n\t🫱🏻‍🫲🏿;;Dark|Light|unused\n\t🫱🏻‍🫲🏻;;Light|unused\n\n",
+        )
         check(
             generated.resolve("de.txt").readText() ==
                 "# fixture\n[people_body]\n👐;Hands;Zulu|alpha\n" +
@@ -1637,6 +1675,32 @@ val testEmojiLocaleAssetGenerator by tasks.registering {
                 )
             }
         }
+        for ((replacement, failure) in listOf(
+            "\t@toneVariants" to "explicit glyph list",
+            "\t@toneVariants([)" to "explicit glyph list",
+            "\t@toneVariants([\"one\" \"two\"])" to "malformed JSON",
+            "\t@toneVariants([])" to "non-empty scalar strings",
+            "\t@toneVariants([1])" to "non-empty scalar strings",
+            "\t@toneVariants([\"bad;row🏻\"])" to "non-empty scalar strings",
+            "\t@toneVariants([\"\\uD800\"])" to "non-empty scalar strings",
+            "\t@toneVariants([\"plain\"])" to "no skin tone",
+        )) {
+            exercise(failure) { root ->
+                root.resolve("sources/en.txt.in").writeText(
+                    english.replace(englishVariants, replacement),
+                    Charsets.UTF_8,
+                )
+            }
+        }
+        exercise("must not end with a blank row") { root ->
+            root.resolve("sources/en.txt.in").appendText("\n", Charsets.UTF_8)
+        }
+        exercise("Only English") { root ->
+            root.resolve("sources/de.txt.in").writeText(
+                template.replaceFirst("\t@toneVariants", englishVariants),
+                Charsets.UTF_8,
+            )
+        }
         exercise("valid base row") { root ->
             root.resolve("sources/de.txt.in").writeText(
                 template.replace("👐;Hands;Zulu|alpha\n", ""),
@@ -1653,25 +1717,31 @@ val testEmojiLocaleAssetGenerator by tasks.registering {
             root.resolve("sources/de.txt.in").writeText(template.replace("👐;Hands", "👍;Hands"), Charsets.UTF_8)
         }
         exercise("English emoji group is duplicated") { root ->
-            root.resolve("en.txt").appendText("👐;Duplicate;duplicate\n", Charsets.UTF_8)
+            root.resolve("sources/en.txt.in").appendText("👐;Duplicate;duplicate\n", Charsets.UTF_8)
         }
         exercise("no skin tone") { root ->
-            root.resolve("en.txt").writeText(english.replace("👐🏻", "👐"), Charsets.UTF_8)
+            root.resolve("sources/en.txt.in").writeText(english.replace("👐🏻", "👐"), Charsets.UTF_8)
         }
-        exercise("exactly the five bundled locales") { root -> root.resolve("sources/fr.txt.in").delete() }
-        exercise("exactly the five bundled locales") { root ->
-            root.resolve("sources/en.txt.in").writeText(template, Charsets.UTF_8)
+        exercise("exactly the six bundled locales") { root -> root.resolve("sources/fr.txt.in").delete() }
+        exercise("exactly the six bundled locales") { root ->
+            root.resolve("sources/unknown.txt.in").writeText(template, Charsets.UTF_8)
         }
         exercise("malformed UTF-8") { root ->
             Files.write(root.resolve("sources/de.txt.in").toPath(), byteArrayOf(0xc3.toByte(), 0x28))
         }
         exercise("missing or linked") { root ->
             root.resolve("sources/de.txt.in").delete()
-            Files.createSymbolicLink(root.resolve("sources/de.txt.in").toPath(), root.resolve("en.txt").toPath())
+            Files.createSymbolicLink(
+                root.resolve("sources/de.txt.in").toPath(),
+                root.resolve("sources/en.txt.in").toPath(),
+            )
         }
         exercise("missing or linked") { root ->
-            root.resolve("en.txt").delete()
-            Files.createSymbolicLink(root.resolve("en.txt").toPath(), root.resolve("sources/de.txt.in").toPath())
+            root.resolve("sources/en.txt.in").delete()
+            Files.createSymbolicLink(
+                root.resolve("sources/en.txt.in").toPath(),
+                root.resolve("sources/de.txt.in").toPath(),
+            )
         }
         exercise("valid base row") { root ->
             root.resolve("sources/de.txt.in").writeText(
@@ -1730,7 +1800,6 @@ val generateCharacterLayoutAssets by tasks.registering(GenerateCharacterLayoutAs
 }
 
 val generateEmojiLocaleAssets by tasks.registering(GenerateEmojiLocaleAssets::class) {
-    englishFile.set(layout.projectDirectory.file("src/main/assets/ime/media/emoji/en.txt"))
     sourceDirectory.set(layout.projectDirectory.dir("emoji-locale-sources"))
     outputDirectory.set(layout.buildDirectory.dir("generated/emojiLocaleAssets/shared"))
 }
@@ -1772,6 +1841,10 @@ androidComponents {
                 "florisboard.characterLayoutAssetRoot",
                 generateCharacterLayoutAssets.get().outputDirectory.get()
                     .dir("ime/keyboard/org.florisboard.layouts").asFile.absolutePath,
+            )
+            systemProperty(
+                "florisboard.emojiLocaleAssetRoot",
+                generateEmojiLocaleAssets.get().outputDirectory.get().dir("ime/media/emoji").asFile.absolutePath,
             )
         }
     }

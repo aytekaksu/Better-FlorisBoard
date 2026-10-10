@@ -29,16 +29,17 @@ The palette's root list uses the glyphs and categories from `en.txt` but drops
 names and keywords as the old generated `root.txt` did. The root asset is no
 longer stored twice. A golden hash test guards the exact original root rows.
 
-Localized sources live in `app/emoji-locale-sources`. Each has five explicit
-tone keywords in light-to-dark order. A tab-indented `@toneVariants` expands
-one complete group using the glyph order in English. It combines the base
-keywords with that glyph's tone words, removes repeats, and sorts by
-case-insensitive code-unit order. Other rows stay literal, including rows the
-loader already skips. Variation names still come from the group's base.
-The build writes the same five locale paths; English and the root projection
-stay unchanged. When refreshing CLDR data, keep exceptions literal and compare
-the decoded names, ordered keywords, categories, groups, and tone lists before
-and after expansion.
+All six sources live in `app/emoji-locale-sources`. Each declares five
+tone keywords in light-to-dark order. English supplies explicit ordered glyph
+lists on tab-indented `@toneVariants([...])` rows; the other locales use
+`@toneVariants` to reuse the rendered English group. A marker replaces one
+whole group. Expansion combines base keywords with the glyph's tone words,
+removes repeats, and sorts by case-insensitive code-unit order. Other rows stay
+literal, including rows the loader skips. Variation names still come from the
+group's base. The build keeps the same six asset paths and English's historical
+final blank row, so the root projection stays byte-exact. When refreshing CLDR
+data, keep exceptions literal and compare decoded names, ordered keywords,
+categories, groups, and tone lists before and after expansion.
 
 Check this build step with
 `./gradlew :app:testEmojiLocaleAssetGenerator :app:generateEmojiLocaleAssets`.

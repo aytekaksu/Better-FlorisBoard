@@ -194,6 +194,7 @@ val formattedKotlinSources = files(
     file("app/src/main/kotlin/dev/patrickgold/florisboard/lib/io/PortablePathSyntax.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/io/PortablePathSyntaxTest.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/lib/io/ContentResolverWriteTest.kt"),
+    file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/media/emoji/EmojiRootAssetTest.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickActionArrangement.kt"),
     file("app/src/main/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickActionsOverflowPanel.kt"),
     file("app/src/test/kotlin/dev/patrickgold/florisboard/ime/smartbar/quickaction/QuickActionArrangementTest.kt"),
