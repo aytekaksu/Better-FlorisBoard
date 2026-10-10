@@ -18,7 +18,7 @@ for event arbitration and
 | --- | --- |
 | Gesture threshold and point collection | [`GlideTypingGesture.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/GlideTypingGesture.kt) |
 | Async coordination, provider fallback, preview, commit | [`GlideTypingManager.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/GlideTypingManager.kt) |
-| Classifier boundary and key geometry | [`GlideTypingClassifier.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/GlideTypingClassifier.kt) |
+| Key geometry | [`GlideTypingKey.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/GlideTypingKey.kt) |
 | Built-in geometry/ranking algorithm | [`StatisticalGlideTypingClassifier.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/gestures/StatisticalGlideTypingClassifier.kt) |
 | Touch ownership and trail drawing | [`TextKeyboardLayout.kt`](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboardLayout.kt) |
 | Detector device tests | [`GlideTypingGestureDetectorTest.kt`](../../../app/src/androidTest/kotlin/dev/patrickgold/florisboard/ime/text/gestures/GlideTypingGestureDetectorTest.kt) |
