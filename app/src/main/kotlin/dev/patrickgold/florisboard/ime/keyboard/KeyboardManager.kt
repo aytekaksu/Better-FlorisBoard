@@ -173,7 +173,7 @@ class KeyboardManager(
             prefs.keyboard.spaceBarLanguageLabelMode.asFlow().collectLatestIn(scope) {
                 updateActiveEvaluators()
             }
-            activeState.collectLatestIn(scope) {
+            activeState.snapshots.collectLatestIn(scope) {
                 updateActiveEvaluators()
             }
             subtypeManager.subtypesFlow.collectLatestIn(scope) {

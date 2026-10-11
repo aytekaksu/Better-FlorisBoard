@@ -105,7 +105,7 @@ fun CandidatesRow(candidates: List<SuggestionCandidate>, modifier: Modifier = Mo
 
     val displayMode by prefs.suggestion.displayMode.collectAsState()
     val matchKeyAppearance by prefs.suggestion.matchKeyAppearance.collectAsState()
-    val keyboardState by keyboardManager.activeState.collectAsState()
+    val keyboardState by keyboardManager.activeState.snapshots.collectAsState()
     val clipboardAccessLocked = rememberClipboardAccessLocked(context, keyguardManager)
     val visibleCandidates = if (clipboardAccessLocked || keyboardState.isIncognitoMode) {
         candidates.filterNot { it is ClipboardSuggestionCandidate }

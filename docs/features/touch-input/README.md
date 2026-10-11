@@ -95,7 +95,9 @@ pressed-Shift reader; it never constructs or looks up `KeyboardManager`.
 Shift rechecks remain at the editor's existing content-publication and
 invalid-selection paths.
 Packed keyboard state uses one reentrant monitor for field updates, snapshots
-and publication. Nested or overlapping batches delay publication until all
+and publication. Observers collect its read-only `snapshots` flow; `snapshot()`
+instead copies the live state, including writes not yet published by a batch.
+Nested or overlapping batches delay publication until all
 batches end. `batchEdit` does not lock its callback and is not a transaction.
 Synchronous observers already hold the monitor: they may re-enter on the same
 thread, but must not block waiting for another thread that needs this state.

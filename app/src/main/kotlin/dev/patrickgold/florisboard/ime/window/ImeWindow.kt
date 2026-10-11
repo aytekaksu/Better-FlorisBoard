@@ -198,7 +198,7 @@ private fun ImeInnerWindow() {
 
     val keyboardManager by context.keyboardManager()
 
-    val state by keyboardManager.activeState.collectAsState()
+    val state by keyboardManager.activeState.snapshots.collectAsState()
     val windowSpec by windowController.activeWindowSpec.collectAsState()
     val rowHeight = windowSpec.calcRowHeight(windowSpec.props.keyboardHeight)
     val smartbarRowHeight = windowSpec.calcSmartbarRowHeight(windowSpec.props.keyboardHeight)

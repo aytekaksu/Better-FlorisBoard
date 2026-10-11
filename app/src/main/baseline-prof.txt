@@ -9856,12 +9856,10 @@ HSPLdev/patrickgold/florisboard/ime/keyboard/ObservableKeyboardState;-><clinit>(
 HSPLdev/patrickgold/florisboard/ime/keyboard/ObservableKeyboardState;-><init>(JLkotlinx/coroutines/flow/MutableStateFlow;)V
 HSPLdev/patrickgold/florisboard/ime/keyboard/ObservableKeyboardState;-><init>(JLkotlinx/coroutines/flow/MutableStateFlow;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 HSPLdev/patrickgold/florisboard/ime/keyboard/ObservableKeyboardState;->beginBatchEdit()V
-HSPLdev/patrickgold/florisboard/ime/keyboard/ObservableKeyboardState;->collect(Lkotlinx/coroutines/flow/FlowCollector;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 HSPLdev/patrickgold/florisboard/ime/keyboard/ObservableKeyboardState;->dispatchState()V
 HSPLdev/patrickgold/florisboard/ime/keyboard/ObservableKeyboardState;->endBatchEdit()V
 HSPLdev/patrickgold/florisboard/ime/keyboard/ObservableKeyboardState;->getRawValue-s-VKNKU()J
-HSPLdev/patrickgold/florisboard/ime/keyboard/ObservableKeyboardState;->getValue()Ldev/patrickgold/florisboard/ime/keyboard/KeyboardState;
-HSPLdev/patrickgold/florisboard/ime/keyboard/ObservableKeyboardState;->getValue()Ljava/lang/Object;
+HSPLdev/patrickgold/florisboard/ime/keyboard/ObservableKeyboardState;->getSnapshots()Lkotlinx/coroutines/flow/StateFlow;
 HSPLdev/patrickgold/florisboard/ime/keyboard/ObservableKeyboardState;->setRawValue-VKZWuLQ(J)V
 Ldev/patrickgold/florisboard/ime/keyboard/PredefinedKeyboardsKt;
 HSPLdev/patrickgold/florisboard/ime/keyboard/PredefinedKeyboardsKt;->**(**)**

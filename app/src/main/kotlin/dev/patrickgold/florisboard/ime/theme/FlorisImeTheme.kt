@@ -69,7 +69,7 @@ fun FlorisImeTheme(content: @Composable () -> Unit) {
     val windowSpec by windowController.activeWindowSpec.collectAsState()
     val fontScale by remember { derivedStateOf { windowSpec.fontScale } }
 
-    val state by keyboardManager.activeState.collectAsState()
+    val state by keyboardManager.activeState.snapshots.collectAsState()
     val attributes = mapOf(
         FlorisImeUi.Attr.Mode to state.keyboardMode.toString(),
         FlorisImeUi.Attr.ShiftState to state.inputShiftState.toString(),
