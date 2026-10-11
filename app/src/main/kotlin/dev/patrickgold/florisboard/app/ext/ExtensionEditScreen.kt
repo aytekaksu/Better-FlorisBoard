@@ -892,10 +892,6 @@ private fun ManageMetaDataScreen(
     var license by rememberSaveable { mutableStateOf(meta.license) }
     val licenseValidation = rememberValidationResult(ExtensionValidation.MetaLicense, license)
 
-    fun handleBackPress() {
-        workspace.currentAction = null
-    }
-
     fun handleApply() {
         val invalid = idValidation.isInvalid() ||
             versionValidation.isInvalid() ||
@@ -925,7 +921,7 @@ private fun ManageMetaDataScreen(
 
     navigationIcon {
         FlorisIconButton(
-            onClick = { handleBackPress() },
+            onClick = { workspace.currentAction = null },
             icon = Icons.Default.Close,
         )
     }
@@ -934,7 +930,7 @@ private fun ManageMetaDataScreen(
         FlorisButtonBar {
             ButtonBarSpacer()
             ButtonBarTextButton(text = stringRes(R.string.action__cancel)) {
-                handleBackPress()
+                workspace.currentAction = null
             }
             ButtonBarButton(text = stringRes(R.string.action__apply)) {
                 handleApply()
@@ -944,7 +940,7 @@ private fun ManageMetaDataScreen(
 
     content {
         BackHandler {
-            handleBackPress()
+            workspace.currentAction = null
         }
 
         Column(modifier = Modifier.padding(MetaDataContentPadding)) {
@@ -1021,20 +1017,16 @@ private fun ManageDependenciesScreen(workspace: CacheManager.ThemeEditorWorkspac
 
     val dependencyList = workspace.editor.dependencies
 
-    fun handleBackPress() {
-        workspace.currentAction = null
-    }
-
     navigationIcon {
         FlorisIconButton(
-            onClick = { handleBackPress() },
+            onClick = { workspace.currentAction = null },
             icon = Icons.Default.Close,
         )
     }
 
     content {
         BackHandler {
-            handleBackPress()
+            workspace.currentAction = null
         }
 
         FlorisInfoCard(
@@ -1097,10 +1089,6 @@ private fun CreateThemeScreen(
     val newLabelValidation = rememberValidationResult(ExtensionValidation.ComponentLabel, newLabel)
     var newAuthors by rememberSaveable { mutableStateOf("") }
     val newAuthorsValidation = rememberValidationResult(ExtensionValidation.ComponentAuthors, newAuthors)
-
-    fun handleBackPress() {
-        workspace.currentAction = null
-    }
 
     fun handleCreate() {
         val invalid = createFrom == CreateFrom.EMPTY && (newIdValidation.isInvalid() ||
@@ -1213,7 +1201,7 @@ private fun CreateThemeScreen(
 
     navigationIcon {
         FlorisIconButton(
-            onClick = { handleBackPress() },
+            onClick = { workspace.currentAction = null },
             enabled = !isCreating,
             icon = Icons.Default.Close,
         )
@@ -1226,7 +1214,7 @@ private fun CreateThemeScreen(
                 text = stringRes(R.string.action__cancel),
                 enabled = !isCreating,
             ) {
-                handleBackPress()
+                workspace.currentAction = null
             }
             ButtonBarButton(
                 text = stringRes(R.string.action__create),
@@ -1240,7 +1228,7 @@ private fun CreateThemeScreen(
     content {
         BackHandler {
             if (!isCreating) {
-                handleBackPress()
+                workspace.currentAction = null
             }
         }
 
@@ -1319,7 +1307,6 @@ private fun CreateThemeScreen(
 
 @Composable
 private fun EditorSheetTextField(
-    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     isRequired: Boolean = false,
     value: String,
@@ -1349,7 +1336,7 @@ private fun EditorSheetTextField(
             }
         }
         JetPrefTextField(
-            modifier = modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             enabled = enabled,
             value = value,
             onValueChange = onValueChange,

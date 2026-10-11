@@ -341,13 +341,9 @@ private fun ThemeEditorReadyScreen(
     var showEditComponentMetaDialog by rememberSaveable { mutableStateOf(false) }
     var showFineTuneDialog by rememberSaveable { mutableStateOf(false) }
 
-    fun handleBackPress() {
-        workspace.currentAction = null
-    }
-
     navigationIcon {
         FlorisIconButton(
-            onClick = { handleBackPress() },
+            onClick = { workspace.currentAction = null },
             icon = Icons.Default.Close,
         )
     }
@@ -378,7 +374,7 @@ private fun ThemeEditorReadyScreen(
 
     content {
         BackHandler {
-            handleBackPress()
+            workspace.currentAction = null
         }
 
         val isImeVisible = WindowInsets.isImeVisible
@@ -510,20 +506,18 @@ private fun ThemeEditorReadyScreen(
                                 }
                             }
                             for ((propertyName, propertyValue) in properties) {
-                                if (true /*propertySpec != null && propertySpec.level <= snyggLevel*/ || isVariablesRule) {
-                                    JetPrefListItem(
-                                        modifier = Modifier.rippleClickable {
-                                            action.propertyEditSession = ThemePropertyEditSession(
-                                                PropertyInfo(rule, propertyName, propertyValue),
-                                                propertySet,
-                                            )
-                                        },
-                                        text = context.translatePropertyName(propertyName, snyggLevel),
-                                        secondaryText = context.translatePropertyValue(propertyValue, snyggLevel, colorRepresentation),
-                                        singleLineSecondaryText = true,
-                                        trailing = { SnyggValueIcon(propertyValue, definedVariables) },
-                                    )
-                                }
+                                JetPrefListItem(
+                                    modifier = Modifier.rippleClickable {
+                                        action.propertyEditSession = ThemePropertyEditSession(
+                                            PropertyInfo(rule, propertyName, propertyValue),
+                                            propertySet,
+                                        )
+                                    },
+                                    text = context.translatePropertyName(propertyName, snyggLevel),
+                                    secondaryText = context.translatePropertyValue(propertyValue, snyggLevel, colorRepresentation),
+                                    singleLineSecondaryText = true,
+                                    trailing = { SnyggValueIcon(propertyValue, definedVariables) },
+                                )
                             }
                         }
 
