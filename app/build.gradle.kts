@@ -645,6 +645,7 @@ abstract class GenerateEmojiLocaleAssets : GeneratedAssetsTask() {
     companion object {
         private const val ASSET_PATH = "ime/media/emoji"
         private val LOCALES = setOf("de", "en", "es", "fr", "it", "pt")
+        private const val INHERIT_HEADER = "@inheritEnglishStructure"
         private val TONE_HEADER = Regex("""^@toneKeywords\((\[.*\])\)$""")
         private val VARIANTS_HEADER = Regex("""^\t@toneVariants\((\[.*\])\)$""")
 
@@ -665,8 +666,16 @@ abstract class GenerateEmojiLocaleAssets : GeneratedAssetsTask() {
             // Keep the historical root stream, including its final blank row.
             val english = expand(englishSource, emptyMap(), isEnglish = true) + "\n"
             val glyphs = englishGroups(english)
+            val structure = englishStructure(englishSource, glyphs)
             val rendered = texts.mapValues { (name, text) ->
-                if (name == "en.txt") english else expand(text, glyphs)
+                if (name == "en.txt") {
+                    english
+                } else {
+                    expand(
+                        inheritEnglishStructure(text, englishSource, structure),
+                        glyphs,
+                    )
+                }
             }
             try {
                 check(target.mkdirs()) { "Unable to create generated emoji locale directory" }
@@ -685,6 +694,86 @@ abstract class GenerateEmojiLocaleAssets : GeneratedAssetsTask() {
             val text = GeneratedAssetSafety.readSource(file, "Emoji locale")
             check(text.endsWith('\n') && '\r' !in text) { "Emoji locale source must use LF-terminated lines" }
             return text
+        }
+
+        private fun englishStructure(
+            text: String,
+            glyphs: Map<Pair<String, String>, List<String>>,
+        ): Map<String, List<String>> {
+            val groups = linkedMapOf<String, List<String>>()
+            var category: String? = null
+            for (line in text.removeSuffix("\n").split('\n')) {
+                when {
+                    line.startsWith("[") -> category = line
+
+                    line.startsWith("@toneKeywords") || line.startsWith("\t") || line.isBlank() ||
+                        (line.startsWith("#") && ';' !in line) -> Unit
+
+                    else -> {
+                        val key = line.substringBefore(';').trim()
+                        check(';' in line && key.isNotEmpty()) { "English emoji structure row is malformed" }
+                        // Comment-like glyph rows are skipped by the loader, but remain locale-owned bytes.
+                        val variations = if (line.startsWith("#")) emptyList() else glyphs.getValue(category!! to key)
+                        check(groups.put(key, variations) == null) { "English emoji key is duplicated" }
+                    }
+                }
+            }
+            return groups
+        }
+
+        private fun inheritEnglishStructure(
+            text: String,
+            english: String,
+            structure: Map<String, List<String>>,
+        ): String {
+            val rows = text.removeSuffix("\n").split('\n')
+            check(rows.first().startsWith("@toneKeywords")) { "Emoji locale source needs a tone keyword header" }
+            check(rows.getOrNull(1) == INHERIT_HEADER) { "Localized emoji source needs the English structure header" }
+            val groups = linkedMapOf<String, MutableList<String>>()
+            var current: MutableList<String>? = null
+            for (line in rows.drop(2)) {
+                check(line.isNotBlank() && !line.startsWith("[") && !(line.startsWith("#") && ';' !in line)) {
+                    "Localized emoji sources inherit the English scaffold"
+                }
+                check(line != INHERIT_HEADER) { "English structure header is misplaced or duplicated" }
+                check("@tone" !in line) { "Compact locale source cannot declare tone markers" }
+                if (line.startsWith("\t")) {
+                    checkNotNull(current) { "Literal emoji variation has no base" }.add(line)
+                } else {
+                    val key = line.substringBefore(';').trim()
+                    check(';' in line && key.isNotEmpty()) { "Localized emoji record is malformed" }
+                    check(key in structure) { "Localized emoji record has no English key" }
+                    current = mutableListOf(line)
+                    check(groups.put(key, current) == null) { "Localized emoji key is duplicated" }
+                }
+            }
+            check(groups.keys == structure.keys) { "Localized emoji source must provide every English key" }
+            for ((key, records) in groups) {
+                check(
+                    records.size == 1 ||
+                        records.drop(1).map { it.substringBefore(';').trim() } == structure.getValue(key),
+                ) {
+                    "Literal emoji variations must preserve ordered English glyphs"
+                }
+            }
+            return buildList {
+                for (line in english.removeSuffix("\n").split('\n')) {
+                    when {
+                        line.startsWith("@toneKeywords") -> add(rows.first())
+
+                        line.startsWith("\t") -> Unit
+
+                        line.isBlank() || line.startsWith("[") || (line.startsWith("#") && ';' !in line) -> add(line)
+
+                        else -> {
+                            val key = line.substringBefore(';').trim()
+                            val local = groups.getValue(key)
+                            addAll(local)
+                            if (local.size == 1 && structure.getValue(key).isNotEmpty()) add("\t@toneVariants")
+                        }
+                    }
+                }
+            }.joinToString("\n", postfix = "\n")
         }
 
         private fun englishGroups(text: String): Map<Pair<String, String>, List<String>> {
@@ -1583,17 +1672,20 @@ val testCharacterLayoutAssetGenerator by tasks.registering {
 
 val testEmojiLocaleAssetGenerator by tasks.registering {
     group = "verification"
-    description = "Exercises emoji tone-keyword expansion and invalid-source rejection."
+    description = "Exercises keyed locale reconstruction, tone-keyword expansion, and invalid-source rejection."
 
     doLast {
         val englishVariants = "\t@toneVariants([\"🫱🏻‍🫲🏿\",\"🫱🏻‍🫲🏻\"])"
         val english = "@toneKeywords([\"Light\",\"Medium-light\",\"Medium\",\"Medium-dark\",\"Dark\"])\n" +
-            "[people_body]\n👐;Unused;unused\n\t👐🏻;Unused;unused;annotation\n\t👐🏿;Unused;unused\n" +
-            "🤝;Unused;unused\n$englishVariants\n"
+            "# fixture\n[people_body]\n👐;Unused;unused\n" +
+            "\t👐🏻;Unused;unused;annotation\n\t👐🏿;Unused;unused\n" +
+            "🤝;Unused;unused\n$englishVariants\n🌡️;Unused;unused\n" +
+            "\t🌡️;Unused;unused;annotation\n\t🧊;Unused;unused\n" +
+            "#;English ignored;opaque\n"
         val template = "@toneKeywords([\"Light\",\"Medium-light\",\"Medium\",\"Medium-dark\",\"Dark\"])\n" +
-            "# fixture\n[people_body]\n👐;Hands;Zulu|alpha\n\t@toneVariants\n" +
-            "🤝;Handshake;pair|alpha\n\t@toneVariants\n🌡️;Literal;warm|temperature\n" +
-            "\t🌡️;literal;warm;broken\n"
+            "@inheritEnglishStructure\n#;Localized ignored;opaque;exception\n" +
+            "🌡️;Literal;warm|temperature\n\t🌡️;literal;warm;broken\n\t🧊;Literal choice;Warm|cold\n" +
+            "🤝;Handshake;pair|alpha\n👐;Hands;Zulu|alpha\n"
         val names = listOf("de", "en", "es", "fr", "it", "pt")
         var caseNumber = 0
         fun exercise(failure: String? = null, prepare: (File) -> Unit = {}): File {
@@ -1622,8 +1714,11 @@ val testEmojiLocaleAssetGenerator by tasks.registering {
         check(generated.listFiles().orEmpty().map(File::getName).sorted() == names.map { "$it.txt" })
         check(
             generated.resolve("en.txt").readText() ==
-                "[people_body]\n👐;Unused;unused\n\t👐🏻;Unused;unused;annotation\n\t👐🏿;Unused;unused\n" +
-                "🤝;Unused;unused\n\t🫱🏻‍🫲🏿;;Dark|Light|unused\n\t🫱🏻‍🫲🏻;;Light|unused\n\n",
+                "# fixture\n[people_body]\n👐;Unused;unused\n" +
+                "\t👐🏻;Unused;unused;annotation\n\t👐🏿;Unused;unused\n" +
+                "🤝;Unused;unused\n\t🫱🏻‍🫲🏿;;Dark|Light|unused\n\t🫱🏻‍🫲🏻;;Light|unused\n" +
+                "🌡️;Unused;unused\n\t🌡️;Unused;unused;annotation\n\t🧊;Unused;unused\n" +
+                "#;English ignored;opaque\n\n",
         )
         check(
             generated.resolve("de.txt").readText() ==
@@ -1631,7 +1726,8 @@ val testEmojiLocaleAssetGenerator by tasks.registering {
                 "\t👐🏻;;alpha|Light|Zulu\n\t👐🏿;;alpha|Dark|Zulu\n" +
                 "🤝;Handshake;pair|alpha\n\t🫱🏻‍🫲🏿;;alpha|Dark|Light|pair\n" +
                 "\t🫱🏻‍🫲🏻;;alpha|Light|pair\n" +
-                "🌡️;Literal;warm|temperature\n\t🌡️;literal;warm;broken\n",
+                "🌡️;Literal;warm|temperature\n\t🌡️;literal;warm;broken\n\t🧊;Literal choice;Warm|cold\n" +
+                "#;Localized ignored;opaque;exception\n",
         )
 
         for ((replacement, failure) in listOf(
@@ -1654,15 +1750,42 @@ val testEmojiLocaleAssetGenerator by tasks.registering {
         }
         for ((replacement, failure) in listOf(
             "\t@toneVariant" to "Malformed tone variant marker",
-            "\t@toneVariants\n\t@toneVariants" to "whole valid group",
-            "\t👐🏻;Literal;alpha\n\t@toneVariants" to "whole valid group",
-            "\t@toneVariants\n\t👐🏻;Literal;alpha" to "Literal variation follows",
+            "$englishVariants\n$englishVariants" to "whole valid group",
+            "\t🫱🏻‍🫲🏿;Literal;alpha\n$englishVariants" to "whole valid group",
+            "$englishVariants\n\t🫱🏻‍🫲🏿;Literal;alpha" to "Literal variation follows",
+        )) {
+            exercise(failure) { root ->
+                root.resolve("sources/en.txt.in").writeText(
+                    english.replace(englishVariants, replacement),
+                    Charsets.UTF_8,
+                )
+            }
+        }
+        for ((replacement, failure) in listOf(
+            "" to "English structure header",
+            "@inheritEnglishStructure()\n" to "English structure header",
+            "@inheritEnglishStructure\n@inheritEnglishStructure\n" to "structure header is misplaced or duplicated",
+            "@inheritEnglishStructure\n[people_body]\n" to "inherit the English scaffold",
+            "@inheritEnglishStructure\n# fixture\n" to "inherit the English scaffold",
+            "@inheritEnglishStructure\n\n" to "inherit the English scaffold",
+            "@inheritEnglishStructure\n\t@toneVariants\n" to "cannot declare tone markers",
+            "@inheritEnglishStructure\n$englishVariants\n" to "cannot declare tone markers",
+            "@inheritEnglishStructure\n\t🌡️;literal;warm;broken\n" to "variation has no base",
         )) {
             exercise(failure) { root ->
                 root.resolve("sources/de.txt.in").writeText(
-                    template.replaceFirst("\t@toneVariants", replacement),
+                    template.replace("@inheritEnglishStructure\n", replacement),
                     Charsets.UTF_8,
                 )
+            }
+        }
+        for (variations in listOf(
+            "\t👐🏻;Literal;alpha\n",
+            "\t👐🏿;Literal;alpha\n\t👐🏻;Literal;alpha\n",
+            "\t👐🏻;Literal;alpha\n\t👍🏿;Literal;alpha\n",
+        )) {
+            exercise("ordered English glyphs") { root ->
+                root.resolve("sources/de.txt.in").writeText(template + variations, Charsets.UTF_8)
             }
         }
         for ((replacement, failure) in listOf(
@@ -1685,15 +1808,21 @@ val testEmojiLocaleAssetGenerator by tasks.registering {
         exercise("must not end with a blank row") { root ->
             root.resolve("sources/en.txt.in").appendText("\n", Charsets.UTF_8)
         }
-        exercise("Only English") { root ->
+        exercise("tone keyword header") { root ->
             root.resolve("sources/de.txt.in").writeText(
-                template.replaceFirst("\t@toneVariants", englishVariants),
+                template.substringAfter('\n'),
+                Charsets.UTF_8,
+            )
+        }
+        exercise("every English key") { root ->
+            root.resolve("sources/de.txt.in").writeText(
+                template.replace("👐;Hands;Zulu|alpha\n", ""),
                 Charsets.UTF_8,
             )
         }
         exercise("valid base row") { root ->
-            root.resolve("sources/de.txt.in").writeText(
-                template.replace("👐;Hands;Zulu|alpha\n", ""),
+            root.resolve("sources/en.txt.in").writeText(
+                english.replace("[people_body]\n", "[people_body]\n$englishVariants\n"),
                 Charsets.UTF_8,
             )
         }
@@ -1703,11 +1832,17 @@ val testEmojiLocaleAssetGenerator by tasks.registering {
                 Charsets.UTF_8,
             )
         }
-        exercise("no English glyph group") { root ->
+        exercise("no English key") { root ->
             root.resolve("sources/de.txt.in").writeText(template.replace("👐;Hands", "👍;Hands"), Charsets.UTF_8)
+        }
+        exercise("Localized emoji key is duplicated") { root ->
+            root.resolve("sources/de.txt.in").appendText("👐;Duplicate;duplicate\n", Charsets.UTF_8)
         }
         exercise("English emoji group is duplicated") { root ->
             root.resolve("sources/en.txt.in").appendText("👐;Duplicate;duplicate\n", Charsets.UTF_8)
+        }
+        exercise("English emoji key is duplicated") { root ->
+            root.resolve("sources/en.txt.in").appendText("[symbols]\n👐;Duplicate;duplicate\n", Charsets.UTF_8)
         }
         exercise("no skin tone") { root ->
             root.resolve("sources/en.txt.in").writeText(english.replace("👐🏻", "👐"), Charsets.UTF_8)
@@ -1733,7 +1868,7 @@ val testEmojiLocaleAssetGenerator by tasks.registering {
                 root.resolve("sources/de.txt.in").toPath(),
             )
         }
-        exercise("valid base row") { root ->
+        exercise("every English key") { root ->
             root.resolve("sources/de.txt.in").writeText(
                 template.replace("👐;Hands;Zulu|alpha\n", ""),
                 Charsets.UTF_8,
