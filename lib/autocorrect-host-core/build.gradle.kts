@@ -11,7 +11,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlinx.kover)
-    alias(libs.plugins.kotest)
 }
 
 java {
