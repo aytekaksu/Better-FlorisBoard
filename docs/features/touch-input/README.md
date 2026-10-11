@@ -71,9 +71,18 @@ or glide work is handed to feature managers. Long-press callbacks and delayed
 work must re-check that their pointer and key are still active.
 
 `FlorisImeService` supplies feedback its lifecycle scope. Audio and haptic
-requests stay asynchronous on `Dispatchers.Default`. Destroying the service
-cancels its feedback jobs; an already-entered platform call may still finish.
-Hiding the keyboard does not destroy this scope.
+requests stay asynchronous on `Dispatchers.Default`. Each accepted window show
+starts one settings snapshot on `Dispatchers.IO`; keys never query Settings.
+Refresh and request admission happen on Main.
+Respect mode waits asynchronously for the snapshot captured at key admission;
+Ignore mode bypasses it. A newer refresh neither cancels accepted keys nor lets
+an older result replace it. Before the first show, Respect remains disabled.
+Destroying the service cancels readers and waiting feedback; an already-entered
+platform call may still finish. Hiding the keyboard does not destroy this scope.
+Settings are sampled when the worker runs, so first-key feedback may be delayed.
+Unexpected read failures are not converted to false: they surface when a Respect
+request awaits the snapshot, not synchronously from the window callback.
+Without a Respect waiter, a failed snapshot may go unreported.
 
 Semantic input order is more important than callback completion order.
 Multi-pointer transitions, gesture completion, and selection dragging must
@@ -157,7 +166,7 @@ Fast state, hit-test, and transition rules:
 ./gradlew :app:testDebugUnitTest
 ```
 
-For feedback's audio output, worker routing, and lifecycle-job ownership:
+For feedback's audio output, settings readiness, and lifecycle-job ownership:
 
 ```shell
 ./gradlew :app:testDebugUnitTest \
