@@ -24,6 +24,10 @@ EXPANDED = (
     "Lsample/Live;\nHSPLsample/Live;->go()V\nHSPLsample/Live;->other(I)V\n"
     "PLsample/Post;->finish()V\nHSPLignored/Other;->skip()V\n"
 )
+NARROW = HEADER + (
+    "Lsample/Live;\nHSPLsample/Live;->go*(**)**\n"
+    "HSPLsample/Live;->other(**)**\nPLsample/Post;->finish(**)**\n"
+)
 
 
 class BaselineProfileVerifierTest(unittest.TestCase):
@@ -68,19 +72,21 @@ class BaselineProfileVerifierTest(unittest.TestCase):
 
     def test_preserves_compact_coverage_and_literal_pruning(self):
         self.make_apk(b"dex\n")
-        self.profile.write_text(SOURCE, encoding="utf-8")
         equivalent = EXPANDED.replace("HSPLsample/Live;->go()V", "HSLsample/Live;->go()V\nSPLsample/Live;->go()V")
         self.expanded.write_text("\n".join(reversed(equivalent.splitlines())) + "\n", encoding="utf-8")
         args = ("--expanded-profile", str(self.expanded))
         with patch.object(checker, "dex_definitions", return_value=({"Lsample/Live;", "Lsample/Post;"}, set())):
-            self.assertEqual(self.verify(*args)[0], 0)
-            self.profile.write_text(SOURCE + "Lsample/Missing;\n", encoding="utf-8")
-            result, output = self.verify(*args)
-            self.assertEqual(result, 1)
-            self.assertIn("4 live, 1 stale", output)
-            pruned = self.profile.with_name("pruned.txt")
-            self.assertEqual(self.verify(*args, "--pruned-output", str(pruned))[0], 0)
-            self.assertEqual(pruned.read_text(encoding="utf-8"), SOURCE)
+            for source, live_count in ((SOURCE, 4), (NARROW, 5)):
+                with self.subTest(source=source):
+                    self.profile.write_text(source, encoding="utf-8")
+                    self.assertEqual(self.verify(*args)[0], 0)
+                    self.profile.write_text(source + "Lsample/Missing;\n", encoding="utf-8")
+                    result, output = self.verify(*args)
+                    self.assertEqual(result, 1)
+                    self.assertIn(f"{live_count} live, 1 stale", output)
+                    pruned = self.profile.with_name(f"pruned-{live_count}.txt")
+                    self.assertEqual(self.verify(*args, "--pruned-output", str(pruned))[0], 0)
+                    self.assertEqual(pruned.read_text(encoding="utf-8"), source)
 
     def test_rejects_invalid_compact_coverage(self):
         self.make_apk(b"dex\n")
@@ -90,7 +96,7 @@ class BaselineProfileVerifierTest(unittest.TestCase):
             (HEADER + SOURCE, EXPANDED, "Exactly one"),
             (SOURCE.replace("classes=1", "classes=01"), EXPANDED, "Malformed.*header"),
             (HEADER + "Lsample/Live;\n", EXPANDED, "header without selectors"),
-            (SOURCE + "HSPLsample/Live;->**(**)**\n", EXPANDED, "Duplicate wildcard owner"),
+            (SOURCE + "HSPLsample/Live;->**(**)**\n", EXPANDED, "Duplicate wildcard selector"),
             (SOURCE.replace("HSPLsample/Live;", "SHPLsample/Live;"), EXPANDED, "Unsupported wildcard"),
             (SOURCE.replace("HSPLsample/Live;", "Lsample/Live;"), EXPANDED, "Unsupported wildcard"),
             (SOURCE.replace("HSPLsample/Live;", "HSPLsample/*;"), EXPANDED, "Unsupported wildcard"),
@@ -104,6 +110,31 @@ class BaselineProfileVerifierTest(unittest.TestCase):
             (SOURCE, EXPANDED + "Lsample/Post;\n", "coverage changed"),
             (SOURCE.replace("PLsample/Post;->**(**)**\n", ""), EXPANDED, "coverage changed"),
             (SOURCE, EXPANDED.replace("HSPLsample/Live;->go()V", "HSPLsample/Live;->**(**)**"), "Malformed expanded"),
+            (NARROW + "HSPLsample/Live;->missing(**)**\n", EXPANDED, "no expanded methods"),
+            (NARROW.replace("->other(", "->othe("), EXPANDED, "no expanded methods"),
+            (NARROW + "SPLsample/Live;->other(**)**\n", EXPANDED, "Duplicate wildcard selector"),
+            (NARROW + "HSPLsample/Live;->go(**)**\n", EXPANDED, "Overlapping wildcard"),
+            (NARROW.replace("->go*", "->go") + "HSPLsample/Live;->go*(**)**\n", EXPANDED, "Overlapping wildcard"),
+            (NARROW + "HSPLsample/Live;->g*(**)**\n", EXPANDED, "Overlapping wildcard"),
+            (NARROW.replace("->go*", "->g*") + "HSPLsample/Live;->go*(**)**\n", EXPANDED, "Overlapping wildcard"),
+            (NARROW + "HSPLsample/Live;->**(**)**\n", EXPANDED, "Overlapping wildcard"),
+            (SOURCE + "HSPLsample/Live;->go(**)**\n", EXPANDED, "Overlapping wildcard"),
+            (NARROW, EXPANDED.replace("->go()", "->goé()"), "no expanded methods"),
+            (NARROW + "HSPLsample/Live;->go(Lsample/É;)V\n",
+             EXPANDED.replace("->go()V", "->go(Lsample/É;)V"), "no expanded methods"),
+            (NARROW + "HSPLsample/Live;->go()Lsample/É;\n",
+             EXPANDED.replace("->go()V", "->go()Lsample/É;"), "no expanded methods"),
+            (NARROW + "HSPLsample/Live;->new()V\n", EXPANDED + "HSPLsample/Live;->new()V\n", "coverage changed"),
+            (NARROW, EXPANDED.replace("->go()", "->go-impl()"), "coverage changed"),
+            (NARROW.replace("->go*", "->go$*"), EXPANDED.replace("->go()", "->go$bridge()"), "coverage changed"),
+        ]
+        cases += [
+            (NARROW.replace("->go*", "->" + name), EXPANDED, "Unsupported wildcard")
+            for name in ("*", "go**", "*go", "g*o", "go?", "<init>*", "<other>", "goé", "")
+        ]
+        cases += [
+            (NARROW.replace("->go*", "->" + name), EXPANDED.replace("->go()", "->" + name + "()"), "coverage changed")
+            for name in ("<init>", "<clinit>", "go-impl", "go$bridge")
         ]
         for source, expanded, error in cases:
             with self.subTest(error=error, source=source, expanded=expanded):
