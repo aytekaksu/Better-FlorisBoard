@@ -11,14 +11,6 @@
     <issue id="UElementAsPsi" severity="ignore" />
 
     <!--
-        Once the detector above is skipped for its crashing file, the same
-        lint/K2 expression-type failure occurs in data-flow detectors while
-        inspecting LaunchUtils.kt.
-    -->
-    <issue id="IntentReset" severity="ignore" />
-    <issue id="ShowToast" severity="ignore" />
-
-    <!--
         Available-version messages change independently of this source tree and include the exact
         latest version, so baselining them makes the merge gate expire over time. Keep the findings
         visible as information while dependency and toolchain upgrades remain deliberate changes.
