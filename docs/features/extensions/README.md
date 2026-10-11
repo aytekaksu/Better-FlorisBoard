@@ -1,228 +1,172 @@
 # Extensions
 
-FlorisBoard packages keyboards, themes, and language data as `.flex` ZIP
-archives. Bundled extensions use the same manifests but live in trusted APK
-asset directories.
+Keyboards, themes, and language data use `.flex` ZIP archives. Bundled packages
+use the same manifests in trusted APK assets.
 
-## Import boundary
+## Import and cleanup
 
-Selected documents are untrusted, including their names and size metadata.
-Import therefore follows one path:
+[CacheManager](../../../app/src/main/kotlin/dev/patrickgold/florisboard/lib/cache/CacheManager.kt) owns import workspaces and labels.
+Provider names, MIME types, sizes, and bytes are untrusted; MIME never authorizes installation.
 
-1. Admit only an unambiguous external `content://` URI with exact read access.
-2. Read provider metadata and bytes in a disposable app process with a hard
-   deadline. Cancellation kills that worker instead of waiting for the provider.
-3. Copy once into a generated private `.flex` file, count the real stream, and
-   reject the first byte above 64 MiB.
-4. Treat the provider name only as a bounded display label.
-5. Validate the complete ZIP, then read `extension.json` as strict UTF-8.
-6. Decode and structurally validate the manifest before extracting or exposing
-   package data.
+1. Accept only an unambiguous external `content://` URI with exact read access.
+2. Read metadata and bytes in the [disposable worker](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/clipboard/provider/DisposableExternalContentImporter.kt) with a 30-second deadline; cancellation terminates it.
+3. Copy once into a generated private `.flex` file, counting the real stream and
+   rejecting bytes above 64 MiB. Show only a bounded, sanitized provider label.
+4. Validate the whole ZIP, then decode and validate strict-UTF-8
+   `extension.json`, before extracting or exposing package data.
+   Rejecting a package removes its source and extracted data.
 
-`CacheManager` owns the import-list MIME label: ZIP and octet-stream provider
-types become the extension MIME type, while other types pass through. The label
-does not decide whether an archive may be installed.
+A selection allows 64 files, 256 MiB source, 512 MiB expanded data, and 16,384
+entries; reads/extraction preserve 128 MiB free-storage headroom. ZIP and
+octet-stream import-list labels become the extension MIME type; others pass through.
 
-Import workspaces retire on app-owned I/O after selection changes or screen
-disposal. Cancellation before handoff awaits cleanup; an install retains its
-extracted files until it finishes. Deletion gets one delayed retry, then an
-app-owned worker retries only failed paths in bounded batches, skipping active
-workspaces. Exhausted failures reach waiters; persistent failures log once
-without paths, and steady retries are quiet.
+Selection changes/disposal retire workspaces on app-owned I/O. Cancellation before
+handoff awaits cleanup; installation retains extracted files until it finishes.
+[Retirement](../../../app/src/main/kotlin/dev/patrickgold/florisboard/lib/cache/ImportWorkspaceRetirement.kt) retries deletion once after a delay.
+If both attempts fail, waiting operations receive the failure; the [janitor](../../../app/src/main/kotlin/dev/patrickgold/florisboard/lib/cache/ImportWorkspaceJanitor.kt) retries only failed paths in bounded batches,
+skipping active workspaces. Persistent failures log once without paths; steady retries are quiet.
 
-After unlock, startup cleanup retires recognized abandoned import, export,
-editor, and backup/restore workspaces, plus provider/share-preview staging
-files, before settings, sharing, or clipboard cache users start, without
-blocking the IME. Unknown entries and symbolic links remain.
-Theme materializations and loaded runtime files are excluded; their managers
-retire stale roots on first use, protecting live assets during direct-boot
-unlock. A failed sweep leaves the app usable and retries next process start.
+After unlock, the [startup janitor](../../../app/src/main/kotlin/dev/patrickgold/florisboard/lib/cache/StartupCacheJanitor.kt) retires recognized
+import/export/editor/backup-restore workspaces and provider/share-preview
+stages before settings, sharing, or clipboard cache users start, without blocking
+the IME. Unknown entries and links remain. Runtime/theme roots are excluded and
+cleaned by their managers on first use, protecting live direct-boot assets.
+A failed sweep leaves the app usable and retries next process start.
 
-One selection is limited to 64 files, 256 MiB of source data, 512 MiB of
-expanded data, and 16,384 entries. Reads and extraction also preserve 128 MiB
-of storage headroom. Rejected packages remove their private source and
-extraction; cancellation removes an undelivered workspace.
+## Archive and manifest validation
 
-## Archive limits
+The [ZIP gate](../../../app/src/main/kotlin/dev/patrickgold/florisboard/lib/io/ExtensionZipContainerGate.kt) rejects multi-disk/ZIP64 before Commons Compress builds its entry table. It validates
+the latest end record, exact central directory, local/central agreement, bounded
+metadata, and UTF-8 names. Shared record/path decoding does not share acceptance
+policy: [backups](../backup-restore/README.md) allow single-disk ZIP64.
 
-The extension ZIP gate rejects multi-disk and ZIP64 containers before Commons
-Compress builds its entry table. It also checks the latest end record, the
-exact central-directory layout, local/central header agreement, bounded
-metadata, and UTF-8 entry names.
-
-Record decoding is shared with backup ZIPs; extension limits and ZIP64 rejection stay separate.
-
-| Budget | Limit |
+| Per-archive budget | Limit |
 | --- | ---: |
 | ZIP file | 64 MiB |
-| Entries | 4,096 |
 | Expanded data | 128 MiB |
+| Entries | 4,096 |
 | One entry | 64 MiB |
-| One control-file read | 8 MiB |
-| Path / path segment | 512 / 255 UTF-8 bytes |
-| Path depth | 16 segments |
+| Control-file read | 8 MiB |
+| Path / segment | 512 / 255 UTF-8 bytes |
+| Depth | 16 segments |
 
-Portable path syntax is shared with backup ZIPs and extension resource paths;
-each caller keeps its own limits and failure handling.
+[Extraction](../../../app/src/main/kotlin/dev/patrickgold/florisboard/lib/io/BoundedExtensionArchive.kt) rejects traversal, ambiguous/duplicate paths, file-directory conflicts, links,
+special files, encryption, unsupported compression, incorrect sizes, and CRC mismatches.
+Private sibling staging publishes by atomic move; failure preserves the previous
+destination and removes owned staging. Trusted APK directory copies use the same
+all-or-nothing publication.
 
-Extraction rejects traversal, ambiguous or duplicate paths, file/directory
-conflicts, links and special files, encryption, unsupported compression,
-incorrect sizes, and CRC mismatches. It writes into a private sibling staging
-directory and publishes only with an atomic move. A failure leaves the previous
-destination unchanged and removes owned staging data.
+[Manifest validation](../../../app/src/main/kotlin/dev/patrickgold/florisboard/lib/ext/ExtensionImportValidation.kt) bounds input to 1 MiB plus JSON depth/containers/items/tokens. Type-aware
+checks cover metadata/dependencies/links/maintainers, component counts/IDs/labels/authors,
+type-local ID uniqueness, resource paths, and SQLite table identifiers. Filesystem
+consumers use [trusted-root, no-link resolution](../../../app/src/main/kotlin/dev/patrickgold/florisboard/lib/ext/SafeRelativePath.kt).
+Invalid installed packages stay out of indexes without hiding healthy siblings or
+stopping later refreshes; corrupted imports cannot be installed.
 
-Trusted APK assets still use staged, all-or-nothing directory publication.
-Bundled layout IDs may share an arrangement via `arrangementFile` while keeping
-distinct labels, modifiers, and subtype choices. Currency keys output their
-visible symbol; metadata tests cover built-in slots. Layout selectors have no
-text of their own; concrete keys still provide their display and input text.
+## Storage and failures
 
-Build-time generators expand `@autoKeys("letters")` character rows and explicit
-paired `@caseKeys("lower", "upper")` rows, and `@kanaKeys("hira", "full", "half")`
-rows, all with optional padding. Selector rows keep explicit alternatives without
-Unicode case, kana, or width conversion. Unusual code/label pairs stay literal.
-The generators also expand
-digit-script numeric rows from Bengali, theme stylesheets from the
-static day base and Material You/night/borderless overlays, subtype presets, and
-shared punctuation popups. Each generator runs once for all requested app variants.
-Both theme families use one borderless rule layer, followed by their
-family-specific borderless overrides.
-Exceptional character and numeric layouts and the Han/Bengali presets stay literal.
-Generation preserves layout IDs and popups,
-theme manifest paths, preset order, and Unicode code points in JSON; missing or
-malformed input fails before packaging. Theme selectors replace whole rules, while
-`@defines` merge by name. Replacing asset trees rejects links in task-owned
-output paths and does not follow nested links during deletion. Run
-`./gradlew :app:testLocalizationAssetGenerator :app:testDebugUnitTest` to check
-generated assets and their metadata.
+[ExtensionManager](../../../app/src/main/kotlin/dev/patrickgold/florisboard/lib/ext/ExtensionManager.kt) serializes storage mutation. Imports cannot replace bundled IDs or change an
+installed package's type. Internal writes/editor saves use a bounded ZIP writer
+and atomic archive replacement; import staging never runs load/unload hooks.
 
-## Manifest rules
+Exports snapshot an installed package's original archive under the storage guard
+before writing the destination; bundled exports use isolated materialization.
+Temporary export workspaces are created/removed on I/O even on failure or
+cancellation. SAF owns the final document, so the app cannot promise an atomic
+rename there.
 
-Manifest validation is bounded and type-aware. It checks:
+Expected failure UI/logs are content-free: no provider names, URIs, archive or
+manifest paths, editor text, or exception messages. Only normal import lists may
+show the sanitized provider label.
 
-- a 1 MiB encoded size plus bounded JSON depth, containers, items, and tokens;
-- package metadata, dependencies, links, maintainers, and component counts;
-- component IDs, labels, authors, and uniqueness within their component type;
-- portable relative paths for layouts, stylesheets, and language databases;
-- safe SQLite table identifiers.
+## Bundled assets
 
-Filesystem consumers resolve manifest paths below a trusted root without
-following symbolic links. Invalid installed packages stay out of extension
-indexes; one unreadable or changed package does not hide healthy packages or
-stop later index refreshes. Invalid imports appear as corrupted and cannot be
-installed.
+[Build generators](../../../app/build.gradle.kts) run once across requested variants.
+Character templates support `@autoKeys("letters")`, `@caseKeys("lower", "upper")`,
+and `@kanaKeys("hira", "full", "half")`, with optional padding. Selector alternatives
+stay explicit, without Unicode case/kana/width conversion; unusual code-label
+pairs and exceptional layouts remain literal. Layout IDs may share `arrangementFile`
+without merging labels, modifiers, or subtype choices. Selectors have no text;
+concrete keys supply display/input text, and currency keys output their visible symbol.
 
-An import cannot replace a bundled package or change the type of an installed
-package with the same ID.
+Generators also expand Bengali-based digit-script rows, ordered subtype presets
+(Han/Bengali exceptions stay literal), shared punctuation popups, and themes from
+the static day base plus Material You/night/borderless overlays. Both theme families
+apply the shared borderless layer before family overrides. Selectors replace whole
+rules; `@defines` merge by name. Generation preserves layout IDs/popups, theme
+manifest paths, preset order, and JSON Unicode code points; malformed/missing input
+fails before packaging. Output replacement rejects task-owned path links and never
+follows nested links while deleting.
 
-## Writes, exports, and failures
+## Runtime owners
 
-Installed-package writes and editor saves use a bounded ZIP writer and replace
-the internal archive atomically. Import never runs load or unload hooks on its
-staging directory. Exporting an installed extension copies its original
-archive; exporting a bundled extension uses an isolated temporary
-materialization. Export creates and removes its temporary workspace on I/O,
-including on failure or caller cancellation. The installed
-archive snapshot finishes under the storage guard before the destination write.
+[KeyboardExtensionRepository](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/keyboard/KeyboardExtensionRepository.kt) publishes metadata/sources together, including archive-only
+replacements. Layouts, subtype editing, NLP, and settings consume it directly;
+`SubtypeManager` owns saved subtypes/selection. `KeyboardManager` clears computed
+keyboards and [LayoutManager](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/keyboard/LayoutManager.kt)
+invalidates older decoded layouts/popups. Later duplicate component IDs win;
+unknown layout types are skipped; preset order and missing-component fallbacks remain.
 
-The Storage Access Framework owns the final export document, so the app cannot
-promise an atomic rename at that external destination.
+[Extension](../../../app/src/main/kotlin/dev/patrickgold/florisboard/lib/ext/Extension.kt) uses a random directory under `extension-runtime` for each load. Unload deletes only its own
+runtime directory; importer/editor workspaces are detached, never mistaken for it.
 
-Expected failures are content-free. Failure UI and logs must not include
-provider names, URIs, archive paths, manifest paths, editor text, or exception
-messages. Normal import lists may show a bounded, sanitized provider label.
+[ThemeManager](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/theme/ThemeManager.kt) keeps a two-entry materialization cache with manager/Compose/preview leases. Retirement
+waits for every lease; abandoned compositions release theirs. Deletion retries once,
+then logs content-free failure; first installed-theme load next process cleans stale
+assets. Styles/file fonts compile off Compose before publication, preview compilation
+holds its own lease, stale work is cancelled/discarded, and the current theme stays
+visible during replacement. Damaged fonts fall back. [Background paths](../../../lib/snygg/src/main/kotlin/org/florisboard/lib/snygg/ui/SnyggBox.kt)
+resolve off Main and clear immediately when the theme changes.
 
-## Runtime and editor ownership
+The [Han provider](../../../app/src/main/kotlin/dev/patrickgold/florisboard/ime/nlp/han/HanShapeBasedLanguageProvider.kt) serializes refresh/query/teardown, publishes only opened read-only
+packs, unloads removals/replacements, and never refreshes per keystroke. Language-pack
+lists/theme selectors keep each observed package title and components together.
+Locale merging keeps system entries for duplicate exact tags and adds missing
+pack locales; the chooser sorts by display name. Subtype drafts/final Save share
+a field snapshot; only final Save validates required choices.
 
-The app-owned `KeyboardExtensionRepository` publishes metadata and sources together
-per keyboard index refresh, including replacements with unchanged manifests. Layouts,
-the subtype editor, NLP, and settings read it directly; `SubtypeManager` owns
-saved subtypes and active selection. `KeyboardManager` clears computed
-keyboards, and `LayoutManager` drops decoded layouts and popups from
-older generations. Later components with the same ID win, unknown layout types
-are skipped, and preset order and missing-component fallbacks stay unchanged.
+## Editor ownership
 
-Each loaded extension gets a random directory below `extension-runtime`.
-`unload()` deletes that directory only when the extension instance created it;
-importer and editor workspaces are detached without being mistaken for owned
-runtime data.
+[ExtensionEditScreen](../../../app/src/main/kotlin/dev/patrickgold/florisboard/app/ext/ExtensionEditScreen.kt) opens/saves/closes off Main and builds bounded saves. Preview close waits for the
+keyboard's asset release before deleting the workspace. One restore-aware effect
+closes a saved route and schedules cleanup. Local theme copies preserve stylesheet,
+Material You palette/contrast/color specification and choose an unused component ID.
 
-Theme assets use a two-entry materialization cache and explicit manager/Compose
-leases, including previews. Retirement waits for all leases; abandoned
-compositions release theirs. Deletion gets one retry; if both attempts fail, a
-content-free warning is logged. The next installed-theme load in a new process
-cleans stale assets.
-Styles and file fonts compile off Compose before publication. Preview compilation
-holds a separate lease; obsolete work is cancelled or discarded, the current
-theme stays visible until replacement is ready, and damaged fonts fall back.
-Background-image paths resolve off Main; changing the theme drops the old path
-while the new one resolves.
+Only the registered workspace owner may operate on files. Creation, operations,
+and close share a guard; stale operations cannot use or delete a replacement.
+Failed deletion remains retryable. Selected fonts/images cross the disposable
+provider boundary; cancel/exit retires their temporary file off Main, and the next
+import waits. Invalid names retain the stage for retry; installation holds the guard.
 
-The Han language provider serializes refresh, query, and teardown work. It
-publishes only packs whose read-only database opened successfully, unloads
-removed or replaced packs, and never refreshes in response to a keystroke.
-Language-pack lists and theme selectors render their observed index snapshot,
-keeping each package's title and components together during refreshes.
-The locale chooser appends language-pack locales absent from Android's list,
-deduplicating by exact locale tag while keeping system entries first.
-The subtype editor saves unfinished drafts and validates required choices only
-on final Save; both paths build the subtype from the same field snapshot.
+[Stylesheets](../../../app/src/main/kotlin/dev/patrickgold/florisboard/app/settings/theme/ThemeEditorScreen.kt) and shared [asset listings](../../../app/src/main/kotlin/dev/patrickgold/florisboard/app/ext/EditorAssetFiles.kt)
+load off Main, show loading, discard stale/cancelled results, and offer lenient/empty
+stylesheet retry. Rename/delete hold the close guard; unsafe names, links,
+or collisions leave files alone.
 
-Editor open/save/close I/O, stylesheet reads/parsing, and asset-list reloads run
-off Main. Saving builds a bounded archive; preview close waits for the keyboard
-to release assets before workspace deletion. Editor-selected fonts and images
-cross the disposable provider boundary before entering that workspace.
-After Save, one restore-aware effect closes the route and schedules workspace cleanup.
-Copying a local theme keeps its Material You palette, contrast, and color specification,
-along with its stylesheet, and chooses an unused component ID.
-
-Canceling an asset import or leaving the file manager retires its temporary
-file off Main. The next import waits for that cleanup; invalid names keep the
-same staged file for retry. Installation holds the workspace close guard.
-
-Stylesheet and asset-list loads show loading states and discard stale or
-cancelled results; invalid stylesheets allow lenient or empty retry. The file
-manager and property picker share one listing path. Renames and deletes run off
-Main under the workspace close guard; unsafe names, links, or collisions leave
-files alone.
-
-Only the registered workspace owner may use its files. Closing or replacing it
-rejects stale operations and cannot delete a live replacement. Failed deletion
-still allows cleanup retries; creation, file operations, and close share one guard.
-
-The theme shape editor displays corners from the current property value. Changing
-shape type resets the preview and chips to the new type's value, and a corner edit
-updates that value before the property can be saved.
-Padding chips also read the current draft; resetting its type cannot leave old
-sizes visible. One-side and all-side edits update the draft before Apply.
-Adding a theme property with an existing name leaves the current value and
-workspace unchanged; editing that property can replace its value.
-An open property draft belongs to the theme action, so rotation keeps its target,
-value, and unfinished size input. Apply and Delete only touch the original
-property set while it still belongs to the rule. This does not recover an unsaved
-editor workspace after process death.
-Committed rule and property changes refresh visible rows and variable previews
-without reopening the component.
+[Property drafts](../../../app/src/main/kotlin/dev/patrickgold/florisboard/app/settings/theme/EditPropertyDialog.kt) belong to the theme action: rotation retains target/value/unfinished size input,
+not an unsaved workspace after process death. Apply/Delete require the original
+property set still attached to its rule. Duplicate Add leaves value/workspace
+unchanged; Edit may replace it. Shape corners/padding chips read the current draft;
+type resets and one/all-side edits update it before Apply. Committed changes refresh
+rows/variable previews without reopening the component.
 
 ## Verification
 
-Run the full JVM suite and local gate:
+Follow [testing strategy](../../testing.md). Run focused JVM owners while iterating,
+then generated-asset/metadata checks, the full app JVM suite, and the local gate:
 
 ```shell
 ./gradlew :app:testDebugUnitTest \
-  --tests 'dev.patrickgold.florisboard.lib.ext.ExtensionIndexIsolationTest'
-./gradlew :app:testDebugUnitTest \
-  --tests 'dev.patrickgold.florisboard.lib.ext.ExtensionExportWorkspaceTest'
-./gradlew :app:testDebugUnitTest \
-  --tests 'dev.patrickgold.florisboard.app.ext.EditorAssetFilesTest'
-./gradlew :app:testDebugUnitTest \
+  --tests 'dev.patrickgold.florisboard.lib.ext.ExtensionIndexIsolationTest' \
+  --tests 'dev.patrickgold.florisboard.lib.ext.ExtensionExportWorkspaceTest' \
+  --tests 'dev.patrickgold.florisboard.app.ext.EditorAssetFilesTest' \
   --tests 'dev.patrickgold.florisboard.app.settings.theme.ThemePropertyEditTest'
-./gradlew :app:testDebugUnitTest
+./gradlew :app:testLocalizationAssetGenerator :app:testDebugUnitTest
 ./gradlew qualityGate
 ```
 
-Theme refresh, URI, streamed-size, cancellation, and workspace contracts have
-focused device tests:
+Use focused device coverage for theme refresh, URI/stream limits, cancellation,
+workspace lifecycles, generated assets, and font/background resolution:
 
 ```shell
 ./gradlew :app:connectedDebugAndroidTest \
