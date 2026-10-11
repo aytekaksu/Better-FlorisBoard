@@ -91,18 +91,20 @@ suppressed.
 
 ## Temporary Android lint workaround
 
-AGP 9.0.0 lint currently crashes in three K2/UAST detectors:
-`UElementAsPsiDetector` (`UElementAsPsi`) in `Flog.kt`, then `IntentDetector`
-(`IntentReset`) and `ToastDetector` (`ShowToast`) in `LaunchUtils.kt` as earlier
-detectors are skipped. `app/lint.xml` disables these IDs globally because lint
-initializes detectors before applying path-level ignores. To recheck after an
-AGP/lint upgrade, remove the matching suppressions and run:
+AGP 9.0.0 lint still crashes in `UElementAsPsiDetector` while resolving a lambda
+in `Flog.kt`. `app/lint.xml` disables only `UElementAsPsi`; path-level ignores
+do not prevent that crash. `IntentReset` and `ShowToast` are enabled again after
+passing a fresh lint run on the simplified source. After an AGP/lint upgrade,
+remove the remaining ignore and run:
 
 ```shell
 ./gradlew :app:lintDebug --stacktrace
 ```
 
-Re-enable each detector as soon as it completes; all others still fail the
+The Android helper library's former detector disables are also removed after
+its lint run passed. No debt-baseline entries were added.
+
+Keep the detector enabled when it completes; lint findings still fail the
 quality gate normally. `app/lint-baseline.xml` separately records existing
 findings as a debt ratchet: review and remove resolved findings rather than
 assuming every baseline entry is harmless.

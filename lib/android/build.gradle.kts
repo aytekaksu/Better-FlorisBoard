@@ -49,19 +49,6 @@ configure<LibraryExtension> {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-
-    lint {
-        // Lint 9.0 crashes in these detectors while resolving a ContentResolver lambda.
-        disable.addAll(
-            listOf(
-                "UElementAsPsi",
-                "ApplySharedPref",
-                "CommitTransaction",
-                "Recycle",
-                "CommitPrefEdits",
-            )
-        )
-    }
 }
 
 dependencies {
