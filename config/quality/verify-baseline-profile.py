@@ -91,18 +91,38 @@ def dex_definitions(data: bytes) -> tuple[set[str], set[str]]:
 def wildcard_owners(lines: list[str], expanded: Path | None) -> dict[str, str]:
     """Check compact selectors against reviewed effective AGP coverage."""
     selectors = {}
-    owners = set()
+    patterns = {}
     headers = [line for line in lines if line.startswith("# wildcard-coverage")]
     for line in lines:
         if line.startswith("#") or not any(char in line for char in "*?"):
             continue
-        match = re.fullmatch(r"(H?S?P?)(L[A-Za-z0-9_/$]+;)->\*\*\(\*\*\)\*\*", line)
+        match = re.fullmatch(
+            r"(H?S?P?)(L[A-Za-z0-9_/$]+;)->(\*\*|[A-Za-z0-9_$-]+\*?|<init>|<clinit>)\(\*\*\)\*\*",
+            line,
+        )
         if not match or not match[1]:
             raise ValueError(f"Unsupported wildcard rule: {line}")
-        if match[2] in owners:
-            raise ValueError(f"Duplicate wildcard owner: {match[2]}")
-        selectors[line] = match[2]
-        owners.add(match[2])
+        owner, name = match[2], match[3]
+        siblings = patterns.setdefault(owner, {})
+        if name in siblings:
+            raise ValueError(f"Duplicate wildcard selector: {owner}->{name}")
+        for other in siblings:
+            if (
+                name == "**" or other == "**"
+                or name.endswith("*") and other.startswith(name[:-1])
+                or other.endswith("*") and name.startswith(other[:-1])
+            ):
+                raise ValueError(f"Overlapping wildcard selectors: {owner}")
+        # AGP uses ASCII wildcards for names and prototypes; check complete exact-output witnesses.
+        if name == "**":
+            expression = r"[-A-Za-z0-9_$<>/;\[\]]*"
+        elif name.endswith("*"):
+            expression = re.escape(name[:-1]) + r"[-A-Za-z0-9_$<>\[\]]*"
+        else:
+            expression = re.escape(name)
+        expression += r"\([-A-Za-z0-9_$<>/;\[\]]*\)[-A-Za-z0-9_$<>/;\[\]]*"
+        siblings[name] = (line, re.compile(expression))
+        selectors[line] = owner
     if not selectors:
         if headers:
             raise ValueError("Wildcard coverage header without selectors")
@@ -117,6 +137,7 @@ def wildcard_owners(lines: list[str], expanded: Path | None) -> dict[str, str]:
         raise ValueError("Malformed wildcard coverage header")
     if expanded is None:
         raise ValueError("Wildcard rules require --expanded-profile from AGP")
+    owners = set(patterns)
     rules = {}
     covered = set()
     for line in expanded.read_text(encoding="utf-8").splitlines():
@@ -129,12 +150,14 @@ def wildcard_owners(lines: list[str], expanded: Path | None) -> dict[str, str]:
             continue
         method = match[3] is not None
         if method:
-            covered.add(match[2])
+            for selector, expression in patterns[match[2]].values():
+                if expression.fullmatch(match[3][2:]):
+                    covered.add(selector)
         mask = sum(value for flag, value in (("H", 1), ("S", 2), ("P", 4)) if flag in match[1]) if method else 2
         key = f"{'M' if method else 'C'}\t{match[2]}{match[3] or ''}"
         rules[key] = rules.get(key, 0) | mask
-    if covered != owners:
-        raise ValueError("Wildcard owner has no expanded methods")
+    if covered != set(selectors):
+        raise ValueError("Wildcard selector has no expanded methods")
     canonical = "".join(f"{key}\t{rules[key]}\n" for key in sorted(rules, key=lambda key: key.encode("utf-8")))
     counts = (sum(key.startswith("C\t") for key in rules), sum(key.startswith("M\t") for key in rules))
     actual = (*counts, hashlib.sha256(canonical.encode("utf-8")).hexdigest())
