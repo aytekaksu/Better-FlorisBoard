@@ -181,9 +181,9 @@ Fast host behavior:
 ./gradlew :lib:autocorrect-host-core:test :app:testDebugUnitTest
 ```
 
-The app uses Kotest dynamic tests, so Gradle class filters may incorrectly
-report that no tests matched. Run the complete app JVM task unless a narrower
-command has been verified locally.
+JUnit and Kotest use the same Gradle class filters; repeat `--tests` to select
+several classes. Check named test results, not just a successful task. Nested
+or method-level Kotest selectors still need their own verified command.
 
 Public API codecs and Robolectric service lifecycle:
 

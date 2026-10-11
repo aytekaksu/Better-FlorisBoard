@@ -115,5 +115,4 @@ mikepenz-aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin.android", v
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 
 # Testing
-kotest = { id = "io.kotest", version.ref = "kotest" }
 kotlinx-kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kotlinx-kover" }
