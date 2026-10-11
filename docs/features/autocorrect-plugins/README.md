@@ -97,6 +97,10 @@ typing, UI/document leases, and pending finish acknowledgements have ended.
 Each retired bind attempt releases Android's connection tracking, even when
 binding returns false or throws a permission error.
 
+The SDK detaches retired message endpoints from their service binding owner.
+Late messages keep their existing rejection replies and document cleanup;
+admitted callbacks keep their cancellation and ordered cleanup.
+
 ## State and concurrency rules
 
 - Each bind has an epoch and an expected package UID. Replies from another

@@ -876,17 +876,6 @@
     </issue>
 
     <issue
-        id="HandlerLeak"
-        message="This `Handler` class should be static or leaks might occur (org.florisboard.autocorrect.api.AutocorrectPluginService.IncomingHandler)"
-        errorLine1="    private inner class IncomingHandler("
-        errorLine2="                        ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/org/florisboard/autocorrect/api/AutocorrectPluginService.kt"
-            line="271"
-            column="25"/>
-    </issue>
-
-    <issue
         id="TypographyEllipsis"
         message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
         errorLine1="    &lt;string name=&quot;emoji__history__empty_message&quot; comment=&quot;Message if the emoji history is empty&quot;>Nenhum emoji usado ainda... Que tal começar agora? Eles aparecerão aqui.&lt;/string>"

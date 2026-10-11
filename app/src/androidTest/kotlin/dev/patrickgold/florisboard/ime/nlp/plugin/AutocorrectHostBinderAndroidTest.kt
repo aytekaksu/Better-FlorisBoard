@@ -7,12 +7,23 @@
 package dev.patrickgold.florisboard.ime.nlp.plugin
 
 import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import android.os.Message
 import android.os.Messenger
+import android.os.ParcelFileDescriptor
 import android.os.Process
 import android.os.SystemClock
+import android.system.Os
+import android.system.OsConstants
+import android.system.StructPollfd
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -35,6 +46,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.florisboard.autocorrect.api.AutocorrectPluginContract
+import org.florisboard.autocorrect.api.finishSessionBundle
+import org.florisboard.autocorrect.api.finishSessionResultFromBundle
+import org.florisboard.autocorrect.api.pluginUiDocumentBundle
+import org.florisboard.autocorrect.api.pluginUiMutationBundle
+import org.florisboard.autocorrect.api.pluginUiRequestBundle
+import org.florisboard.autocorrect.api.pluginUiResultFromBundle
 import org.florisboard.autocorrect.host.core.BindingState
 import org.florisboard.autocorrect.host.core.DiscoveryState
 import org.junit.After
@@ -47,6 +65,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 
 /** Exercises the real host against a protocol-v5 Messenger service in a separate fixture app. */
 // One fixture lifecycle serves the Binder scenarios; splitting it would duplicate mutable IME setup.
@@ -137,6 +157,108 @@ class AutocorrectHostBinderAndroidTest {
             eventsBeforeRestore.lastIndexOf("B_UNBOUND")
         ) {
             waitForEventCount("B_UNBOUND", eventsBeforeRestore.count { it == "B_UNBOUND" } + 1)
+        }
+    }
+
+    @Test
+    fun retiredProviderEndpointKeepsTerminalRepliesAndClosesDocuments() {
+        val connections = LinkedBlockingQueue<Messenger>()
+        val replies = LinkedBlockingQueue<Triple<Int, Int, Bundle>>()
+        val replyHandler = Handler(Looper.getMainLooper()) { message ->
+            replies.offer(Triple(message.what, message.sendingUid, Bundle(message.data)))
+            true
+        }
+        val replyTo = Messenger(replyHandler)
+        val fixtureUid = targetContext.packageManager.getServiceInfo(secondProviderComponent, 0)
+            .applicationInfo.uid
+        val connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                connections.offer(Messenger(service))
+            }
+
+            override fun onServiceDisconnected(name: ComponentName) = Unit
+        }
+        checkNotNull(targetContext.contentResolver.acquireContentProviderClient(CONTROL_URI)).use { processLease ->
+            val initialPid = checkNotNull(processLease.call("snapshot", null, null)).getInt("pid")
+            val bEventsBefore = snapshot().events.filter { it.startsWith("B_") }
+            var bindingOwned = true
+            try {
+                assertTrue(targetContext.bindService(
+                    Intent(AutocorrectPluginContract.ACTION_BIND_PROVIDER).setComponent(secondProviderComponent),
+                    connection,
+                    Context.BIND_AUTO_CREATE,
+                ))
+                val endpoint = checkNotNull(connections.poll(10, TimeUnit.SECONDS)) {
+                    "Fixture provider did not connect"
+                }
+                targetContext.unbindService(connection)
+                bindingOwned = false
+                waitForEventCount("B_UNBOUND", bEventsBefore.count { it == "B_UNBOUND" } + 1)
+
+                fun send(what: Int, data: Bundle) {
+                    endpoint.send(Message.obtain(null, what).apply {
+                        this.data = data
+                        this.replyTo = replyTo
+                    })
+                }
+                fun reply(expectedWhat: Int): Bundle {
+                    val (what, uid, data) = checkNotNull(replies.poll(10, TimeUnit.SECONDS)) {
+                        "Retired provider did not return message $expectedWhat"
+                    }
+                    assertEquals(expectedWhat, what)
+                    assertEquals(fixtureUid, uid)
+                    return data
+                }
+                fun rejectedUi(requestId: Long) {
+                    val result = pluginUiResultFromBundle(reply(AutocorrectPluginContract.MSG_PLUGIN_UI_RESULT))
+                    assertEquals(requestId, result.requestId)
+                    assertFalse(result.successful)
+                    assertNull(result.ui)
+                }
+
+                send(AutocorrectPluginContract.MSG_FINISH_SESSION, finishSessionBundle(7L))
+                assertEquals(7L, finishSessionResultFromBundle(
+                    reply(AutocorrectPluginContract.MSG_FINISH_SESSION_RESULT),
+                ))
+                listOf(
+                    Triple(AutocorrectPluginContract.MSG_GET_PLUGIN_UI, 101L, pluginUiRequestBundle(101L)),
+                    Triple(AutocorrectPluginContract.MSG_SET_PLUGIN_UI_VALUE, 102L,
+                        pluginUiMutationBundle(102L, "fixture-b-setting", "true")),
+                    Triple(AutocorrectPluginContract.MSG_INVOKE_PLUGIN_UI_ACTION, 103L,
+                        pluginUiMutationBundle(103L, "fixture-b-action")),
+                ).forEach { (what, requestId, data) ->
+                    send(what, data)
+                    rejectedUi(requestId)
+                }
+
+                val pipe = ParcelFileDescriptor.createPipe()
+                try {
+                    send(AutocorrectPluginContract.MSG_PLUGIN_UI_DOCUMENT, pluginUiDocumentBundle(
+                        requestId = 104L,
+                        itemId = "fixture-b-document",
+                        displayName = null,
+                        mimeType = "application/octet-stream",
+                        write = true,
+                        fileDescriptor = pipe[1],
+                    ))
+                    pipe[1].close() // Only the transferred write-end can now keep the pipe open.
+                    rejectedUi(104L)
+                    val poll = StructPollfd().apply {
+                        fd = pipe[0].fileDescriptor
+                        events = OsConstants.POLLIN.toShort()
+                    }
+                    assertEquals("Document descriptor was not released before its reply", 1, Os.poll(arrayOf(poll), 0))
+                    assertFalse(poll.revents.toInt() and OsConstants.POLLNVAL != 0)
+                    assertTrue(poll.revents.toInt() and OsConstants.POLLHUP != 0)
+                } finally {
+                    pipe.forEach { runCatching(it::close) }
+                }
+                assertEquals(initialPid, checkNotNull(processLease.call("snapshot", null, null)).getInt("pid"))
+                assertEquals(bEventsBefore + "B_UNBOUND", snapshot().events.filter { it.startsWith("B_") })
+            } finally {
+                if (bindingOwned) runCatching { targetContext.unbindService(connection) }
+                replyHandler.removeCallbacksAndMessages(null)
+            }
         }
     }
 

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2026 The FlorisBoard Contributors
  * SPDX-License-Identifier: Apache-2.0
- * Modified in Better FlorisBoard: license header standardized.
+ * Modified in Better FlorisBoard: retired Binder endpoints detached; license header standardized.
  */
 
 package org.florisboard.autocorrect.api
@@ -86,7 +86,8 @@ abstract class AutocorrectPluginService : Service() {
         }
         val epoch = ++nextBindingEpoch
         activeBindingEpoch = epoch
-        val handler = IncomingHandler(epoch)
+        val handler = IncomingHandler(IncomingBinding(epoch))
+        activeIncomingHandler?.detach()
         activeIncomingHandler = handler
         val messenger = Messenger(handler)
         userDictionaryClient.beginBinding(epoch, messenger)
@@ -233,6 +234,7 @@ abstract class AutocorrectPluginService : Service() {
     private fun clearBinding(): Pair<Long, Job> {
         val epoch = activeBindingEpoch
         activeIncomingHandler?.closePluginUi()
+        activeIncomingHandler?.detach()
         activeIncomingHandler = null
         activeBindingEpoch = 0L
         bindingReady?.cancel()
@@ -268,15 +270,32 @@ abstract class AutocorrectPluginService : Service() {
         }
     }
 
-    private inner class IncomingHandler(
-        private val bindingEpoch: Long,
+    /** Keeps retired Binder endpoints from retaining their service binding owner. */
+    private class IncomingHandler(
+        private var binding: IncomingBinding?,
     ) : Handler(Looper.getMainLooper()) {
+        override fun handleMessage(message: Message) {
+            binding?.handleMessage(message) ?: rejectMessage(message)
+        }
+
+        fun closePluginUi() {
+            binding?.closePluginUi()
+        }
+
+        fun detach() {
+            binding = null
+        }
+    }
+
+    private inner class IncomingBinding(
+        private val bindingEpoch: Long,
+    ) {
         private val hostAuthorization = BindingHostAuthorization()
         private val pluginUiLifetime = PluginUiLifetime(
             serviceScope.coroutineContext[Job]!!,
         )
 
-        override fun handleMessage(message: Message) {
+        fun handleMessage(message: Message) {
             val rejected =
                 bindingEpoch != activeBindingEpoch ||
                 !runCatching {
@@ -457,7 +476,7 @@ abstract class AutocorrectPluginService : Service() {
                 AutocorrectPluginContract.MSG_HOST_USER_DICTIONARY_RESULT -> {
                     userDictionaryClient.complete(message.sendingUid, message.data)
                 }
-                else -> super.handleMessage(message)
+                else -> Unit
             }
         }
 
@@ -547,55 +566,6 @@ abstract class AutocorrectPluginService : Service() {
             } else {
                 operation()
                 true
-            }
-        }
-
-        private fun rejectMessage(message: Message) {
-            val replyTo = message.replyTo
-            when (message.what) {
-                AutocorrectPluginContract.MSG_SUGGEST -> {
-                    val request = runCatching {
-                        AutocorrectRequest.fromBundle(message.data)
-                    }.getOrNull() ?: return
-                    replyTo.sendSafely(
-                        AutocorrectPluginContract.MSG_SUGGESTIONS,
-                        suggestionResultToBundle(
-                            request.requestId,
-                            AutocorrectSuggestionResult.Unhandled,
-                        ),
-                    )
-                }
-                AutocorrectPluginContract.MSG_REMOVE -> {
-                    replyTo.sendSafely(
-                        AutocorrectPluginContract.MSG_REMOVE_RESULT,
-                        android.os.Bundle().apply {
-                            putLong(Keys.REQUEST_ID, message.data.getLong(Keys.REQUEST_ID))
-                            putBoolean(Keys.REMOVED, false)
-                        },
-                    )
-                }
-                AutocorrectPluginContract.MSG_FINISH_SESSION -> {
-                    replyTo.sendSafely(
-                        AutocorrectPluginContract.MSG_FINISH_SESSION_RESULT,
-                        finishSessionBundle(message.data.getLong(Keys.SESSION_ID)),
-                    )
-                }
-                AutocorrectPluginContract.MSG_GET_PLUGIN_UI,
-                AutocorrectPluginContract.MSG_SET_PLUGIN_UI_VALUE,
-                AutocorrectPluginContract.MSG_INVOKE_PLUGIN_UI_ACTION,
-                AutocorrectPluginContract.MSG_PLUGIN_UI_DOCUMENT -> {
-                    if (message.what == AutocorrectPluginContract.MSG_PLUGIN_UI_DOCUMENT) {
-                        runCatching { message.data.pluginUiDocument()?.close() }
-                    }
-                    replyTo.sendSafely(
-                        AutocorrectPluginContract.MSG_PLUGIN_UI_RESULT,
-                        pluginUiResultBundle(
-                            message.data.pluginUiRequestId(),
-                            false,
-                            null,
-                        ),
-                    )
-                }
             }
         }
 
@@ -931,6 +901,55 @@ private class HostUserDictionaryClient(
 
     private fun AutocorrectUserDictionaryPage.toMutationResult() =
         AutocorrectUserDictionaryMutationResult(status, entries.firstOrNull())
+}
+
+private fun rejectMessage(message: Message) {
+    val replyTo = message.replyTo
+    when (message.what) {
+        AutocorrectPluginContract.MSG_SUGGEST -> {
+            val request = runCatching {
+                AutocorrectRequest.fromBundle(message.data)
+            }.getOrNull() ?: return
+            replyTo.sendSafely(
+                AutocorrectPluginContract.MSG_SUGGESTIONS,
+                suggestionResultToBundle(
+                    request.requestId,
+                    AutocorrectSuggestionResult.Unhandled,
+                ),
+            )
+        }
+        AutocorrectPluginContract.MSG_REMOVE -> {
+            replyTo.sendSafely(
+                AutocorrectPluginContract.MSG_REMOVE_RESULT,
+                android.os.Bundle().apply {
+                    putLong(Keys.REQUEST_ID, message.data.getLong(Keys.REQUEST_ID))
+                    putBoolean(Keys.REMOVED, false)
+                },
+            )
+        }
+        AutocorrectPluginContract.MSG_FINISH_SESSION -> {
+            replyTo.sendSafely(
+                AutocorrectPluginContract.MSG_FINISH_SESSION_RESULT,
+                finishSessionBundle(message.data.getLong(Keys.SESSION_ID)),
+            )
+        }
+        AutocorrectPluginContract.MSG_GET_PLUGIN_UI,
+        AutocorrectPluginContract.MSG_SET_PLUGIN_UI_VALUE,
+        AutocorrectPluginContract.MSG_INVOKE_PLUGIN_UI_ACTION,
+        AutocorrectPluginContract.MSG_PLUGIN_UI_DOCUMENT -> {
+            if (message.what == AutocorrectPluginContract.MSG_PLUGIN_UI_DOCUMENT) {
+                runCatching { message.data.pluginUiDocument()?.close() }
+            }
+            replyTo.sendSafely(
+                AutocorrectPluginContract.MSG_PLUGIN_UI_RESULT,
+                pluginUiResultBundle(
+                    message.data.pluginUiRequestId(),
+                    false,
+                    null,
+                ),
+            )
+        }
+    }
 }
 
 private fun Messenger?.sendSafely(what: Int, data: android.os.Bundle) {
