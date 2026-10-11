@@ -85,6 +85,8 @@ The generators also expand
 digit-script numeric rows from Bengali, theme stylesheets from the
 static day base and Material You/night/borderless overlays, subtype presets, and
 shared punctuation popups. Each generator runs once for all requested app variants.
+Both theme families use one borderless rule layer, followed by their
+family-specific borderless overrides.
 Exceptional character and numeric layouts and the Han/Bengali presets stay literal.
 Generation preserves layout IDs and popups,
 theme manifest paths, preset order, and Unicode code points in JSON; missing or
