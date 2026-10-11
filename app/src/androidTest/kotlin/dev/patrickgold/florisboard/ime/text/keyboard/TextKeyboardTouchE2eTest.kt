@@ -288,7 +288,7 @@ class TextKeyboardTouchE2eTest {
         val originalMotionMode = prefs.smartbar.motionMode.get()
         val originalSharedActionsExpanded = prefs.smartbar.sharedActionsExpanded.get()
         val sharedActions by instrumentation.targetContext.sharedActionsController()
-        val originalUiMode = keyboardManager.activeState.value.imeUiMode
+        val originalUiMode = keyboardManager.activeState.snapshots.value.imeUiMode
         val originalEditorEnabled = controller.editor.state.value.isEnabled
         assertTrue("window editor already has an active gesture", !controller.editor.state.value.isAnyGesture)
 
@@ -1236,8 +1236,8 @@ class TextKeyboardTouchE2eTest {
                     it.isCharHalfWidth = fromHalf
                 }
                 keyboardManager.onInputKeyUp(TextKeyData(type = KeyType.SYSTEM_GUI, code = code))
-                assertEquals("Kana state after key $code", toKana, keyboardManager.activeState.value.isKanaKata)
-                assertEquals("width state after key $code", toHalf, keyboardManager.activeState.value.isCharHalfWidth)
+                assertEquals("Kana state after key $code", toKana, keyboardManager.activeState.snapshots.value.isKanaKata)
+                assertEquals("width state after key $code", toHalf, keyboardManager.activeState.snapshots.value.isCharHalfWidth)
             }
         }
 

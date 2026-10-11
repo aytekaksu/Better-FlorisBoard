@@ -66,7 +66,7 @@ class ObservableKeyboardStateTest {
                 awaitBarrier()
                 workerFailure.get()?.let { throw it }
                 // Both setters returned; workers cannot write again until the next start barrier.
-                val published = state.value
+                val published = state.snapshots.value
                 assertTrue(
                     "STRESS_LOST_RAW_UPDATE round=${round + 1}",
                     state.keyboardMode == KeyboardMode.NUMERIC && state.isIncognitoMode,
@@ -121,8 +121,8 @@ class ObservableKeyboardStateTest {
             state.batchEdit {
                 state.keyboardMode = KeyboardMode.NUMERIC
                 state.batchEdit { state.isSelectionMode = true }
-                assertEquals(KeyboardMode.CHARACTERS, state.value.keyboardMode)
-                assertFalse(state.value.isSelectionMode)
+                assertEquals(KeyboardMode.CHARACTERS, state.snapshots.value.keyboardMode)
+                assertFalse(state.snapshots.value.isSelectionMode)
                 worker = executor.submit {
                     state.batchEdit {
                         state.isIncognitoMode = true
@@ -133,14 +133,14 @@ class ObservableKeyboardStateTest {
                 // This also detects accidentally holding the monitor across a batch callback.
                 assertTrue("overlap worker could not enter", workerWrote.await(2, SECONDS))
             }
-            assertEquals(KeyboardMode.CHARACTERS, state.value.keyboardMode)
-            assertFalse(state.value.isSelectionMode)
-            assertFalse(state.value.isIncognitoMode)
+            assertEquals(KeyboardMode.CHARACTERS, state.snapshots.value.keyboardMode)
+            assertFalse(state.snapshots.value.isSelectionMode)
+            assertFalse(state.snapshots.value.isIncognitoMode)
             releaseWorker.countDown()
             worker!!.get(2, SECONDS)
-            assertEquals(KeyboardMode.NUMERIC, state.value.keyboardMode)
-            assertTrue(state.value.isSelectionMode)
-            assertTrue(state.value.isIncognitoMode)
+            assertEquals(KeyboardMode.NUMERIC, state.snapshots.value.keyboardMode)
+            assertTrue(state.snapshots.value.isSelectionMode)
+            assertTrue(state.snapshots.value.isIncognitoMode)
         }
         releaseWorker.countDown()
         executor.shutdownNow()
@@ -168,19 +168,19 @@ class ObservableKeyboardStateTest {
             }
         }
         assertSame(failure, result.exceptionOrNull())
-        assertEquals(KeyboardMode.PHONE, state.value.keyboardMode)
-        assertTrue(state.value.isIncognitoMode)
+        assertEquals(KeyboardMode.PHONE, state.snapshots.value.keyboardMode)
+        assertTrue(state.snapshots.value.isIncognitoMode)
         state.isIncognitoMode = false
-        assertFalse(state.value.isIncognitoMode)
+        assertFalse(state.snapshots.value.isIncognitoMode)
     }
 
     @Test(timeout = 5_000)
     fun snapshotsAndPublishedValuesStayDetachedFromLaterWrites() {
         val state = ObservableKeyboardState.new(KeyboardState.F_IS_INCOGNITO_MODE)
-        assertTrue(state.value.isIncognitoMode)
+        assertTrue(state.snapshots.value.isIncognitoMode)
         state.keyboardMode = KeyboardMode.PHONE
         val snapshot = state.snapshot()
-        val published = state.value
+        val published = state.snapshots.value
         state.batchEdit {
             state.keyboardMode = KeyboardMode.NUMERIC
             state.isIncognitoMode = false
@@ -194,8 +194,8 @@ class ObservableKeyboardStateTest {
         assertEquals(KeyboardMode.NUMERIC, state.keyboardMode)
         assertFalse(state.isIncognitoMode)
         assertFalse(state.isSelectionMode)
-        assertEquals(KeyboardMode.NUMERIC, state.value.keyboardMode)
-        assertFalse(state.value.isSelectionMode)
+        assertEquals(KeyboardMode.NUMERIC, state.snapshots.value.keyboardMode)
+        assertFalse(state.snapshots.value.isSelectionMode)
     }
 
     @Test(timeout = 5_000)
@@ -203,7 +203,7 @@ class ObservableKeyboardStateTest {
         val state = ObservableKeyboardState.new()
         val observed = mutableListOf<Pair<KeyboardMode, Boolean>>()
         val collector = launch(Dispatchers.Unconfined) {
-            state.collect { published ->
+            state.snapshots.collect { published ->
                 observed += published.keyboardMode to published.isIncognitoMode
                 if (published.keyboardMode == KeyboardMode.PHONE && !published.isIncognitoMode) {
                     state.batchEdit { state.isIncognitoMode = true }
@@ -220,8 +220,8 @@ class ObservableKeyboardStateTest {
                 ),
                 observed,
             )
-            assertEquals(KeyboardMode.PHONE, state.value.keyboardMode)
-            assertTrue(state.value.isIncognitoMode)
+            assertEquals(KeyboardMode.PHONE, state.snapshots.value.keyboardMode)
+            assertTrue(state.snapshots.value.isIncognitoMode)
         } finally {
             collector.cancelAndJoin()
         }

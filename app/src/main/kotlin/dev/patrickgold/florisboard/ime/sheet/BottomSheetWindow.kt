@@ -23,7 +23,7 @@ import kotlin.getValue
 fun BottomSheetWindow() {
     val context = LocalContext.current
     val keyboardManager by context.keyboardManager()
-    val state by keyboardManager.activeState.collectAsState()
+    val state by keyboardManager.activeState.snapshots.collectAsState()
     var actionsEditorClose by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     BottomSheetHostUi(

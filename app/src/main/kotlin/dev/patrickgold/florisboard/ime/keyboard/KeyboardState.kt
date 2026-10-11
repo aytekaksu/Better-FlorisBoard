@@ -13,6 +13,7 @@ import dev.patrickgold.florisboard.ime.sheet.isAnyBottomSheetVisible
 import dev.patrickgold.florisboard.ime.text.key.KeyVariation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
@@ -182,13 +183,15 @@ internal val KeyboardState.manualSelectionEndpointIsStart: Boolean?
 class ObservableKeyboardState private constructor(
     initValue: ULong,
     private val dispatchFlow: MutableStateFlow<KeyboardState> = MutableStateFlow(KeyboardState.new(initValue)),
-) : KeyboardState(initValue), StateFlow<KeyboardState> by dispatchFlow {
+) : KeyboardState(initValue) {
 
     companion object {
         const val BATCH_ZERO: Int = 0
 
         fun new(value: ULong = STATE_ALL_ZERO) = ObservableKeyboardState(value)
     }
+
+    val snapshots: StateFlow<KeyboardState> = dispatchFlow.asStateFlow()
 
     override var rawValue: ULong
         @Synchronized get() = super.rawValue

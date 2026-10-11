@@ -50,7 +50,7 @@ fun TextInputLayout(
 
     val prefs by FlorisPreferenceStore
 
-    val state by keyboardManager.activeState.collectAsState()
+    val state by keyboardManager.activeState.snapshots.collectAsState()
     val evaluator by keyboardManager.activeEvaluator.collectAsState()
     val pluginUiVisible by autocorrectPluginManager.keyboardUiVisible.collectAsState()
     val pluginUi by autocorrectPluginManager.pluginUi.collectAsState()
