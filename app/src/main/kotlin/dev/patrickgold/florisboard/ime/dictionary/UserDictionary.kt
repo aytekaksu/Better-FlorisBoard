@@ -304,32 +304,14 @@ interface UserDictionaryDatabase {
 
     fun exportCombinedList(context: Context, uri: Uri) {
         context.contentResolver.writeText(uri) { dst ->
-            StringBuilder().apply {
-                append("dictionary=")
-                append(uri.lastPathSegment)
-                append(";date=")
-                append(System.currentTimeMillis())
-                append(";generated-by=")
-                append(context.packageName)
-                append(";version=1")
-                appendLine()
-                dst.write(toString())
-            }
+            dst.write(
+                "dictionary=${uri.lastPathSegment};date=${System.currentTimeMillis()};" +
+                    "generated-by=${context.packageName};version=1\n",
+            )
             for (entry in userDictionaryDao().queryAll()) {
-                StringBuilder().apply {
-                    append(" w=")
-                    append(entry.word)
-                    append(";f=")
-                    append(entry.freq)
-                    append(";l=")
-                    append(entry.locale) // always append locale even if null
-                    if (entry.shortcut != null) {
-                        append(";s=")
-                        append(entry.shortcut)
-                    }
-                    appendLine()
-                    dst.write(toString())
-                }
+                val shortcut = entry.shortcut?.let { ";s=$it" }.orEmpty()
+                // Keep null locales as l=null.
+                dst.write(" w=${entry.word};f=${entry.freq};l=${entry.locale}$shortcut\n")
             }
         }
     }
@@ -365,12 +347,6 @@ abstract class FlorisUserDictionaryDatabase :
         fun localeToString(locale: FlorisLocale?): String? = when (locale) {
             null -> null
             else -> locale.localeTag()
-        }
-
-        @TypeConverter
-        fun stringToLocale(string: String?): FlorisLocale? = when (string) {
-            null, "all", "null", "" -> null
-            else -> FlorisLocale.fromTag(string)
         }
     }
 }
