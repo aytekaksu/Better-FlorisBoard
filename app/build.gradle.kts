@@ -77,22 +77,42 @@ abstract class GenerateBuiltInThemeAssets : GeneratedAssetsTask() {
             mapOf(
                 "floris_night" to listOf("night"),
                 "floris_pure_night" to listOf("night", "pure-night"),
-                "floris_day_borderless" to listOf("borderless", "day-borderless"),
-                "floris_night_borderless" to listOf("night", "borderless"),
-                "floris_pure_night_borderless" to listOf("night", "pure-night", "borderless"),
+                "floris_day_borderless" to listOf("borderless", "static-borderless", "day-borderless"),
+                "floris_night_borderless" to listOf("night", "borderless", "static-borderless"),
+                "floris_pure_night_borderless" to listOf(
+                    "night",
+                    "pure-night",
+                    "borderless",
+                    "static-borderless",
+                ),
             ),
         )
         generateFamily(
             baseStylesheet.get().asFile,
-            overlaysDirectory.get().asFile.resolve("material-you"),
+            overlaysDirectory.get().asFile,
             targetRoot.resolve("org.florisboard.themes.my/stylesheets"),
             mapOf(
-                "floris_day_my" to listOf("day"),
-                "floris_night_my" to listOf("day", "night"),
-                "floris_pure_night_my" to listOf("day", "night", "pure-night"),
-                "floris_day_my_borderless" to listOf("day", "borderless"),
-                "floris_night_my_borderless" to listOf("day", "night", "borderless"),
-                "floris_pure_night_my_borderless" to listOf("day", "night", "pure-night", "borderless"),
+                "floris_day_my" to listOf("material-you/day"),
+                "floris_night_my" to listOf("material-you/day", "material-you/night"),
+                "floris_pure_night_my" to listOf(
+                    "material-you/day",
+                    "material-you/night",
+                    "material-you/pure-night",
+                ),
+                "floris_day_my_borderless" to listOf("material-you/day", "borderless", "material-you/borderless"),
+                "floris_night_my_borderless" to listOf(
+                    "material-you/day",
+                    "material-you/night",
+                    "borderless",
+                    "material-you/borderless",
+                ),
+                "floris_pure_night_my_borderless" to listOf(
+                    "material-you/day",
+                    "material-you/night",
+                    "material-you/pure-night",
+                    "borderless",
+                    "material-you/borderless",
+                ),
             ),
         )
     }

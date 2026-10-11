@@ -1,0 +1,10 @@
+{
+  "smartbar-actions-editor-subheader": {
+    "foreground": "var(--on-background)",
+    "font-size": "16sp",
+    "font-weight": "bold",
+    "padding": "12dp 16dp 12dp 8dp",
+    "text-max-lines": "1",
+    "text-overflow": "ellipsis"
+  }
+}
