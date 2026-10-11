@@ -32,7 +32,7 @@
     <ID>CyclomaticComplexMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$private fun handleUserDictionaryRequest</ID>
     <ID>CyclomaticComplexMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$private suspend fun requestCandidates: AutocorrectProviderSuggestionResult?</ID>
     <ID>CyclomaticComplexMethod:AutocorrectPluginManager.kt:internal fun EditorContent.buildAutocorrectWireRequest: AutocorrectWireRequest?</ID>
-    <ID>CyclomaticComplexMethod:AutocorrectPluginService.kt:AutocorrectPluginService.IncomingHandler$override fun handleMessage</ID>
+    <ID>CyclomaticComplexMethod:AutocorrectPluginService.kt:AutocorrectPluginService.IncomingBinding$fun handleMessage</ID>
     <ID>CyclomaticComplexMethod:AutocorrectPluginService.kt:HostUserDictionaryClient$private fun AutocorrectUserDictionaryPage.validatedFor: AutocorrectUserDictionaryPage</ID>
     <ID>CyclomaticComplexMethod:AutocorrectPluginUi.kt:@Composable fun AutocorrectPluginUiHost</ID>
     <ID>CyclomaticComplexMethod:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginUiItem</ID>
@@ -43,7 +43,7 @@
     <ID>LongMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$private fun handleUserDictionaryRequest</ID>
     <ID>LongMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$private fun performUserDictionaryRequest: AutocorrectUserDictionaryPage</ID>
     <ID>LongMethod:AutocorrectPluginManager.kt:AutocorrectPluginManager$private suspend fun requestCandidates: AutocorrectProviderSuggestionResult?</ID>
-    <ID>LongMethod:AutocorrectPluginService.kt:AutocorrectPluginService.IncomingHandler$override fun handleMessage</ID>
+    <ID>LongMethod:AutocorrectPluginService.kt:AutocorrectPluginService.IncomingBinding$fun handleMessage</ID>
     <ID>LongMethod:AutocorrectPluginUi.kt:@Composable fun AutocorrectPluginUiHost</ID>
     <ID>LongMethod:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginUiItem</ID>
     <ID>LongMethod:AutocorrectPluginUiApp.kt:@Composable private fun AppPluginValueDialog</ID>
@@ -57,12 +57,12 @@
     <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$@Synchronized private fun ensureSession: AutocorrectSession?</ID>
     <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$override suspend fun removeSuggestion: Boolean</ID>
     <ID>ReturnCount:AutocorrectPluginManager.kt:AutocorrectPluginManager$private suspend fun requestCandidates: AutocorrectProviderSuggestionResult?</ID>
-    <ID>ReturnCount:AutocorrectPluginService.kt:AutocorrectPluginService.IncomingHandler$override fun handleMessage</ID>
+    <ID>ReturnCount:AutocorrectPluginService.kt:AutocorrectPluginService.IncomingBinding$fun handleMessage</ID>
     <ID>ReturnCount:AutocorrectUserDictionary.kt:fun userDictionaryRequestFromBundle: AutocorrectUserDictionaryRequest?</ID>
     <ID>ReturnCount:AutocorrectUserDictionary.kt:private fun AutocorrectUserDictionaryEntry.validated: AutocorrectUserDictionaryEntry?</ID>
     <ID>ReturnCount:AutocorrectUserDictionary.kt:private fun Bundle.toDictionaryEntry: AutocorrectUserDictionaryEntry?</ID>
     <ID>ThrowingExceptionsWithoutMessageOrCause:Flog.kt:Flog$Throwable()</ID>
-    <ID>TooGenericExceptionCaught:AutocorrectPluginService.kt:AutocorrectPluginService.IncomingHandler$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:AutocorrectPluginService.kt:AutocorrectPluginService.IncomingBinding$error: Exception</ID>
     <ID>TooGenericExceptionCaught:Devtools.kt:Devtools$e: Exception</ID>
     <ID>TooManyFunctions:AutocorrectPluginManager.kt:AutocorrectPluginManager : SuggestionProvider</ID>
     <ID>TooManyFunctions:AutocorrectPluginService.kt:AutocorrectPluginService : Service</ID>
