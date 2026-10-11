@@ -1185,53 +1185,29 @@ val testLocalizationAssetGenerator by tasks.registering {
                 listOf("en-US", "en-US") + (2 until 71).map { "case-$it" } + listOf("fr", "de"),
         )
 
-        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Expected 71 @preset markers, found 0") { root ->
-            val template = root.resolve("extension.json")
-            template.writeText(template.readText().replace("@preset", "@preseT"))
+        fun rejectChangedManifest(failure: String, change: (String) -> String) {
+            exercise(listOf("en"), mapOf("en.json" to "{}"), failure = failure) { root ->
+                val manifest = root.resolve("extension.json")
+                manifest.writeText(change(manifest.readText()))
+            }
         }
-        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Expected 71 @preset markers, found 70") { root ->
-            val template = root.resolve("extension.json")
-            template.writeText(template.readText().replaceFirst("$firstPreset,\n", ""))
+
+        rejectChangedManifest("Expected 71 @preset markers, found 0") { it.replace("@preset", "@preseT") }
+        rejectChangedManifest("Expected 71 @preset markers, found 70") { it.replaceFirst("$firstPreset,\n", "") }
+        rejectChangedManifest("Expected 71 @preset markers, found 72") {
+            it.replaceFirst("$firstPreset,\n", "$firstPreset,\n$firstPreset,\n")
         }
-        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Expected 71 @preset markers, found 72") { root ->
-            val template = root.resolve("extension.json")
-            template.writeText(template.readText().replaceFirst("$firstPreset,\n", "$firstPreset,\n$firstPreset,\n"))
+        rejectChangedManifest("Expected 73 subtype presets, found 72") { it.replace("    $literalPreset,\n", "") }
+        rejectChangedManifest("Duplicate subtype preset record") { it.replaceFirst(secondPreset, firstPreset) }
+        rejectChangedManifest("Malformed @preset marker") { it.replace("@preset(", "@preset!(") }
+        rejectChangedManifest("Duplicate @preset field") {
+            it.replaceFirst("\"tag\": \"en-US\"", "\"tag\": \"en-US\", \"tag\": \"hy\"")
         }
-        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Expected 73 subtype presets, found 72") { root ->
-            val template = root.resolve("extension.json")
-            template.writeText(template.readText().replace("    $literalPreset,\n", ""))
+        rejectChangedManifest("Unknown @preset field") {
+            it.replaceFirst("\"currency\": \"dollar\"", "\"currency\": \"dollar\", \"extra\": \"x\"")
         }
-        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Duplicate subtype preset record") { root ->
-            val template = root.resolve("extension.json")
-            template.writeText(template.readText().replaceFirst(secondPreset, firstPreset))
-        }
-        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Malformed @preset marker") { root ->
-            val template = root.resolve("extension.json")
-            template.writeText(template.readText().replace("@preset(", "@preset!("))
-        }
-        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Duplicate @preset field") { root ->
-            val template = root.resolve("extension.json")
-            template.writeText(
-                template.readText().replaceFirst("\"tag\": \"en-US\"", "\"tag\": \"en-US\", \"tag\": \"hy\""),
-            )
-        }
-        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "Unknown @preset field") { root ->
-            val template = root.resolve("extension.json")
-            template.writeText(
-                template.readText().replaceFirst(
-                    "\"currency\": \"dollar\"",
-                    "\"currency\": \"dollar\", \"extra\": \"x\"",
-                ),
-            )
-        }
-        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "@preset needs characters") { root ->
-            val template = root.resolve("extension.json")
-            template.writeText(template.readText().replaceFirst(", \"characters\": \"qwerty\"", ""))
-        }
-        exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "malformed JSON") { root ->
-            val template = root.resolve("extension.json")
-            template.writeText(template.readText().replace("]}\n", "]\n"))
-        }
+        rejectChangedManifest("@preset needs characters") { it.replaceFirst(", \"characters\": \"qwerty\"", "") }
+        rejectChangedManifest("malformed JSON") { it.replace("]}\n", "]\n") }
         exercise(listOf("en"), mapOf("en.json" to "{}"), failure = "malformed UTF-8") { root ->
             Files.write(root.resolve("extension.json").toPath(), byteArrayOf(0xc3.toByte(), 0x28))
         }
