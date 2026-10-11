@@ -193,6 +193,19 @@ private class GeneratedAssetSafety {
             )
         }
 
+        fun writeWithCleanup(target: File, write: () -> Unit) {
+            try {
+                write()
+            } catch (cause: Exception) {
+                try {
+                    removeTreeNoFollow(target.toPath())
+                } catch (cleanupFailure: Exception) {
+                    cause.addSuppressed(cleanupFailure)
+                }
+                throw cause
+            }
+        }
+
         fun clearTarget(output: File, assetPath: String, label: String): File {
             val root = checkedOutputRoot(output, label)
             val target = root.resolve(assetPath)
@@ -393,7 +406,7 @@ abstract class GenerateLocalizationAssets : GeneratedAssetsTask() {
                     "missing=${expected.toSet() - rendered.keys}, extra=${rendered.keys - expected.toSet()}"
             }
 
-            try {
+            GeneratedAssetSafety.writeWithCleanup(target) {
                 check(target.mkdirs()) { "Unable to create generated localization directory" }
                 target.resolve("extension.json").writeText(expandedManifest, Charsets.UTF_8)
                 val popupTarget = target.resolve("popupMappings")
@@ -401,20 +414,11 @@ abstract class GenerateLocalizationAssets : GeneratedAssetsTask() {
                 for ((name, text) in rendered.toSortedMap()) {
                     popupTarget.resolve(name).writeText(text, Charsets.UTF_8)
                 }
-            } catch (cause: Exception) {
-                try {
-                    GeneratedAssetSafety.removeTreeNoFollow(target.toPath())
-                } catch (cleanupFailure: Exception) {
-                    cause.addSuppressed(cleanupFailure)
-                }
-                throw cause
             }
         }
 
         private fun clearOutput(output: File) =
             GeneratedAssetSafety.clearOutputRoot(output, "localization").resolve(ASSET_PATH)
-
-        fun removeTreeNoFollow(root: Path) = GeneratedAssetSafety.removeTreeNoFollow(root)
 
         private fun readSource(file: File) = GeneratedAssetSafety.readSource(file, "Popup mapping")
 
@@ -478,16 +482,9 @@ abstract class GenerateCharacterLayoutAssets : GeneratedAssetsTask() {
                     "missing=${expected - static - generated.keys}, " +
                     "extra=${(static + generated.keys) - expected}"
             }
-            try {
+            GeneratedAssetSafety.writeWithCleanup(target) {
                 check(target.mkdirs()) { "Unable to create generated character layout directory" }
                 for ((name, text) in generated.toSortedMap()) target.resolve(name).writeText(text, Charsets.UTF_8)
-            } catch (cause: Exception) {
-                try {
-                    GeneratedAssetSafety.removeTreeNoFollow(target.toPath())
-                } catch (cleanupFailure: Exception) {
-                    cause.addSuppressed(cleanupFailure)
-                }
-                throw cause
             }
         }
 
@@ -676,16 +673,9 @@ abstract class GenerateEmojiLocaleAssets : GeneratedAssetsTask() {
                     )
                 }
             }
-            try {
+            GeneratedAssetSafety.writeWithCleanup(target) {
                 check(target.mkdirs()) { "Unable to create generated emoji locale directory" }
                 for ((name, text) in rendered) target.resolve(name).writeText(text, Charsets.UTF_8)
-            } catch (cause: Exception) {
-                try {
-                    GeneratedAssetSafety.removeTreeNoFollow(target.toPath())
-                } catch (cleanupFailure: Exception) {
-                    cause.addSuppressed(cleanupFailure)
-                }
-                throw cause
             }
         }
 
@@ -1088,7 +1078,7 @@ val testLocalizationAssetGenerator by tasks.registering {
             prepare: (File) -> Unit = {},
         ): File {
             val root = temporaryDir.resolve("case-${caseNumber++}")
-            GenerateLocalizationAssets.removeTreeNoFollow(root.toPath())
+            GeneratedAssetSafety.removeTreeNoFollow(root.toPath())
             val sources = root.resolve("sources").apply { mkdirs() }
             for ((name, text) in files) sources.resolve(name).writeText(text)
             val sharedFile = root.resolve("right.inc").apply { writeText("$shared\n") }
@@ -1375,7 +1365,7 @@ val testCharacterLayoutAssetGenerator by tasks.registering {
             prepare: (File) -> Unit = {},
         ): File {
             val root = temporaryDir.resolve("case-${caseNumber++}")
-            GenerateLocalizationAssets.removeTreeNoFollow(root.toPath())
+            GeneratedAssetSafety.removeTreeNoFollow(root.toPath())
             val sources = root.resolve("sources").apply { mkdirs() }
             val staticFiles = root.resolve("static").apply { mkdirs() }
             templates.forEach { (name, text) -> sources.resolve(name).writeText(text, Charsets.UTF_8) }
@@ -1640,7 +1630,7 @@ val testCharacterLayoutAssetGenerator by tasks.registering {
         )) {
             for (linkedPath in listOf(path, "ime")) {
                 val root = temporaryDir.resolve("output-link-${caseNumber++}")
-                GenerateLocalizationAssets.removeTreeNoFollow(root.toPath())
+                GeneratedAssetSafety.removeTreeNoFollow(root.toPath())
                 val output = root.resolve("output")
                 val outside = root.resolve("outside").apply { mkdirs() }
                 outside.resolve("keep.json").writeText("safe")
@@ -1653,7 +1643,7 @@ val testCharacterLayoutAssetGenerator by tasks.registering {
             }
 
             val root = temporaryDir.resolve("output-parent-link-${caseNumber++}")
-            GenerateLocalizationAssets.removeTreeNoFollow(root.toPath())
+            GeneratedAssetSafety.removeTreeNoFollow(root.toPath())
             val outside = root.resolve("outside").apply { mkdirs() }
             val linkedBuild = root.resolve("build")
             Files.createSymbolicLink(linkedBuild.toPath(), outside.toPath())
