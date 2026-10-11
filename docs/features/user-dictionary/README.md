@@ -28,6 +28,6 @@ those literal locale values can be browsed, but cannot round-trip as literal
 tags through this format.
 
 Run the focused host and Android tests for state ordering, Room's Main-thread
-guard, and an import/export round trip, then run `./gradlew qualityGate`. Device
-tests must target a dedicated emulator: they touch app dictionary data, and the
-system-provider query test writes and deletes synthetic system words.
+guard, and an import/export round trip, then run `./gradlew qualityGate`.
+Use a dedicated emulator with the app enabled as a keyboard. These tests touch
+app dictionary data; the provider query writes and deletes synthetic system words.
