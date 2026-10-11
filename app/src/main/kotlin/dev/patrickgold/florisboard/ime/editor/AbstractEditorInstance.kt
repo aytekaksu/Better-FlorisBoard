@@ -6,7 +6,6 @@
 
 package dev.patrickgold.florisboard.ime.editor
 
-import android.inputmethodservice.InputMethodService
 import android.os.SystemClock
 import android.text.TextUtils
 import android.view.InputDevice
@@ -641,14 +640,8 @@ abstract class AbstractEditorInstance(
     }
 
     /**
-     * Gets [n] characters before the cursor's current position. The resulting string may be any
-     * length ranging from 0 to n.
-     *
-     * @param n The number of characters to get before the cursor. Must be greater than 0 or this
-     *  method will fail. This number indicates the number of Unicode chars, so the returned string
-     *  length may be greater than n, due to Java char encoding.
-     *
-     * @return [n] or less characters before the cursor.
+     * Returns up to [n] Unicode characters before selection from the available snapshot.
+     * UTF-16 length can exceed [n]; nonpositive counts or missing text return empty.
      */
     fun EditorContent.getTextBeforeCursor(n: Int): String {
         if (n < 1 || text.isEmpty()) return ""
@@ -658,14 +651,8 @@ abstract class AbstractEditorInstance(
     }
 
     /**
-     * Gets [n] characters after the cursor's current position. The resulting string may be any
-     * length ranging from 0 to n.
-     *
-     * @param n The number of characters to get after the cursor. Must be greater than 0 or this
-     *  method will fail. This number indicates the number of Unicode chars, so the returned string
-     *  length may be greater than n, due to Java char encoding.
-     *
-     * @return [n] or less characters after the cursor.
+     * Returns up to [n] Unicode characters after selection from the available snapshot.
+     * UTF-16 length can exceed [n]; nonpositive counts or missing text return empty.
      */
     fun EditorContent.getTextAfterCursor(n: Int): String {
         if (n < 1 || text.isEmpty()) return ""
@@ -674,17 +661,7 @@ abstract class AbstractEditorInstance(
         return text.take(length)
     }
 
-    /**
-     * Constructs a meta state integer flag which can be used for setting the `metaState` field when sending a KeyEvent
-     * to the input connection. If this method is called without a meta modifier set to true, the default value `0` is
-     * returned.
-     *
-     * @param ctrl Set to true to enable the CTRL meta modifier. Defaults to false.
-     * @param alt Set to true to enable the ALT meta modifier. Defaults to false.
-     * @param shift Set to true to enable the SHIFT meta modifier. Defaults to false.
-     *
-     * @return An integer containing all meta flags passed and formatted for use in a [KeyEvent].
-     */
+    /** Builds left-side CTRL/ALT/SHIFT flags, or 0 when none are requested. */
     fun meta(
         ctrl: Boolean = false,
         alt: Boolean = false,
@@ -723,15 +700,8 @@ abstract class AbstractEditorInstance(
     ))
 
     /**
-     * Same as [InputMethodService.sendDownUpKeyEvents] but also allows to set meta state.
-     * Presses CTRL/ALT/SHIFT in that order and releases them in reverse order.
-     *
-     * @param keyEventCode The key code to send, use a key code defined in Android's [KeyEvent].
-     * @param metaState Flags indicating which meta keys are currently pressed.
-     * @param count How often the key is pressed while the meta keys passed are down. Must be greater than or equal to
-     *  `1`, else this method will immediately return false.
-     *
-     * @return True on success, false if an error occurred or the input connection is invalid.
+     * Sends [count] virtual DOWN events and one UP; nonpositive counts or no connection return false.
+     * Modifiers press CTRL/ALT/SHIFT in order and release in reverse; Android acknowledgements are ignored.
      */
     fun sendDownUpKeyEvent(keyEventCode: Int, metaState: Int = meta(), count: Int = 1): Boolean {
         if (count < 1) return false
